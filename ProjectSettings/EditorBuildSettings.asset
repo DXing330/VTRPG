@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Start.unity
+    guid: a3f109cb860b8ed49b2a8abe2dbf820d
+  - enabled: 1
+    path: Assets/Scenes/Hub.unity
+    guid: 9c503d491e84ba24aa0f9fac16940cc2
+  - enabled: 1
+    path: Assets/Scenes/Armory.unity
+    guid: 0ce8b0d3cdbe2f44bb5415d801960581
+  - enabled: 1
+    path: Assets/Scenes/Barracks.unity
+    guid: 27de1987e3dc7c24e8b5b311b3b4c0e6
+  - enabled: 1
+    path: Assets/Scenes/BasicStore.unity
+    guid: 01fd8529d8d434146b8a4776fcb9aed7
+  - enabled: 1
+    path: Assets/Scenes/BattleScene.unity
+    guid: 27a478a717deac740a183e88d8de7f75
+  - enabled: 1
+    path: Assets/Scenes/Dungeon.unity
+    guid: c35e227f4bb634b468262f6c14c847e1
+  - enabled: 1
+    path: Assets/Scenes/DungeonRequests.unity
+    guid: 6b87912e4da44024b80c0c7b38ad8d33
+  - enabled: 1
+    path: Assets/Scenes/DungeonRewards.unity
+    guid: 1d2b7773ab8469340a888715ebe49ee7
+  - enabled: 1
+    path: Assets/Scenes/Hiring.unity
+    guid: a148008320739a64a86dd590e3ef7984
+  - enabled: 1
+    path: Assets/Scenes/MageTower.unity
+    guid: f3a13cf6e491aa945a4d1589f735b18d
+  - enabled: 1
+    path: Assets/Scenes/Market.unity
+    guid: dde7a8be122336e4886f6f59065ca249
+  - enabled: 1
+    path: Assets/Scenes/RequestBoard.unity
+    guid: 9a2aaecae942e28499ca5bd689311f7c
+  - enabled: 1
+    path: Assets/Scenes/Storage.unity
+    guid: c3e4b73663dc03f429f84ac7b8d00054
+  - enabled: 1
+    path: Assets/Scenes/TrainingGrounds.unity
+    guid: 34ec3d98ee791b44c87cec939e88b179
+  - enabled: 1
+    path: Assets/Scenes/DebugScenes/BattleSimulator.unity
+    guid: 3ee00250de6e9734ab99681a5fa2b126
+  - enabled: 1
+    path: Assets/Scenes/DebugScenes/MapEditor.unity
+    guid: c7766102859c18b42bcdf1290d7f0778
+  - enabled: 1
+    path: Assets/Scenes/RogueLikeScenes/StSMap.unity
+    guid: 309210a694c2c304cabc23f1e5d66ec0
+  - enabled: 1
+    path: Assets/Scenes/RogueLikeScenes/StSBattle.unity
+    guid: 261aa1ca6501a2443993bc1524c9eb36
+  - enabled: 1
+    path: Assets/Scenes/DebugScenes/BattleEditor.unity
+    guid: 338a60c2e3ce03e4a95704a7c185f92d
+  - enabled: 1
+    path: Assets/Scenes/RogueLikeScenes/StSBattleReward.unity
+    guid: 2614a09bd9b0a234eb9cf5be8c86f2a2
+  m_configObjects: {}
