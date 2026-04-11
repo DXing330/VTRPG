@@ -37,6 +37,17 @@ public class SelectList : MonoBehaviour
     public int GetSelected(){return selectedIndex;}
     public string selected;
     public string GetSelectedString(){return selected;}
+    public void SetSelectedString(string prevSelected)
+    {
+        int index = selectable.IndexOf(prevSelected);
+        if (index < 0)
+        {
+            ResetSelected();
+            return;
+        }
+        selectedIndex = index;
+        selected = prevSelected;
+    }
     public TMP_Text pageDisplay;
     public void UpdatePageDisplay()
     {

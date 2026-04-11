@@ -720,6 +720,10 @@ public class BattleManager : MonoBehaviour
             case "Spell":
                 NPCSpellAction(actionsLeft, turnDetails[1]);
                 return;
+            case "One Time Spell":
+                turnActor.IncrementCounter();
+                NPCSpellAction(actionsLeft, turnDetails[1]);
+                return;
             case "Summon Spell":
                 NPCSpellAction(actionsLeft, actorAI.ReturnSpellWithEffect(turnActor, map, "Summon"));
                 return;
@@ -1325,6 +1329,7 @@ public class BattleManager : MonoBehaviour
         customEnemyStartingLocations.Clear();
         if (!battleState.UsingCustomBattle() || battleState.savedBattles == null)
         {
+            Debug.Log("TryLoadCustomBattleMap aborted. UsingCustomBattle=" + battleState.UsingCustomBattle() + " savedBattlesNull=" + (battleState.savedBattles == null));
             return false;
         }
         List<string> savedMapInfo;
@@ -1338,6 +1343,7 @@ public class BattleManager : MonoBehaviour
         string savedTime;
         if (!battleState.savedBattles.TryLoadBattleData(battleState.GetCustomBattleName(), out savedMapInfo, out savedTerrainEffects, out savedElevations, out savedBorders, out savedBuildings, out savedEnemies, out savedEnemyLocations, out savedWeather, out savedTime))
         {
+            Debug.Log("TryLoadCustomBattleMap failed to load saved data for: " + battleState.GetCustomBattleName());
             return false;
         }
         map.SetMapInfo(savedMapInfo);

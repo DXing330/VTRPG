@@ -440,7 +440,21 @@ public class ActorInitialStats : ActorPassives
         {
             string[] modDetails = activeMods[i].Split("_");
             if (modDetails[0] != skillName){continue;}
-            if (modDetails[1] == "Power" || modDetails[1] == "Energy" || modDetails[1] == "Action")
+            if (modDetails[1] == "Power" || modDetails[1] == "Energy" || modDetails[1] == "Actions")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    public bool ActiveHasModType(string skillName, string modType, string delimiter = "_")
+    {
+        for (int i = 0; i < activeMods.Count; i++)
+        {
+            string[] modDetails = activeMods[i].Split(delimiter);
+            if (modDetails.Length < 2){continue;}
+            if (modDetails[0] != skillName){continue;}
+            if (modDetails[1] == modType)
             {
                 return true;
             }
@@ -453,7 +467,7 @@ public class ActorInitialStats : ActorPassives
         {
             string[] modDetails = activeMods[i].Split("_");
             if (modDetails[0] != skillName){continue;}
-            if (modDetails[1] != "Power" && modDetails[1] != "Energy" && modDetails[1] != "Action")
+            if (modDetails[1] != "Power" && modDetails[1] != "Energy" && modDetails[1] != "Actions")
             {
                 return true;
             }
@@ -476,6 +490,29 @@ public class ActorInitialStats : ActorPassives
         for (int i = activeMods.Count - 1; i >= 0; i--)
         {
             if (activeMods[i].Length <= 1) { activeMods.RemoveAt(i); }
+        }
+    }
+    public void AddActiveMod(string skillName, string modType, string delimiter = "_")
+    {
+        if (skillName.Length <= 0 || modType.Length <= 0){return;}
+        if (activeMods == null)
+        {
+            activeMods = new List<string>();
+        }
+        if (ActiveHasModType(skillName, modType, delimiter)){return;}
+        activeMods.Add(skillName + delimiter + modType);
+    }
+    public void RemoveActiveMod(string skillName, string modType, string delimiter = "_")
+    {
+        if (activeMods == null || activeMods.Count <= 0){return;}
+        for (int i = activeMods.Count - 1; i >= 0; i--)
+        {
+            string[] modDetails = activeMods[i].Split(delimiter);
+            if (modDetails.Length < 2){continue;}
+            if (modDetails[0] == skillName && modDetails[1] == modType)
+            {
+                activeMods.RemoveAt(i);
+            }
         }
     }
     public int magicPower;

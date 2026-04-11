@@ -27,6 +27,18 @@ public class ActiveSkill : SkillEffect
         skillInfoList[8] = effect;
         skillInfoList[9] = specifics;
         skillInfoList[10] = power;
+        if (skillInfoList.Count < 12)
+        {
+            skillInfo = String.Join(activeSkillDelimiter, skillInfoList);
+            return;
+        }
+        skillInfoList[11] = healthCost;
+        if (skillInfoList.Count < 13)
+        {
+            skillInfo = String.Join(activeSkillDelimiter, skillInfoList);
+            return;
+        }
+        skillInfoList[12] = scalingSpecifics; // Power Or Specifics
         skillInfo = String.Join(activeSkillDelimiter, skillInfoList);
     }
     public string skillName;
@@ -66,6 +78,7 @@ public class ActiveSkill : SkillEffect
         specifics = "";
         power = "1";
         healthCost = "0";
+        scalingSpecifics = "Power";
     }
     public virtual void LoadSkill(List<string> skillData, string newName = "")
     {
@@ -88,6 +101,8 @@ public class ActiveSkill : SkillEffect
         power = skillData[10];
         if (skillData.Count <= 11){return;}
         healthCost = skillData[11];
+        if (skillData.Count <= 12){return;}
+        scalingSpecifics = skillData[12];
     }
     public virtual void ApplyActorMods(TacticActor actor)
     {
@@ -115,19 +130,35 @@ public class ActiveSkill : SkillEffect
                 actionCost = "0";
                 break;
                 case "Power":
-                int powerInt = GetPower();
-                if (powerInt <= 0){break;}
-                // If it's an int under 2 then double it?
-                if (powerInt == 1)
+                switch (scalingSpecifics)
                 {
-                    power = "2";
+                    case "Power":
+                    int powerInt = GetPower();
+                    if (powerInt <= 0){break;}
+                    // If it's an int under 2 then double it?
+                    if (powerInt == 1)
+                    {
+                        power = "2";
+                    }
+                    // If int > 2 then 50% increase?
+                    else if (powerInt > 1)
+                    {
+                        power = ((powerInt * 3) / 2).ToString();
+                    }
+                    break;
+                    case "Specifics":
+                    int specificsInt = utility.SafeParseInt(GetSpecifics(), 0);
+                    if (specificsInt <= 0){break;}
+                    if (specificsInt == 1)
+                    {
+                        specifics = "2";
+                    }
+                    else if (specificsInt > 1)
+                    {
+                        specifics = ((specificsInt * 3) / 2).ToString();
+                    }
+                    break;
                 }
-                // If int > 2 then 50% increase?
-                else if (powerInt > 1)
-                {
-                    power = ((powerInt * 3) / 2).ToString();
-                }
-                // Else do nothing.
                 break;
                 case "Energy":
                 energyCost = Mathf.Max(0, int.Parse(energyCost) - 1).ToString();
@@ -135,11 +166,11 @@ public class ActiveSkill : SkillEffect
                 case "EnergyUp":
                 energyCost = Mathf.Max(0, int.Parse(energyCost) + 1).ToString();
                 break;
-                case "Action":
+                case "Actions":
                 actionCost = Mathf.Max(0, int.Parse(actionCost) - 1).ToString();
                 break;
-                case "ActionUp":
-                energyCost = Mathf.Max(0, int.Parse(actionCost) + 1).ToString();
+                case "ActionsUp":
+                actionCost = Mathf.Max(0, int.Parse(actionCost) + 1).ToString();
                 break;
                 case "Range":
                 // If it's a string then add a plus.
@@ -232,6 +263,8 @@ public class ActiveSkill : SkillEffect
         int cost = utility.SafeParseInt(healthCost);
         return cost;
     }
+    public string scalingSpecifics;
+    public string GetScalingSpecifics(){return scalingSpecifics;}
     protected int flatActionAdjust = 0;
     protected int percentActionAdjust = 0;
     protected int flatEnergyAdjust = 0;
@@ -294,7 +327,7 @@ public class ActiveSkill : SkillEffect
         newECost += flatEnergyAdjust;
         newECost += newECost * (percentEnergyAdjust) / 100;
         // Clamp the costs.
-        newACost = Mathf.Max(1, newACost);
+        newACost = Mathf.Max(0, newACost);
         newECost = Mathf.Max(0, newECost);
         // Apply the override if applicable.
         if (overrideEnergyValue > -1)
@@ -404,6 +437,18 @@ public class ActiveSkill : SkillEffect
     public int GetPower()
     {
         return utility.SafeParseInt(power);
+    }
+    public bool CanTrainPower()
+    {
+        switch (scalingSpecifics)
+        {
+            case "Power":
+                return GetPower() > 0;
+            case "Specifics":
+                return utility.SafeParseInt(specifics) > 0;
+            default:
+                return false;
+        }
     }
     public void AffectActors(List<TacticActor> actors, string effect, string specifics, int power)
     {

@@ -1,115 +1,183 @@
-using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 public class StSLikeRestScene : MonoBehaviour
 {
     public SceneMover sceneMover;
-    public string StSMapSceneName;
-    public int statGainPercentage = 10;
-    public void FinishRest()
-    {
-        // Update stats based on chosen downtime activities.
-        for (int i = 0; i < restingChoices.Count; i++)
-        {
-            dummyActor.SetInitialStatsFromString(partyData.ReturnPartyMemberStatsAtIndex(i));
-            switch (restingChoices[i])
-            {
-                case "Rest":
-                    dummyActor.UpdateHealth(dummyActor.GetBaseHealth() / 2, false);
-                    dummyActor.ClearStatuses();
-                    break;
-                case "Health":
-                    dummyActor.UpdateBaseHealth(Mathf.Max(1, dummyActor.GetBaseHealth() / statGainPercentage), false);
-                    break;
-                case "Attack":
-                    dummyActor.UpdateBaseAttack(1);
-                    break;
-                case "Defense":
-                    dummyActor.UpdateBaseDefense(1);
-                    break;
-                case "Energy":
-                    dummyActor.UpdateBaseEnergy(1);
-                    break;
-            }
-            partyData.UpdatePartyMember(dummyActor, i);
-        }
-        partyData.SetFullParty();
-    }
-    void Start()
-    {
-        restingChoices = new List<string>();
-        for (int i = 0; i < partyData.ReturnTotalPartyCount(); i++)
-        {
-            restingChoices.Add("");
-        }
-    }
+    public string StSMapSceneName = "StSMap";
     public PartyDataManager partyData;
     public TacticActor dummyActor;
     public ActorSpriteHPList actorSelectList;
-    public SelectStatTextList statList;
-    // Keep track of what each party member does during the downtime.
-    public List<string> restingChoices;
+    // TODO Step 1.
+    public void SelectActor()
+    {
+        if (GetSelectedActorIndex() < 0){return;}
+        restChoiceSelectObject.SetActive(true);
+        restChoiceSelect.SetSelectedString(restChoices[GetSelectedActorIndex()]);
+        actorChoiceObject.SetActive(true);
+        UpdateActorChoiceText();
+    }
+    public List<string> possibleChoices;
+    public List<bool> choiceAvailable;
+    public GameObject restChoiceSelectObject;
+    public SelectList restChoiceSelect;
+    protected void UpdateAvailableChoices()
+    {
+        List<string> availableChoices = new List<string>();
+        for (int i = 0; i < possibleChoices.Count; i++)
+        {
+            if (choiceAvailable[i]){availableChoices.Add(possibleChoices[i]);}
+        }
+        restChoiceSelect.SetSelectables(availableChoices);
+    }
+    public void SelectRestChoice()
+    {
+        if (restChoiceSelect.GetSelected() < 0){return;}
+        restChoices[GetSelectedActorIndex()] = restChoiceSelect.GetSelectedString();
+        switch (restChoices[GetSelectedActorIndex()])
+        {
+            // Resting goes here.
+            default:
+            UpdateActorChoiceText();
+            break;
+            // Have the training popup.
+            case "Train":
+            break;
+            // Have another actor select popup.
+            case "Mend":
+            break;
+        }
+    }
+    // ACTOR CHOICES.
+    public List<string> restChoices;
+    public List<string> restChoiceSpecifics;
+    protected void InitializeChoices()
+    {
+        int actorCount = actorSelectList.allActorNames.Count;
+        restChoices.Clear();
+        restChoiceSpecifics.Clear();
+        for (int i = 0; i < actorCount; i++)
+        {
+            restChoices.Add("");
+            restChoiceSpecifics.Add("");
+        }
+    }
+    public GameObject actorChoiceObject;
+    public TMP_Text actorChoiceText;
+    public TMP_Text actorChoiceSpecificsText;
+    public void UpdateActorChoiceText()
+    {
+        actorChoiceText.text = restChoices[GetSelectedActorIndex()];
+        switch (restChoices[GetSelectedActorIndex()])
+        {
+            default:
+            actorChoiceSpecificsText.text = "";
+            break;
+        }
+    }
+    public StatDatabase activeData;
+    public ActiveSkill previewActive;
+    // On the home page, show a high level overview of the training chosen by each actor.
     public List<TMP_Text> restEffects;
-    public void ResetRestEffects()
+    // Select a skill and popup the current skill stats and training options.
+    public BasicSkillTrainingUI skillTraining;
+
+    void Start()
     {
-        for (int i = 0; i < restEffects.Count; i++)
+        // Load in the actors.
+        partyData.Load();
+        actorSelectList.RefreshData();
+        // TODO determine options based on relics.
+        // Initialize the choices available/selected.
+        UpdateAvailableChoices();
+        InitializeChoices();
+    }
+
+    protected int GetSelectedActorIndex()
+    {
+        return actorSelectList.GetSelected();
+    }
+
+    protected string GetChoiceDelimiter()
+    {
+        if (previewActive == null){return "_";}
+        return previewActive.activeSkillDelimiter;
+    }
+
+    protected string BuildTrainSpecifics(string skillName, string upgradeType)
+    {
+        return skillName + GetChoiceDelimiter() + upgradeType;
+    }
+
+    protected bool TryParseTrainSpecifics(string specifics, out string skillName, out string upgradeType)
+    {
+        string[] blocks = specifics.Split(GetChoiceDelimiter());
+        if (blocks.Length < 2)
         {
-            restEffects[i].text = "";
+            skillName = "";
+            upgradeType = "";
+            return false;
+        }
+        skillName = blocks[0];
+        upgradeType = blocks[1];
+        return true;
+    }
+
+    protected string ReturnActorNameFromID(int actorID)
+    {
+        for (int i = 0; i < partyData.ReturnTotalPartyCount(); i++)
+        {
+            if (partyData.ReturnIDAtIndex(i) == actorID)
+            {
+                return partyData.GetAllPartyNames()[i];
+            }
+        }
+        return actorID.ToString();
+    }
+
+    protected int ReturnActorIndexFromID(int actorID)
+    {
+        for (int i = 0; i < partyData.ReturnTotalPartyCount(); i++)
+        {
+            if (partyData.ReturnIDAtIndex(i) == actorID)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    protected void RestoreActor(TacticActor actor)
+    {
+        List<string> curses = new List<string>(actor.GetCurses());
+        actor.SetCurrentHealth(actor.GetBaseHealth());
+        actor.SetMana(actor.GetMaxMana());
+        actor.ClearStatuses();
+        for (int i = 0; i < curses.Count; i++)
+        {
+            actor.AddStatus(curses[i], -1);
         }
     }
-    public void UpdateRestingChoices(string newInfo)
+
+    protected void ApplyTraining(TacticActor actor, string specifics)
     {
-        int index = actorSelectList.GetSelected();
-        if (index == -1) { return; }
-        restingChoices[index] = newInfo;
-        ResetRestEffects();
-        UpdateRestingEffects();
-    }
-    public void UpdateRestingEffects()
-    {
-        int index = actorSelectList.GetSelected();
-        if (index == -1) { return; }
-        switch (restingChoices[index])
+        string skillName;
+        string upgradeType;
+        if (!TryParseTrainSpecifics(specifics, out skillName, out upgradeType))
         {
-            case "Rest":
-                restEffects[0].text = "+ " + (dummyActor.GetBaseHealth() / 2).ToString();
-                break;
-            case "Health":
-                restEffects[1].text = "+ " + (Mathf.Max(1, dummyActor.GetBaseHealth()/ statGainPercentage)).ToString();
-                break;
-            case "Attack":
-                restEffects[2].text = "+ 1";
-                break;
-            case "Defense":
-                restEffects[3].text = "+ 1";
-                break;
-            case "Energy":
-                restEffects[4].text = "+ 1";
-                break;
-            
+            return;
         }
+        actor.AddActiveMod(skillName, upgradeType, GetChoiceDelimiter());
     }
-    public void ViewStats()
+
+    public void FinishRest()
     {
-        int index = actorSelectList.GetSelected();
-        if (index == -1) { return; }
-        ResetRestEffects();
-        dummyActor.SetInitialStatsFromString(partyData.ReturnPartyMemberStatsAtIndex(index));
-        List<string> stats = new List<string>();
-        List<string> data = new List<string>();
-        stats.Add("Current Health");
-        stats.Add("Health");
-        stats.Add("Attack");
-        stats.Add("Defense");
-        stats.Add("Energy");
-        data.Add(dummyActor.GetHealth().ToString());
-        data.Add(dummyActor.GetBaseHealth().ToString());
-        data.Add(dummyActor.GetBaseAttack().ToString());
-        data.Add(dummyActor.GetBaseDefense().ToString());
-        data.Add(dummyActor.GetBaseEnergy().ToString());
-        statList.SetStatsAndData(stats, data);
-        UpdateRestingEffects();
+        // TODO 
+        partyData.Save();
+        sceneMover.LoadScene(StSMapSceneName);
     }
 }

@@ -22,6 +22,7 @@ public class StSStateManager : MonoBehaviour
     // Scene Names
     public string rewardSceneName;
     public string mapSceneName;
+    public string restSceneName = "StSRest";
     // SUBMANAGERS
     public SceneMover sceneMover;
     public PartyDataManager stsParty;
@@ -151,6 +152,8 @@ public class StSStateManager : MonoBehaviour
             // Generate Shop.
             break;
             case "Rest":
+            gameState.UpdateState("Rest");
+            newScene = restSceneName;
             break;
             case "Treasure":
             // Generate Treasure.

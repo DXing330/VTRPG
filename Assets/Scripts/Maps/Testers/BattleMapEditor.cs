@@ -103,6 +103,7 @@ public class BattleMapEditor : MonoBehaviour
     public GameObject battleNameSelectObject;
     enum NameRaterState
     {
+        searching,
         copying,
         newing
     }
@@ -184,6 +185,44 @@ public class BattleMapEditor : MonoBehaviour
     public MapEditor mapEditor;
     public StatDatabase actorStats;
     public ActorSpriteHPList actorSelect;
+    public void ShowEnemySearch()
+    {
+        bNRS = NameRaterState.searching;
+        if (nRObject != null)
+        {
+            nRObject.SetActive(true);
+        }
+        if (nameRater != null)
+        {
+            nameRater.ResetNewName();
+        }
+    }
+    public void NameRaterConfirm()
+    {
+        if (nameRater == null){return;}
+        switch (bNRS)
+        {
+            case NameRaterState.searching:
+                FilterActorSelect(nameRater);
+                break;
+        }
+        if (nRObject != null)
+        {
+            nRObject.SetActive(false);
+        }
+        nameRater.ResetNewName();
+    }
+    public void CancelNameRater()
+    {
+        if (nRObject != null)
+        {
+            nRObject.SetActive(false);
+        }
+        if (nameRater != null)
+        {
+            nameRater.ResetNewName();
+        }
+    }
     public void ResetSelectedEnemy()
     {
         selectedEnemy = "";
@@ -202,15 +241,27 @@ public class BattleMapEditor : MonoBehaviour
     public NameRater filter;
     public void ResetFilter()
     {
-        filter.ResetNewName();
+        if (filter != null)
+        {
+            filter.ResetNewName();
+        }
+        if (nameRater != null)
+        {
+            nameRater.ResetNewName();
+        }
         actorSelect.SetData(actorStats.GetAllKeys(), actorStats.GetAllKeys(), actorStats.GetAllValues());
     }
     public void FilterActorSelect()
     {
+        FilterActorSelect(filter);
+    }
+    protected void FilterActorSelect(NameRater activeFilter)
+    {
+        if (activeFilter == null){return;}
         actorSelect.ResetSelected();
         List<string> filters = new List<string>();
-        filters.Add(filter.ReturnNameWithFirstCharUpperCase());
-        filters.Add(filter.ConfirmName().ToLower());
+        filters.Add(activeFilter.ReturnNameWithFirstCharUpperCase());
+        filters.Add(activeFilter.ConfirmName().ToLower());
         actorSelect.SetData(actorStats.GetFilteredKeys(filters), actorStats.GetFilteredKeys(filters), actorStats.GetFilteredValues(filters));
     }
     public void InitializeNewMap()

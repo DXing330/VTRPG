@@ -649,7 +649,7 @@ public class ActiveManager : MonoBehaviour
                 // Light/Dark is different.
                 if (specifics == "Light")
                 {
-                    if (battle.map.GetWeather() == "Day")
+                    if (battle.map.GetTime() == "Day")
                     {
                         skillUser.RestoreMana(power);
                     }
@@ -657,7 +657,7 @@ public class ActiveManager : MonoBehaviour
                 }
                 else if (specifics == "Dark")
                 {
-                    if (battle.map.GetWeather() == "Night")
+                    if (battle.map.GetTime() == "Night")
                     {
                         skillUser.RestoreMana(power);
                     }
