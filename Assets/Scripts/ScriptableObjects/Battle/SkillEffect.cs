@@ -34,6 +34,9 @@ public class SkillEffect : ScriptableObject
                     passiveOrganizer.AddSortedPassive(target, effectSpecifics);
                 }
                 break;
+            case "NextSkillMod":
+                target.AddNextSkillMod(effectSpecifics);
+                break;
             case "Status":
                 int duration = level;
                 if (level <= baseStatusDuration && level >= 0) { duration = baseStatusDuration; }

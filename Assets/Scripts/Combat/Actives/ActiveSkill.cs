@@ -106,109 +106,140 @@ public class ActiveSkill : SkillEffect
     }
     public virtual void ApplyActorMods(TacticActor actor)
     {
-        List<string> mods = actor.GetActiveMods();
+        List<string> actorMods = actor.GetActiveMods();
+        List<string> mods = actorMods == null ? new List<string>() : new List<string>(actorMods);
+        List<string> nextMods = actor.GetNextSkillMods();
+        for (int i = 0; i < nextMods.Count; i++)
+        {
+            mods.Add(skillName + activeSkillDelimiter + nextMods[i]);
+        }
         for (int i = 0; i < mods.Count; i++)
         {
             string[] modDetails = mods[i].Split(activeSkillDelimiter);
             if (modDetails[0] != skillName){continue;}
             // Active Mods Buff Power/Energy/Action/Range/Span
-            switch (modDetails[1])
+            ApplySingleActorMod(actor, modDetails);
+        }
+    }
+
+    protected virtual void ApplySingleActorMod(TacticActor actor, string[] modDetails)
+    {
+        if (modDetails.Length < 2){return;}
+        switch (modDetails[1])
+        {
+            default:
+            break;
+            case "Free":
+            energyCost = "0";
+            actionCost = "0";
+            break;
+            case "FirstFree":
+            // Check if the skill has been cast already.
+            if (actor.SkillUsedAlready(GetSkillName()))
             {
-                default:
                 break;
-                case "Free":
-                energyCost = "0";
-                actionCost = "0";
-                break;
-                case "FirstFree":
-                // Check if the skill has been cast already.
-                if (actor.SkillUsedAlready(GetSkillName()))
-                {
-                    break;
-                }
-                energyCost = "0";
-                actionCost = "0";
-                break;
+            }
+            energyCost = "0";
+            actionCost = "0";
+            break;
+            case "Power":
+            ApplyPowerMod();
+            break;
+            case "Energy":
+            energyCost = Mathf.Max(0, int.Parse(energyCost) - 1).ToString();
+            break;
+            case "EnergyUp":
+            energyCost = Mathf.Max(0, int.Parse(energyCost) + 1).ToString();
+            break;
+            case "Action":
+            case "Actions":
+            actionCost = Mathf.Max(0, int.Parse(actionCost) - 1).ToString();
+            break;
+            case "ActionsUp":
+            actionCost = Mathf.Max(0, int.Parse(actionCost) + 1).ToString();
+            break;
+            case "Range":
+            // If it's a string then add a plus.
+            if (range.Length > 2)
+            {
+                range = range + "+";
+            }
+            // Else add 1.
+            else
+            {
+                range = (int.Parse(range) + 1).ToString();
+            }
+            break;
+            case "RangeDown":
+            // If it's a string then add a minus.
+            if (range.Length > 2)
+            {
+                range = range + "-";
+            }
+            // Else subtract 1.
+            else
+            {
+                range = (int.Parse(range) - 1).ToString();
+            }
+            break;
+            case "Span":
+            if (span.Length <= 0){break;}
+            span = (int.Parse(span) + 1).ToString();
+            break;
+            // Requires a third string for specifics.
+            case "SpanShape":
+            if (modDetails.Length > 2){shape = modDetails[2];}
+            break;
+            case "RangeShape":
+            if (modDetails.Length > 2){rangeShape = modDetails[2];}
+            break;
+        }
+    }
+
+    protected virtual void ApplyPowerMod()
+    {
+        List<string> powers = GetAllPowerStrings();
+        List<string> specificsList = GetAllSpecifics();
+        List<string> scalingList = GetAllScalingSpecifics();
+        int effectCount = Mathf.Max(GetAllEffects().Count, Mathf.Max(powers.Count, specificsList.Count));
+        HashSet<int> modifiedPowerIndexes = new HashSet<int>();
+        HashSet<int> modifiedSpecificsIndexes = new HashSet<int>();
+        for (int i = 0; i < effectCount; i++)
+        {
+            switch (GetMatchingString(scalingList, i, "Power"))
+            {
                 case "Power":
-                switch (scalingSpecifics)
-                {
-                    case "Power":
-                    int powerInt = GetPower();
-                    if (powerInt <= 0){break;}
-                    // If it's an int under 2 then double it?
-                    if (powerInt == 1)
-                    {
-                        power = "2";
-                    }
-                    // If int > 2 then 50% increase?
-                    else if (powerInt > 1)
-                    {
-                        power = ((powerInt * 3) / 2).ToString();
-                    }
-                    break;
-                    case "Specifics":
-                    int specificsInt = utility.SafeParseInt(GetSpecifics(), 0);
-                    if (specificsInt <= 0){break;}
-                    if (specificsInt == 1)
-                    {
-                        specifics = "2";
-                    }
-                    else if (specificsInt > 1)
-                    {
-                        specifics = ((specificsInt * 3) / 2).ToString();
-                    }
-                    break;
-                }
+                int powerIndex = NormalizeIndex(powers, i);
+                if (modifiedPowerIndexes.Contains(powerIndex)){break;}
+                int powerInt = utility.SafeParseInt(GetMatchingString(powers, i, "1"), 0);
+                if (powerInt <= 0){break;}
+                powers[powerIndex] = PowerModdedInt(powerInt).ToString();
+                modifiedPowerIndexes.Add(powerIndex);
                 break;
-                case "Energy":
-                energyCost = Mathf.Max(0, int.Parse(energyCost) - 1).ToString();
-                break;
-                case "EnergyUp":
-                energyCost = Mathf.Max(0, int.Parse(energyCost) + 1).ToString();
-                break;
-                case "Actions":
-                actionCost = Mathf.Max(0, int.Parse(actionCost) - 1).ToString();
-                break;
-                case "ActionsUp":
-                actionCost = Mathf.Max(0, int.Parse(actionCost) + 1).ToString();
-                break;
-                case "Range":
-                // If it's a string then add a plus.
-                if (range.Length > 2)
-                {
-                    range = range + "+";
-                }
-                // Else add 1.
-                else
-                {
-                    range = (int.Parse(range) + 1).ToString();
-                }
-                break;
-                case "RangeDown":
-                // If it's a string then add a plus.
-                if (range.Length > 2)
-                {
-                    range = range + "-";
-                }
-                // Else add 1.
-                else
-                {
-                    range = (int.Parse(range) - 1).ToString();
-                }
-                break;
-                case "Span":
-                if (span.Length <= 0){break;}
-                span = (int.Parse(span) + 1).ToString();
-                break;
-                // Requires a third string for specifics.
-                case "SpanShape":
-                shape = modDetails[2];
-                break;
-                case "RangeShape":
-                rangeShape = modDetails[2];
+                case "Specifics":
+                int specificsIndex = NormalizeIndex(specificsList, i);
+                if (modifiedSpecificsIndexes.Contains(specificsIndex)){break;}
+                int specificsInt = utility.SafeParseInt(GetMatchingString(specificsList, i, "0"), 0);
+                if (specificsInt <= 0){break;}
+                specificsList[specificsIndex] = PowerModdedInt(specificsInt).ToString();
+                modifiedSpecificsIndexes.Add(specificsIndex);
                 break;
             }
         }
+        power = String.Join(effectDelimiter, powers);
+        specifics = String.Join(effectDelimiter, specificsList);
+    }
+
+    protected int PowerModdedInt(int value)
+    {
+        if (value == 1){return 2;}
+        return (value * 3) / 2;
+    }
+
+    protected int NormalizeIndex(List<string> entries, int index)
+    {
+        if (entries.Count <= 1){return 0;}
+        return Mathf.Min(index, entries.Count - 1);
     }
     public string GetStat(string statName)
     {
@@ -437,6 +468,60 @@ public class ActiveSkill : SkillEffect
     public int GetPower()
     {
         return utility.SafeParseInt(power);
+    }
+    public string effectDelimiter = "?";
+    public List<string> GetAllEffects()
+    {
+        return SplitEffectField(GetEffect());
+    }
+    public List<string> GetAllSpecifics()
+    {
+        return SplitEffectField(GetSpecifics());
+    }
+    public List<string> GetAllPowerStrings()
+    {
+        return SplitEffectField(GetPowerString());
+    }
+    public List<int> GetAllPowers()
+    {
+        List<string> temp = GetAllPowerStrings();
+        List<int> powers = new List<int>();
+        for (int i = 0; i < temp.Count; i++)
+        {
+            powers.Add(utility.SafeParseInt(temp[i], 1));
+        }
+        return powers;
+    }
+    public List<string> GetAllScalingSpecifics()
+    {
+        return SplitEffectField(GetScalingSpecifics());
+    }
+    public string GetEffectAt(int index)
+    {
+        return GetMatchingString(GetAllEffects(), index, "");
+    }
+    public string GetSpecificsAt(int index)
+    {
+        return GetMatchingString(GetAllSpecifics(), index, "");
+    }
+    public int GetPowerAt(int index)
+    {
+        return utility.SafeParseInt(GetMatchingString(GetAllPowerStrings(), index, "1"), 1);
+    }
+    public string GetScalingSpecificsAt(int index)
+    {
+        return GetMatchingString(GetAllScalingSpecifics(), index, "Power");
+    }
+    protected List<string> SplitEffectField(string field)
+    {
+        return field.Split(effectDelimiter).ToList();
+    }
+    protected string GetMatchingString(List<string> entries, int index, string defaultValue = "")
+    {
+        if (entries == null || entries.Count <= 0){return defaultValue;}
+        if (entries.Count == 1){return entries[0];}
+        if (index < entries.Count){return entries[index];}
+        return defaultValue;
     }
     public bool CanTrainPower()
     {

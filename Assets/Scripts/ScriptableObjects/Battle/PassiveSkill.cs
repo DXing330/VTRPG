@@ -78,6 +78,7 @@ public class PassiveSkill : SkillEffect
         // Check the conditions.
         string[] conditions = data[1].Split(",");
         string[] cSpecifics = data[2].Split(",");
+        if (conditions.Length != cSpecifics.Length){return;}
         for (int i = 0; i < conditions.Length; i++)
         {
             if (!CheckAdjustCostCondition(actor, active, map, conditions[i], cSpecifics[i])){return;}
@@ -86,6 +87,7 @@ public class PassiveSkill : SkillEffect
         string target = data[3];
         string[] effects = data[4].Split(",");
         string[] specifics = data[5].Split(",");
+        if (effects.Length != specifics.Length){return;}
         for (int i = 0; i < effects.Length; i++)
         {
             int change = int.Parse(specifics[i]);
@@ -150,9 +152,10 @@ public class PassiveSkill : SkillEffect
         for (int i = 0; i < passives.Count; i++)
         {
             string[] passiveData = passives[i].Split("|");
-            if (passiveData.Length <= 4) { continue; }
+            if (passiveData.Length < 6) { continue; }
             string[] conditions = passiveData[1].Split(",");
             string[] specifics = passiveData[2].Split(",");
+            if (conditions.Length != specifics.Length) { continue; }
             bool conditionsMet = true;
             for (int j = 0; j < conditions.Length; j++)
             {
@@ -169,10 +172,11 @@ public class PassiveSkill : SkillEffect
             // For now only affect the actor, later might after other things.
             string[] effects = passiveData[4].Split(",");
             string[] effectSpecifics = passiveData[5].Split(",");
+            if (effects.Length != effectSpecifics.Length) { continue; }
             for (int h = 0; h < effects.Length; h++)
             {
                 string specificDetails = GetEffectSpecifics(skillUser, effectSpecifics[h], 0, map);
-                ApplyPassiveEffectToTarget(skillUser, map, passiveData[4], effects[h], specificDetails);
+                ApplyPassiveEffectToTarget(skillUser, map, passiveData[3], effects[h], specificDetails);
             }
         }
     }
@@ -184,9 +188,10 @@ public class PassiveSkill : SkillEffect
         for (int i = 0; i < passives.Count; i++)
         {
             string[] passiveData = passives[i].Split("|");
-            if (passiveData.Length <= 4) { continue; }
+            if (passiveData.Length < 6) { continue; }
             string[] conditions = passiveData[1].Split(",");
             string[] specifics = passiveData[2].Split(",");
+            if (conditions.Length != specifics.Length) { continue; }
             bool conditionsMet = true;
             for (int j = 0; j < conditions.Length; j++)
             {
@@ -202,10 +207,16 @@ public class PassiveSkill : SkillEffect
             }
             string[] effects = passiveData[4].Split(",");
             string[] effectSpecifics = passiveData[5].Split(",");
+            if (effects.Length != effectSpecifics.Length) { continue; }
+            TacticActor target = actor;
+            if (passiveData[3] == "Target")
+            {
+                target = attackTarget;
+            }
             for (int h = 0; h < effects.Length; h++)
             {
                 string specificDetails = GetEffectSpecifics(actor, effectSpecifics[h], 0, map);
-                ApplyPassiveEffectToTarget(actor, map, passiveData[4], effects[h], specificDetails);
+                ApplyPassiveEffectToTarget(target, map, passiveData[3], effects[h], specificDetails);
             }
         }
     }
@@ -217,9 +228,10 @@ public class PassiveSkill : SkillEffect
         for (int i = 0; i < passives.Count; i++)
         {
             string[] passiveData = passives[i].Split("|");
-            if (passiveData.Length <= 4) { continue; }
+            if (passiveData.Length < 6) { continue; }
             string[] conditions = passiveData[1].Split(",");
             string[] specifics = passiveData[2].Split(",");
+            if (conditions.Length != specifics.Length) { continue; }
             bool conditionsMet = true;
             for (int j = 0; j < conditions.Length; j++)
             {
@@ -240,10 +252,11 @@ public class PassiveSkill : SkillEffect
             }
             string[] effects = passiveData[4].Split(",");
             string[] effectSpecifics = passiveData[5].Split(",");
+            if (effects.Length != effectSpecifics.Length) { continue; }
             for (int h = 0; h < effects.Length; h++)
             {
                 string specificDetails = GetEffectSpecifics(attackTarget, effectSpecifics[h], 0, map);
-                ApplyPassiveEffectToTarget(actor, map, passiveData[4], effects[h], specificDetails);
+                ApplyPassiveEffectToTarget(target, map, passiveData[3], effects[h], specificDetails);
             }
         }
     }
@@ -255,9 +268,10 @@ public class PassiveSkill : SkillEffect
         for (int h = 0; h < startBattlePassives.Count; h++)
         {
             string[] passiveData = startBattlePassives[h].Split("|");
-            if (passiveData.Length <= 4) { continue; }
+            if (passiveData.Length < 6) { continue; }
             string[] conditions = passiveData[1].Split(",");
             string[] specifics = passiveData[2].Split(",");
+            if (conditions.Length != specifics.Length) { continue; }
             bool conditionsMet = true;
             for (int j = 0; j < conditions.Length; j++)
             {
@@ -273,6 +287,7 @@ public class PassiveSkill : SkillEffect
             }
             string[] effects = passiveData[4].Split(",");
             string[] effectSpecifics = passiveData[5].Split(",");
+            if (effects.Length != effectSpecifics.Length) { continue; }
             for (int i = 0; i < effects.Length; i++)
             {
                 AffectActor(actor, effects[i], GetEffectSpecifics(actor, effectSpecifics[i]));
@@ -287,6 +302,11 @@ public class PassiveSkill : SkillEffect
         switch (target)
         {
             default:
+                AffectActor(actor, effect, specifics);
+                break;
+            case "Self":
+            case "Target":
+            case "Attacker":
                 AffectActor(actor, effect, specifics);
                 break;
             // Move based on wording (effect) and distance (specifics).
@@ -339,14 +359,15 @@ public class PassiveSkill : SkillEffect
     public void ApplyPassive(TacticActor actor, BattleMap map, string passive)
     {
         List<string> passiveData = passive.Split("|").ToList();
-        if (passiveData.Count <= 4) { return; }
+        if (passiveData.Count < 6) { return; }
         if (!CheckStartEndConditions(actor, passiveData[1], passiveData[2], map)){return;}
         string[] effects = passiveData[4].Split(",");
         string[] effectSpecifics = passiveData[5].Split(",");
+        if (effects.Length != effectSpecifics.Length) { return; }
         for (int i = 0; i < effects.Length; i++)
         {
             string specifics = GetEffectSpecifics(actor, effectSpecifics[i], 0, map);
-            ApplyPassiveEffectToTarget(actor, map, passiveData[4], effects[i], specifics);
+            ApplyPassiveEffectToTarget(actor, map, passiveData[3], effects[i], specifics);
         }
     }
 
@@ -375,7 +396,7 @@ public class PassiveSkill : SkillEffect
             case "ActionCost>":
                 return skillData.GetActionCost() > int.Parse(specifics);
             case "ActionCost<":
-                return skillData.GetActionCost() > int.Parse(specifics);
+                return skillData.GetActionCost() < int.Parse(specifics);
             // Energy / Actions / Power
             case "SkillUpgraded":
                 return skillUser.ActiveUpgraded(skillData.GetSkillName());
@@ -454,6 +475,7 @@ public class PassiveSkill : SkillEffect
     {
         string[] conditions = condition.Split(",");
         string[] specifics = conditionSpecifics.Split(",");
+        if (conditions.Length != specifics.Length) { return false; }
         for (int i = 0; i < conditions.Length; i++)
         {
             if (!CheckStartEndCondition(conditions[i], specifics[i], actor, map))
@@ -721,6 +743,7 @@ public class PassiveSkill : SkillEffect
     {
         string[] conditions = condition.Split(",");
         string[] specifics = conditionSpecifics.Split(",");
+        if (conditions.Length != specifics.Length) { return false; }
         for (int i = 0; i < conditions.Length; i++)
         {
             if (!CheckBattleCondition(conditions[i], specifics[i], target, attacker, map))

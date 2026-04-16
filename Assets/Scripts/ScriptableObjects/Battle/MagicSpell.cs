@@ -49,24 +49,15 @@ public class MagicSpell : ActiveSkill
             return Mathf.Max(1, baseCost / 4) * (nilCount + 1);
         }
     }
-    public string effectDelimiter = "?";
     public void AddEffects(string newInfo)
     {
         effect += effectDelimiter + newInfo;
         RefreshSkillInfo();
     }
-    public List<string> GetAllEffects()
-    {
-        return GetEffect().Split(effectDelimiter).ToList();
-    }
     public void AddSpecifics(string newInfo)
     {
         specifics += effectDelimiter + newInfo;
         RefreshSkillInfo();
-    }
-    public List<string> GetAllSpecifics()
-    {
-        return GetSpecifics().Split(effectDelimiter).ToList();
     }
     public void AddPowers(string newInfo)
     {
@@ -76,15 +67,5 @@ public class MagicSpell : ActiveSkill
     public string GetAllPowersString()
     {
         return String.Join(effectDelimiter, GetAllPowers());
-    }
-    public List<int> GetAllPowers()
-    {
-        List<string> temp = power.Split(effectDelimiter).ToList();
-        List<int> powers = new List<int>();
-        for (int i = 0; i < temp.Count; i++)
-        {
-            powers.Add(utility.SafeParseInt(temp[i], 1));
-        }
-        return powers;
     }
 }

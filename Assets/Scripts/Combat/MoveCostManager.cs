@@ -133,6 +133,7 @@ public class MoveCostManager : MonoBehaviour
         for (int i = 0; i < movingPassives.Count; i++)
         {
             passiveInfo = movingPassives[i].Split("|").ToList();
+            if (passiveInfo.Count < 6) { continue; }
             if (passiveInfo[3] != "MoveCost"){continue;}
             for (int j = 0; j < currentMoveCosts.Count; j++)
             {
@@ -528,6 +529,7 @@ public class MoveCostManager : MonoBehaviour
         for (int i = 0; i < movingPassives.Count; i++)
         {
             passiveInfo = movingPassives[i].Split("|").ToList();
+            if (passiveInfo.Count < 6) { continue; }
             // Only apply passives that affect the user or the map.
             switch (passiveInfo[3])
             {

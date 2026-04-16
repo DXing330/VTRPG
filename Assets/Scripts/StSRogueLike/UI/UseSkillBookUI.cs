@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -25,8 +26,16 @@ public class UseSkillBookUI : MonoBehaviour
         selectedBookEffectObject.SetActive(false);
         actorSelectObject.SetActive(false);
         actorSkillSelectObject.SetActive(false);
-        confirmObject.SetActive(false);
+        ResetConfirmPanel();
         activeViewerPanel.ResetMessage();
+    }
+    protected void ResetConfirmPanel()
+    {
+        skillTypeText.text = "";
+        skillNameText.text = "";
+        skillEffectText.text = "";
+        confirmObject.SetActive(false);
+        confirmButtonObject.SetActive(false);
     }
     public SelectList skillBookSelect;
     public GameObject selectedBookEffectObject;
@@ -44,17 +53,21 @@ public class UseSkillBookUI : MonoBehaviour
             skillBookEffectText.text = "";
             return;
             case "Passive":
-            skillBookEffectText.text = passiveDetailViewer.ReturnPassiveDetailsFromName(skillName);
-            // If the passive grants a skill/spell then show that skill/spell effect as well.
-            if (passiveDetailViewer.SpellGrantingPassive(skillName))
+            int passiveLevelToShow = 1;
+            if (selectedActor != null)
             {
-                skillBookEffectText.text += "\n" + activeDetailViewer.ReturnSpellDescriptionFromName(skillName);
-                return;
+                passiveLevelToShow = selectedActor.GetLevelFromPassive(skillName) + 1;
             }
-            else if (passiveDetailViewer.SkillGrantingPassive(skillName))
+            string passiveLevelName = passiveDetailViewer.passiveNameLevels.GetMultiKeyValue(skillName, passiveLevelToShow.ToString());
+            string passiveDetails = passiveDetailViewer.ReturnPassiveDetailsFromName(passiveLevelName);
+            skillBookEffectText.text = passiveDetails;
+            if (passiveDetailViewer.SpellGrantingPassive(passiveLevelName))
             {
-                skillBookEffectText.text += "\n" + activeDetailViewer.ReturnActiveDescriptionFromName(skillName);
-                return;
+                skillBookEffectText.text += "\n" + activeDetailViewer.ReturnSpellDescriptionFromName(passiveLevelName);
+            }
+            else if (passiveDetailViewer.SkillGrantingPassive(passiveLevelName))
+            {
+                skillBookEffectText.text += "\n" + activeDetailViewer.ReturnActiveDescriptionFromName(passiveLevelName);
             }
             return;
             case "Skill":
@@ -101,6 +114,7 @@ public class UseSkillBookUI : MonoBehaviour
             return;
         }
         selectedActor = partyData.ReturnActorAtIndex(actorSelect.GetSelected());
+        UpdateSkillBookEffectText();
         actorSkillSelectObject.SetActive(true);
         confirmObject.SetActive(true);
         UpdateConfirmPanel();
@@ -166,28 +180,68 @@ public class UseSkillBookUI : MonoBehaviour
         }
     }
     public GameObject confirmObject;
+    public GameObject confirmButtonObject;
     public TMP_Text skillTypeText;
     public TMP_Text skillNameText;
     public TMP_Text skillEffectText;
     protected void UpdateConfirmPanel()
     {
+        ResetConfirmPanel();
+        if (selectedActor == null || skillName == "" || skillType == "")
+        {
+            return;
+        }
         skillTypeText.text = skillType;
         skillNameText.text = skillName;
+        confirmObject.SetActive(true);
+        bool canUseBook = CanUseSelectedBookOnActor();
         switch (skillType)
         {
             case "Passive":
+            if (!canUseBook)
+            {
+                skillEffectText.text = skillName + " is already at max level.";
+                break;
+            }
             skillEffectText.text = skillName + " level: " + selectedActor.GetLevelFromPassive(skillName) + " > " + (selectedActor.GetLevelFromPassive(skillName) + 1);
             break;
             case "Skill":
+            if (!canUseBook)
+            {
+                skillEffectText.text = skillName + " is already learned.";
+                break;
+            }
             skillEffectText.text = "Learn the " + skillName + " skill.";
             break;
             case "Spell":
+            if (!canUseBook)
+            {
+                skillEffectText.text = skillName + " is already learned.";
+                break;
+            }
             skillEffectText.text = "Learn the " + skillName + " spell.";
             break;
         }
+        confirmButtonObject.SetActive(canUseBook);
+    }
+
+    protected bool CanUseSelectedBookOnActor()
+    {
+        if (selectedActor == null){return false;}
+        switch (skillType)
+        {
+            case "Passive":
+            return selectedActor.GetLevelFromPassive(skillName) < passiveDetailViewer.GetMaxLevelFromPassiveName(skillName);
+            case "Skill":
+            return !selectedActor.GetActiveSkills().Contains(skillName);
+            case "Spell":
+            return !selectedActor.GetSpells().Contains(skillName);
+        }
+        return false;
     }
     public void ConfirmUse()
     {
+        if (!CanUseSelectedBookOnActor()){return;}
         // Teach the actor.
         switch (skillType)
         {
@@ -207,7 +261,137 @@ public class UseSkillBookUI : MonoBehaviour
         partyData.spellBook.LoseBookAtIndex(skillBookSelect.GetSelected());
         InitialSetUp();
     }
+
     public SpellDetailViewer activeDetailViewer;
     public PassiveDetailViewer passiveDetailViewer;
     public GameObject passiveViewerObject;
+
+    // --- Testing ---
+    // Test setup for validating skillbook use rules. Does not save.
+    public string testActorOne;
+    public string testActorTwo;
+    public string testActorThree;
+    public string testBooks = "Dash|Dash|Apparition|Apparition|Attack Up|Attack Up|Attack Up|Attack Up|Attack Up|Attack Up|Attack Up|Bhavati-Vishnu|Bhavati-Kali|Bhavati-Shiva|Bottomless Trap Hole|Power Word Kill";
+
+    [ContextMenu("Load Use SkillBook Test Data")]
+    public void LoadUseSkillBookTestData()
+    {
+        if (partyData.ReturnTotalPartyCount() < 3)
+        {
+            Debug.Log("Need at least 3 party members to load the skillbook test data.");
+            return;
+        }
+        testActorOne = BuildSkillBookTestActorOne();
+        testActorTwo = BuildSkillBookTestActorTwo();
+        testActorThree = BuildSkillBookTestActorThree();
+        LoadTestActorAtIndex(0, testActorOne);
+        LoadTestActorAtIndex(1, testActorTwo);
+        LoadTestActorAtIndex(2, testActorThree);
+        partyData.spellBook.SetBooks(testBooks.Split('|').ToList());
+        actorSelect.SetSelectables(partyData.GetAllPartyNames());
+        InitialSetUp();
+    }
+
+    protected void LoadTestActorAtIndex(int index, string actorStats)
+    {
+        TacticActor actor = partyData.ReturnActorAtIndex(index);
+        actor.SetInitialStatsFromString(actorStats);
+        partyData.UpdatePartyMember(actor, index);
+    }
+
+    protected string BuildSkillBookTestActorOne()
+    {
+        string[] fields = new string[35];
+        fields[0] = "Test Assassin";
+        fields[1] = "Humanoid";
+        fields[4] = "60";
+        fields[5] = "12";
+        fields[6] = "1";
+        fields[7] = "3";
+        fields[8] = "2";
+        fields[9] = "Walking";
+        fields[10] = "1";
+        fields[11] = "12";
+        fields[12] = "6";
+        fields[13] = "0";
+        fields[14] = "1";
+        fields[15] = "200";
+        fields[16] = "99";
+        fields[17] = "1";
+        fields[18] = "Assassin";
+        fields[19] = "6";
+        fields[21] = "Dash";
+        fields[24] = "2";
+        fields[25] = "0";
+        fields[26] = "0";
+        fields[27] = "10";
+        fields[31] = "2";
+        fields[32] = "10";
+        fields[33] = "60";
+        return string.Join("!", fields);
+    }
+
+    protected string BuildSkillBookTestActorTwo()
+    {
+        string[] fields = new string[35];
+        fields[0] = "Test Mage";
+        fields[1] = "Humanoid";
+        fields[4] = "70";
+        fields[5] = "8";
+        fields[6] = "2";
+        fields[7] = "5";
+        fields[8] = "2";
+        fields[9] = "Walking";
+        fields[10] = "1";
+        fields[11] = "12";
+        fields[12] = "7";
+        fields[13] = "0";
+        fields[14] = "0";
+        fields[15] = "200";
+        fields[16] = "100";
+        fields[17] = "0";
+        fields[18] = "Dash";
+        fields[19] = "1";
+        fields[21] = "Double Slash,Gravity";
+        fields[24] = "2";
+        fields[25] = "0";
+        fields[26] = "0";
+        fields[27] = "12";
+        fields[31] = "2";
+        fields[32] = "12";
+        fields[33] = "70";
+        return string.Join("!", fields);
+    }
+
+    protected string BuildSkillBookTestActorThree()
+    {
+        string[] fields = new string[35];
+        fields[0] = "Test Scholar";
+        fields[1] = "Humanoid";
+        fields[4] = "55";
+        fields[5] = "6";
+        fields[6] = "1";
+        fields[7] = "4";
+        fields[8] = "2";
+        fields[9] = "Walking";
+        fields[10] = "1";
+        fields[11] = "10";
+        fields[12] = "6";
+        fields[13] = "0";
+        fields[14] = "0";
+        fields[15] = "200";
+        fields[16] = "100";
+        fields[17] = "0";
+        fields[18] = "Bhavati-Vishnu+Bhavati-Kali";
+        fields[19] = "1+1";
+        fields[21] = "Double Slash";
+        fields[24] = "2";
+        fields[25] = "0";
+        fields[26] = "0";
+        fields[27] = "10";
+        fields[31] = "2";
+        fields[32] = "10";
+        fields[33] = "55";
+        return string.Join("!", fields);
+    }
 }

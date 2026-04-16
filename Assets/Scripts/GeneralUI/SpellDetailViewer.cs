@@ -20,10 +20,16 @@ public class SpellDetailViewer : ActiveDescriptionViewer
         popUp.SetMessage(ReturnSpellDescription(dummySpell));
     }
     public string testActiveName;
-    [ContextMenu("Debug Active Description")]
+    [ContextMenu("Debug Active Description From Name")]
+    public void ShowActiveDescriptionFromName()
+    {
+        spellEffects.text = ReturnActiveDescriptionFromName(testActiveName);
+    }
+    public string testActiveData;
+    [ContextMenu("Debug Active Description From Data")]
     public void ShowActiveDescription()
     {
-        dummyActive.LoadSkillFromString(testActiveName, null);
+        dummyActive.LoadSkillFromString(testActiveData, null);
         spellEffects.text = ReturnActiveDescription(dummyActive);
     }
     [ContextMenu("Debug Spell Description")]

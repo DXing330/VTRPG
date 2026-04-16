@@ -7,6 +7,7 @@ using TMPro;
 public class ActorSpriteAndName : ActorSprite
 {
     public TMP_Text actorName;
+    public bool showHealth = false;
 
     public override void SetTextSize(int newSize)
     {
@@ -17,6 +18,10 @@ public class ActorSpriteAndName : ActorSprite
     {
         ShowActorSprite(actor);
         actorName.text = actor.GetPersonalName();
+        if (showHealth)
+        {
+            actorName.text += "\n" + actor.GetHealth() + "/" + actor.GetBaseHealth();
+        }
     }
 
     public override void ChangeTextColor(Color newColor)

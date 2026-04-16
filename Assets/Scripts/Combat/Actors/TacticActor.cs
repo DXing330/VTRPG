@@ -7,6 +7,38 @@ using UnityEngine;
 
 public class TacticActor : ActorStats
 {
+    public List<string> nextSkillMods = new List<string>();
+    public void AddNextSkillMod(string mod)
+    {
+        if (String.IsNullOrEmpty(mod)){return;}
+        if (nextSkillMods == null)
+        {
+            nextSkillMods = new List<string>();
+        }
+        nextSkillMods.Add(mod);
+    }
+    public List<string> GetNextSkillMods()
+    {
+        if (nextSkillMods == null)
+        {
+            nextSkillMods = new List<string>();
+        }
+        return nextSkillMods;
+    }
+    public void ClearNextSkillMods()
+    {
+        if (nextSkillMods == null)
+        {
+            nextSkillMods = new List<string>();
+            return;
+        }
+        nextSkillMods.Clear();
+    }
+    public bool HasNextSkillMods()
+    {
+        return nextSkillMods != null && nextSkillMods.Count > 0;
+    }
+
     // EQUIPMENT STUFF.
     public void ResetEquipment()
     {
@@ -847,6 +879,7 @@ public class TacticActor : ActorStats
     {
         base.InitializeStats();
         currentEnergy = GetBaseEnergy();
+        ClearNextSkillMods();
         ResetMentalState();
         ResetTarget();
         ResetHurtBy();

@@ -15,6 +15,8 @@ public class StSRewardSaveData : SavedData
     public RNGUtility rewardSeed;
     public StatDatabase skillBookDB;
     public StatDatabase skillBookRarity;
+    public StatDatabase colorlessSkillBookDB;
+    public StatDatabase colorlessSkillBookRarity;
     public StatDatabase itemDB;
     public StatDatabase relicDB;
     public StatDatabase relicLocations;

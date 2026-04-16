@@ -33,7 +33,8 @@ public class RewardDisplayMenu : MonoBehaviour
     public void UpdateRewardDisplay()
     {
         utility.DisableGameObjects(rewardButtons);
-        for (int i = 0; i < rewards.Count; i++)
+        int displayCount = Mathf.Min(rewards.Count, rewardButtons.Count, rewardPanels.Count);
+        for (int i = 0; i < displayCount; i++)
         {
             rewardButtons[i].SetActive(true);
             rewardPanels[i].SetRewardAndSpecifics(rewards[i], rewardSpecifics[i]);
@@ -77,5 +78,11 @@ public class RewardDisplayMenu : MonoBehaviour
         rewardSpecifics.RemoveAt(selectedIndex);
         UpdateRewardDisplay();
         selectedIndex = -1;
+    }
+    public void ClaimSelectedSkillBook(string skillBookName)
+    {
+        partyData.spellBook.GainBook(skillBookName);
+        ClaimRewardAtIndex();
+        UpdateRewardDisplay();
     }
 }

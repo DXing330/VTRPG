@@ -32,6 +32,7 @@ public class StSStateManager : MonoBehaviour
     public StSMapSaveData mapState;
     public StSEnemyTracker enemyTracker;
     public StSRewardSaveData rewardTracker;
+    public StSShopSaveData shopTracker;
     public BattleState battleState; // Needed To Save Enemies To A Battle.
     public CharacterList enemyList;
     // STATE DATA

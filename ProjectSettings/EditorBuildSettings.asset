@@ -68,4 +68,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/RogueLikeScenes/StSBattleReward.unity
     guid: 2614a09bd9b0a234eb9cf5be8c86f2a2
+  - enabled: 1
+    path: Assets/Scenes/RogueLikeScenes/StSRest.unity
+    guid: da8ab38738f23c24d94f1639410950ec
   m_configObjects: {}

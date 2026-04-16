@@ -10,6 +10,15 @@ public class BasicSkillTrainingUI : MonoBehaviour
 {
     public PartyDataManager partyData;
     public TacticActor selectedActor;
+    public string testActorString;
+    protected string defaultTestActorString = "Test Trainer!Humanoid!!!99!12!1!6!2!Walking!1!10!6!0!0!200!100!0!Dash!1!!Double Slash,Gravity,Pain Split,Fire Attack,Bloodletting,Cleave,Attack Blessing,Mass Attack Order!Cleave_Energy,Cleave_Actions,Cleave_Power,Gravity_Energy,Mass Attack Order_Actions,Attack Blessing_Power!!2!0!0!10!!!!2!10!99!";
+    [ContextMenu("Test Actor")]
+    public void TestActor()
+    {
+        testActorString = defaultTestActorString;
+        selectedActor.SetInitialStatsFromString(testActorString);
+        SetActor(selectedActor);
+    }
     public int selectedActorIndex = -1;
     public StatDatabase activeData;
     public ActiveSkill selectedActive;
@@ -57,7 +66,7 @@ public class BasicSkillTrainingUI : MonoBehaviour
         }
     }
 
-    protected void SetActor(TacticActor actor = null)
+    public void SetActor(TacticActor actor = null)
     {
         selectedActor = actor;
         ResetSelection();
@@ -216,13 +225,33 @@ public class BasicSkillTrainingUI : MonoBehaviour
         switch (upgrade)
         {
             case "Energy":
-                return selectedActive.GetEnergyCost() > 0;
+                return CanUpgradeEnergy();
             case "Actions":
-                return selectedActive.GetActionCost() > 0;
+                return CanUpgradeActions();
             case "Power":
                 return selectedActive.CanTrainPower();
         }
         return false;
+    }
+
+    protected bool CanUpgradeEnergy()
+    {
+        if (selectedActive.GetEnergyCost() <= 0)
+        {
+            return false;
+        }
+        int newEnergy = selectedActive.GetEnergyCost() - 1;
+        return !(newEnergy == 0 && selectedActive.GetActionCost() == 0);
+    }
+
+    protected bool CanUpgradeActions()
+    {
+        if (selectedActive.GetActionCost() <= 0)
+        {
+            return false;
+        }
+        int newActions = selectedActive.GetActionCost() - 1;
+        return !(selectedActive.GetEnergyCost() == 0 && newActions == 0);
     }
 
     public void SelectUpgradeFromList()

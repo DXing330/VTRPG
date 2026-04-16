@@ -18,11 +18,9 @@ public class ActiveDescriptionViewer : MonoBehaviour
     {
         string fullDetails = "";
         List<string> effects = spell.GetAllEffects();
-        List<string> specifics = spell.GetAllSpecifics();
-        List<int> powers = spell.GetAllPowers();
         for (int i = 0; i < effects.Count; i++)
         {
-            fullDetails += AED(effects[i], specifics[i], powers[i].ToString());
+            fullDetails += AED(effects[i], spell.GetSpecificsAt(i), spell.GetPowerAt(i).ToString());
             if (i < effects.Count - 1)
             {
                 fullDetails += "\n";
@@ -35,7 +33,7 @@ public class ActiveDescriptionViewer : MonoBehaviour
     }
     public string ReturnActiveDescriptionOnly(ActiveSkill activeSkill)
     {
-        return AED(activeSkill.GetEffect(), activeSkill.GetSpecifics(), activeSkill.GetPower().ToString());
+        return ReturnActiveEffectDescriptions(activeSkill);
     }
     public string ReturnActiveDescriptionFromName(string activeName, TacticActor actor = null)
     {
@@ -44,12 +42,27 @@ public class ActiveDescriptionViewer : MonoBehaviour
     }
     public string ReturnActiveDescription(ActiveSkill activeSkill, TacticActor actor = null, BattleMap map = null)
     {
-        string activeDescription = AED(activeSkill.GetEffect(), activeSkill.GetSpecifics(), activeSkill.GetPower().ToString());
+        string activeDescription = ReturnActiveEffectDescriptions(activeSkill);
         activeDescription += "\n" + "Action Cost: " + activeSkill.GetActionCost(actor, map);
         activeDescription += "\n" + "Energy Cost: " + activeSkill.GetEnergyCost(actor, map);
         // Shape / Span.
         activeDescription += "\n" + "Range: " + activeSkill.GetRangeShape() + "-" + activeSkill.GetRangeString(actor, map);
         activeDescription += "\n" + "Span: " + activeSkill.GetShape() + "-" + activeSkill.GetSpan(actor, map);
+        return activeDescription;
+    }
+
+    protected string ReturnActiveEffectDescriptions(ActiveSkill activeSkill)
+    {
+        string activeDescription = "";
+        List<string> effects = activeSkill.GetAllEffects();
+        for (int i = 0; i < effects.Count; i++)
+        {
+            activeDescription += AED(effects[i], activeSkill.GetSpecificsAt(i), activeSkill.GetPowerAt(i).ToString());
+            if (i < effects.Count - 1)
+            {
+                activeDescription += "\n";
+            }
+        }
         return activeDescription;
     }
 
@@ -237,8 +250,32 @@ public class ActiveDescriptionViewer : MonoBehaviour
                 return "The target(s) turn invisible for " + ASD(s) + " turns";
             case "SupportWeight":
                 return "Gives the target(s) bonus defense and weight equal to your own.";
+            case "NextSkillMod":
+                return "The target(s) next skill gains " + ASD(s) + ".";
+            case "TriggerSkill":
+                return TriggerSkillDescription(s);
         }
         return "The target(s) gain " + ASD(s) + " " + e + ".";
+    }
+
+    protected string TriggerSkillDescription(string triggerData)
+    {
+        string delimiter = "::triggerSkillDelimiter::";
+        string[] triggerDetails = triggerData.Split(new string[] { delimiter }, System.StringSplitOptions.None);
+        if (triggerDetails.Length < 2)
+        {
+            return "Trigger " + ASD(triggerData) + ".";
+        }
+        string skillName = triggerDetails[0];
+        string targetMode = triggerDetails[1];
+        switch (targetMode)
+        {
+            case "Self":
+                return "Trigger " + ASD(skillName) + " targeting self.";
+            case "RandomEnemy":
+                return "Trigger " + ASD(skillName) + " targeting a random enemy in range.";
+        }
+        return "Trigger " + ASD(skillName) + " targeting " + ASD(targetMode) + ".";
     }
 
     // ActiveSpecificsDescription

@@ -54,7 +54,7 @@ public class AttackManagerTester : MonoBehaviour
     public TacticActor dummyGuard;
     public string guardStats;
 
-    protected void InitializeMap()
+    public void InitializeMap()
     {
         map.ForceStart();
         map.combatLog.ForceStart();
