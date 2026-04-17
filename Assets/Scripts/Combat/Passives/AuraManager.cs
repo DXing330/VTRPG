@@ -72,8 +72,8 @@ public class AuraManager : MonoBehaviour
                 return true;
             }
             map.combatLog.UpdateNewestLog(auraTarget.GetPersonalName() + " is consumed by the ritual.");
+            auraTarget.MarkSacrificed();
             auraTarget.SetCurrentHealth(-1);
-            map.battleManager.ActiveDeathPassives(auraTarget);
             map.battlingActors.Remove(auraTarget);
             map.battleManager.SpawnAndAddActor(auraTarget.GetLocation(), aura.GetEffect(), auraTarget.GetTeam());
             map.combatLog.UpdateNewestLog("By offering " + auraTarget.GetPersonalName() + " a " + aura.GetEffect() + " is summoned.");
@@ -113,8 +113,13 @@ public class AuraManager : MonoBehaviour
         if (!aura.TriggerAura("RemoveAura")){return;}
         List<TacticActor> triggeringActors = ReturnActorsInAura(aura);
         // Check for special effects, which don't need an actor, they can change the map directly.
-        if (SpecialAuraEffect(null, aura))
+        if (aura.GetTarget() == "Map" && SpecialAuraEffect(null, aura))
         {
+            return;
+        }
+        if (triggeringActors.Count <= 0 && aura.GetTarget() == "RitualSummon")
+        {
+            SpecialAuraEffect(null, aura);
             return;
         }
         // Otherwise iterate through the actors.

@@ -15,7 +15,11 @@ public class CombatUpgradeTester : MonoBehaviour
     public int forcedAttackerEnergy = -1;
     public int forcedAttackerActions = -1;
     public int triggeredDepthLimitOverride = -1;
+    public bool forceTriggeredSkillDebug = true;
+    public bool clearKnownActivesBeforePreload = false;
     public List<string> preloadNextSkillMods = new List<string>();
+    public List<string> preloadKnownActives = new List<string>();
+    public List<string> preloadSkillHistory = new List<string>();
 
     [Header("Single Skill")]
     public string activeName;
@@ -129,13 +133,24 @@ public class CombatUpgradeTester : MonoBehaviour
             activeManager.triggeredSkillDepthLimit = triggeredDepthLimitOverride;
             AddDebugLine("Applied triggeredDepthLimitOverride=" + triggeredDepthLimitOverride);
         }
-        if (activeManager.triggeredSkillResolver != null)
-        {
-            activeManager.triggeredSkillResolver.ClearDebugMessages();
-        }
+        InitializeTriggeredSkillDebug();
         for (int i = 0; i < preloadNextSkillMods.Count; i++)
         {
             attackTester.dummyAttacker.AddNextSkillMod(preloadNextSkillMods[i]);
+        }
+        if (clearKnownActivesBeforePreload)
+        {
+            attackTester.dummyAttacker.SetActiveSkills(new List<string>());
+            attackTester.dummyAttacker.GetTempActives().Clear();
+            AddDebugLine("Cleared known actives before preload.");
+        }
+        for (int i = 0; i < preloadKnownActives.Count; i++)
+        {
+            attackTester.dummyAttacker.AddActiveSkill(preloadKnownActives[i]);
+        }
+        for (int i = 0; i < preloadSkillHistory.Count; i++)
+        {
+            attackTester.dummyAttacker.skillsUsed.Add(preloadSkillHistory[i]);
         }
         LogState("Initialized");
     }
@@ -154,6 +169,27 @@ public class CombatUpgradeTester : MonoBehaviour
         {
             activeManager = attackTester.activeManager;
         }
+    }
+
+    protected void InitializeTriggeredSkillDebug()
+    {
+        if (activeManager.triggeredSkillResolver == null)
+        {
+            activeManager.triggeredSkillResolver = activeManager.GetComponent<TriggeredSkillResolver>();
+            if (activeManager.triggeredSkillResolver == null)
+            {
+                activeManager.triggeredSkillResolver = activeManager.gameObject.AddComponent<TriggeredSkillResolver>();
+            }
+        }
+        if (forceTriggeredSkillDebug)
+        {
+            activeManager.triggeredSkillResolver.debugTriggeredSkillTargets = true;
+        }
+        activeManager.triggeredSkillResolver.ClearDebugMessages();
+        AddDebugLine("TriggeredSkillDebug"
+            + " | Enabled=" + activeManager.triggeredSkillResolver.debugTriggeredSkillTargets
+            + " | TriggerDelimiter=" + activeManager.triggeredSkillResolver.triggerSkillDelimiter
+            + " | SelectorDelimiter=" + activeManager.triggeredSkillResolver.triggerSelectorDelimiter);
     }
 
     protected void StartDebugReport(string title)
@@ -208,7 +244,9 @@ public class CombatUpgradeTester : MonoBehaviour
             + " | LoadedSkill=" + loadedSkill
             + " | Energy=" + actor.GetEnergy()
             + " | Actions=" + actor.GetActions()
-            + " | NextSkillMods=" + string.Join(",", actor.GetNextSkillMods().ToArray()));
+            + " | NextSkillMods=" + string.Join(",", actor.GetNextSkillMods().ToArray())
+            + " | KnownActives=" + string.Join(",", actor.GetActiveSkills().ToArray())
+            + " | SkillHistory=" + string.Join(",", actor.skillsUsed.ToArray()));
     }
 
     protected void LogTargeting(string label, int selectedTile)

@@ -132,6 +132,10 @@ public class AIConditionChecker : ScriptableObject
                 return map.AllAllies(actor).Count < int.Parse(specifics);
             case "AllyCount>":
                 return map.AllAllies(actor).Count > int.Parse(specifics);
+            case "AllyExists":
+                return map.AllyExists(specifics, actor.GetTeam());
+            case "AllyExists<>":
+                return !map.AllyExists(specifics, actor.GetTeam());
             case "EnemyCount<":
                 return map.AllEnemies(actor).Count < int.Parse(specifics);
             case "EnemyCount>":

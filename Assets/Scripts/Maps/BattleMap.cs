@@ -331,11 +331,20 @@ public class BattleMap : MapManager
         battlingActors.Add(actor);
         UpdateMap();
     }
-    public bool EnemyExists(string spriteName)
+    public bool AllyExists(string spriteName, int team = 0)
     {
         for (int i = 0; i < battlingActors.Count; i++)
         {
-            if (battlingActors[i].GetTeam() == 0){continue;}
+            if (battlingActors[i].GetTeam() != team){continue;}
+            if (battlingActors[i].GetSpriteName() == spriteName){return true;}
+        }
+        return false;
+    }
+    public bool EnemyExists(string spriteName, int team = 0)
+    {
+        for (int i = 0; i < battlingActors.Count; i++)
+        {
+            if (battlingActors[i].GetTeam() == team){continue;}
             if (battlingActors[i].GetSpriteName() == spriteName){return true;}
         }
         return false;
@@ -348,6 +357,57 @@ public class BattleMap : MapManager
     public List<TacticActor> GetDefeatedActors()
     {
         return defeatedActors;
+    }
+    public int ReviveDefeatedActorsBySprite(string spriteName)
+    {
+        int revivedCount = 0;
+        for (int i = defeatedActors.Count - 1; i >= 0; i--)
+        {
+            if (defeatedActors[i].GetSpriteName() != spriteName){continue;}
+            if (ReviveDefeatedActorAtOpenTile(defeatedActors[i]))
+            {
+                defeatedActors.RemoveAt(i);
+                revivedCount++;
+            }
+        }
+        return revivedCount;
+    }
+
+    protected bool ReviveDefeatedActorAtOpenTile(TacticActor actor)
+    {
+        int reviveTile = GetReviveTile(actor.GetLocation());
+        if (reviveTile < 0){return false;}
+        actor.SetLocation(reviveTile);
+        actor.SetCurrentHealth(Mathf.Max(1, actor.GetBaseHealth() / 2));
+        AddActorToBattle(actor);
+        combatLog.UpdateNewestLog(actor.GetPersonalName() + " is revived.");
+        return true;
+    }
+
+    protected int GetReviveTile(int defeatedTile)
+    {
+        if (defeatedTile >= 0 && defeatedTile < mapSize * mapSize && GetActorOnTile(defeatedTile) == null)
+        {
+            return defeatedTile;
+        }
+        List<int> emptyAdjacentTiles = ReturnEmptyAdjacentTiles(defeatedTile);
+        if (emptyAdjacentTiles.Count <= 0){return -1;}
+        return emptyAdjacentTiles[UnityEngine.Random.Range(0, emptyAdjacentTiles.Count)];
+    }
+
+    protected List<int> ReturnEmptyAdjacentTiles(int tileNumber)
+    {
+        List<int> emptyAdjacentTiles = new List<int>();
+        if (tileNumber < 0 || tileNumber >= mapSize * mapSize){return emptyAdjacentTiles;}
+        List<int> adjacentTiles = mapUtility.AdjacentTiles(tileNumber, mapSize);
+        for (int i = 0; i < adjacentTiles.Count; i++)
+        {
+            if (GetActorOnTile(adjacentTiles[i]) == null)
+            {
+                emptyAdjacentTiles.Add(adjacentTiles[i]);
+            }
+        }
+        return emptyAdjacentTiles;
     }
     public List<TacticActor> capturedActors;
     public void CaptureActor(TacticActor actor)
@@ -548,11 +608,19 @@ public class BattleMap : MapManager
                 battlingActors.RemoveAt(i);
                 // If someone whose turn already passed escapes, then the turn count needs to be decremented to avoid skipping someones turn.
                 if (i <= originalTurnNumber) { turnNumber--; }
+                continue;
             }
             if (battlingActors[i].GetHealth() <= 0)
             {
-                // Apply the death passives here.
                 combatLog.UpdateNewestLog(battlingActors[i].GetPersonalName() + " is defeated.");
+                // Don't activate death passives, don't allow revival.
+                if (battlingActors[i].WasSacrificed())
+                {
+                    battlingActors.RemoveAt(i);
+                    if (i <= originalTurnNumber) { turnNumber--; }
+                    continue;
+                }
+                // Apply the death passives here.
                 battleManager.ActiveDeathPassives(battlingActors[i]);
                 defeatedActors.Add(battlingActors[i]);
                 battlingActors.RemoveAt(i);
@@ -1477,7 +1545,7 @@ public class BattleMap : MapManager
         {
             for (int i = attackable.Count - 1; i >= 0; i--)
             {
-                if (!LineOfSightBetweenTiles(startTile, attackable[i]))
+                if (!LineOfSightBetweenTiles(startTile, attackable[i], range))
                 {
                     attackable.RemoveAt(i);
                 }
@@ -1636,7 +1704,7 @@ public class BattleMap : MapManager
     public List<int> GetAdjacentEmptyTiles(int tileNumber)
     {
         List<int> allAdjacent = mapUtility.AdjacentTiles(tileNumber, mapSize);
-        for (int i = 0; i < allAdjacent.Count; i++)
+        for (int i = allAdjacent.Count - 1; i >= 0; i--)
         {
             if (TileNotEmpty(allAdjacent[i]))
             {

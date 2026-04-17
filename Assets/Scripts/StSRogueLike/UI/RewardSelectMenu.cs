@@ -24,12 +24,14 @@ public class RewardSelectMenu : MonoBehaviour
     public void UpdateRewardOptions()
     {
         ResetSelection();
-        for (int i = 0; i < Mathf.Min(rewardOptions.Count, skillDisplayObjects.Count); i++)
+        int displayCount = Mathf.Min(rewardOptions.Count, skillDisplayObjects.Count, skillDisplays.Count);
+        for (int i = 0; i < displayCount; i++)
         {
-            skillDisplayObjects[i].SetActive(true);
             string[] blocks = rewardOptions[i].Split("_");
+            if (blocks.Length < 2){continue;}
             string rarity = rewardData.skillBookRarity.ReturnValue(blocks[1]);
             if (rarity == ""){continue;}
+            skillDisplayObjects[i].SetActive(true);
             skillDisplays[i].SetSkill(blocks[1], blocks[0], int.Parse(rewardData.skillBookRarity.ReturnValue(blocks[1])));
         }
     }

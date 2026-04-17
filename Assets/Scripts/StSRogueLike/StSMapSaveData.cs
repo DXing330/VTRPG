@@ -19,7 +19,8 @@ public class StSMapSaveData : SavedData
         if (pathInfo.Count < 1){return 0;}
         for (int i = 0; i < pathInfo.Count; i++)
         {
-            if (mapInfo[int.Parse(pathInfo[i])] == "Battle")
+            string tileType = mapInfo[int.Parse(pathInfo[i])];
+            if (tileType == "Enemy" || tileType == "Elite" || tileType == "Boss" || tileType == "Battle")
             {
                 count++;
             }
@@ -42,7 +43,13 @@ public class StSMapSaveData : SavedData
     public override void Load()
     {
         dataPath = Application.persistentDataPath + "/" + filename;
-        if (!File.Exists(dataPath)){return;}
+        if (!File.Exists(dataPath))
+        {
+            allData = "";
+            mapInfo = new List<string>();
+            pathInfo = new List<string>();
+            return;
+        }
         allData = File.ReadAllText(dataPath);
         dataList = allData.Split(delimiter).ToList();
         for (int i = 0; i < dataList.Count; i++)

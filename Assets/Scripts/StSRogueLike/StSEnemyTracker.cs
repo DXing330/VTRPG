@@ -21,6 +21,7 @@ public class StSEnemyTracker : SavedData
     public List<string> defaultAllies;
     public string previousElite;
     public string floorBoss;
+    protected const string defaultEasyEnemyName = "Wolves";
 
     public override void NewGame()
     {
@@ -45,12 +46,14 @@ public class StSEnemyTracker : SavedData
     public string RandomNewBoss()
     {
         int floor = stsState.GetFloor();
-        string newBoss = floorBosses[floor - 1].ReturnKeyAtIndex(enemyRNGSeed.Range(0, floorBosses[floor - 1].keys.Count));
-        if (newBoss != floorBoss)
+        List<string> bossCandidates = floorBosses[floor - 1].GetAllKeys();
+        bossCandidates.Remove(floorBoss);
+        if (bossCandidates.Count <= 0)
         {
-            return newBoss;
+            Debug.LogWarning("No alternate StS boss available for floor " + floor + ".");
+            return floorBoss;
         }
-        return RandomNewBoss();
+        return bossCandidates[enemyRNGSeed.Range(0, bossCandidates.Count)];
     }
 
     public List<string> GetBossData(bool additional = false)
@@ -86,7 +89,13 @@ public class StSEnemyTracker : SavedData
     public string GetEnemyData(string enemyName)
     {
         int floor = stsState.GetFloor();
-        return floorEnemies[floor - 1].ReturnValue(enemyName);
+        string enemyData = floorEnemies[floor - 1].ReturnValue(enemyName);
+        if (enemyData != ""){return enemyData;}
+        if (floorEnemies.Count > 0 && floorEnemies[0].KeyExists(defaultEasyEnemyName))
+        {
+            return floorEnemies[0].ReturnValue(defaultEasyEnemyName);
+        }
+        return "";
     }
 
     public string GetEnemyName()
@@ -100,18 +109,31 @@ public class StSEnemyTracker : SavedData
         List<string> possibleEnemies = new List<string>();
         for (int i = 0; i < enemyPool.Count; i++)
         {
-            if (int.Parse(floorEnemyDifficulties[floor - 1].ReturnValue(enemyPool[i])) == difficulty)
+            int enemyDifficulty = 0;
+            if (!int.TryParse(floorEnemyDifficulties[floor - 1].ReturnValue(enemyPool[i]), out enemyDifficulty)){continue;}
+            if (enemyDifficulty == difficulty)
             {
                 possibleEnemies.Add(enemyPool[i]);
             }
         }
-        if (possibleEnemies.Count <= 0 && difficulty <= 0)
+        if (possibleEnemies.Count <= 0)
         {
-            return enemyPool[enemyRNGSeed.Range(0, enemyPool.Count)];
+            possibleEnemies = new List<string>(enemyPool);
+        }
+        if (possibleEnemies.Count <= 0)
+        {
+            possibleEnemies = floorEnemies[floor - 1].GetAllKeys();
+        }
+        if (possibleEnemies.Count <= 0)
+        {
+            return defaultEasyEnemyName;
         }
         string enemyName = possibleEnemies[enemyRNGSeed.Range(0, possibleEnemies.Count)];
-        enemyPool.Remove(enemyName);
-        Save();
+        if (enemyPool.Contains(enemyName))
+        {
+            enemyPool.Remove(enemyName);
+            Save();
+        }
         return enemyName;
     }
 

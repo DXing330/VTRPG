@@ -66,6 +66,15 @@ public class StSState : SavedState
     public override void Load()
     {
         dataPath = Application.persistentDataPath + "/" + filename;
+        if (!File.Exists(dataPath))
+        {
+            newGame = 1;
+            floor = 1;
+            state = "";
+            previousState = "";
+            allData = "";
+            return;
+        }
         allData = File.ReadAllText(dataPath);
         string[] dataBlocks = allData.Split(delimiter);
         for (int i = 0; i < dataBlocks.Length; i++)

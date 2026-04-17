@@ -221,11 +221,15 @@ public class ActiveManager : MonoBehaviour
                 }
                 return;
             case "TributeSummon":
+                if (targetedTiles.Count <= 0){return;}
+                TacticActor tributeActor = battle.map.GetActorOnTile(targetedTiles[0]);
+                if (tributeActor == null || tributeActor.GetTeam() != skillUser.GetTeam()){return;}
                 // Create a new actor on that location on the same team.
-                battle.SpawnAndAddActor(selectedTile, specifics, skillUser.GetTeam(), skillUser);
-                // Kill yourself as tribute.
-                skillUser.SetCurrentHealth(0);
-                skillUser.ResetActions();
+                battle.SpawnAndAddActor(targetedTiles[0], specifics, skillUser.GetTeam(), skillUser);
+                // Kill the targeted ally as tribute.
+                tributeActor.MarkSacrificed();
+                tributeActor.SetCurrentHealth(0);
+                tributeActor.ResetActions();
                 return;
             case "MassSummon":
                 for (int i = 0; i < targetedTiles.Count; i++)
@@ -255,6 +259,9 @@ public class ActiveManager : MonoBehaviour
                         battle.SpawnAndAddActor(targetedTiles[i], randomPool[UnityEngine.Random.Range(0, randomPool.Length)], skillUser.GetTeam(), skillUser);
                     }
                 }
+                return;
+            case "Revive":
+                battle.map.ReviveDefeatedActorsBySprite(specifics);
                 return;
             case "Summon Enemy":
                 // Check if selected tile is free.

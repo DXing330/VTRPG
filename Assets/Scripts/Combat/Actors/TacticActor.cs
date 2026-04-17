@@ -7,6 +7,7 @@ using UnityEngine;
 
 public class TacticActor : ActorStats
 {
+    // Skill modifiers.
     public List<string> nextSkillMods = new List<string>();
     public void AddNextSkillMod(string mod)
     {
@@ -39,7 +40,7 @@ public class TacticActor : ActorStats
         return nextSkillMods != null && nextSkillMods.Count > 0;
     }
 
-    // EQUIPMENT STUFF.
+    // Equipment.
     public void ResetEquipment()
     {
         ResetWeapon();
@@ -91,11 +92,36 @@ public class TacticActor : ActorStats
     public string armorStats;
     public void SetArmorStats(string newInfo){armorStats = newInfo;}
     public string GetArmorStats(){return armorStats;}
+
+    // Actor identity and battle membership.
     public GameObject actorObject;
     public void DestroyActor(){DestroyImmediate(actorObject);}
+    protected bool sacrificed;
+    public void MarkSacrificed(){sacrificed = true;}
+    public bool WasSacrificed(){return sacrificed;}
+    public void ResetSacrificed(){sacrificed = false;}
     public int team;
     public int GetTeam(){return team;}
     public void SetTeam(int newTeam){team = newTeam;}
+    public string personalName;
+    public void SetPersonalName(string newName){personalName = newName;}
+    public string GetPersonalName()
+    {
+        if (personalName.Length <= 0){return GetSpriteName();}
+        return personalName;
+    }
+    // Used mainly for enemy AI.
+    public int counter = 0;
+    public void ResetCounter(){counter = 0;}
+    public void UpdateCounter(int changeAmount)
+    {
+        counter += changeAmount;
+    }
+    public void IncrementCounter(){counter++;}
+    public void SetCounter(int newInfo){counter = newInfo;}
+    public int GetCounter(){return counter;}
+
+    // Actions.
     public int baseActions = 2;
     public void UpdateBaseActions(int amount){baseActions += amount;}
     public int GetBaseActions() { return baseActions; }
@@ -103,7 +129,6 @@ public class TacticActor : ActorStats
     public int actions;
     public void SetActions(int newActions){actions = newActions;}
     public void ResetActions(){actions = 0;}
-    // AAA
     public void AdjustActionAmount(int change){actions += change;}
     public void SpendAction(int actionCost = 1)
     {
@@ -134,6 +159,8 @@ public class TacticActor : ActorStats
         SpendAction(attackActionCost);
     }
     public bool ActionsLeft(){return actions > 0;}
+
+    // Movement.
     public int movement;
     public int GetMovement(){return movement + tempMovement;}
     protected void MoveAction()
@@ -173,6 +200,8 @@ public class TacticActor : ActorStats
             }
         }
     }
+
+    // Counterattacks.
     public int counterAttacks;
     public void GainCounterAttacks(int amount = 1)
     {
@@ -185,6 +214,20 @@ public class TacticActor : ActorStats
     public void UseCounterAttack()
     {
         counterAttacks--;
+    }
+
+    // Turn lifecycle.
+    public override void InitializeStats()
+    {
+        base.InitializeStats();
+        currentEnergy = GetBaseEnergy();
+        ClearNextSkillMods();
+        ResetMentalState();
+        ResetTarget();
+        ResetHurtBy();
+        ResetRoundTrackers();
+        ResetSummonTrackers();
+        ResetSacrificed();
     }
     public override void ResetStats()
     {
@@ -212,6 +255,26 @@ public class TacticActor : ActorStats
         // Pay for any summons. Pay for auras?
         ControlSummonedActors();
     }
+    protected override void EndTurnResetStats()
+    {
+        base.EndTurnResetStats();
+        ResetTempMovement();
+        ResetBonusActions();
+    }
+    public void EndTurn()
+    {
+        tempMovement = 0;
+        // Allow some slight turn manipulation by saving your actions.
+        /*if (actions > 0)
+        {
+            UpdateTempInitiative(actions * 2);
+            ResetActions();
+        }*/
+        EndTurnResetStats();
+        UpdateMentalState();
+        CheckBuffDuration();
+        CheckStatusDuration();
+    }
     public int GetMoveRangeBasedOnActions(int actionCount)
     {
         return (movement + (GetSpeed() * actionCount));
@@ -238,29 +301,16 @@ public class TacticActor : ActorStats
         }
         return (movement + (GetMoveSpeed() * (baseActions - attackActionCost)));
     }
-    public string personalName;
-    public void SetPersonalName(string newName){personalName = newName;}
-    public string GetPersonalName()
-    {
-        if (personalName.Length <= 0){return GetSpriteName();}
-        return personalName;
-    }
-    // Used mainly for enemy AI
-    public int counter = 0;
-    public void ResetCounter(){counter = 0;}
-    public void UpdateCounter(int changeAmount)
-    {
-        counter += changeAmount;
-    }
-    public void IncrementCounter(){counter++;}
-    public void SetCounter(int newInfo){counter = newInfo;}
-    public int GetCounter(){return counter;}
+
+    // Map position and facing.
     public int location;
     public void SetLocation(int newLocation){location = newLocation;}
     public int GetLocation(){return location;}
     public int direction;
     public int GetDirection(){return direction;}
     public void SetDirection(int newDirection){direction = newDirection;}
+
+    // Mental state.
     protected string immuneMentalState = "Calm";
     public string mentalState;
     public int mentalStateDuration = 0;
@@ -306,6 +356,7 @@ public class TacticActor : ActorStats
         mentalStateDuration = duration;
     }
     public string GetMentalState(){ return mentalState; }
+
     // Keep track of skills/spells used, movement and attacks.
     protected void ResetRoundTrackers()
     {
@@ -329,6 +380,8 @@ public class TacticActor : ActorStats
         locationsEachRound.Add(GetLocation());
         healthEachRound.Add(GetHealth());
     }
+
+    // Location and health history.
     public List<int> locationsEachRound;
     public void ResetLocationTracker()
     {
@@ -365,6 +418,8 @@ public class TacticActor : ActorStats
     {
         return healthEachRound[0];
     }
+
+    // Action history.
     public List<int> actionsEachRound;
     public void ResetRoundActionTracker()
     {
@@ -404,6 +459,8 @@ public class TacticActor : ActorStats
         }
         return actionsEachRound.Sum();
     }
+
+    // Attack history.
     public List<int> attacksEachRound;
     public void ResetRoundAttackTracker()
     {
@@ -433,6 +490,8 @@ public class TacticActor : ActorStats
     {
         return attacksEachRound.Sum();
     }
+
+    // Defense history.
     public List<int> defendsEachRound;
     public void ResetRoundDefendTracker()
     {
@@ -462,6 +521,8 @@ public class TacticActor : ActorStats
     {
         return defendsEachRound.Sum();
     }
+
+    // Skill history.
     public List<int> skillsEachRound;
     public List<string> skillsUsed;
     public bool SkillUsedAlready(string skillName)
@@ -498,7 +559,8 @@ public class TacticActor : ActorStats
     }
     public string ReturnMostUsedSkill()
     {
-        return "";
+        if (skillsUsed == null || skillsUsed.Count <= 0){return "";}
+        return skillsUsed.GroupBy(s => s).OrderByDescending(g => g.Count()).First().Key;
     }
     public string ReturnMostRecentSkill()
     {
@@ -536,6 +598,8 @@ public class TacticActor : ActorStats
     {
         return skillsEachRound.Sum();
     }
+
+    // Spell history.
     public List<int> spellsEachRound;
     public List<string> spellsUsed;
     public List<string> tempSpellsUsed;
@@ -592,6 +656,8 @@ public class TacticActor : ActorStats
         if (spellsEachRound == null){return 0;}
         return spellsEachRound.Sum();
     }
+
+    // Move history.
     public List<int> movesEachRound;
     public void ResetRoundMoveTracker()
     {
@@ -621,6 +687,7 @@ public class TacticActor : ActorStats
     {
         return movesEachRound.Sum();
     }
+
     // Keep track of who hurt you, how many times and how much.
     public List<TacticActor> hurtByList;
     public List<int> hurtCount;
@@ -723,6 +790,8 @@ public class TacticActor : ActorStats
         }
         return hurtByList[index];
     }
+
+    // Targeting.
     public TacticActor target;
     public void ResetTarget(){ target = null; }
     public void SetTarget(TacticActor newTarget) { target = newTarget; }
@@ -742,6 +811,8 @@ public class TacticActor : ActorStats
         if (target.invisible){return false;}
         return true;
     }
+
+    // Grappling.
     public TacticActor grappledActor;
     public TacticActor GetGrappledActor(){return grappledActor;}
     public void ResetGrappledActor(){grappledActor = null;}
@@ -824,6 +895,8 @@ public class TacticActor : ActorStats
         }
         return false;
     }
+
+    // Summons.
     protected void ResetSummonTrackers()
     {
         summoned = false;
@@ -874,38 +947,8 @@ public class TacticActor : ActorStats
             }
         }
     }
-    // For organization purposes.
-    public override void InitializeStats()
-    {
-        base.InitializeStats();
-        currentEnergy = GetBaseEnergy();
-        ClearNextSkillMods();
-        ResetMentalState();
-        ResetTarget();
-        ResetHurtBy();
-        ResetRoundTrackers();
-        ResetSummonTrackers();
-    }
-    protected override void EndTurnResetStats()
-    {
-        base.EndTurnResetStats();
-        ResetTempMovement();
-        ResetBonusActions();
-    }
-    public void EndTurn()
-    {
-        tempMovement = 0;
-        // Allow some slight turn manipulation by saving your actions.
-        /*if (actions > 0)
-        {
-            UpdateTempInitiative(actions * 2);
-            ResetActions();
-        }*/
-        EndTurnResetStats();
-        UpdateMentalState();
-        CheckBuffDuration();
-        CheckStatusDuration();
-    }
+
+    // Save/load stat summaries.
     public List<string> ReturnSpendableStats()
     {
         List<string> stats = new List<string>();

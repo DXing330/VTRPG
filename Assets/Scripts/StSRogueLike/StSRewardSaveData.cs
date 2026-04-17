@@ -78,12 +78,12 @@ public class StSRewardSaveData : SavedData
             break;
         }
     }
-    protected int DetermineRewardRarity(List<int> rarityWeights)
+    public int DetermineRewardRarity(List<int> rarityWeights)
     {
         int index = utility.ReturnIndexBasedOnWeight(rarityWeights, rewardSeed.Range(0, rarityWeights.Sum()));
         return (index + 1);
     }
-    protected string GetRewardOfRarity(int rarity, List<string> rewards, List<int> rewardRarities)
+    public string GetRewardOfRarity(int rarity, List<string> rewards, List<int> rewardRarities)
     {
         // Probably works.
         for (int i = 0; i < rewards.Count * 2; i++)

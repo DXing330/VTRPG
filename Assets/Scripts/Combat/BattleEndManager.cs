@@ -37,7 +37,7 @@ public class BattleEndManager : MonoBehaviour
             return map.CapturedActor(specifics);
             // Check that you've defeated all the required enemy types.
             case "Defeat":
-            return map.EnemyExists(specifics);
+            return !map.EnemyExists(specifics);
         }
     }
 

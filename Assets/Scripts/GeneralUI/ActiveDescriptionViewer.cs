@@ -143,6 +143,8 @@ public class ActiveDescriptionViewer : MonoBehaviour
                 return "Randomly summon one of the following: " + ASD(s) + ".";
             case "MassRandomSummon":
                 return "Randomly summon the following: " + ASD(s) + ".";
+            case "Revive":
+                return "Revive defeated " + ASD(s) + "(s).";
             case "Summon Enemy":
                 return "Create a " + ASD(s) + ".";
             case "TerrainEffect":
@@ -260,22 +262,54 @@ public class ActiveDescriptionViewer : MonoBehaviour
 
     protected string TriggerSkillDescription(string triggerData)
     {
-        string delimiter = "::triggerSkillDelimiter::";
+        string delimiter = "::trig::";
+        string legacyDelimiter = "::triggerSkillDelimiter::";
+        string selectorDelimiter = "::sel::";
         string[] triggerDetails = triggerData.Split(new string[] { delimiter }, System.StringSplitOptions.None);
+        if (triggerDetails.Length < 2)
+        {
+            triggerDetails = triggerData.Split(new string[] { legacyDelimiter }, System.StringSplitOptions.None);
+        }
         if (triggerDetails.Length < 2)
         {
             return "Trigger " + ASD(triggerData) + ".";
         }
-        string skillName = triggerDetails[0];
+        string selectorDescription = TriggerSelectorDescription(triggerDetails[0], selectorDelimiter);
         string targetMode = triggerDetails[1];
         switch (targetMode)
         {
             case "Self":
-                return "Trigger " + ASD(skillName) + " targeting self.";
+                return "Trigger " + selectorDescription + " targeting self.";
             case "RandomEnemy":
-                return "Trigger " + ASD(skillName) + " targeting a random enemy in range.";
+                return "Trigger " + selectorDescription + " targeting a random enemy in range.";
         }
-        return "Trigger " + ASD(skillName) + " targeting " + ASD(targetMode) + ".";
+        return "Trigger " + selectorDescription + " targeting " + ASD(targetMode) + ".";
+    }
+
+    protected string TriggerSelectorDescription(string selectorData, string selectorDelimiter)
+    {
+        string selectorType = selectorData;
+        string selectorSpecifics = "";
+        string[] selectorDetails = selectorData.Split(new string[] { selectorDelimiter }, System.StringSplitOptions.None);
+        if (selectorDetails.Length >= 2)
+        {
+            selectorType = selectorDetails[0];
+            selectorSpecifics = selectorDetails[1];
+        }
+        switch (selectorType)
+        {
+            case "Fixed":
+                return ASD(selectorSpecifics);
+            case "LastUsed":
+                return "the last used skill";
+            case "MostUsed":
+                return "the most used skill";
+            case "RandomKnown":
+                return "a random known skill";
+            case "RandomType":
+                return "a random " + ASD(selectorSpecifics) + " skill";
+        }
+        return ASD(selectorData);
     }
 
     // ActiveSpecificsDescription

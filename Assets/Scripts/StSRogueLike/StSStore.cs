@@ -1,10 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using TMPro;
 
-// Roguelike shop scene. Reads pre-generated shop state and only mutates in-memory data while inside the scene.
+// Roguelike shop scene. Reads pre-generated shop state and mutates only in-memory data while inside the scene.
 // Saving should happen only when leaving through StSStateManager.
 public class StSStore : MonoBehaviour
 {
@@ -13,8 +12,10 @@ public class StSStore : MonoBehaviour
     public StSStateManager stsManager;
     public StSShopSaveData shopData;
     public StSRewardSaveData rewardData;
-    public InventoryUI inventoryUI;
     public ItemDetailViewer itemDetailViewer;
+    public SpriteContainer itemSprites;
+    public SpriteContainer relicSprites;
+    public Sprite priestServiceSprite;
 
     // --- Skillbook Data ---
     public StatDatabase skillBookData;
@@ -23,31 +24,29 @@ public class StSStore : MonoBehaviour
     public ActiveDescriptionViewer activeDetailViewer;
     public SpellDetailViewer spellDetailViewer;
 
-    // --- General UI ---
+    // --- Shared Left Panel ---
     public TMP_Text goldText;
-    public TMP_Text selectedSectionText;
     public TMP_Text selectedNameText;
     public TMP_Text selectedPriceText;
     public TMP_Text selectedDescriptionText;
     public GameObject buyButtonObject;
 
-    // --- Book Sections ---
-    public SelectStatTextList normalBookDisplay;
-    public SelectStatTextList rareBookDisplay;
-    public SelectStatTextList colorlessBookDisplay;
-
-    // --- Item / Relic Sections ---
-    public SelectStatTextList consumableDisplay;
-    public SelectStatTextList relicDisplay;
+    // --- Fixed Shop Slots ---
+    public List<ShopSkillBookSlotDisplay> bookSlots;
+    public List<ShopTextSlotDisplay> consumableSlots;
+    public List<ShopTextSlotDisplay> relicSlots;
 
     // --- Priest Service ---
-    public GameObject priestServiceObject;
-    public TMP_Text priestServicePriceText;
+    public ShopTextSlotDisplay priestServiceSlot;
     public SelectList priestActorSelect;
     public SelectList priestInjurySelect;
-    public TMP_Text priestServiceDescriptionText;
-    public GameObject priestBuyButtonObject;
     public List<string> removableInjuries;
+
+    // --- Runtime Sold State ---
+    protected List<bool> bookSold = new List<bool>();
+    protected List<bool> consumableSold = new List<bool>();
+    protected List<bool> relicSold = new List<bool>();
+    protected bool priestServiceUsed = false;
 
     // --- Current Selection State ---
     public string selectedSection = "";
@@ -61,29 +60,36 @@ public class StSStore : MonoBehaviour
     // --- Scene Setup ---
     protected void LoadStore()
     {
+        ResetRuntimeSoldState();
         ResetSelection();
         UpdateAllDisplays();
-        UpdatePriestSection();
     }
 
-    protected void ResetSelection()
+    protected void ResetRuntimeSoldState()
     {
-        selectedSection = "";
-        selectedIndex = -1;
-        if (normalBookDisplay != null){normalBookDisplay.ResetSelected();}
-        if (rareBookDisplay != null){rareBookDisplay.ResetSelected();}
-        if (colorlessBookDisplay != null){colorlessBookDisplay.ResetSelected();}
-        if (consumableDisplay != null){consumableDisplay.ResetSelected();}
-        if (relicDisplay != null){relicDisplay.ResetSelected();}
-        UpdateSelectionDisplay();
+        bookSold = NewFalseList(shopData != null ? shopData.books.Count : 0);
+        consumableSold = NewFalseList(shopData != null ? shopData.consumables.Count : 0);
+        relicSold = NewFalseList(shopData != null ? shopData.relics.Count : 0);
+        priestServiceUsed = false;
+    }
+
+    protected List<bool> NewFalseList(int count)
+    {
+        List<bool> values = new List<bool>();
+        for (int i = 0; i < count; i++)
+        {
+            values.Add(false);
+        }
+        return values;
     }
 
     protected void UpdateAllDisplays()
     {
         UpdateGoldDisplay();
-        UpdateBookDisplays();
-        UpdateItemDisplays();
-        UpdateRelicDisplay();
+        UpdateBookSlots();
+        UpdateTextSlots(consumableSlots, shopData.consumables, shopData.consumablePrices, consumableSold, "Consumable");
+        UpdateTextSlots(relicSlots, shopData.relics, shopData.relicPrices, relicSold, "Relic");
+        UpdatePriestServiceSlot();
         UpdateSelectionDisplay();
     }
 
@@ -91,165 +97,157 @@ public class StSStore : MonoBehaviour
     {
         if (goldText == null || partyData == null){return;}
         goldText.text = partyData.inventory.GetGold().ToString();
-        if (inventoryUI != null)
-        {
-            inventoryUI.UpdateKeyValues();
-        }
     }
 
-    // --- Book Display ---
-    protected void UpdateBookDisplays()
+    // --- Slot Population ---
+    protected void UpdateBookSlots()
     {
-        if (normalBookDisplay != null)
+        if (bookSlots == null || shopData == null){return;}
+        for (int i = 0; i < bookSlots.Count; i++)
         {
-            normalBookDisplay.SetStatsAndData(BuildDisplayStats(shopData.normalBooks, shopData.normalBookSold), BuildDisplayPrices(shopData.normalBookPrices, shopData.normalBookSold));
-        }
-        if (rareBookDisplay != null)
-        {
-            rareBookDisplay.SetStatsAndData(BuildDisplayStats(shopData.rareBooks, shopData.rareBookSold), BuildDisplayPrices(shopData.rareBookPrices, shopData.rareBookSold));
-        }
-        if (colorlessBookDisplay != null)
-        {
-            colorlessBookDisplay.SetStatsAndData(BuildDisplayStats(shopData.colorlessBooks, shopData.colorlessBookSold), BuildDisplayPrices(shopData.colorlessBookPrices, shopData.colorlessBookSold));
-        }
-    }
-
-    // --- Item / Relic Display ---
-    protected void UpdateItemDisplays()
-    {
-        if (consumableDisplay != null)
-        {
-            consumableDisplay.SetStatsAndData(BuildDisplayStats(shopData.consumables, shopData.consumableSold), BuildDisplayPrices(shopData.consumablePrices, shopData.consumableSold));
-        }
-    }
-
-    protected void UpdateRelicDisplay()
-    {
-        if (relicDisplay != null)
-        {
-            relicDisplay.SetStatsAndData(BuildDisplayStats(shopData.relics, shopData.relicSold), BuildDisplayPrices(shopData.relicPrices, shopData.relicSold));
-        }
-    }
-
-    protected List<string> BuildDisplayStats(List<string> names, List<string> soldFlags)
-    {
-        List<string> display = new List<string>();
-        for (int i = 0; i < names.Count; i++)
-        {
-            if (IsSold(soldFlags, i))
+            if (bookSlots[i] == null){continue;}
+            bookSlots[i].store = this;
+            bookSlots[i].index = i;
+            if (IndexValid(shopData.books, i))
             {
-                display.Add(names[i] + " (Sold)");
+                bool sold = IsRuntimeSold(bookSold, i);
+                bookSlots[i].gameObject.SetActive(!sold);
+                bookSlots[i].SetSlot(shopData.books[i], ReturnPriceText(shopData.bookPrices, i), sold, BookIsColorless(shopData.books[i]));
             }
             else
             {
-                display.Add(names[i]);
+                bookSlots[i].ResetSlot();
+                bookSlots[i].gameObject.SetActive(false);
             }
         }
-        return display;
     }
 
-    protected List<string> BuildDisplayPrices(List<string> prices, List<string> soldFlags)
+    protected void UpdateTextSlots(List<ShopTextSlotDisplay> slots, List<string> names, List<string> prices, List<bool> soldFlags, string section)
     {
-        List<string> display = new List<string>();
-        for (int i = 0; i < prices.Count; i++)
+        if (slots == null){return;}
+        for (int i = 0; i < slots.Count; i++)
         {
-            if (IsSold(soldFlags, i))
+            if (slots[i] == null){continue;}
+            slots[i].store = this;
+            slots[i].section = section;
+            slots[i].index = i;
+            if (IndexValid(names, i))
             {
-                display.Add("Sold");
+                bool sold = IsRuntimeSold(soldFlags, i);
+                slots[i].gameObject.SetActive(!sold);
+                slots[i].SetSlot(names[i], ReturnPriceText(prices, i), sold, ReturnSlotIcon(section, names[i]));
             }
             else
             {
-                display.Add(prices[i]);
+                slots[i].ResetSlot();
+                slots[i].gameObject.SetActive(false);
             }
         }
-        return display;
     }
 
-    // --- Section Selection ---
-    public void SelectNormalBook()
+    protected void UpdatePriestServiceSlot()
     {
-        SelectSection("NormalBook", normalBookDisplay != null ? normalBookDisplay.GetSelected() : -1);
+        if (priestServiceSlot == null){return;}
+        priestServiceSlot.gameObject.SetActive(shopData != null && !priestServiceUsed);
+        priestServiceSlot.store = this;
+        priestServiceSlot.section = "PriestService";
+        priestServiceSlot.index = 0;
+        priestServiceSlot.SetSlot("Restore Injury", shopData != null ? shopData.priestServicePrice : "", priestServiceUsed, priestServiceSprite);
+        if (priestActorSelect != null && partyData != null)
+        {
+            priestActorSelect.SetSelectables(partyData.GetAllPartyNames());
+        }
+        UpdatePriestInjuries();
     }
 
-    public void SelectRareBook()
-    {
-        SelectSection("RareBook", rareBookDisplay != null ? rareBookDisplay.GetSelected() : -1);
-    }
-
-    public void SelectColorlessBook()
-    {
-        SelectSection("ColorlessBook", colorlessBookDisplay != null ? colorlessBookDisplay.GetSelected() : -1);
-    }
-
-    public void SelectConsumable()
-    {
-        SelectSection("Consumable", consumableDisplay != null ? consumableDisplay.GetSelected() : -1);
-    }
-
-    public void SelectRelic()
-    {
-        SelectSection("Relic", relicDisplay != null ? relicDisplay.GetSelected() : -1);
-    }
-
-    protected void SelectSection(string section, int index)
+    // --- Selection Entry Point ---
+    public void SelectSlot(string section, int index)
     {
         selectedSection = section;
         selectedIndex = index;
         UpdateSelectionDisplay();
     }
 
+    protected void ResetSelection()
+    {
+        selectedSection = "";
+        selectedIndex = -1;
+        ClearHighlights();
+        UpdateSelectionDisplay();
+    }
+
+    protected void ClearHighlights()
+    {
+        SetBookHighlights(-1);
+        SetTextHighlights(consumableSlots, -1);
+        SetTextHighlights(relicSlots, -1);
+        if (priestServiceSlot != null){priestServiceSlot.SetHighlighted(false);}
+    }
+
     protected void UpdateSelectionDisplay()
     {
-        if (selectedSectionText != null){selectedSectionText.text = selectedSection;}
-        if (selectedNameText != null){selectedNameText.text = "";}
-        if (selectedPriceText != null){selectedPriceText.text = "";}
-        if (selectedDescriptionText != null){selectedDescriptionText.text = "";}
-        if (buyButtonObject != null){buyButtonObject.SetActive(false);}
-
+        ClearHighlights();
+        ClearLeftPanel();
         if (selectedIndex < 0){return;}
 
         switch (selectedSection)
         {
-            case "NormalBook":
-            UpdateBookSelection(shopData.normalBooks, shopData.normalBookPrices, shopData.normalBookSold, false);
-            return;
-            case "RareBook":
-            UpdateBookSelection(shopData.rareBooks, shopData.rareBookPrices, shopData.rareBookSold, false);
-            return;
-            case "ColorlessBook":
-            UpdateBookSelection(shopData.colorlessBooks, shopData.colorlessBookPrices, shopData.colorlessBookSold, true);
+            case "Book":
+            SetBookHighlights(selectedIndex);
+            UpdateBookSelection();
             return;
             case "Consumable":
+            SetTextHighlights(consumableSlots, selectedIndex);
             UpdateConsumableSelection();
             return;
             case "Relic":
+            SetTextHighlights(relicSlots, selectedIndex);
             UpdateRelicSelection();
             return;
+            case "PriestService":
+            if (priestServiceSlot != null){priestServiceSlot.SetHighlighted(true);}
+            UpdatePriestSelection();
+            return;
+        }
+    }
+
+    protected void ClearLeftPanel()
+    {
+        if (selectedNameText != null){selectedNameText.text = "";}
+        if (selectedPriceText != null){selectedPriceText.text = "";}
+        if (selectedDescriptionText != null){selectedDescriptionText.text = "";}
+        if (buyButtonObject != null){buyButtonObject.SetActive(false);}
+    }
+
+    protected void SetBookHighlights(int index)
+    {
+        if (bookSlots == null){return;}
+        for (int i = 0; i < bookSlots.Count; i++)
+        {
+            if (bookSlots[i] != null){bookSlots[i].SetHighlighted(i == index);}
+        }
+    }
+
+    protected void SetTextHighlights(List<ShopTextSlotDisplay> slots, int index)
+    {
+        if (slots == null){return;}
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (slots[i] != null){slots[i].SetHighlighted(i == index);}
         }
     }
 
     // --- Book Detail Display ---
-    protected void UpdateBookSelection(List<string> books, List<string> prices, List<string> soldFlags, bool colorless)
+    protected void UpdateBookSelection()
     {
-        if (!IndexValid(books, selectedIndex)){return;}
-        string bookName = books[selectedIndex];
-        if (selectedNameText != null){selectedNameText.text = bookName;}
-        if (selectedPriceText != null){selectedPriceText.text = ReturnPriceText(prices, selectedIndex);}
-        if (selectedDescriptionText != null)
-        {
-            selectedDescriptionText.text = ReturnSkillBookDescription(bookName, colorless);
-        }
-        if (buyButtonObject != null)
-        {
-            buyButtonObject.SetActive(!IsSold(soldFlags, selectedIndex));
-        }
+        if (!IndexValid(shopData.books, selectedIndex)){return;}
+        string bookName = shopData.books[selectedIndex];
+        SetLeftPanel("Book", bookName, ReturnPriceText(shopData.bookPrices, selectedIndex), ReturnSkillBookDescription(bookName), !IsRuntimeSold(bookSold, selectedIndex));
     }
 
-    protected string ReturnSkillBookDescription(string bookName, bool colorless)
+    protected string ReturnSkillBookDescription(string bookName)
     {
-        StatDatabase sourceData = colorless ? colorlessSkillBookData : skillBookData;
-        if (sourceData == null){return "";}
-        string bookData = sourceData.ReturnValue(bookName);
+        string bookData = ReturnSkillBookData(bookName);
         if (bookData == ""){return "";}
         string[] blocks = bookData.Split("_");
         if (blocks.Length < 2){return bookName;}
@@ -267,160 +265,80 @@ public class StSStore : MonoBehaviour
         return skillName;
     }
 
+    protected string ReturnSkillBookData(string bookName)
+    {
+        if (skillBookData != null)
+        {
+            string normalData = skillBookData.ReturnValue(bookName);
+            if (normalData != ""){return normalData;}
+        }
+        if (colorlessSkillBookData != null)
+        {
+            return colorlessSkillBookData.ReturnValue(bookName);
+        }
+        return "";
+    }
+
+    protected bool BookIsColorless(string bookName)
+    {
+        if (skillBookData != null && skillBookData.ReturnValue(bookName) != "")
+        {
+            return false;
+        }
+        return colorlessSkillBookData != null && colorlessSkillBookData.ReturnValue(bookName) != "";
+    }
+
     // --- Item / Relic Detail Display ---
     protected void UpdateConsumableSelection()
     {
         if (!IndexValid(shopData.consumables, selectedIndex)){return;}
         string itemName = shopData.consumables[selectedIndex];
-        if (selectedNameText != null){selectedNameText.text = itemName;}
-        if (selectedPriceText != null){selectedPriceText.text = ReturnPriceText(shopData.consumablePrices, selectedIndex);}
-        if (selectedDescriptionText != null && itemDetailViewer != null)
+        string description = itemName;
+        if (itemDetailViewer != null)
         {
             itemDetailViewer.ViewItem();
             itemDetailViewer.ShowInfo(itemName);
-            selectedDescriptionText.text = itemDetailViewer.itemInfo.text;
+            description = itemDetailViewer.itemInfo.text;
         }
-        if (buyButtonObject != null)
-        {
-            buyButtonObject.SetActive(!IsSold(shopData.consumableSold, selectedIndex));
-        }
+        SetLeftPanel("Consumable", itemName, ReturnPriceText(shopData.consumablePrices, selectedIndex), description, !IsRuntimeSold(consumableSold, selectedIndex));
     }
 
     protected void UpdateRelicSelection()
     {
         if (!IndexValid(shopData.relics, selectedIndex)){return;}
         string relicName = shopData.relics[selectedIndex];
-        if (selectedNameText != null){selectedNameText.text = relicName;}
-        if (selectedPriceText != null){selectedPriceText.text = ReturnPriceText(shopData.relicPrices, selectedIndex);}
-        if (selectedDescriptionText != null)
-        {
-            // TODO Replace with authored relic description display once relic runtime/data is complete.
-            selectedDescriptionText.text = relicName;
-        }
-        if (buyButtonObject != null)
-        {
-            buyButtonObject.SetActive(!IsSold(shopData.relicSold, selectedIndex));
-        }
+        SetLeftPanel("Relic", relicName, ReturnPriceText(shopData.relicPrices, selectedIndex), relicName, !IsRuntimeSold(relicSold, selectedIndex));
     }
 
-    // --- Buy Button ---
-    public void TryBuySelected()
-    {
-        switch (selectedSection)
-        {
-            case "NormalBook":
-            TryBuyBook(shopData.normalBooks, shopData.normalBookPrices, shopData.normalBookSold);
-            return;
-            case "RareBook":
-            TryBuyBook(shopData.rareBooks, shopData.rareBookPrices, shopData.rareBookSold);
-            return;
-            case "ColorlessBook":
-            TryBuyBook(shopData.colorlessBooks, shopData.colorlessBookPrices, shopData.colorlessBookSold);
-            return;
-            case "Consumable":
-            TryBuyConsumable();
-            return;
-            case "Relic":
-            TryBuyRelic();
-            return;
-        }
-    }
-
-    protected void TryBuyBook(List<string> books, List<string> prices, List<string> soldFlags)
-    {
-        if (!IndexValid(books, selectedIndex)){return;}
-        if (IsSold(soldFlags, selectedIndex)){return;}
-        if (!TrySpendGold(prices[selectedIndex])){return;}
-        partyData.spellBook.GainBook(books[selectedIndex]);
-        soldFlags[selectedIndex] = "1";
-        UpdateAllDisplays();
-    }
-
-    protected void TryBuyConsumable()
-    {
-        if (!IndexValid(shopData.consumables, selectedIndex)){return;}
-        if (IsSold(shopData.consumableSold, selectedIndex)){return;}
-        if (!TrySpendGold(shopData.consumablePrices[selectedIndex])){return;}
-        partyData.inventory.AddItemQuantity(shopData.consumables[selectedIndex]);
-        shopData.consumableSold[selectedIndex] = "1";
-        UpdateAllDisplays();
-    }
-
-    protected void TryBuyRelic()
-    {
-        if (!IndexValid(shopData.relics, selectedIndex)){return;}
-        if (IsSold(shopData.relicSold, selectedIndex)){return;}
-
-        // TODO: hook this into run relic ownership once relic save/runtime is finalized.
-        Debug.Log("Relic purchase is not fully implemented yet. Needs a run-owned relic list.");
-    }
-
-    protected bool TrySpendGold(string priceString)
-    {
-        int price = 0;
-        if (!int.TryParse(priceString, out price)){return false;}
-        if (!partyData.inventory.EnoughGold(price)){return false;}
-        partyData.inventory.SpendGold(price);
-        return true;
-    }
-
-    // --- Priest Service Setup ---
-    protected void UpdatePriestSection()
-    {
-        if (priestServiceObject != null)
-        {
-            priestServiceObject.SetActive(shopData != null && shopData.priestServiceUsed != "1");
-        }
-        if (priestServicePriceText != null)
-        {
-            priestServicePriceText.text = shopData != null ? shopData.priestServicePrice : "";
-        }
-        if (priestActorSelect != null && partyData != null)
-        {
-            priestActorSelect.SetSelectables(partyData.GetAllPartyNames());
-        }
-        UpdatePriestInjuries();
-    }
-
+    // --- Priest Service Detail Display ---
     public void SelectPriestActor()
     {
         UpdatePriestInjuries();
+        if (selectedSection == "PriestService")
+        {
+            UpdateSelectionDisplay();
+        }
     }
 
     protected void UpdatePriestInjuries()
     {
-        if (priestInjurySelect == null)
-        {
-            return;
-        }
+        if (priestInjurySelect == null){return;}
         priestInjurySelect.SetSelectables(ReturnSelectedActorRemovableInjuries());
-        UpdatePriestDescription();
     }
 
     public void SelectPriestInjury()
     {
-        UpdatePriestDescription();
+        if (selectedSection == "PriestService")
+        {
+            UpdateSelectionDisplay();
+        }
     }
 
-    protected void UpdatePriestDescription()
+    protected void UpdatePriestSelection()
     {
-        if (priestServiceDescriptionText == null)
-        {
-            return;
-        }
         string injuryName = GetSelectedPriestInjury();
-        if (injuryName == "")
-        {
-            priestServiceDescriptionText.text = "";
-        }
-        else
-        {
-            priestServiceDescriptionText.text = "Remove the permanent injury: " + injuryName;
-        }
-        if (priestBuyButtonObject != null)
-        {
-            priestBuyButtonObject.SetActive(CanUsePriestService());
-        }
+        string description = injuryName == "" ? "Select an actor and permanent injury to restore." : "Remove the permanent injury: " + injuryName;
+        SetLeftPanel("Priest Service", "Restore Injury", shopData.priestServicePrice, description, CanUsePriestService());
     }
 
     protected List<string> ReturnSelectedActorRemovableInjuries()
@@ -453,19 +371,81 @@ public class StSStore : MonoBehaviour
 
     protected bool CanUsePriestService()
     {
-        if (shopData == null || shopData.priestServiceUsed == "1")
-        {
-            return false;
-        }
-        if (priestActorSelect == null || priestActorSelect.GetSelected() < 0)
-        {
-            return false;
-        }
-        if (GetSelectedPriestInjury() == "")
-        {
-            return false;
-        }
+        if (shopData == null || priestServiceUsed){return false;}
+        if (priestActorSelect == null || priestActorSelect.GetSelected() < 0){return false;}
+        if (GetSelectedPriestInjury() == ""){return false;}
         return partyData.inventory.EnoughGold(ReturnPriestPrice());
+    }
+
+    protected void SetLeftPanel(string section, string itemName, string price, string description, bool canBuy)
+    {
+        if (selectedNameText != null){selectedNameText.text = itemName;}
+        if (selectedPriceText != null){selectedPriceText.text = price;}
+        if (selectedDescriptionText != null){selectedDescriptionText.text = description;}
+        if (buyButtonObject != null){buyButtonObject.SetActive(canBuy);}
+    }
+
+    protected Sprite ReturnSlotIcon(string section, string itemName)
+    {
+        switch (section)
+        {
+            case "Consumable":
+            if (itemSprites != null){return itemSprites.SpriteDictionary(itemName);}
+            break;
+            case "Relic":
+            if (relicSprites != null){return relicSprites.SpriteDictionary(itemName);}
+            break;
+        }
+        return null;
+    }
+
+    // --- Buy Button ---
+    public void TryBuySelected()
+    {
+        switch (selectedSection)
+        {
+            case "Book":
+            TryBuyBook();
+            return;
+            case "Consumable":
+            TryBuyConsumable();
+            return;
+            case "Relic":
+            TryBuyRelic();
+            return;
+            case "PriestService":
+            TryUsePriestService();
+            return;
+        }
+    }
+
+    protected void TryBuyBook()
+    {
+        if (!IndexValid(shopData.books, selectedIndex)){return;}
+        if (IsRuntimeSold(bookSold, selectedIndex)){return;}
+        if (!TrySpendGold(shopData.bookPrices[selectedIndex])){return;}
+        partyData.spellBook.GainBook(shopData.books[selectedIndex]);
+        bookSold[selectedIndex] = true;
+        UpdateAllDisplays();
+    }
+
+    protected void TryBuyConsumable()
+    {
+        if (!IndexValid(shopData.consumables, selectedIndex)){return;}
+        if (IsRuntimeSold(consumableSold, selectedIndex)){return;}
+        if (!TrySpendGold(shopData.consumablePrices[selectedIndex])){return;}
+        partyData.inventory.AddItemQuantity(shopData.consumables[selectedIndex]);
+        consumableSold[selectedIndex] = true;
+        UpdateAllDisplays();
+    }
+
+    protected void TryBuyRelic()
+    {
+        if (!IndexValid(shopData.relics, selectedIndex)){return;}
+        if (IsRuntimeSold(relicSold, selectedIndex)){return;}
+
+        // TODO: hook this into run relic ownership once relic save/runtime is finalized.
+        Debug.Log("Relic purchase is not fully implemented yet. Needs a run-owned relic list.");
     }
 
     public void TryUsePriestService()
@@ -475,9 +455,17 @@ public class StSStore : MonoBehaviour
         string injuryName = GetSelectedPriestInjury();
         if (!RemoveInjuryFromActor(actorIndex, injuryName)){return;}
         partyData.inventory.SpendGold(ReturnPriestPrice());
-        shopData.priestServiceUsed = "1";
+        priestServiceUsed = true;
         UpdateAllDisplays();
-        UpdatePriestSection();
+    }
+
+    protected bool TrySpendGold(string priceString)
+    {
+        int price = 0;
+        if (!int.TryParse(priceString, out price)){return false;}
+        if (!partyData.inventory.EnoughGold(price)){return false;}
+        partyData.inventory.SpendGold(price);
+        return true;
     }
 
     protected int ReturnPriestPrice()
@@ -490,18 +478,12 @@ public class StSStore : MonoBehaviour
 
     protected bool RemoveInjuryFromActor(int actorIndex, string injuryName)
     {
-        if (partyData == null || actorIndex < 0 || injuryName == "")
-        {
-            return false;
-        }
+        if (partyData == null || actorIndex < 0 || injuryName == ""){return false;}
         TacticActor actor = partyData.ReturnActorAtIndex(actorIndex);
         List<string> passives = new List<string>(actor.GetPassiveSkills());
         List<string> levels = new List<string>(actor.GetPassiveLevels());
         int injuryIndex = passives.IndexOf(injuryName);
-        if (injuryIndex < 0)
-        {
-            return false;
-        }
+        if (injuryIndex < 0){return false;}
         passives.RemoveAt(injuryIndex);
         if (injuryIndex < levels.Count)
         {
@@ -528,10 +510,15 @@ public class StSStore : MonoBehaviour
         return list != null && index >= 0 && index < list.Count;
     }
 
-    protected bool IsSold(List<string> soldFlags, int index)
+    protected bool IndexValid(List<bool> list, int index)
+    {
+        return list != null && index >= 0 && index < list.Count;
+    }
+
+    protected bool IsRuntimeSold(List<bool> soldFlags, int index)
     {
         if (!IndexValid(soldFlags, index)){return false;}
-        return soldFlags[index] == "1";
+        return soldFlags[index];
     }
 
     protected string ReturnPriceText(List<string> prices, int index)
