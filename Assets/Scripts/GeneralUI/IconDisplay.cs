@@ -9,9 +9,29 @@ public class IconDisplay : MonoBehaviour
     public Image highlightImage;
     public TMP_Text displayText;
     public Color defaultHighlightColor = new Color32(255, 250, 235, 165);
+    protected Color defaultIconColor = Color.white;
+    protected Vector3 defaultIconScale = Vector3.one;
+    protected bool initializedAppearance = false;
+
+    protected void InitializeAppearance()
+    {
+        if (initializedAppearance || iconImage == null){return;}
+        defaultIconColor = iconImage.color;
+        defaultIconScale = iconImage.rectTransform.localScale;
+        initializedAppearance = true;
+    }
+
+    protected void RestoreDefaultAppearance()
+    {
+        if (iconImage == null){return;}
+        iconImage.color = defaultIconColor;
+        iconImage.rectTransform.localScale = defaultIconScale;
+    }
 
     public void SetIcon(Sprite icon, string text = "")
     {
+        InitializeAppearance();
+        RestoreDefaultAppearance();
         if (iconImage != null)
         {
             iconImage.sprite = icon;
@@ -30,6 +50,8 @@ public class IconDisplay : MonoBehaviour
 
     public void ResetDisplay()
     {
+        InitializeAppearance();
+        RestoreDefaultAppearance();
         if (iconImage != null)
         {
             iconImage.sprite = null;

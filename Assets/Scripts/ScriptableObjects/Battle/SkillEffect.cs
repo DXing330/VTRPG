@@ -323,6 +323,9 @@ public class SkillEffect : ScriptableObject
             case "AttackRange":
                 target.SetAttackRangeMax(int.Parse(effectSpecifics));
                 break;
+            case "SetAttackActionCost":
+                target.SetAttackActionCost(int.Parse(effectSpecifics));
+                break;
             case "TempRange":
                 target.UpdateBonusAttackRange(int.Parse(effectSpecifics));
                 break;

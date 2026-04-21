@@ -44,6 +44,7 @@ public class BattleManager : MonoBehaviour
     public InteractableMaker interactableMaker;
     public BattleMapFeatures battleMapFeatures;
     public InitiativeTracker initiativeTracker;
+    public TurnOrderManager turnOrderManager;
     public CombatLog combatLog;
     public BattleStatsTracker battleStatsTracker;
     public PopUpMessage popUpMessage;
@@ -204,8 +205,27 @@ public class BattleManager : MonoBehaviour
     public int GetRoundNumber(){return roundNumber;}
     public int turnNumber;
     public int GetTurnIndex(){return turnNumber;}
+    // Snapshot of actors eligible to act this round; map.battlingActors remains the live roster.
+    public List<TacticActor> roundTurnOrder = new List<TacticActor>();
+    public List<TacticActor> GetRoundTurnOrder(){return roundTurnOrder;}
     public TacticActor turnActor;
     public TacticActor GetTurnActor(){return turnActor;}
+    public bool ValidTurnActor(TacticActor actor)
+    {
+        return actor != null
+            && actor.GetHealth() > 0
+            && map.battlingActors.Contains(actor);
+    }
+    protected bool TryFindNextValidTurn()
+    {
+        for (int i = turnNumber; i < roundTurnOrder.Count; i++)
+        {
+            if (!ValidTurnActor(roundTurnOrder[i])){continue;}
+            turnNumber = i;
+            return true;
+        }
+        return false;
+    }
     protected void NextRound()
     {
         combatLog.AddNewLog();
@@ -223,8 +243,8 @@ public class BattleManager : MonoBehaviour
         selectedActor = null;
         roundNumber++;
         map.SetRound(roundNumber);
-        // Get initiative order.
-        map.battlingActors = initiativeTracker.SortActors(map.battlingActors);
+        // Copy at round start so summons/revivals wait until the next round.
+        roundTurnOrder = initiativeTracker.SortActors(new List<TacticActor>(map.battlingActors));
     }
     // Updates stats UI inbetween turns.
     // Also applies new turn effects to the next actor.
@@ -240,7 +260,22 @@ public class BattleManager : MonoBehaviour
             EndBattle(winningTeam);
             return;
         }
-        turnActor = map.battlingActors[turnNumber];
+        if (!TryFindNextValidTurn())
+        {
+            NextRound();
+            if (FindWinningTeam() >= 0)
+            {
+                return;
+            }
+            if (!TryFindNextValidTurn())
+            {
+                combatLog.UpdateNewestLog("Everyone is Dead");
+                int winningTeam = FindWinningTeam();
+                EndBattle(winningTeam);
+                return;
+            }
+        }
+        turnActor = roundTurnOrder[turnNumber];
         turnActor.NewTurn();
         combatLog.UpdateNewestLog(turnActor.GetPersonalName() + "'s Turn");
         // Apply Conditions/Passives.
@@ -292,7 +327,7 @@ public class BattleManager : MonoBehaviour
         // This allows for a one turn grace period for immunities to have a chance.
         map.ApplyEndTerrainEffect(turnActor);
         // Remove dead actors.
-        turnNumber = map.RemoveActorsFromBattle(turnNumber);
+        map.RemoveActorsFromBattle();
         winningTeam = FindWinningTeam();
         if (winningTeam >= 0)
         {
@@ -301,7 +336,14 @@ public class BattleManager : MonoBehaviour
             return;
         }
         turnNumber++;
-        if (turnNumber >= map.battlingActors.Count){NextRound();}
+        if (!TryFindNextValidTurn())
+        {
+            NextRound();
+            if (FindWinningTeam() >= 0)
+            {
+                return;
+            }
+        }
         ChangeTurn();
         ResetState();
         UI.PlayerTurn();
@@ -1092,12 +1134,10 @@ public class BattleManager : MonoBehaviour
 
     protected void BasicNPCAction()
     {
-        // Summoned enemies have summoning sickness.
+        // Summons break command on their first turn, then act normally.
         if (turnActor.summoned && turnActor.summonedBy != null)
         {
             turnActor.ResetSummonedBy();
-            EndTurn();
-            return;
         }
         // This will make sure the path costs are up to date for AI action calculations.
         moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
@@ -1270,7 +1310,7 @@ public class BattleManager : MonoBehaviour
 
     public bool AdjustTurnNumber()
     {
-        turnNumber = map.RemoveActorsFromBattle(turnNumber);
+        map.RemoveActorsFromBattle();
         int winningTeam = FindWinningTeam();
         if (winningTeam >= 0)
         {

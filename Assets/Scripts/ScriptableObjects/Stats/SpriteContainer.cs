@@ -11,9 +11,10 @@ using UnityEngine.UI;
 [CreateAssetMenu(fileName = "SpriteContainer", menuName = "ScriptableObjects/DataContainers/SpriteContainer", order = 1)]
 public class SpriteContainer : ScriptableObject
 {
-    public bool elevationDifferences = false;
     public bool copySprites = false;
     public SpriteContainer copiedSprites;
+    public bool searchLinkedSpriteContainers = false;
+    public List<SpriteContainer> linkedSpriteContainers;
     public GeneralUtility utility;
     public ColorDictionary colors;
     public List<Sprite> sprites;
@@ -91,39 +92,53 @@ public class SpriteContainer : ScriptableObject
         return sprites[index].name;
     }
 
+    bool SearchLinkedContainers()
+    {
+        return searchLinkedSpriteContainers && linkedSpriteContainers != null;
+    }
+
+    Sprite SpriteByNameLocal(string spriteName)
+    {
+        if (sprites == null){return null;}
+        for (int i = 0; i < sprites.Count; i++)
+        {
+            if (sprites[i] != null && sprites[i].name == spriteName){return sprites[i];}
+        }
+        return null;
+    }
+
+    string LocalSpriteName(string spriteName)
+    {
+        if (keys != null && values != null)
+        {
+            int indexOf = keys.IndexOf(spriteName);
+            if (indexOf >= 0 && indexOf < values.Count)
+            {
+                return values[indexOf];
+            }
+        }
+        return spriteName;
+    }
+
+    Sprite SpriteDictionaryFromLinkedContainers(string spriteName)
+    {
+        if (!SearchLinkedContainers()){return null;}
+        for (int i = 0; i < linkedSpriteContainers.Count; i++)
+        {
+            if (linkedSpriteContainers[i] == null){continue;}
+            Sprite linkedSprite = linkedSpriteContainers[i].SpriteByNameLocal(spriteName);
+            if (linkedSprite != null){return linkedSprite;}
+        }
+        return null;
+    }
+
     public Sprite SpriteDictionary(string spriteName)
     {
-        // Maybe try using a key first.
-        int indexOf = keys.IndexOf(spriteName);
-        if (indexOf >= 0)
-        {
-            spriteName = values[indexOf];
-        }
-        for (int i = 0; i < sprites.Count; i++)
-        {
-            if (sprites[i].name == spriteName){return sprites[i];}
-        }
-        if (elevationDifferences)
-        {
-            if (!spriteName.Contains("E"))
-            {
-                spriteName += "E0";
-            }
-        }
-        for (int i = 0; i < sprites.Count; i++)
-        {
-            if (sprites[i].name == spriteName){return sprites[i];}
-        }
-        if (elevationDifferences)
-        {
-            // Try to use a lower elevation.
-            string[] blocks = spriteName.Split("E");
-            int elevation = int.Parse(blocks[1]);
-            if (elevation > 0)
-            {
-                return SpriteDictionary(blocks[0]+"E"+(elevation-1));
-            }
-        }
+        spriteName = LocalSpriteName(spriteName);
+        Sprite sprite = SpriteByNameLocal(spriteName);
+        if (sprite != null){return sprite;}
+        sprite = SpriteDictionaryFromLinkedContainers(spriteName);
+        if (sprite != null){return sprite;}
         if (defaultsEnabled)
         {
             return defaultSprite;
@@ -146,8 +161,8 @@ public class SpriteContainer : ScriptableObject
 
     public Sprite SpriteByKey(string nKey)
     {
-        int indexOf = keys.IndexOf(nKey);
-        if (indexOf < 0)
+        int indexOf = keys == null ? -1 : keys.IndexOf(nKey);
+        if (values == null || indexOf < 0 || indexOf >= values.Count)
         {
             if (defaultsEnabled)
             {
@@ -163,10 +178,10 @@ public class SpriteContainer : ScriptableObject
         return SpriteDictionary(spriteName);
     }
 
-    public string GetColorName(string nKey)
+    string GetColorNameLocal(string nKey)
     {
-        int indexOf = keys.IndexOf(nKey);
-        if (indexOf < 0 || indexOf >= colorNames.Count)
+        int indexOf = keys == null ? -1 : keys.IndexOf(nKey);
+        if (colorNames == null || indexOf < 0 || indexOf >= colorNames.Count)
         {
             return "None";
         }
@@ -177,9 +192,14 @@ public class SpriteContainer : ScriptableObject
         return colorNames[indexOf];
     }
 
-    public Color GetColor(string nKey, Color defaultColor)
+    public string GetColorName(string nKey)
     {
-        string colorName = GetColorName(nKey);
+        return GetColorNameLocal(nKey);
+    }
+
+    Color GetColorLocal(string nKey, Color defaultColor)
+    {
+        string colorName = GetColorNameLocal(nKey);
         if (colorName == "None" || colors == null)
         {
             return defaultColor;
@@ -187,10 +207,15 @@ public class SpriteContainer : ScriptableObject
         return colors.GetColorByName(colorName);
     }
 
-    public string GetSize(string nKey)
+    public Color GetColor(string nKey, Color defaultColor)
     {
-        int indexOf = keys.IndexOf(nKey);
-        if (indexOf < 0 || indexOf >= sizes.Count)
+        return GetColorLocal(nKey, defaultColor);
+    }
+
+    string GetSizeLocal(string nKey)
+    {
+        int indexOf = keys == null ? -1 : keys.IndexOf(nKey);
+        if (sizes == null || indexOf < 0 || indexOf >= sizes.Count)
         {
             return "1";
         }
@@ -199,5 +224,23 @@ public class SpriteContainer : ScriptableObject
             return "1";
         }
         return sizes[indexOf];
+    }
+
+    public string GetSize(string nKey)
+    {
+        return GetSizeLocal(nKey);
+    }
+
+    public void ApplyToImage(Image image, string nKey, Color defaultColor, Vector3 defaultScale)
+    {
+        if (image == null){return;}
+        image.sprite = GetSprite(nKey);
+        image.color = GetColor(nKey, defaultColor);
+        float scale = 1f;
+        if (!float.TryParse(GetSize(nKey), out scale))
+        {
+            scale = 1f;
+        }
+        image.rectTransform.localScale = defaultScale * scale;
     }
 }

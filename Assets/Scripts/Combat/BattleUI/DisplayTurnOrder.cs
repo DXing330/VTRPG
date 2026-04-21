@@ -33,7 +33,7 @@ public class DisplayTurnOrder : MonoBehaviour
     }
 
 
-    public void UpdateTurnOrder(List<TacticActor> actors, int turnIndex)
+    public void UpdateTurnOrder(List<TacticActor> actors, int turnIndex, BattleManager battleManager)
     {
         currentTurn = turnIndex;
         ResetActorImages();
@@ -41,6 +41,7 @@ public class DisplayTurnOrder : MonoBehaviour
         int index = 0;
         for (int i = turnIndex; i < actors.Count; i++)
         {
+            if (battleManager != null && !battleManager.ValidTurnActor(actors[i])){continue;}
             if (index >= actorImages.Count){break;}
             displayObjects[index].SetActive(true);
             actorImages[index].SetSprite(actorSprites.GetSprite(actors[i].GetSpriteName()), displayLayer);

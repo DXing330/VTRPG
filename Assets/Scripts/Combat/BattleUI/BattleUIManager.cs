@@ -151,7 +151,7 @@ public class BattleUIManager : MonoBehaviour
 
     public void UpdateTurnOrder()
     {
-        turnOrder.UpdateTurnOrder(battleManager.map.battlingActors, battleManager.GetTurnIndex());
+        turnOrder.UpdateTurnOrder(battleManager.GetRoundTurnOrder(), battleManager.GetTurnIndex(), battleManager);
     }
     // State 3 - Map Details.
     public int mapDetailState = 3;

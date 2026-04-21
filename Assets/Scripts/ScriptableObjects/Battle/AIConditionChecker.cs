@@ -111,6 +111,10 @@ public class AIConditionChecker : ScriptableObject
                 return specifics == map.GetTime();
             case "Time<>":
                 return specifics != map.GetTime();
+            case "MoveType":
+                return specifics == actor.GetMoveType();
+            case "MoveType<>":
+                return specifics != actor.GetMoveType();
             case "Energy<":
                 return actor.GetEnergy() < int.Parse(specifics);
             case "Round":

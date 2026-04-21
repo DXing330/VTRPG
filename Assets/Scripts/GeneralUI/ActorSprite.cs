@@ -26,14 +26,7 @@ public class ActorSprite : MonoBehaviour
     protected void UpdateActorSpriteAppearance(string spriteKey)
     {
         InitializeAppearance();
-        actorSprite.sprite = actorSprites.GetSprite(spriteKey);
-        actorSprite.color = actorSprites.GetColor(spriteKey, defaultSpriteColor);
-        float scale = 1f;
-        if (!float.TryParse(actorSprites.GetSize(spriteKey), out scale))
-        {
-            scale = 1f;
-        }
-        actorSprite.rectTransform.localScale = defaultSpriteScale * scale;
+        actorSprites.ApplyToImage(actorSprite, spriteKey, defaultSpriteColor, defaultSpriteScale);
     }
 
     public void ShowActorSprite(TacticActor actor)

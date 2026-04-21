@@ -900,11 +900,13 @@ public class PassiveDetailViewer : MonoBehaviour
             case "Guard":
                 return " protect adjacent allies from attacks for " + specifics + " turns";
             case "GuardRange":
-                return "Increase the distance from which you can protected allies from attacks to up to " + specifics + " tiles.";
+                return " increase the distance from which you can protected allies from attacks to up to " + specifics + " tiles.";
             case "MoveForwardRandom":
                 return " move to a random forward tile";
             case "MoveBackwardRandom":
                 return " move to a random backward tile";
+            case "SetAttackActionCost":
+                return " set the action cost of basic attacks to " + specifics;
         }
         return " increase " + effect + " of " + target + " by " + specifics;
     }

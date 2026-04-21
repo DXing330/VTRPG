@@ -13,8 +13,7 @@ public class StSStore : MonoBehaviour
     public StSShopSaveData shopData;
     public StSRewardSaveData rewardData;
     public ItemDetailViewer itemDetailViewer;
-    public SpriteContainer itemSprites;
-    public SpriteContainer relicSprites;
+    public SpriteContainer variantSprites;
     public Sprite priestServiceSprite;
 
     // --- Skillbook Data ---
@@ -40,7 +39,7 @@ public class StSStore : MonoBehaviour
     public ShopTextSlotDisplay priestServiceSlot;
     public SelectList priestActorSelect;
     public SelectList priestInjurySelect;
-    public List<string> removableInjuries;
+    public StatDatabase allInjuries;
 
     // --- Runtime Sold State ---
     protected List<bool> bookSold = new List<bool>();
@@ -350,6 +349,7 @@ public class StSStore : MonoBehaviour
         }
         TacticActor actor = partyData.ReturnActorAtIndex(priestActorSelect.GetSelected());
         List<string> passives = actor.GetPassiveSkills();
+        List<string> removableInjuries = allInjuries.GetAllKeys();
         for (int i = 0; i < passives.Count; i++)
         {
             if (removableInjuries != null && removableInjuries.Contains(passives[i]))
@@ -387,16 +387,7 @@ public class StSStore : MonoBehaviour
 
     protected Sprite ReturnSlotIcon(string section, string itemName)
     {
-        switch (section)
-        {
-            case "Consumable":
-            if (itemSprites != null){return itemSprites.SpriteDictionary(itemName);}
-            break;
-            case "Relic":
-            if (relicSprites != null){return relicSprites.SpriteDictionary(itemName);}
-            break;
-        }
-        return null;
+        return variantSprites.SpriteDictionary(itemName);
     }
 
     // --- Buy Button ---

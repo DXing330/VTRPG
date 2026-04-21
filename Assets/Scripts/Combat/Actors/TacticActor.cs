@@ -150,6 +150,10 @@ public class TacticActor : ActorStats
     public void GainBonusActions(int amount){bonusActions += amount;}
     public int GetActions(){return actions + bonusActions;}
     public int attackActionCost = 2;
+    public void SetAttackActionCost(int newCost)
+    {
+        attackActionCost = Mathf.Max(1, newCost);
+    }
     public bool AttackActionsLeft()
     {
         return actions >= attackActionCost;
