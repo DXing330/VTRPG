@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7a6c69d8f224d1098383e2c93dc5c11, type: 3}
+  m_Name: Scenario_KnightClericVsAnts
+  m_EditorClassIdentifier: 
+  scenarioName: Knight Cleric Vs Ants
+  enabled: 1
+  tags:
+  - smoke
+  - balance
+  runCount: 10
+  maxRounds: 100
+  maxTurns: 1000
+  baseSeed: 2000
+  randomizeSeed: 0
+  autoBattle: 1
+  controlAI: 0
+  partyOne:
+  - spriteName: Knight
+    personalName: Test Knight
+    statsOverride: 
+    equipment: 
+    id: 1
+  - spriteName: Cleric
+    personalName: Test Cleric
+    statsOverride: 
+    equipment: 
+    id: 2
+  partyTwo:
+  - spriteName: Giant Ant
+    personalName: Giant Ant A
+    statsOverride: 
+    equipment: 
+    id: 101
+  - spriteName: Fire Ant
+    personalName: Fire Ant A
+    statsOverride: 
+    equipment: 
+    id: 102
+  allowedTerrains:
+  - Forest
+  allowedWeather:
+  - Rainy
+  allowedTimes:
+  - Day
+  startingFormations:
+  - Faceoff
+  partyOneBattleModifiers: []
+  partyTwoBattleModifiers: []
+  baselineEnabled: 1
+  minTeamZeroWinRate: 0
+  maxTeamZeroWinRate: 0.3
+  minTeamOneWinRate: 0.7
+  maxTeamOneWinRate: 1
+  minAverageRounds: 1
+  maxAverageRounds: 20
+  maxFailureRate: 0
+  maxUnknownWinRate: 0
+  actorBaselines: []

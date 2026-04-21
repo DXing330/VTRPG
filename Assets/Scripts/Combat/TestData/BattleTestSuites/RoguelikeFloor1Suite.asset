@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 496ce31c67b34925bc3df07d8e35c8bb, type: 3}
+  m_Name: RoguelikeFloor1Suite
+  m_EditorClassIdentifier: 
+  suiteName: Roguelike Floor 1 Suite
+  reportRoot: Assets/output/battle-tests
+  stopOnFailure: 0
+  scenarios:
+  - {fileID: 11400000, guid: f0758879a05c49ac9fa31ca502325425, type: 2}
+  - {fileID: 11400000, guid: ee8e051c3fa34e838bffe78dbfcbde98, type: 2}
+  - {fileID: 11400000, guid: c4570c3f546345f9bbf735218e124c63, type: 2}
+  - {fileID: 11400000, guid: b67dbee210344d9788f4108f42b4f96f, type: 2}
+  - {fileID: 11400000, guid: 618146bbdde941c181b2b90418feffb4, type: 2}
+  - {fileID: 11400000, guid: 510bffe538134c34b0e495567a2635e8, type: 2}
+  - {fileID: 11400000, guid: 3f1028b5e00a482c993ccb0378d2bafc, type: 2}
+  - {fileID: 11400000, guid: 0104859ac1094c878cca1d411a306453, type: 2}
+  - {fileID: 11400000, guid: 118431f7f1a2447d9f0c41a56136c3e4, type: 2}
+  - {fileID: 11400000, guid: 671ddd6a50f74268b4472ceca5d76dfc, type: 2}
+  - {fileID: 11400000, guid: 0ae3a85f072c4e6f81ce18a43ae61b40, type: 2}
+  - {fileID: 11400000, guid: c82c95fef3504f4092d05b5aaa764815, type: 2}
+  - {fileID: 11400000, guid: 34949b30d0e24997862d26c99c76038d, type: 2}
+  - {fileID: 11400000, guid: a3d43810ed324e8bb6e0c842d540dfa5, type: 2}
+  - {fileID: 11400000, guid: 7ff6823aaa224942a9fa69561fedb58c, type: 2}
+  - {fileID: 11400000, guid: 12605f5ed8fb4342ad4af70cfe1b8caa, type: 2}
+  - {fileID: 11400000, guid: 25f2b1041f8243a7a81e360255b240d5, type: 2}
+  - {fileID: 11400000, guid: c904e93b0bc94cbda7597c2c981b14e2, type: 2}
+  - {fileID: 11400000, guid: 3b46d9eb265c4b50bc69556907091e43, type: 2}
+  - {fileID: 11400000, guid: b2c231725dfe456f9779c1aaa9772fd5, type: 2}
+  - {fileID: 11400000, guid: efd81669d3cf433e92604d3fcc3a35da, type: 2}

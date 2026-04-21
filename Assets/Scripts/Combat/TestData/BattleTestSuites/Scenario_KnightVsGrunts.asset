@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7a6c69d8f224d1098383e2c93dc5c11, type: 3}
+  m_Name: Scenario_KnightVsGrunts
+  m_EditorClassIdentifier: 
+  scenarioName: Knight Vs Grunts
+  enabled: 1
+  tags:
+  - smoke
+  - balance
+  runCount: 10
+  maxRounds: 100
+  maxTurns: 1000
+  baseSeed: 1000
+  randomizeSeed: 0
+  autoBattle: 1
+  controlAI: 0
+  partyOne:
+  - spriteName: Knight
+    personalName: Test Knight
+    statsOverride: 
+    equipment: 
+    id: 1
+  partyTwo:
+  - spriteName: Grunt
+    personalName: Grunt A
+    statsOverride: 
+    equipment: 
+    id: 101
+  - spriteName: Grunt
+    personalName: Grunt B
+    statsOverride: 
+    equipment: 
+    id: 102
+  allowedTerrains:
+  - Plains
+  allowedWeather:
+  - Sunny
+  allowedTimes:
+  - Day
+  startingFormations:
+  - Faceoff
+  partyOneBattleModifiers: []
+  partyTwoBattleModifiers: []
+  baselineEnabled: 1
+  minTeamZeroWinRate: 0.7
+  maxTeamZeroWinRate: 1
+  minTeamOneWinRate: 0
+  maxTeamOneWinRate: 0.3
+  minAverageRounds: 1
+  maxAverageRounds: 20
+  maxFailureRate: 0
+  maxUnknownWinRate: 0
+  actorBaselines: []

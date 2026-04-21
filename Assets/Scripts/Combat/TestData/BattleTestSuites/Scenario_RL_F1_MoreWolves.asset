@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7a6c69d8f224d1098383e2c93dc5c11, type: 3}
+  m_Name: Scenario_RL_F1_MoreWolves
+  m_EditorClassIdentifier: 
+  scenarioName: RL F1 - More Wolves
+  enabled: 1
+  tags: [roguelike, floor1, normal, hard]
+  runCount: 5
+  maxRounds: 100
+  maxTurns: 1000
+  baseSeed: 4190
+  randomizeSeed: 0
+  autoBattle: 1
+  controlAI: 0
+  partyOne:
+  - spriteName: Defender
+    personalName: Test Defender
+    statsOverride: 
+    equipment: 
+    id: 1
+  - spriteName: Warrior
+    personalName: Test Warrior
+    statsOverride: 
+    equipment: 
+    id: 2
+  - spriteName: Cleric
+    personalName: Test Cleric
+    statsOverride: 
+    equipment: 
+    id: 3
+  partyTwo:
+  - spriteName: Wolf
+    personalName: Wolf A
+    statsOverride: 
+    equipment: 
+    id: 101
+  - spriteName: Wolf
+    personalName: Wolf B
+    statsOverride: 
+    equipment: 
+    id: 102
+  - spriteName: Wolf
+    personalName: Wolf C
+    statsOverride: 
+    equipment: 
+    id: 103
+  allowedTerrains: [Plains]
+  allowedWeather:
+  - 
+  allowedTimes:
+  - 
+  startingFormations: [Faceoff]
+  partyOneBattleModifiers: []
+  partyTwoBattleModifiers: []
+  baselineEnabled: 0
+  minTeamZeroWinRate: -1
+  maxTeamZeroWinRate: -1
+  minTeamOneWinRate: -1
+  maxTeamOneWinRate: -1
+  minAverageRounds: -1
+  maxAverageRounds: -1
+  maxFailureRate: 0
+  maxUnknownWinRate: 0
+  actorBaselines: []
