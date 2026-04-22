@@ -31,6 +31,13 @@ public static class BattleSimulationCli
         RunScenarioAtPath(GuardianFocusScenarioPath, "Guardian Focus");
     }
 
+    [MenuItem("Window/Battle Tests/Clean Generated Actors")]
+    public static void CleanGeneratedActorsFromWindowMenu()
+    {
+        int cleaned = BattleSimulationRunner.CleanGeneratedActorObjectsInLoadedScenes();
+        Debug.Log("Battle test cleanup removed " + cleaned + " generated actor object(s).");
+    }
+
     public static void RunGuardianFocus()
     {
         RunScenarioAtPath(GuardianFocusScenarioPath, "Guardian Focus");

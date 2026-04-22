@@ -42,6 +42,25 @@ public class BattleSimulationCombatLogEntry
 }
 
 [Serializable]
+public class BattleSimulationAiReasoningEntry
+{
+    public int round;
+    public int turn;
+    public string actorName;
+    public string actionType;
+    public string skillName;
+    public string inferredForm;
+    public string rotationKey;
+    public string rotationRule;
+    public string condition;
+    public string conditionSpecifics;
+    public string rotationAction;
+    public string rotationTarget;
+    public string confidence;
+    public string note;
+}
+
+[Serializable]
 public class BattleSimulationActorDebugInfo
 {
     public string partyName;
@@ -92,6 +111,7 @@ public class BattleSimulationRunResult
     public List<BattleSimulationActorResult> actors = new List<BattleSimulationActorResult>();
     public List<string> combatLogs = new List<string>();
     public List<BattleSimulationCombatLogEntry> combatLogEntries = new List<BattleSimulationCombatLogEntry>();
+    public List<BattleSimulationAiReasoningEntry> aiReasoning = new List<BattleSimulationAiReasoningEntry>();
 }
 
 [Serializable]

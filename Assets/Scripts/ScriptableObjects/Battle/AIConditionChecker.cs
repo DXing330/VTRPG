@@ -184,6 +184,10 @@ public class AIConditionChecker : ScriptableObject
                 return !actor.BuffExists(specifics);
             case "Buff":
                 return actor.BuffExists(specifics);
+            case "Guarding":
+                return actor.Guarding();
+            case "Guarding<>":
+                return !actor.Guarding();
         }
         return true;
     }

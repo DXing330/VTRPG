@@ -174,4 +174,30 @@ public class BattleMapUtility : ScriptableObject
         }
         return tile;
     }
+    public bool GuardCoveringAlly(BattleMap map, TacticActor guardActor)
+    {
+        if (map == null || guardActor == null) { return false; }
+        if (!guardActor.Guarding() || guardActor.GetHealth() <= 0) { return false; }
+
+        List<TacticActor> allies = map.AllAllies(guardActor);
+        for (int i = 0; i < allies.Count; i++)
+        {
+            if (GuardCanCoverAlly(map, guardActor, allies[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    public bool GuardCanCoverAlly(BattleMap map, TacticActor guardActor, TacticActor ally)
+    {
+        if (map == null || guardActor == null || ally == null) { return false; }
+        if (guardActor == ally) { return false; }
+        if (guardActor.GetTeam() != ally.GetTeam()) { return false; }
+        if (guardActor.GetHealth() <= 0 || ally.GetHealth() <= 0) { return false; }
+        if (!guardActor.Guarding()) { return false; }
+
+        return map.DistanceBetweenActors(guardActor, ally) <= guardActor.GetGuardRange();
+    }
 }

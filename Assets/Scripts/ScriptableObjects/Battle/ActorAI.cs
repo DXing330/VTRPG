@@ -56,7 +56,7 @@ public class ActorAI : ScriptableObject
         return actorSkillRotation.ReturnValue(actor.GetSpriteName()) == "Boss";
     }
 
-    public bool NormalTurn(TacticActor actor, int roundIndex)
+    public bool NormalTurn(TacticActor actor, int roundIndex, BattleMap map = null, MoveCostManager moveManager = null)
     {
         string fullSkillRotation = actorSkillRotation.ReturnValue(actor.GetSpriteName());
         if (fullSkillRotation == "" || fullSkillRotation == "-1") { return true; }
@@ -319,9 +319,11 @@ public class ActorAI : ScriptableObject
     {
         // Determine the type of skill being used.
         string skillType = activeManager.active.GetSkillType();
+        int range = activeManager.active.GetRange(currentActor, map);
         if (spell)
         {
             skillType = activeManager.magicSpell.GetSkillType();
+            range = activeManager.magicSpell.GetRange(currentActor, map);
         }
         switch (skillType)
         {
@@ -332,6 +334,8 @@ public class ActorAI : ScriptableObject
                 // For attacking skills, make sure at least 1 enemy is in range.
                 return map.EnemiesInTiles(currentActor, activeManager.targetedTiles);
             case "Support":
+                // If range is 0 then it's meant to only target itself, return true.
+                if (range <= 0){return true;}
                 // For supporting skills, make sure at least 1 ally is in range.
                 // Unless it's a summon skill then just let it through.
                 // Should make an allow list of support skills that always go through.

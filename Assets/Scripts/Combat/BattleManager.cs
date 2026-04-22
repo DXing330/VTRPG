@@ -727,76 +727,90 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    protected void BossTurn(int actionsLeft)
+    protected void BossTurn(int actionsLeft, string turnAction = "", string turnSpecifics = "")
     {
         List<string> turnDetails = actorAI.ReturnBossActions(turnActor, map);
-        // Some things you can do without actions.
-        switch (turnDetails[0])
+        string chosenAction = turnDetails[0];
+        string chosenSpecifics = turnDetails[1];
+        if (turnAction != "")
         {
+            chosenAction = turnAction;
+        }
+        if (turnSpecifics != "")
+        {
+            chosenSpecifics = turnSpecifics;
+        }
+        // Some things you can do without actions.
+        switch (chosenAction)
+        {
+            // LOOP and try to find the next rotation.
             case "Change Form":
                 // Update base stats based on new form.
-                actorMaker.ChangeActorForm(turnActor, turnDetails[1]);
+                actorMaker.ChangeActorForm(turnActor, chosenSpecifics);
                 BossTurn(actionsLeft);
                 // This will always take all your actions.
                 //turnActor.ResetActions();
                 return;
-            case "Split":
-                // Change base health to be the same as current health.
-                turnActor.SetBaseHealth(turnActor.GetHealth());
-                // Check if there are any empty adjacent tiles.
-                int splitTile = map.ReturnRandomAdjacentEmptyTile(turnActor.GetLocation());
-                // Create a copy in a random adjacent empty tile.
-                // Or this is a special case where you can stack actors?
-                // This will always take all your actions.
-                TacticActor clonedActor = actorMaker.CloneActor(turnActor, splitTile);
-                map.AddActorToBattle(clonedActor);
-                ApplyBattleModifiersToActor(clonedActor);
-                turnActor.ResetActions();
-                break;
-            case "Skill":
-                NPCSkillAction(actionsLeft, turnDetails[1]);
-                return;
-            case "Summon Skill":
-                NPCSkillAction(actionsLeft, actorAI.ReturnSkillWithEffect(turnActor, map, "Summon"));
-                return;
-            case "Spell":
-                NPCSpellAction(actionsLeft, turnDetails[1]);
-                return;
             case "One Time Spell":
                 turnActor.IncrementCounter();
-                NPCSpellAction(actionsLeft, turnDetails[1]);
-                return;
-            case "Summon Spell":
-                NPCSpellAction(actionsLeft, actorAI.ReturnSpellWithEffect(turnActor, map, "Summon"));
-                return;
+                NPCSpellAction(actionsLeft, chosenSpecifics);
+                return;            
             case "One Time Skill":
                 turnActor.IncrementCounter();
-                NPCSkillAction(actionsLeft, turnDetails[1]);
-                return;
-            case "Chain Skill":
-                string[] chainSkills = turnDetails[1].Split(",");
-                NPCChainSkillActions(chainSkills);
+                NPCSkillAction(actionsLeft, chosenSpecifics);
                 return;
             case "One Time Chain Skill":
                 turnActor.IncrementCounter();
-                string[] OTchainSkills = turnDetails[1].Split(",");
+                string[] OTchainSkills = chosenSpecifics.Split(",");
                 NPCChainSkillActions(OTchainSkills);
                 return;
-            case "Random Skill":
-                string[] skills = turnDetails[1].Split(",");
-                string chosenSkill = skills[Random.Range(0, skills.Length)];
-                if (chosenSkill == "None")
+            case "Spell":
+                if (!TryNPCSpellOnce(chosenSpecifics))
                 {
                     BasicNPCAction();
+                    return;
                 }
-                else
+                if (turnActor.GetActions() > 0 && turnActor.GetHealth() > 0)
                 {
-                    NPCSkillAction(actionsLeft, chosenSkill);
+                    BossTurn(turnActor.GetActions());
+                    return;
                 }
+                EndTurn();
+                return;
+            case "Skill":
+                if (!TryNPCSkillOnce(chosenSpecifics))
+                {
+                    BasicNPCAction();
+                    return;
+                }
+                if (turnActor.GetActions() > 0 && turnActor.GetHealth() > 0)
+                {
+                    BossTurn(turnActor.GetActions());
+                    return;
+                }
+                EndTurn();
+                return;
+            case "Summon Skill":
+                string summonSkill = actorAI.ReturnSkillWithEffect(turnActor, map, "Summon");
+                if (summonSkill == "")
+                {
+                    BasicNPCAction();
+                    return;
+                }
+                BossTurn(actionsLeft, "Skill", summonSkill);
+                return;
+            case "Summon Spell":
+                string summonSpell = actorAI.ReturnSpellWithEffect(turnActor, map, "Summon");
+                if (summonSpell == "")
+                {
+                    BasicNPCAction();
+                    return;
+                }
+                BossTurn(actionsLeft, "Spell", summonSpell);
                 return;
             case "MoveToTile":
                 // Move to the closest tile of type.
-                int tile = map.ReturnClosestTileOfType(turnActor, turnDetails[1]);
+                int tile = map.ReturnClosestTileOfType(turnActor, chosenSpecifics);
                 if (tile < 0)
                 {
                     BasicNPCAction();
@@ -808,7 +822,7 @@ public class BattleManager : MonoBehaviour
                     MoveAlongPath(turnActor, path);
                     if (turnActor.GetActions() > 0)
                     {
-                        BasicNPCAction();
+                        BossTurn(turnActor.GetActions());
                         return;
                     }
                     else
@@ -817,7 +831,7 @@ public class BattleManager : MonoBehaviour
                     }
                 }
             case "MoveToSandwichTarget":
-                int sandwichingTile = map.ReturnClosestSandwichTargetBetweenTileOfType(turnActor, turnDetails[1]);
+                int sandwichingTile = map.ReturnClosestSandwichTargetBetweenTileOfType(turnActor, chosenSpecifics);
                 if (sandwichingTile < 0)
                 {
                     BasicNPCAction();
@@ -838,7 +852,7 @@ public class BattleManager : MonoBehaviour
                     }
                 }
             case "MoveToSandwichTile":
-                int sandwichedTile = map.ReturnClosestTileSandwiched(turnActor, turnDetails[1]);
+                int sandwichedTile = map.ReturnClosestTileSandwiched(turnActor, chosenSpecifics);
                 if (sandwichedTile < 0)
                 {
                     BasicNPCAction();
@@ -858,6 +872,39 @@ public class BattleManager : MonoBehaviour
                         break;
                     }
                 }
+            // STOP And Basic For The Rest Of The Turn.
+            case "Split":
+                // Change base health to be the same as current health.
+                turnActor.SetBaseHealth(turnActor.GetHealth());
+                // Check if there are any empty adjacent tiles.
+                int splitTile = map.ReturnRandomAdjacentEmptyTile(turnActor.GetLocation());
+                // Create a copy in a random adjacent empty tile.
+                // Or this is a special case where you can stack actors?
+                // This will always take all your actions.
+                TacticActor clonedActor = actorMaker.CloneActor(turnActor, splitTile);
+                map.AddActorToBattle(clonedActor);
+                ApplyBattleModifiersToActor(clonedActor);
+                turnActor.ResetActions();
+                break;
+
+
+            case "Chain Skill":
+                string[] chainSkills = chosenSpecifics.Split(",");
+                NPCChainSkillActions(chainSkills);
+                return;
+            case "Random Skill":
+                string[] skills = chosenSpecifics.Split(",");
+                string chosenSkill = skills[Random.Range(0, skills.Length)];
+                if (chosenSkill == "None")
+                {
+                    BasicNPCAction();
+                }
+                else
+                {
+                    NPCSkillAction(actionsLeft, chosenSkill);
+                }
+                return;
+            
             case "Basic":
                 BasicNPCAction();
                 return;
@@ -892,34 +939,35 @@ public class BattleManager : MonoBehaviour
         EndTurn();
     }
 
+    protected bool TryNPCSpellOnce(string spell)
+    {
+        activeManager.SetSkillUser(turnActor);
+        activeManager.SetSpell(spell);
+        int targetedTile = actorAI.ChooseSpellTargetLocation(turnActor, map, moveManager, activeManager.magicSpell);
+        if (targetedTile == -1 || !activeManager.CheckSpellCost(map))
+        {
+            return false;
+        }
+        activeManager.GetTargetedTiles(targetedTile, moveManager.actorPathfinder, true);
+        if (!actorAI.ValidSkillTargets(turnActor, map, activeManager, true))
+        {
+            return false;
+        }
+        ActivateSpell();
+        AdjustTurnNumber();
+        return true;
+    }
+
     protected void NPCSpellAction(int actionsLeft, string spell)
     {
         for (int i = 0; i < actionsLeft; i++)
         {
-            // Get the active and the targeted tile.
-            activeManager.SetSkillUser(turnActor);
-            activeManager.SetSpell(spell);
-            int targetedTile = actorAI.ChooseSpellTargetLocation(turnActor, map, moveManager, activeManager.magicSpell);
-            // If you can't find a target or cast the skill or are silenced then just do a regular action.
-            if (targetedTile == -1 || !activeManager.CheckSpellCost(map))
-            {
-                Debug.Log("Invalid Tile/Cost");
-                BasicNPCAction();
-                return;
-            }
-            activeManager.GetTargetedTiles(targetedTile, moveManager.actorPathfinder, true);
-            // Bool = TRUE for spells.
-            if (!actorAI.ValidSkillTargets(turnActor, map, activeManager, true))
+            if (!TryNPCSpellOnce(spell))
             {
                 BasicNPCAction();
                 return;
             }
-            ActivateSpell();
-            if (AdjustTurnNumber())
-            {
-                return;
-            }
-            if (turnActor.GetActions() <= 0 || turnActor.GetHealth() < 0)
+            if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
             {
                 EndTurn();
                 return;
@@ -928,50 +976,46 @@ public class BattleManager : MonoBehaviour
         EndTurn();
     }
 
+    protected bool TryNPCSkillOnce(string skill)
+    {
+        // Get the active and the targeted tile.
+        string skillToUse = skill;
+        if (skillToUse == "")
+        {
+            skillToUse = actorAI.ReturnAIActiveSkill();
+        }
+        activeManager.SetSkillFromName(skillToUse, turnActor);
+        // Choose Target.
+        int targetedTile = actorAI.ChooseSkillTargetLocation(turnActor, map, moveManager);
+        // Check Cost & Target.
+        if (targetedTile == -1 || !activeManager.CheckSkillCost(map))
+        {
+            return false;
+        }
+        // Check Target Appropriate
+        activeManager.GetTargetedTiles(targetedTile, moveManager.actorPathfinder);
+        // If the skill has no valid targets in the case of an AOE, let caller decide fallback.
+        if (!actorAI.ValidSkillTargets(turnActor, map, activeManager))
+        {
+            return false;
+        }
+        ActivateSkill(skillToUse);
+        // Preserve the same battle-end / actor-death handling order.
+        AdjustTurnNumber();
+        return true;
+    }
+
     protected void NPCSkillAction(int actionsLeft, string skill = "")
     {
         for (int i = 0; i < actionsLeft; i++)
         {
-            // Get the active and the targeted tile.
-            if (skill == "")
-            {
-                activeManager.SetSkillFromName(actorAI.ReturnAIActiveSkill(), turnActor);
-            }
-            else
-            {
-                activeManager.SetSkillFromName(skill, turnActor);
-            }
-            int targetedTile = actorAI.ChooseSkillTargetLocation(turnActor, map, moveManager);
-            // If you can't find a target or cast the skill or are silenced then just do a regular action.
-            if (targetedTile == -1 || !activeManager.CheckSkillCost(map))
+            // If you can't use the skill then just do a basic action.
+            if (!TryNPCSkillOnce(skill))
             {
                 BasicNPCAction();
                 return;
             }
-            activeManager.GetTargetedTiles(targetedTile, moveManager.actorPathfinder);
-            // If the skill has no valid targets in the case of an AOE, then just do a normal action.
-            if (!actorAI.ValidSkillTargets(turnActor, map, activeManager))
-            {
-                BasicNPCAction();
-                return;
-            }
-            if (skill == "")
-            {
-                ActivateSkill(actorAI.ReturnAIActiveSkill());
-                if (AdjustTurnNumber())
-                {
-                    return;
-                }
-            }
-            else
-            {
-                ActivateSkill(skill);
-                if (AdjustTurnNumber())
-                {
-                    return;
-                }
-            }
-            if (turnActor.GetActions() <= 0 || turnActor.GetHealth() < 0)
+            if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
             {
                 EndTurn();
                 return;

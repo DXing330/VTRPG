@@ -122,7 +122,7 @@ public class TacticActor : ActorStats
     public int GetCounter(){return counter;}
 
     // Actions.
-    public int baseActions = 2;
+    public int baseActions = 4;
     public void UpdateBaseActions(int amount){baseActions += amount;}
     public int GetBaseActions() { return baseActions; }
     public void SetBaseActions(int newActions){baseActions = newActions;}

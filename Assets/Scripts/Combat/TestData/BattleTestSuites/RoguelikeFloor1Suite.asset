@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   suiteName: Roguelike Floor 1 Suite
   reportRoot: Assets/output/battle-tests
-  stopOnFailure: 0
+  stopOnFailure: 1
   scenarios:
   - {fileID: 11400000, guid: f0758879a05c49ac9fa31ca502325425, type: 2}
   - {fileID: 11400000, guid: ee8e051c3fa34e838bffe78dbfcbde98, type: 2}

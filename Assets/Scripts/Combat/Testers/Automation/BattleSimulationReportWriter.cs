@@ -22,6 +22,7 @@ public static class BattleSimulationReportWriter
         File.WriteAllText(Path.Combine(reportDirectory, "review.md"), BuildReviewMarkdown(result, currentStats, previousStats, scenarioMap));
         File.WriteAllText(Path.Combine(reportDirectory, "comparison.md"), BuildComparisonMarkdown(result, previousResult, currentStats, previousStats));
         File.WriteAllText(Path.Combine(reportDirectory, "skill-usage.md"), BuildSkillUsageMarkdown(result));
+        File.WriteAllText(Path.Combine(reportDirectory, "ai-reasoning.md"), BuildAiReasoningMarkdown(result));
         File.WriteAllText(Path.Combine(reportDirectory, "debug.md"), BuildDebugMarkdown(result));
         File.WriteAllText(Path.Combine(reportDirectory, "boss-ai-debug.md"), BuildBossAiDebugMarkdown(result));
         File.WriteAllText(Path.Combine(reportDirectory, "dashboard.html"), BuildDashboardHtml(result, currentStats));
@@ -243,6 +244,7 @@ public static class BattleSimulationReportWriter
 
         int currentRound = int.MinValue;
         int currentTurn = int.MinValue;
+        bool[] usedReasoning = run.aiReasoning == null ? new bool[0] : new bool[run.aiReasoning.Count];
         for (int i = 0; i < run.combatLogEntries.Count; i++)
         {
             BattleSimulationCombatLogEntry entry = run.combatLogEntries[i];
@@ -263,6 +265,11 @@ public static class BattleSimulationReportWriter
             if (!string.IsNullOrEmpty(entry.actionType))
             {
                 builder.AppendLine("- **" + entry.actorName + "** " + entry.actionType.ToLower() + ": `" + entry.skillName + "`");
+                BattleSimulationAiReasoningEntry reasoning = FindReasoningForLogEntry(run, entry, usedReasoning);
+                if (reasoning != null)
+                {
+                    builder.AppendLine("  - AI: " + ReasoningSentence(reasoning));
+                }
             }
             else
             {
@@ -271,6 +278,50 @@ public static class BattleSimulationReportWriter
         }
 
         return builder.ToString();
+    }
+
+    static BattleSimulationAiReasoningEntry FindReasoningForLogEntry(BattleSimulationRunResult run, BattleSimulationCombatLogEntry entry, bool[] usedReasoning)
+    {
+        if (run.aiReasoning == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < run.aiReasoning.Count; i++)
+        {
+            if (i < usedReasoning.Length && usedReasoning[i])
+            {
+                continue;
+            }
+
+            BattleSimulationAiReasoningEntry reasoning = run.aiReasoning[i];
+            if (reasoning.round == entry.round
+                && reasoning.turn == entry.turn
+                && reasoning.actorName == entry.actorName
+                && reasoning.actionType == entry.actionType
+                && reasoning.skillName == entry.skillName)
+            {
+                if (i < usedReasoning.Length)
+                {
+                    usedReasoning[i] = true;
+                }
+                return reasoning;
+            }
+        }
+        return null;
+    }
+
+    static string ReasoningSentence(BattleSimulationAiReasoningEntry reasoning)
+    {
+        if (reasoning == null)
+        {
+            return "";
+        }
+
+        string form = string.IsNullOrEmpty(reasoning.inferredForm) ? "unknown form" : "`" + reasoning.inferredForm + "`";
+        string condition = string.IsNullOrEmpty(reasoning.condition) ? "unknown condition" : "`" + reasoning.condition + "|" + reasoning.conditionSpecifics + "`";
+        string rule = string.IsNullOrEmpty(reasoning.rotationRule) ? "no matched rotation block" : "`" + reasoning.rotationRule + "`";
+        return reasoning.confidence + " from " + form + " using " + condition + " -> " + rule + ". " + reasoning.note;
     }
 
     static string BuildSkillUsageMarkdown(BattleSimulationSuiteResult result)
@@ -313,6 +364,58 @@ public static class BattleSimulationReportWriter
         return builder.ToString();
     }
 
+    static string BuildAiReasoningMarkdown(BattleSimulationSuiteResult result)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("# AI Reasoning Trace");
+        builder.AppendLine();
+        builder.AppendLine("- Suite: " + result.suiteName);
+        builder.AppendLine("- Note: this is inferred from observed combat-log actions and boss rotation data. It does not instrument runtime condition values.");
+        builder.AppendLine();
+
+        bool foundReasoning = false;
+        for (int i = 0; i < result.runs.Count; i++)
+        {
+            BattleSimulationRunResult run = result.runs[i];
+            if (run.aiReasoning == null || run.aiReasoning.Count == 0)
+            {
+                continue;
+            }
+
+            foundReasoning = true;
+            builder.AppendLine("## " + run.scenarioName + " run " + run.runIndex);
+            builder.AppendLine();
+            builder.AppendLine("- Seed: " + run.seed);
+            builder.AppendLine("- Winner: Team " + run.winningTeam);
+            builder.AppendLine();
+            builder.AppendLine("| Round | Turn | Actor | Observed Action | Inferred Form | Condition | Rotation Action | Rule | Confidence |");
+            builder.AppendLine("| ---: | ---: | --- | --- | --- | --- | --- | --- | --- |");
+            for (int j = 0; j < run.aiReasoning.Count; j++)
+            {
+                BattleSimulationAiReasoningEntry entry = run.aiReasoning[j];
+                builder.AppendLine("| "
+                    + entry.round + " | "
+                    + (entry.turn + 1) + " | "
+                    + EscapeMarkdown(entry.actorName) + " | "
+                    + EscapeMarkdown(entry.actionType + " " + entry.skillName) + " | "
+                    + EscapeMarkdown(entry.inferredForm) + " | "
+                    + EscapeMarkdown(entry.condition + "|" + entry.conditionSpecifics) + " | "
+                    + EscapeMarkdown(entry.rotationAction + " " + entry.rotationTarget) + " | "
+                    + EscapeMarkdown(entry.rotationRule) + " | "
+                    + EscapeMarkdown(entry.confidence) + " |");
+            }
+            builder.AppendLine();
+        }
+
+        if (!foundReasoning)
+        {
+            builder.AppendLine("No inferred AI reasoning was captured.");
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
     static string BuildReviewMarkdown(BattleSimulationSuiteResult result, Dictionary<string, ScenarioStats> currentStats, Dictionary<string, ScenarioStats> previousStats, Dictionary<string, BattleTestScenario> scenarioMap)
     {
         List<string> baselineWarnings = BuildBaselineWarnings(currentStats, scenarioMap);
@@ -340,6 +443,7 @@ public static class BattleSimulationReportWriter
         builder.AppendLine("- `summary.md`: full scenario and actor averages");
         builder.AppendLine("- `comparison.md`: latest-vs-previous deltas");
         builder.AppendLine("- `skill-usage.md`: skill/action counts by actor");
+        builder.AppendLine("- `ai-reasoning.md`: inferred boss rotation reasoning from combat-log actions");
         builder.AppendLine("- `debug.md`: exception stack traces and setup diagnostics for failed runs");
         builder.AppendLine("- `boss-ai-debug.md`: boss rotation, form-change, live turn-actor state, and inferred crash context");
         builder.AppendLine("- `combat-logs/`: per-run round and turn timelines");
@@ -391,7 +495,8 @@ public static class BattleSimulationReportWriter
         {
             BattleSimulationRunResult run = result.runs[i];
             if ((run.bossAiDebug == null || run.bossAiDebug.Count == 0)
-                && (run.crashInference == null || run.crashInference.Count == 0))
+                && (run.crashInference == null || run.crashInference.Count == 0)
+                && (run.aiReasoning == null || run.aiReasoning.Count == 0))
             {
                 continue;
             }
@@ -405,6 +510,7 @@ public static class BattleSimulationReportWriter
             builder.AppendLine("- Stage: " + run.failureStage);
             builder.AppendLine();
             AppendDebugList(builder, "Boss AI Data", run.bossAiDebug);
+            AppendAiReasoningDebug(builder, run);
             AppendDebugList(builder, "Crash Inference", run.crashInference);
         }
 
@@ -415,6 +521,27 @@ public static class BattleSimulationReportWriter
         }
 
         return builder.ToString();
+    }
+
+    static void AppendAiReasoningDebug(StringBuilder builder, BattleSimulationRunResult run)
+    {
+        if (run.aiReasoning == null || run.aiReasoning.Count == 0)
+        {
+            return;
+        }
+
+        builder.AppendLine("### Inferred AI Trace");
+        builder.AppendLine();
+        for (int i = 0; i < run.aiReasoning.Count; i++)
+        {
+            BattleSimulationAiReasoningEntry entry = run.aiReasoning[i];
+            builder.AppendLine("- Round " + entry.round
+                + " turn " + (entry.turn + 1)
+                + ": " + entry.actorName
+                + " observed `" + entry.actionType + " " + entry.skillName + "` -> "
+                + ReasoningSentence(entry));
+        }
+        builder.AppendLine();
     }
 
     static void AppendRunDebug(StringBuilder builder, BattleSimulationRunResult run)

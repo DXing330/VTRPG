@@ -15,11 +15,13 @@ public static class BattleSimulationRunner
         capturedErrors = new List<string>();
         Application.logMessageReceived += CaptureUnityErrors;
         BattleSimulator simulator = null;
+        HashSet<int> preRunActorObjects = new HashSet<int>();
         string stage = "Finding BattleSimulator";
         try
         {
             AddDebugStep(result, stage);
             simulator = FindLoadedSimulator();
+            preRunActorObjects = CaptureSceneActorObjects(simulator.gameObject.scene);
             CaptureScenarioDebug(result, scenario);
             CaptureSimulatorDebug(result, simulator);
             stage = "Validating scenario";
@@ -72,6 +74,7 @@ public static class BattleSimulationRunner
         }
         finally
         {
+            CleanupNewActorObjects(simulator, preRunActorObjects);
             Application.logMessageReceived -= CaptureUnityErrors;
         }
         if (capturedErrors.Count > 0)
@@ -81,6 +84,116 @@ public static class BattleSimulationRunner
         }
 
         return result;
+    }
+
+    public static int CleanGeneratedActorObjectsInLoadedScenes()
+    {
+        int cleaned = 0;
+        TacticActor[] actors = Resources.FindObjectsOfTypeAll<TacticActor>();
+        for (int i = actors.Length - 1; i >= 0; i--)
+        {
+            TacticActor actor = actors[i];
+            if (actor == null || actor.gameObject == null)
+            {
+                continue;
+            }
+
+            Scene scene = actor.gameObject.scene;
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                continue;
+            }
+
+            if (!actor.gameObject.name.Contains("(Clone)"))
+            {
+                continue;
+            }
+
+            DestroyActorObject(actor.gameObject);
+            cleaned++;
+        }
+        return cleaned;
+    }
+
+    static HashSet<int> CaptureSceneActorObjects(Scene scene)
+    {
+        HashSet<int> actorObjects = new HashSet<int>();
+        if (!scene.IsValid() || !scene.isLoaded)
+        {
+            return actorObjects;
+        }
+
+        TacticActor[] actors = Resources.FindObjectsOfTypeAll<TacticActor>();
+        for (int i = 0; i < actors.Length; i++)
+        {
+            TacticActor actor = actors[i];
+            if (actor == null || actor.gameObject == null)
+            {
+                continue;
+            }
+
+            if (actor.gameObject.scene != scene)
+            {
+                continue;
+            }
+
+            actorObjects.Add(actor.gameObject.GetInstanceID());
+        }
+        return actorObjects;
+    }
+
+    static void CleanupNewActorObjects(BattleSimulator simulator, HashSet<int> preRunActorObjects)
+    {
+        if (simulator == null || simulator.gameObject == null)
+        {
+            return;
+        }
+
+        Scene scene = simulator.gameObject.scene;
+        if (!scene.IsValid() || !scene.isLoaded)
+        {
+            return;
+        }
+
+        TacticActor[] actors = Resources.FindObjectsOfTypeAll<TacticActor>();
+        for (int i = actors.Length - 1; i >= 0; i--)
+        {
+            TacticActor actor = actors[i];
+            if (actor == null || actor.gameObject == null)
+            {
+                continue;
+            }
+
+            GameObject actorObject = actor.gameObject;
+            if (actorObject.scene != scene)
+            {
+                continue;
+            }
+
+            if (preRunActorObjects != null && preRunActorObjects.Contains(actorObject.GetInstanceID()))
+            {
+                continue;
+            }
+
+            DestroyActorObject(actorObject);
+        }
+    }
+
+    static void DestroyActorObject(GameObject actorObject)
+    {
+        if (actorObject == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            UnityEngine.Object.Destroy(actorObject);
+        }
+        else
+        {
+            UnityEngine.Object.DestroyImmediate(actorObject);
+        }
     }
 
     static void AddDebugStep(BattleSimulationRunResult result, string step)
@@ -1445,6 +1558,7 @@ public static class BattleSimulationRunner
             result.logEntries = battleManager.combatLog.allLogs.Count;
             result.combatLogs = new List<string>(battleManager.combatLog.allLogs);
             result.combatLogEntries = BuildCombatLogEntries(battleManager.combatLog);
+            result.aiReasoning = BuildAiReasoningTrace(simulator, scenario, result);
         }
         if (tracker != null)
         {
@@ -1526,6 +1640,306 @@ public static class BattleSimulationRunner
             skill = skill.Substring(0, skill.Length - 1);
         }
         entry.skillName = skill;
+    }
+
+    static List<BattleSimulationAiReasoningEntry> BuildAiReasoningTrace(BattleSimulator simulator, BattleTestScenario scenario, BattleSimulationRunResult result)
+    {
+        List<BattleSimulationAiReasoningEntry> trace = new List<BattleSimulationAiReasoningEntry>();
+        Dictionary<string, List<BossRotationRule>> rulesByActor = BuildBossReasoningRules(simulator, scenario);
+        if (rulesByActor.Count == 0 || result == null || result.combatLogEntries == null)
+        {
+            return trace;
+        }
+
+        for (int i = 0; i < result.combatLogEntries.Count; i++)
+        {
+            BattleSimulationCombatLogEntry logEntry = result.combatLogEntries[i];
+            if (string.IsNullOrEmpty(logEntry.actorName) || string.IsNullOrEmpty(logEntry.actionType))
+            {
+                continue;
+            }
+
+            if (!rulesByActor.ContainsKey(logEntry.actorName))
+            {
+                continue;
+            }
+
+            BattleSimulationAiReasoningEntry reasoning = BuildAiReasoningEntry(logEntry, rulesByActor[logEntry.actorName]);
+            trace.Add(reasoning);
+        }
+        return trace;
+    }
+
+    static Dictionary<string, List<BossRotationRule>> BuildBossReasoningRules(BattleSimulator simulator, BattleTestScenario scenario)
+    {
+        Dictionary<string, List<BossRotationRule>> rulesByActor = new Dictionary<string, List<BossRotationRule>>();
+        if (simulator == null || simulator.battleManager == null || scenario == null)
+        {
+            return rulesByActor;
+        }
+
+        ActorAI actorAI = simulator.battleManager.actorAI;
+        if (actorAI == null)
+        {
+            return rulesByActor;
+        }
+
+        AddBossReasoningRules(rulesByActor, actorAI, scenario.partyOne);
+        AddBossReasoningRules(rulesByActor, actorAI, scenario.partyTwo);
+        return rulesByActor;
+    }
+
+    static void AddBossReasoningRules(Dictionary<string, List<BossRotationRule>> rulesByActor, ActorAI actorAI, List<BattleTestActorSpec> actors)
+    {
+        if (actors == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < actors.Count; i++)
+        {
+            BattleTestActorSpec actor = actors[i];
+            if (actor == null || string.IsNullOrEmpty(actor.spriteName) || !ShouldCaptureBossActor(actorAI, actor.spriteName))
+            {
+                continue;
+            }
+
+            string actorName = actor.DisplayName(i);
+            if (!rulesByActor.ContainsKey(actorName))
+            {
+                rulesByActor.Add(actorName, new List<BossRotationRule>());
+            }
+
+            HashSet<string> visitedForms = new HashSet<string>();
+            CollectBossReasoningRules(actorAI, actor.spriteName, actorName, rulesByActor[actorName], visitedForms, 0);
+        }
+    }
+
+    static void CollectBossReasoningRules(ActorAI actorAI, string spriteName, string actorName, List<BossRotationRule> rules, HashSet<string> visitedForms, int depth)
+    {
+        if (actorAI == null || string.IsNullOrEmpty(spriteName) || rules == null || depth > 4)
+        {
+            return;
+        }
+
+        if (visitedForms.Contains(spriteName))
+        {
+            return;
+        }
+        visitedForms.Add(spriteName);
+
+        if (actorAI.spriteToBossRotation == null || actorAI.bossSkillRotation == null)
+        {
+            return;
+        }
+
+        string rotationKey = actorAI.spriteToBossRotation.ReturnValue(spriteName);
+        if (string.IsNullOrEmpty(rotationKey))
+        {
+            return;
+        }
+
+        string rotation = actorAI.bossSkillRotation.ReturnValue(rotationKey);
+        if (string.IsNullOrEmpty(rotation))
+        {
+            return;
+        }
+
+        string[] blocks = rotation.Split('#');
+        for (int i = 0; i < blocks.Length; i++)
+        {
+            string[] fields = blocks[i].Split('|');
+            if (fields.Length < 4)
+            {
+                continue;
+            }
+
+            BossRotationRule rule = new BossRotationRule();
+            rule.actorName = actorName;
+            rule.formSprite = spriteName;
+            rule.rotationKey = rotationKey;
+            rule.blockIndex = i;
+            rule.condition = fields[0];
+            rule.conditionSpecifics = fields[1];
+            rule.action = fields[2];
+            rule.target = fields[3];
+            rule.rawBlock = blocks[i];
+            rules.Add(rule);
+
+            if (rule.action == "Change Form")
+            {
+                CollectBossReasoningRules(actorAI, rule.target, actorName, rules, visitedForms, depth + 1);
+            }
+        }
+    }
+
+    static BattleSimulationAiReasoningEntry BuildAiReasoningEntry(BattleSimulationCombatLogEntry logEntry, List<BossRotationRule> rules)
+    {
+        BattleSimulationAiReasoningEntry reasoning = new BattleSimulationAiReasoningEntry();
+        reasoning.round = logEntry.round;
+        reasoning.turn = logEntry.turn;
+        reasoning.actorName = logEntry.actorName;
+        reasoning.actionType = logEntry.actionType;
+        reasoning.skillName = logEntry.skillName;
+
+        List<BossRotationRule> matches = MatchingRules(logEntry, rules);
+        if (matches.Count == 0)
+        {
+            reasoning.confidence = "Low";
+            reasoning.note = "No matching boss rotation block was found for this observed action. This may be default/basic AI, fallback after an unavailable skill, or an action outside the boss rotation.";
+            return reasoning;
+        }
+
+        if (matches.Count == 1)
+        {
+            ApplyRuleToReasoning(reasoning, matches[0]);
+            reasoning.confidence = logEntry.actionType == "Attack" ? "Low" : "Inferred";
+            reasoning.note = logEntry.actionType == "Attack"
+                ? "Observed basic attack. This can come from a Basic rotation block or fallback/default AI."
+                : "Inferred from the observed combat-log action and the boss rotation data. Runtime condition values were not instrumented.";
+            return reasoning;
+        }
+
+        ApplyRuleToReasoning(reasoning, matches[0]);
+        reasoning.inferredForm = JoinRuleValues(matches, "form");
+        reasoning.rotationKey = JoinRuleValues(matches, "rotation");
+        reasoning.rotationRule = JoinRuleValues(matches, "rule");
+        reasoning.condition = JoinRuleValues(matches, "condition");
+        reasoning.conditionSpecifics = JoinRuleValues(matches, "specifics");
+        reasoning.rotationAction = JoinRuleValues(matches, "action");
+        reasoning.rotationTarget = JoinRuleValues(matches, "target");
+        reasoning.confidence = "Ambiguous";
+        reasoning.note = "Multiple boss rotation blocks can explain this observed action. Runtime condition values were not instrumented.";
+        return reasoning;
+    }
+
+    static List<BossRotationRule> MatchingRules(BattleSimulationCombatLogEntry logEntry, List<BossRotationRule> rules)
+    {
+        List<BossRotationRule> matches = new List<BossRotationRule>();
+        if (rules == null)
+        {
+            return matches;
+        }
+
+        for (int i = 0; i < rules.Count; i++)
+        {
+            if (RuleMatchesLogEntry(rules[i], logEntry))
+            {
+                matches.Add(rules[i]);
+            }
+        }
+        return matches;
+    }
+
+    static bool RuleMatchesLogEntry(BossRotationRule rule, BattleSimulationCombatLogEntry logEntry)
+    {
+        if (rule == null || logEntry == null)
+        {
+            return false;
+        }
+
+        if (logEntry.actionType == "Attack")
+        {
+            return rule.action == "Basic";
+        }
+
+        if (logEntry.actionType == "Skill")
+        {
+            return RuleUsesObservedTarget(rule, logEntry.skillName, "Skill");
+        }
+
+        if (logEntry.actionType == "Spell")
+        {
+            return RuleUsesObservedTarget(rule, logEntry.skillName, "Spell");
+        }
+
+        return false;
+    }
+
+    static bool RuleUsesObservedTarget(BossRotationRule rule, string observedTarget, string actionKind)
+    {
+        if (string.IsNullOrEmpty(observedTarget) || string.IsNullOrEmpty(rule.action))
+        {
+            return false;
+        }
+
+        if (!rule.action.Contains(actionKind))
+        {
+            return false;
+        }
+
+        string[] targets = string.IsNullOrEmpty(rule.target) ? new string[0] : rule.target.Split(',');
+        for (int i = 0; i < targets.Length; i++)
+        {
+            if (targets[i].Trim() == observedTarget)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static void ApplyRuleToReasoning(BattleSimulationAiReasoningEntry reasoning, BossRotationRule rule)
+    {
+        reasoning.inferredForm = rule.formSprite;
+        reasoning.rotationKey = rule.rotationKey;
+        reasoning.rotationRule = "block[" + rule.blockIndex + "] " + rule.rawBlock;
+        reasoning.condition = rule.condition;
+        reasoning.conditionSpecifics = rule.conditionSpecifics;
+        reasoning.rotationAction = rule.action;
+        reasoning.rotationTarget = rule.target;
+    }
+
+    static string JoinRuleValues(List<BossRotationRule> rules, string valueType)
+    {
+        List<string> values = new List<string>();
+        for (int i = 0; i < rules.Count; i++)
+        {
+            string value = RuleValue(rules[i], valueType);
+            if (!values.Contains(value))
+            {
+                values.Add(value);
+            }
+        }
+        return string.Join("; ", values.ToArray());
+    }
+
+    static string RuleValue(BossRotationRule rule, string valueType)
+    {
+        if (rule == null)
+        {
+            return "";
+        }
+
+        if (valueType == "form")
+        {
+            return rule.formSprite;
+        }
+        if (valueType == "rotation")
+        {
+            return rule.rotationKey;
+        }
+        if (valueType == "rule")
+        {
+            return "block[" + rule.blockIndex + "] " + rule.rawBlock;
+        }
+        if (valueType == "condition")
+        {
+            return rule.condition;
+        }
+        if (valueType == "specifics")
+        {
+            return rule.conditionSpecifics;
+        }
+        if (valueType == "action")
+        {
+            return rule.action;
+        }
+        if (valueType == "target")
+        {
+            return rule.target;
+        }
+        return "";
     }
 
     static void AddActorResults(BattleSimulationRunResult result, BattleStatsTracker tracker, BattleSimulator simulator, BattleTestScenario scenario)
@@ -1681,6 +2095,19 @@ public static class BattleSimulationRunner
             }
             return parsed;
         }
+    }
+
+    class BossRotationRule
+    {
+        public string actorName;
+        public string formSprite;
+        public string rotationKey;
+        public int blockIndex;
+        public string condition;
+        public string conditionSpecifics;
+        public string action;
+        public string target;
+        public string rawBlock;
     }
 
     static void MarkFailed(BattleSimulationRunResult result, string reason)
