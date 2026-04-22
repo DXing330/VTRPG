@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scenarioName: RL F1 - More Wolves
   enabled: 1
-  tags: [roguelike, floor1, normal, hard]
   runCount: 5
   maxRounds: 100
   maxTurns: 1000

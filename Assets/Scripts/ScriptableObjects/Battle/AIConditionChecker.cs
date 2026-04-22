@@ -64,7 +64,7 @@ public class AIConditionChecker : ScriptableObject
                 return actor.GetBaseHealth() - actor.GetHealth() < int.Parse(specifics);
             case "Sprite":
                 return actor.GetSpriteName() == specifics;
-            case "<>TempPassive":
+            case "TempPassive<>":
                 return !actor.tempPassives.Contains(specifics);
             case "SkillExists":
                 return actor.SkillExists(specifics);
@@ -180,6 +180,10 @@ public class AIConditionChecker : ScriptableObject
                 return map.GetAdjacentAllies(actor.GetTarget()).Count > int.Parse(specifics);
             case "TargetAdjacentAllyCount<":
                 return map.GetAdjacentAllies(actor.GetTarget()).Count < int.Parse(specifics);
+            case "Buff<>":
+                return !actor.BuffExists(specifics);
+            case "Buff":
+                return actor.BuffExists(specifics);
         }
         return true;
     }

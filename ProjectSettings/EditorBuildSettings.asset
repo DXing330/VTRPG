@@ -51,7 +51,7 @@ EditorBuildSettings:
     path: Assets/Scenes/TrainingGrounds.unity
     guid: 34ec3d98ee791b44c87cec939e88b179
   - enabled: 1
-    path: Assets/Scenes/DebugScenes/BattleSimulator.unity
+    path: Assets/Scenes/DebugScenes/ManualBattleSimulator.unity
     guid: 3ee00250de6e9734ab99681a5fa2b126
   - enabled: 1
     path: Assets/Scenes/DebugScenes/MapEditor.unity

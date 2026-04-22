@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b7a6c69d8f224d1098383e2c93dc5c11, type: 3}
-  m_Name: Scenario_RL_F1_MoreBigSlimes
+  m_Name: Scenario_RL_F1_EliteLavagulin
   m_EditorClassIdentifier: 
-  scenarioName: RL F1 - More Big Slimes
+  scenarioName: RL F1 Elite - Lavagulin
   enabled: 1
   runCount: 5
   maxRounds: 100
   maxTurns: 1000
-  baseSeed: 4240
+  baseSeed: 4275
   randomizeSeed: 0
   autoBattle: 1
   controlAI: 0
@@ -38,21 +38,11 @@ MonoBehaviour:
     equipment: 
     id: 3
   partyTwo:
-  - spriteName: Big Slime
-    personalName: Big Slime A
+  - spriteName: Lavagulin
+    personalName: Lavagulin
     statsOverride: 
     equipment: 
     id: 101
-  - spriteName: Big Slime
-    personalName: Big Slime B
-    statsOverride: 
-    equipment: 
-    id: 102
-  - spriteName: Big Slime
-    personalName: Big Slime C
-    statsOverride: 
-    equipment: 
-    id: 103
   allowedTerrains: [Water]
   allowedWeather:
   - 

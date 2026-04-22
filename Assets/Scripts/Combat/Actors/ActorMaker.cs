@@ -153,7 +153,7 @@ public class ActorMaker : MonoBehaviour
         // Update the base stats of the actor.
         actor.SetSpriteName((newForm));
         actor.ResetElements();
-        actor.ChangeForm(actorStats.ReturnStats(newForm));
+        actor.ChangeFormFromString(actorStats.ReturnValue(newForm));
         AddElementPassives(actor);
         AddAttributePassives(actor);
         AddSpeciesPassives(actor);

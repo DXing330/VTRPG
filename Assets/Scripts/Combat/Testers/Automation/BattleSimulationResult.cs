@@ -42,6 +42,24 @@ public class BattleSimulationCombatLogEntry
 }
 
 [Serializable]
+public class BattleSimulationActorDebugInfo
+{
+    public string partyName;
+    public int index;
+    public string displayName;
+    public string spriteName;
+    public string id;
+    public string equipment;
+    public int equipmentLength;
+    public bool actorStatsKeyExists;
+    public bool usesStatsOverride;
+    public int statsLength;
+    public int statsFieldCount;
+    public string statsPreview;
+    public List<string> indexedStats = new List<string>();
+}
+
+[Serializable]
 public class BattleSimulationRunResult
 {
     public string scenarioName;
@@ -57,8 +75,20 @@ public class BattleSimulationRunResult
     public int logEntries;
     public bool failed;
     public string failureReason;
+    public string failureStage;
+    public string exceptionType;
+    public string exceptionMessage;
+    public string exceptionStackTrace;
     public List<string> warnings = new List<string>();
     public List<string> errors = new List<string>();
+    public List<string> debugSteps = new List<string>();
+    public List<string> scenarioDebug = new List<string>();
+    public List<string> simulatorDebug = new List<string>();
+    public List<string> partyDebug = new List<string>();
+    public List<string> bossAiDebug = new List<string>();
+    public List<string> crashInference = new List<string>();
+    public List<string> combatLogTail = new List<string>();
+    public List<BattleSimulationActorDebugInfo> actorDebug = new List<BattleSimulationActorDebugInfo>();
     public List<BattleSimulationActorResult> actors = new List<BattleSimulationActorResult>();
     public List<string> combatLogs = new List<string>();
     public List<BattleSimulationCombatLogEntry> combatLogEntries = new List<BattleSimulationCombatLogEntry>();

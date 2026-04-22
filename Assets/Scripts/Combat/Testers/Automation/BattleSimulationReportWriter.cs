@@ -22,6 +22,8 @@ public static class BattleSimulationReportWriter
         File.WriteAllText(Path.Combine(reportDirectory, "review.md"), BuildReviewMarkdown(result, currentStats, previousStats, scenarioMap));
         File.WriteAllText(Path.Combine(reportDirectory, "comparison.md"), BuildComparisonMarkdown(result, previousResult, currentStats, previousStats));
         File.WriteAllText(Path.Combine(reportDirectory, "skill-usage.md"), BuildSkillUsageMarkdown(result));
+        File.WriteAllText(Path.Combine(reportDirectory, "debug.md"), BuildDebugMarkdown(result));
+        File.WriteAllText(Path.Combine(reportDirectory, "boss-ai-debug.md"), BuildBossAiDebugMarkdown(result));
         File.WriteAllText(Path.Combine(reportDirectory, "dashboard.html"), BuildDashboardHtml(result, currentStats));
         WriteCombatLogs(reportDirectory, result);
         WriteFailureLogs(reportDirectory, result);
@@ -338,9 +340,198 @@ public static class BattleSimulationReportWriter
         builder.AppendLine("- `summary.md`: full scenario and actor averages");
         builder.AppendLine("- `comparison.md`: latest-vs-previous deltas");
         builder.AppendLine("- `skill-usage.md`: skill/action counts by actor");
+        builder.AppendLine("- `debug.md`: exception stack traces and setup diagnostics for failed runs");
+        builder.AppendLine("- `boss-ai-debug.md`: boss rotation, form-change, live turn-actor state, and inferred crash context");
         builder.AppendLine("- `combat-logs/`: per-run round and turn timelines");
         builder.AppendLine("- `dashboard.html`: browser-friendly overview");
         return builder.ToString();
+    }
+
+    static string BuildDebugMarkdown(BattleSimulationSuiteResult result)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("# Battle Test Debug");
+        builder.AppendLine();
+        builder.AppendLine("- Suite: " + result.suiteName);
+        builder.AppendLine("- Failed runs: " + result.failures.Count);
+        builder.AppendLine();
+
+        bool foundFailure = false;
+        for (int i = 0; i < result.runs.Count; i++)
+        {
+            BattleSimulationRunResult run = result.runs[i];
+            if (!run.failed)
+            {
+                continue;
+            }
+            foundFailure = true;
+            AppendRunDebug(builder, run);
+        }
+
+        if (!foundFailure)
+        {
+            builder.AppendLine("No failed runs.");
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    static string BuildBossAiDebugMarkdown(BattleSimulationSuiteResult result)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("# Boss AI Debug");
+        builder.AppendLine();
+        builder.AppendLine("- Suite: " + result.suiteName);
+        builder.AppendLine("- Runs: " + result.runs.Count);
+        builder.AppendLine();
+
+        bool foundBossDebug = false;
+        for (int i = 0; i < result.runs.Count; i++)
+        {
+            BattleSimulationRunResult run = result.runs[i];
+            if ((run.bossAiDebug == null || run.bossAiDebug.Count == 0)
+                && (run.crashInference == null || run.crashInference.Count == 0))
+            {
+                continue;
+            }
+
+            foundBossDebug = true;
+            builder.AppendLine("## " + run.scenarioName + " run " + run.runIndex);
+            builder.AppendLine();
+            builder.AppendLine("- Seed: " + run.seed);
+            builder.AppendLine("- Status: " + (run.failed ? "FAILED" : "PASSED"));
+            builder.AppendLine("- Failure: " + run.failureReason);
+            builder.AppendLine("- Stage: " + run.failureStage);
+            builder.AppendLine();
+            AppendDebugList(builder, "Boss AI Data", run.bossAiDebug);
+            AppendDebugList(builder, "Crash Inference", run.crashInference);
+        }
+
+        if (!foundBossDebug)
+        {
+            builder.AppendLine("No boss AI debug data was captured.");
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    static void AppendRunDebug(StringBuilder builder, BattleSimulationRunResult run)
+    {
+        builder.AppendLine("## " + run.scenarioName + " run " + run.runIndex);
+        builder.AppendLine();
+        builder.AppendLine("- Seed: " + run.seed);
+        builder.AppendLine("- Failure: " + run.failureReason);
+        builder.AppendLine("- Stage: " + run.failureStage);
+        builder.AppendLine("- Exception type: " + run.exceptionType);
+        builder.AppendLine("- Exception message: " + run.exceptionMessage);
+        builder.AppendLine("- Winner: " + run.winningTeam);
+        builder.AppendLine("- Rounds: " + run.rounds);
+        builder.AppendLine("- Log entries: " + run.logEntries);
+        builder.AppendLine();
+
+        AppendDebugList(builder, "Debug Steps", run.debugSteps);
+        AppendDebugList(builder, "Scenario", run.scenarioDebug);
+        AppendActorDebug(builder, run);
+        AppendDebugList(builder, "Boss AI Data", run.bossAiDebug);
+        AppendDebugList(builder, "Crash Inference", run.crashInference);
+        AppendDebugList(builder, "Simulator Snapshots", run.simulatorDebug);
+        AppendDebugList(builder, "Party Lists", run.partyDebug);
+        AppendDebugList(builder, "Combat Log Tail", run.combatLogTail);
+        AppendDebugList(builder, "Unity Errors", run.errors);
+
+        if (!string.IsNullOrEmpty(run.exceptionStackTrace))
+        {
+            builder.AppendLine("### Stack Trace");
+            builder.AppendLine();
+            builder.AppendLine("```");
+            builder.AppendLine(run.exceptionStackTrace);
+            builder.AppendLine("```");
+            builder.AppendLine();
+        }
+    }
+
+    static void AppendActorDebug(StringBuilder builder, BattleSimulationRunResult run)
+    {
+        builder.AppendLine("### Actor Data");
+        builder.AppendLine();
+        if (run.actorDebug.Count == 0)
+        {
+            builder.AppendLine("- None");
+            builder.AppendLine();
+            return;
+        }
+
+        builder.AppendLine("| Party | Index | Display | Sprite | Key Exists | Override | Fields | Stats Length | Equipment Length |");
+        builder.AppendLine("| --- | ---: | --- | --- | --- | --- | ---: | ---: | ---: |");
+        for (int i = 0; i < run.actorDebug.Count; i++)
+        {
+            BattleSimulationActorDebugInfo actor = run.actorDebug[i];
+            builder.AppendLine("| "
+                + EscapeMarkdown(actor.partyName) + " | "
+                + actor.index + " | "
+                + EscapeMarkdown(actor.displayName) + " | "
+                + EscapeMarkdown(actor.spriteName) + " | "
+                + actor.actorStatsKeyExists + " | "
+                + actor.usesStatsOverride + " | "
+                + actor.statsFieldCount + " | "
+                + actor.statsLength + " | "
+                + actor.equipmentLength + " |");
+        }
+        builder.AppendLine();
+
+        for (int i = 0; i < run.actorDebug.Count; i++)
+        {
+            BattleSimulationActorDebugInfo actor = run.actorDebug[i];
+            builder.AppendLine("#### " + actor.partyName + " " + actor.index + ": " + actor.displayName);
+            builder.AppendLine();
+            builder.AppendLine("- Sprite: `" + actor.spriteName + "`");
+            builder.AppendLine("- ID: `" + actor.id + "`");
+            builder.AppendLine("- Equipment: `" + EscapeBackticks(actor.equipment) + "`");
+            builder.AppendLine("- Stats preview: `" + EscapeBackticks(actor.statsPreview) + "`");
+            builder.AppendLine();
+            builder.AppendLine("Stats fields:");
+            builder.AppendLine();
+            if (actor.indexedStats.Count == 0)
+            {
+                builder.AppendLine("- None");
+            }
+            else
+            {
+                for (int statIndex = 0; statIndex < actor.indexedStats.Count; statIndex++)
+                {
+                    builder.AppendLine("- `" + EscapeBackticks(actor.indexedStats[statIndex]) + "`");
+                }
+            }
+            builder.AppendLine();
+        }
+    }
+
+    static void AppendDebugList(StringBuilder builder, string title, List<string> lines)
+    {
+        builder.AppendLine("### " + title);
+        builder.AppendLine();
+        if (lines == null || lines.Count == 0)
+        {
+            builder.AppendLine("- None");
+            builder.AppendLine();
+            return;
+        }
+        for (int i = 0; i < lines.Count; i++)
+        {
+            builder.AppendLine("- " + EscapeMarkdown(lines[i]));
+        }
+        builder.AppendLine();
+    }
+
+    static string EscapeBackticks(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "";
+        }
+        return value.Replace("`", "'");
     }
 
     static void AppendReviewSection(StringBuilder builder, string title, List<string> items)

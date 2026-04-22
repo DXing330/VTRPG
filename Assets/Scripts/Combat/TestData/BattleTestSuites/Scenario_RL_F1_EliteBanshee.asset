@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scenarioName: RL F1 Elite - Banshee
   enabled: 1
-  tags: [roguelike, floor1, elite]
   runCount: 5
   maxRounds: 100
   maxTurns: 1000

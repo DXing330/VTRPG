@@ -17,7 +17,6 @@ public class BattleTestScenario : ScriptableObject
 {
     public string scenarioName = "Battle Test Scenario";
     public bool enabled = true;
-    public List<string> tags = new List<string>();
     public int runCount = 10;
     public int maxRounds = 100;
     public int maxTurns = 1000;
@@ -67,21 +66,5 @@ public class BattleTestScenario : ScriptableObject
             return Random.Range(int.MinValue, int.MaxValue);
         }
         return baseSeed + runIndex;
-    }
-
-    public bool HasTag(string tag)
-    {
-        if (string.IsNullOrEmpty(tag))
-        {
-            return true;
-        }
-        for (int i = 0; i < tags.Count; i++)
-        {
-            if (string.Equals(tags[i], tag, System.StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
     }
 }

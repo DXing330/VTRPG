@@ -393,7 +393,7 @@ public class BattleManager : MonoBehaviour
             BossTurn(actionsLeft);
         }
         // This always calls an end turn.
-        else if (!actorAI.NormalTurn(turnActor, roundNumber))
+        else if (!actorAI.NormalTurn(turnActor, roundNumber, map, moveManager))
         {
             NPCSkillAction(actionsLeft);
         }
@@ -903,6 +903,7 @@ public class BattleManager : MonoBehaviour
             // If you can't find a target or cast the skill or are silenced then just do a regular action.
             if (targetedTile == -1 || !activeManager.CheckSpellCost(map))
             {
+                Debug.Log("Invalid Tile/Cost");
                 BasicNPCAction();
                 return;
             }
@@ -1367,7 +1368,8 @@ public class BattleManager : MonoBehaviour
     protected bool TryLoadCustomBattleMap()
     {
         customEnemyStartingLocations.Clear();
-        if (!battleState.UsingCustomBattle() || battleState.savedBattles == null)
+        if (!battleState.UsingCustomBattle()){return false;}
+        else if (battleState.UsingCustomBattle() && battleState.savedBattles == null)
         {
             Debug.Log("TryLoadCustomBattleMap aborted. UsingCustomBattle=" + battleState.UsingCustomBattle() + " savedBattlesNull=" + (battleState.savedBattles == null));
             return false;

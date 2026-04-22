@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scenarioName: Ranger Warrior Vs Bandits
   enabled: 1
-  tags:
   - smoke
   - balance
   runCount: 5

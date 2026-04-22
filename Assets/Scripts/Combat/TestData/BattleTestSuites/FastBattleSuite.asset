@@ -16,4 +16,4 @@ MonoBehaviour:
   reportRoot: Assets/output/battle-tests
   stopOnFailure: 1
   scenarios:
-  - {fileID: 11400000, guid: efd81669d3cf433e92604d3fcc3a35da, type: 2}
+  - {fileID: 11400000, guid: 3b46d9eb265c4b50bc69556907091e43, type: 2}

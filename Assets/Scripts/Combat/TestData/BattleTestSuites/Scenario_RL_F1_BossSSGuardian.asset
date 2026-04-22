@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scenarioName: RL F1 Boss - SS Guardian
   enabled: 1
-  tags: [roguelike, floor1, boss]
   runCount: 5
   maxRounds: 100
   maxTurns: 1000

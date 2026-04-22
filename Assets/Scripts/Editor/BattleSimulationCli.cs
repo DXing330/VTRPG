@@ -9,30 +9,31 @@ using UnityEngine.SceneManagement;
 public static class BattleSimulationCli
 {
     const string FastSuitePath = "Assets/Scripts/Combat/TestData/BattleTestSuites/FastBattleSuite.asset";
+    const string R1SuitePath = "Assets/Scripts/Combat/TestData/BattleTestSuites/RoguelikeFloor1Suite.asset";
+    const string GuardianFocusScenarioPath = "Assets/Scripts/Combat/TestData/BattleTestSuites/Scenario_RL_F1_BossSSGuardian.asset";
     const string SimulatorScenePath = "Assets/Scenes/DebugScenes/BattleSimulator.unity";
 
-    [MenuItem("Tools/Battle Tests/Run Fast Suite")]
-    public static void RunFastSuite()
+    [MenuItem("Window/Battle Tests/Run R1 Suite")]
+    public static void RunR1SuiteFromWindowMenu()
     {
-        RunSuiteAtPath(FastSuitePath, "");
+        RunSuiteAtPath(R1SuitePath);
     }
 
     [MenuItem("Window/Battle Tests/Run Fast Suite")]
     public static void RunFastSuiteFromWindowMenu()
     {
-        RunFastSuite();
+        RunSuiteAtPath(FastSuitePath);
     }
 
-    [MenuItem("Window/Battle Tests/Run Smoke Scenarios")]
-    public static void RunSmokeScenarios()
+    [MenuItem("Window/Battle Tests/Run Guardian Focus")]
+    public static void RunGuardianFocusFromWindowMenu()
     {
-        RunSuiteAtPath(FastSuitePath, "smoke");
+        RunScenarioAtPath(GuardianFocusScenarioPath, "Guardian Focus");
     }
 
-    [MenuItem("Window/Battle Tests/Run Balance Scenarios")]
-    public static void RunBalanceScenarios()
+    public static void RunGuardianFocus()
     {
-        RunSuiteAtPath(FastSuitePath, "balance");
+        RunScenarioAtPath(GuardianFocusScenarioPath, "Guardian Focus");
     }
 
     [MenuItem("Window/Battle Tests/Run Selected Suite Or Scenario")]
@@ -41,7 +42,7 @@ public static class BattleSimulationCli
         BattleTestSuite suite = Selection.activeObject as BattleTestSuite;
         if (suite != null)
         {
-            RunSuite(suite, "");
+            RunSuite(suite);
             return;
         }
 
@@ -53,7 +54,7 @@ public static class BattleSimulationCli
             transientSuite.reportRoot = "Assets/output/battle-tests";
             transientSuite.scenarios = new List<BattleTestScenario>();
             transientSuite.scenarios.Add(scenario);
-            RunSuite(transientSuite, "");
+            RunSuite(transientSuite);
             ScriptableObject.DestroyImmediate(transientSuite);
             return;
         }
@@ -62,11 +63,6 @@ public static class BattleSimulationCli
     }
 
     public static void RunSuiteAtPath(string suitePath)
-    {
-        RunSuiteAtPath(suitePath, "");
-    }
-
-    public static void RunSuiteAtPath(string suitePath, string requiredTag)
     {
         AssetDatabase.Refresh();
         BattleTestSuite suite = AssetDatabase.LoadAssetAtPath<BattleTestSuite>(suitePath);
@@ -79,32 +75,42 @@ public static class BattleSimulationCli
             }
             return;
         }
-        RunSuite(suite, requiredTag);
+        RunSuite(suite);
     }
 
-    static void RunSuite(BattleTestSuite suite, string requiredTag)
+    public static void RunScenarioAtPath(string scenarioPath, string suiteName)
+    {
+        AssetDatabase.Refresh();
+        BattleTestScenario scenario = AssetDatabase.LoadAssetAtPath<BattleTestScenario>(scenarioPath);
+        if (scenario == null)
+        {
+            Debug.LogError("Could not load battle test scenario at " + scenarioPath + ".");
+            if (Application.isBatchMode)
+            {
+                EditorApplication.Exit(1);
+            }
+            return;
+        }
+
+        BattleTestSuite transientSuite = ScriptableObject.CreateInstance<BattleTestSuite>();
+        transientSuite.suiteName = suiteName;
+        transientSuite.reportRoot = "Assets/output/battle-tests";
+        transientSuite.scenarios = new List<BattleTestScenario>();
+        transientSuite.scenarios.Add(scenario);
+        RunSuite(transientSuite);
+        ScriptableObject.DestroyImmediate(transientSuite);
+    }
+
+    static void RunSuite(BattleTestSuite suite)
     {
         BattleSimulationSuiteResult suiteResult = new BattleSimulationSuiteResult();
         string reportDirectory = "";
         int exitCode = 0;
-
         try
         {
             suiteResult.suiteName = suite.SuiteName();
-            if (!string.IsNullOrEmpty(requiredTag))
-            {
-                suiteResult.suiteName += " [" + requiredTag + "]";
-            }
             suiteResult.startedAt = DateTime.Now.ToString("o");
-
-            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-            {
-                Debug.Log("Battle simulation suite cancelled because modified scenes were not saved.");
-                return;
-            }
-
-            RunSuiteScenarios(suite, suiteResult, requiredTag);
-
+            RunSuiteScenarios(suite, suiteResult);
             suiteResult.finishedAt = DateTime.Now.ToString("o");
             reportDirectory = BattleSimulationReportWriter.WriteSuiteResult(suite, suiteResult);
             Debug.Log("Battle simulation report written to: " + reportDirectory);
@@ -117,37 +123,28 @@ public static class BattleSimulationCli
             suiteResult.failures.Add(exception.Message);
             Debug.LogError(exception);
         }
-
         if (suiteResult.failed)
         {
             exitCode = 1;
         }
-
         if (Application.isBatchMode)
         {
             EditorApplication.Exit(exitCode);
         }
     }
 
-    static void RunSuiteScenarios(BattleTestSuite suite, BattleSimulationSuiteResult suiteResult, string requiredTag)
+    static void RunSuiteScenarios(BattleTestSuite suite, BattleSimulationSuiteResult suiteResult)
     {
-        if (!File.Exists(ProjectRelativePath(SimulatorScenePath)))
-        {
-            throw new FileNotFoundException("Simulator scene was not found.", SimulatorScenePath);
-        }
-
-        var scenarios = suite.EnabledScenariosWithTag(requiredTag);
-        if (scenarios.Count == 0)
-        {
-            throw new InvalidOperationException("Battle test suite has no enabled scenarios" + (string.IsNullOrEmpty(requiredTag) ? "." : " tagged '" + requiredTag + "'."));
-        }
-
+        AddSuiteReferenceFailures(suite, suiteResult);
+        var scenarios = suite.EnabledScenarios();
         for (int scenarioIndex = 0; scenarioIndex < scenarios.Count; scenarioIndex++)
         {
             BattleTestScenario scenario = scenarios[scenarioIndex];
+            Debug.Log(scenario);
             for (int runIndex = 0; runIndex < scenario.RunCount(); runIndex++)
             {
                 EditorSceneManager.OpenScene(SimulatorScenePath, OpenSceneMode.Single);
+                Debug.Log(scenario);
                 BattleSimulationRunResult run = BattleSimulationRunner.RunScenarioInLoadedScene(scenario, runIndex);
                 suiteResult.AddRun(run);
                 if (suite.stopOnFailure && run.failed)
@@ -155,6 +152,26 @@ public static class BattleSimulationCli
                     return;
                 }
             }
+        }
+    }
+
+    static void AddSuiteReferenceFailures(BattleTestSuite suite, BattleSimulationSuiteResult suiteResult)
+    {
+        if (suite == null || suite.scenarios == null)
+        {
+            suiteResult.failed = true;
+            suiteResult.failures.Add("Suite has no scenario list.");
+            return;
+        }
+
+        for (int i = 0; i < suite.scenarios.Count; i++)
+        {
+            if (suite.scenarios[i] != null)
+            {
+                continue;
+            }
+            suiteResult.failed = true;
+            suiteResult.failures.Add("Suite scenario reference at index " + i + " is missing or could not be loaded.");
         }
     }
 

@@ -20,19 +20,10 @@ public class BattleTestSuite : ScriptableObject
 
     public List<BattleTestScenario> EnabledScenarios()
     {
-        return EnabledScenariosWithTag("");
-    }
-
-    public List<BattleTestScenario> EnabledScenariosWithTag(string tag)
-    {
         List<BattleTestScenario> enabledScenarios = new List<BattleTestScenario>();
         for (int i = 0; i < scenarios.Count; i++)
         {
             if (scenarios[i] == null || !scenarios[i].enabled)
-            {
-                continue;
-            }
-            if (!scenarios[i].HasTag(tag))
             {
                 continue;
             }
