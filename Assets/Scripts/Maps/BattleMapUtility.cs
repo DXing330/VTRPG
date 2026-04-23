@@ -105,8 +105,7 @@ public class BattleMapUtility : ScriptableObject
     // Finding Tiles Utilities.
     public int ReturnClosestTileOfType(BattleMap map, TacticActor actor, string tileType)
     {
-        int tile = -1;
-        int distance = map.mapSize * map.mapSize;
+        List<int> tiles = new List<int>();
         for (int i = 0; i < map.mapInfo.Count; i++)
         {
             if (actor.GetMoveType() != "Flying" && map.excludedTileTypesForNonFlying.Contains(map.mapInfo[i]))
@@ -115,15 +114,17 @@ public class BattleMapUtility : ScriptableObject
             }
             if (map.mapInfo[i].Contains(tileType) && GetActorOnTile(map, i) == null)
             {
-                int newDistance = mapUtility.DistanceBetweenTiles(i, actor.GetLocation(), map.mapSize);
-                if (newDistance < distance)
-                {
-                    distance = newDistance;
-                    tile = i;
-                }
+                tiles.Add(i);
             }
         }
-        return tile;
+        if (tiles.Count <= 0) { return -1; }
+        if (map.battleManager == null || map.battleManager.moveManager == null)
+        {
+            return mapUtility.ReturnClosestTile(actor.GetLocation(), tiles, map.mapSize);
+        }
+        MoveCostManager moveManager = map.battleManager.moveManager;
+        moveManager.GetAllMoveCosts(actor, map.battlingActors);
+        return moveManager.GetLowestMoveCostTile(actor.GetLocation(), tiles);
     }
     public bool TileSandwiched(BattleMap map, TacticActor actor, string tileType)
     {
@@ -178,7 +179,6 @@ public class BattleMapUtility : ScriptableObject
     {
         if (map == null || guardActor == null) { return false; }
         if (!guardActor.Guarding() || guardActor.GetHealth() <= 0) { return false; }
-
         List<TacticActor> allies = map.AllAllies(guardActor);
         for (int i = 0; i < allies.Count; i++)
         {
@@ -187,7 +187,6 @@ public class BattleMapUtility : ScriptableObject
                 return true;
             }
         }
-
         return false;
     }
     public bool GuardCanCoverAlly(BattleMap map, TacticActor guardActor, TacticActor ally)
@@ -197,7 +196,81 @@ public class BattleMapUtility : ScriptableObject
         if (guardActor.GetTeam() != ally.GetTeam()) { return false; }
         if (guardActor.GetHealth() <= 0 || ally.GetHealth() <= 0) { return false; }
         if (!guardActor.Guarding()) { return false; }
-
         return map.DistanceBetweenActors(guardActor, ally) <= guardActor.GetGuardRange();
+    }
+    public bool TileCanGuardAnyAllyFromAnyEnemy(BattleMap map, TacticActor guardActor, int tileNumber, int guardRange = -1)
+    {
+        if (!ValidGuardTile(map, guardActor, tileNumber)) { return false; }
+        if (guardRange < 0)
+        {
+            guardRange = guardActor.GetGuardRange();
+        }
+        if (guardRange <= 0) { return false; }
+        List<TacticActor> allies = map.AllAllies(guardActor);
+        List<TacticActor> enemies = map.AllEnemies(guardActor);
+        for (int i = 0; i < allies.Count; i++)
+        {
+            TacticActor ally = allies[i];
+            if (ally == null || ally == guardActor || ally.GetHealth() <= 0) { continue; }
+            for (int j = 0; j < enemies.Count; j++)
+            {
+                TacticActor enemy = enemies[j];
+                if (enemy == null || enemy.GetHealth() <= 0 || enemy.invisible) { continue; }
+                if (TileCanGuardAllyFromEnemy(map, guardActor, tileNumber, ally, enemy, guardRange))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    public bool TileCanGuardAllyFromEnemy(BattleMap map, TacticActor guardActor, int tileNumber, TacticActor ally, TacticActor enemy, int guardRange)
+    {
+        if (map == null || guardActor == null || ally == null || enemy == null) { return false; }
+        if (guardActor.GetTeam() != ally.GetTeam()) { return false; }
+        if (guardActor.GetTeam() == enemy.GetTeam()) { return false; }
+        if (guardActor == ally) { return false; }
+        if (ally.GetHealth() <= 0 || enemy.GetHealth() <= 0) { return false; }
+        // Check If Guard Is Close Enough To Ally To Intercept.
+        if (mapUtility.DistanceBetweenTiles(tileNumber, ally.GetLocation(), map.mapSize) > guardRange)
+        {
+            return false;
+        }
+        bool meleeAttack = mapUtility.DistanceBetweenTiles(enemy.GetLocation(), ally.GetLocation(), map.mapSize) <= 1;
+        // Check If Guard Is Close Enough To Enemy To Intercept.
+        if (meleeAttack && mapUtility.DistanceBetweenTiles(tileNumber, enemy.GetLocation(), map.mapSize) > guardRange)
+        {
+            return false;
+        }
+        return true;
+    }
+    protected bool ValidGuardTile(BattleMap map, TacticActor guardActor, int tileNumber)
+    {
+        if (map == null || guardActor == null) { return false; }
+        if (tileNumber < 0 || tileNumber >= map.mapInfo.Count) { return false; }
+        if (map.TileExcluded(guardActor, map.mapInfo[tileNumber])) { return false; }
+        TacticActor occupyingActor = GetActorOnTile(map, tileNumber);
+        return occupyingActor == null || occupyingActor == guardActor;
+    }
+    public List<int> ReturnGuardTiles(BattleMap map, TacticActor guardActor)
+    {
+        List<int> guardTiles = new List<int>();
+        if (map == null || guardActor == null) { return guardTiles; }
+        for (int tile = 0; tile < map.mapInfo.Count; tile++)
+        {
+            if (TileCanGuardAnyAllyFromAnyEnemy(map, guardActor, tile))
+            {
+                guardTiles.Add(tile);
+            }
+        }
+        return guardTiles;
+    }
+    public int ReturnLowestMoveCostGuardTile(BattleMap map, TacticActor guardActor)
+    {
+        if (map == null || guardActor == null || map.battleManager == null || map.battleManager.moveManager == null) { return -1; }
+        List<int> guardTiles = ReturnGuardTiles(map, guardActor);
+        MoveCostManager moveManager = map.battleManager.moveManager;
+        moveManager.GetAllMoveCosts(guardActor, map.battlingActors);
+        return moveManager.GetLowestMoveCostTile(guardActor.GetLocation(), guardTiles);
     }
 }

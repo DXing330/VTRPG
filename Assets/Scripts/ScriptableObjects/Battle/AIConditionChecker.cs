@@ -188,6 +188,14 @@ public class AIConditionChecker : ScriptableObject
                 return actor.Guarding();
             case "Guarding<>":
                 return !actor.Guarding();
+            case "GuardCoveringAlly":
+                return map.battleMapUtility.GuardCoveringAlly(map, actor);
+            case "GuardCoveringAlly<>":
+                return !map.battleMapUtility.GuardCoveringAlly(map, actor);
+            case "CurrentTileCanGuard":
+            return map.battleMapUtility.TileCanGuardAnyAllyFromAnyEnemy(map, actor, actor.GetLocation());
+            case "CurrentTileCanGuard<>":
+                return !map.battleMapUtility.TileCanGuardAnyAllyFromAnyEnemy(map, actor, actor.GetLocation());
         }
         return true;
     }

@@ -199,6 +199,26 @@ public class MoveCostManager : MonoBehaviour
         return path;
     }
 
+    public int GetLowestMoveCostTile(int startTile, List<int> tiles)
+    {
+        if (tiles == null || tiles.Count <= 0) { return -1; }
+        int bestTile = -1;
+        int bestCost = bigInt;
+        for (int i = 0; i < tiles.Count; i++)
+        {
+            int tile = tiles[i];
+            if (tile == startTile) { return tile; }
+            List<int> path = GetPrecomputedPath(startTile, tile);
+            if (path.Count <= 0) { continue; }
+            if (moveCost < bestCost)
+            {
+                bestCost = moveCost;
+                bestTile = tile;
+            }
+        }
+        return bestTile;
+    }
+
     public int MoveCostOfPath(List<int> path)
     {
         moveCost = 0;

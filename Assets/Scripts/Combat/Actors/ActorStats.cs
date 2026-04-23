@@ -70,6 +70,7 @@ public class ActorStats : ActorInitialStats
         // Initiative is used to determine your turn in the round.
         // At the start of your turn during the round reset it.
         ResetTempInitiative();
+        CheckStartUniqueEffects();
     }
     // End of Turn
     protected virtual void EndTurnResetStats()
@@ -78,6 +79,7 @@ public class ActorStats : ActorInitialStats
         ResetTempDefense();
         ResetTempHealth();
         ResetBonusAttackRange();
+        CheckEndUniqueEffects();
         tempWeight = 0;
         currentCritDamage = baseCritDamage;
         currentCrit = baseCrit;
@@ -778,7 +780,6 @@ public class ActorStats : ActorInitialStats
                 statusDurations.RemoveAt(i);
             }
         }
-        CheckUniqueEffects();
     }
     // UNIQUE STATUSES //
     public void ResetUniqueEffects()
@@ -789,13 +790,16 @@ public class ActorStats : ActorInitialStats
         RemoveBarricade();
         RemoveGuard();
     }
-    public void CheckUniqueEffects()
+    public void CheckStartUniqueEffects()
     {
-        CheckSilence();
-        CheckSleeping();
         CheckInvisibility();
         CheckBarricade();
         CheckGuard();
+    }
+    public void CheckEndUniqueEffects()
+    {
+        CheckSilence();
+        CheckSleeping();
     }
     public bool silenced = false;
     public bool GetSilenced(){return silenced;}
