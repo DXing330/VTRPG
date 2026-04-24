@@ -8,12 +8,14 @@ public class MapStateTester : MonoBehaviour
     public BattleManager battleManager;
     public MoveCostManager moveManager;
     public TacticActor testGuardActor;
+    public TacticActor testTargetActor;
     public int guardRange = -1;
     public int testTileNumber = 0;
     public bool reachableTilesOnly = true;
     public bool includeCurrentTile = true;
     public bool logOnlyGoodTiles = true;
     public int maxLoggedTiles = 80;
+    public string testTileType = "";
 
     [ContextMenu("Find References")]
     public void FindReferences()
@@ -86,6 +88,32 @@ public class MapStateTester : MonoBehaviour
             TacticActor blockedEnemy;
             bool goodTile = TryFindCoverage(actor, actor.GetLocation(), out coveredAlly, out blockedEnemy);
             Debug.Log(GuardTileLine(actor, actor.GetLocation(), goodTile, coveredAlly, blockedEnemy));
+        }
+    }
+
+    [ContextMenu("Move Cost Choices > Level 1")]
+    public void TestLevelOneMoveCostChoices()
+    {
+        if (!Ready()) { return; }
+        if (testTileType == "")
+        {
+            Debug.Log("MapStateTester needs `testTileType` set for move cost choice tests.");
+            return;
+        }
+
+        List<TacticActor> actors = ActorsToTest();
+        for (int i = 0; i < actors.Count; i++)
+        {
+            TacticActor actor = actors[i];
+            TacticActor originalTarget = actor.GetTarget();
+            if (testTargetActor != null)
+            {
+                actor.SetTarget(testTargetActor);
+            }
+            LogMoveCostChoice(actor, "TileType", testTileType, TileTypeCandidates(actor, testTileType), map.ReturnClosestTileOfType(actor, testTileType));
+            LogMoveCostChoice(actor, "SandwichTarget", testTileType, SandwichTargetCandidates(actor, testTileType), map.ReturnClosestSandwichTargetBetweenTileOfType(actor, testTileType));
+            LogMoveCostChoice(actor, "SandwichedTile", testTileType, SandwichedTileCandidates(actor, testTileType), map.ReturnClosestTileSandwiched(actor, testTileType));
+            actor.SetTarget(originalTarget);
         }
     }
 
@@ -187,6 +215,75 @@ public class MapStateTester : MonoBehaviour
             tiles.Add(actor.GetLocation());
         }
         return tiles;
+    }
+
+    List<int> TileTypeCandidates(TacticActor actor, string tileType)
+    {
+        List<int> tiles = new List<int>();
+        for (int i = 0; i < map.mapInfo.Count; i++)
+        {
+            if (actor.GetMoveType() != "Flying" && map.excludedTileTypesForNonFlying.Contains(map.mapInfo[i])) { continue; }
+            if (map.mapInfo[i].Contains(tileType) && map.GetActorOnTile(i) == null) { tiles.Add(i); }
+        }
+        return tiles;
+    }
+
+    List<int> SandwichTargetCandidates(TacticActor actor, string tileType)
+    {
+        List<int> tiles = new List<int>();
+        if (actor.GetTarget() == null || actor.GetTarget().GetHealth() <= 0 || actor.GetTarget().invisible) { return tiles; }
+        int targetLocation = actor.GetTarget().GetLocation();
+        List<int> adjacentTiles = map.mapUtility.AdjacentTiles(targetLocation, map.mapSize);
+        for (int i = 0; i < adjacentTiles.Count; i++)
+        {
+            if (!map.mapInfo[adjacentTiles[i]].Contains(tileType)) { continue; }
+            int sandwichingPoint = map.mapUtility.PointInOppositeDirection(targetLocation, adjacentTiles[i], map.mapSize);
+            if (sandwichingPoint < 0 || map.TileExcluded(actor, map.mapInfo[sandwichingPoint]) || map.GetActorOnTile(sandwichingPoint) != null) { continue; }
+            tiles.Add(sandwichingPoint);
+        }
+        return tiles;
+    }
+
+    List<int> SandwichedTileCandidates(TacticActor actor, string tileType)
+    {
+        List<int> tiles = new List<int>();
+        if (actor.GetTarget() == null || actor.GetTarget().GetHealth() <= 0 || actor.GetTarget().invisible) { return tiles; }
+        int targetLocation = actor.GetTarget().GetLocation();
+        List<int> adjacentTiles = map.mapUtility.AdjacentTiles(targetLocation, map.mapSize);
+        for (int i = 0; i < adjacentTiles.Count; i++)
+        {
+            if (!map.mapInfo[adjacentTiles[i]].Contains(tileType)) { continue; }
+            int direction = map.mapUtility.DirectionBetweenLocations(targetLocation, adjacentTiles[i], map.mapSize);
+            List<int> lineTiles = map.mapUtility.GetTilesInLineDirection(adjacentTiles[i], direction, map.mapSize, map.mapSize);
+            for (int j = 0; j < lineTiles.Count; j++)
+            {
+                if (lineTiles[j] < 0 || map.TileExcluded(actor, map.mapInfo[lineTiles[j]]) || map.GetActorOnTile(lineTiles[j]) != null) { continue; }
+                tiles.Add(lineTiles[j]);
+                break;
+            }
+        }
+        return tiles;
+    }
+
+    void LogMoveCostChoice(TacticActor actor, string mode, string tileType, List<int> candidates, int selectedTile)
+    {
+        int rawClosest = candidates == null || candidates.Count <= 0 ? -1 : map.mapUtility.ReturnClosestTile(actor.GetLocation(), candidates, map.mapSize);
+        int rawDistance = rawClosest < 0 ? -1 : map.mapUtility.DistanceBetweenTiles(actor.GetLocation(), rawClosest, map.mapSize);
+        int selectedDistance = selectedTile < 0 ? -1 : map.mapUtility.DistanceBetweenTiles(actor.GetLocation(), selectedTile, map.mapSize);
+        int selectedMoveCost = MoveCostToTile(actor, selectedTile);
+        int rawMoveCost = MoveCostToTile(actor, rawClosest);
+        Debug.Log("MapStateTester MoveCostChoice " + mode + " actor=" + ActorLabel(actor) + " tileType=" + tileType + " candidates=" + candidates.Count + " rawClosest=" + rawClosest + " rawDistance=" + rawDistance + " rawMoveCost=" + rawMoveCost + " selected=" + selectedTile + " selectedDistance=" + selectedDistance + " selectedMoveCost=" + selectedMoveCost);
+    }
+
+    int MoveCostToTile(TacticActor actor, int tile)
+    {
+        if (moveManager == null || actor == null || tile < 0) { return -1; }
+        if (tile == actor.GetLocation()) { return 0; }
+        moveManager.UpdateInfoFromBattleMap(map);
+        moveManager.GetAllMoveCosts(actor, map.battlingActors);
+        List<int> path = moveManager.GetPrecomputedPath(actor.GetLocation(), tile);
+        if (path.Count <= 0) { return -1; }
+        return moveManager.GetMoveCost();
     }
 
     bool Ready()

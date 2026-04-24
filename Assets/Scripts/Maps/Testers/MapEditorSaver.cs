@@ -8,6 +8,20 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "SavedMaps", menuName = "ScriptableObjects/DataContainers/SavedData/SavedMaps", order = 1)]
 public class MapEditorSaver : SavedData
 {
+    public StatDatabase customMapDB;
+    public string testSavedMapName;
+    [ContextMenu("Show Saved Map")]
+    public void ShowSavedMap()
+    {
+        dataPath = Application.persistentDataPath + "/" + filename + testSavedMapName;
+        if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
+        else
+        {
+            Debug.Log("No Map Exists With That Name");
+            return;
+        }
+        Debug.Log(allData);
+    }
     public List<string> savedKeys;
     public bool AddKey(string newKey)
     {
@@ -15,37 +29,18 @@ public class MapEditorSaver : SavedData
         savedKeys.Add(newKey);
         return true;
     }
-    public void DeleteKey(string key)
+    public virtual void DeleteKey(string key)
     {
         if (!KeyExists(key)){return;}
-        savedKeys.Remove(key);
-        SaveKeys();
-        // Delete the file.
-        dataPath = Application.persistentDataPath + "/" + filename + currentMapName;
-        if (File.Exists(dataPath))
-        {
-            File.Delete(dataPath);
-            Debug.Log("File deleted!");
-        }
+        customMapDB.RemoveKey(key);
     }
     public bool KeyExists(string key)
     {
-        return savedKeys.Contains(key);
-    }
-    public void SaveKeys()
-    {
-        dataPath = Application.persistentDataPath + "/" + filename;
-        allData = String.Join(delimiter, savedKeys);
-        File.WriteAllText(dataPath, allData);
+        return customMapDB.KeyExists(key);
     }
     public void LoadKeys()
     {
-        savedKeys.Clear();
-        dataPath = Application.persistentDataPath + "/" + filename;
-        if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
-        else{return;}
-        savedKeys = allData.Split(delimiter).ToList();
-        utility.RemoveEmptyListItems(savedKeys);
+        savedKeys = customMapDB.GetAllKeys();
     }
     public string currentMapName;
     public string delimiterTwo;
@@ -72,19 +67,13 @@ public class MapEditorSaver : SavedData
     public void SaveMap(MapEditor map)
     {
         currentMapName = map.cMap;
-        if (AddKey(currentMapName))
-        {
-            SaveKeys();
-        }
-        dataPath = Application.persistentDataPath + "/" + filename + currentMapName;
         allData = ReturnSaveMapDataString(map);
-        File.WriteAllText(dataPath, allData);
+        customMapDB.UpsertValue(currentMapName, allData);
     }
     public void LoadMap(MapEditor map)
     {
-        dataPath = Application.persistentDataPath + "/" + filename + currentMapName;
-        if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
-        else
+        allData = customMapDB.ReturnValue(currentMapName);
+        if (allData.Length <= 0)
         {
             map.InitializeNewMap();
             return;
@@ -125,5 +114,28 @@ public class MapEditorSaver : SavedData
                 map.borders = value.Split(delimiterTwo).ToList();
                 return true;
         }
+    }
+    [ContextMenu("Import All Saved Maps To Custom DB")]
+    public void ImportAllSavedMapsToCustomDB()
+    {
+        if (customMapDB == null)
+        {
+            Debug.LogWarning("Map import failed: missing customMapDB reference.");
+            return;
+        }
+        LoadKeys();
+        for (int i = 0; i < savedKeys.Count; i++)
+        {
+            string mapName = savedKeys[i];
+            string dataPath = Application.persistentDataPath + "/" + filename + mapName;
+            if (!File.Exists(dataPath))
+            {
+                Debug.LogWarning("Map import skipped missing file: " + dataPath);
+                continue;
+            }
+            string rawMapData = File.ReadAllText(dataPath);
+            customMapDB.UpsertValue(mapName, rawMapData);
+        }
+        Debug.Log("Imported " + savedKeys.Count + " saved maps into customMapDB.");
     }
 }

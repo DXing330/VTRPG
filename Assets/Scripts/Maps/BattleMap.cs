@@ -1469,9 +1469,8 @@ public class BattleMap : MapManager
 
     public int ReturnClosestSandwichTargetBetweenTileOfType(TacticActor actor, string tileType)
     {
-        int tile = -1;
-        int distance = mapSize * mapSize;
-        if (actor.GetTarget() == null || actor.GetTarget().GetHealth() <= 0 || actor.GetTarget().invisible){return tile;}
+        List<int> tiles = new List<int>();
+        if (actor.GetTarget() == null || actor.GetTarget().GetHealth() <= 0 || actor.GetTarget().invisible){return -1;}
         int targetLocation = actor.GetTarget().GetLocation();
         List<int> adjacentTiles = mapUtility.AdjacentTiles(targetLocation, mapSize);
         for (int i = 0; i < adjacentTiles.Count; i++)
@@ -1486,15 +1485,10 @@ public class BattleMap : MapManager
                 {
                     continue;
                 }
-                int newDistance = mapUtility.DistanceBetweenTiles(sandwichingPoint, actor.GetLocation(), mapSize);
-                if (newDistance < distance)
-                {
-                    distance = newDistance;
-                    tile = sandwichingPoint;
-                }
+                tiles.Add(sandwichingPoint);
             }
         }
-        return tile;
+        return battleMapUtility.ReturnLowestMoveCostTile(this, actor, tiles);
     }
 
     public string GetTileEffectOfActor(TacticActor actor)

@@ -269,4 +269,36 @@ public class StatDatabase : ScriptableObject
     {
         return values[values.Count / 2];
     }
+
+    public virtual void RemoveKey(string key)
+    {
+        int index = keys.IndexOf(key);
+        if (index >= 0)
+        {
+            values.RemoveAt(index);
+            keys.RemoveAt(index);
+        }
+        DBSetDirty();
+    }
+
+    public virtual void UpsertValue(string key, string updatedValue)
+    {
+        int index = keys.IndexOf(key);
+        if (index >= 0)
+        {
+            values[index] = updatedValue;
+        }
+        else
+        {
+            keys.Add(key);
+            values.Add(updatedValue);
+        }
+        allKeys = string.Join(keyDelimiter, keys);
+        allValues = string.Join(keyDelimiter, values);
+        if (inputKeysAndValues)
+        {
+            allKeysAndValues = allKeys + keyValueDelimiter + allValues;
+        }
+        DBSetDirty();
+    }
 }

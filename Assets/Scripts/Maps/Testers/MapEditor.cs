@@ -8,6 +8,8 @@ using TMPro;
 public class MapEditor : MapManager
 {
     public MapEditorSaver savedData;
+    [Header("Debug Loading")]
+    public string debugMapNameToLoad;
     public GameObject nameRaterObject;
     // Change Name, Load Name, Copy To Name
     enum NameRaterState
@@ -25,7 +27,48 @@ public class MapEditor : MapManager
     public void SetCMap(string newInfo)
     {
         cMap = newInfo;
-        cMapText.text = cMap;
+        if (cMapText != null)
+        {
+            cMapText.text = cMap;
+        }
+    }
+    [ContextMenu("Debug Load Map By Name")]
+    public void DebugLoadMapByName()
+    {
+        if (savedData == null)
+        {
+            Debug.LogWarning("MapEditor debug load failed: missing savedData reference.");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(debugMapNameToLoad))
+        {
+            Debug.LogWarning("MapEditor debug load failed: debugMapNameToLoad is empty.");
+            return;
+        }
+        savedData.LoadKeys();
+        if (!savedData.KeyExists(debugMapNameToLoad))
+        {
+            Debug.LogWarning("MapEditor debug load failed: no saved map named " + debugMapNameToLoad);
+            return;
+        }
+        SetCMap(debugMapNameToLoad);
+        savedData.SetCurrentMap(this, cMap);
+        Debug.Log("MapEditor debug loaded map: " + cMap);
+    }
+    [ContextMenu("Debug Refresh Saved Map Keys")]
+    public void DebugRefreshSavedMapKeys()
+    {
+        if (savedData == null)
+        {
+            Debug.LogWarning("MapEditor debug refresh failed: missing savedData reference.");
+            return;
+        }
+        savedData.LoadKeys();
+        if (selectMapToLoad != null)
+        {
+            selectMapToLoad.SetSelectables(savedData.savedKeys);
+        }
+        Debug.Log("MapEditor debug refreshed saved map keys.");
     }
     public void DeleteMap()
     {

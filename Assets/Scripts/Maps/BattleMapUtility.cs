@@ -117,7 +117,11 @@ public class BattleMapUtility : ScriptableObject
                 tiles.Add(i);
             }
         }
-        if (tiles.Count <= 0) { return -1; }
+        return ReturnLowestMoveCostTile(map, actor, tiles);
+    }
+    public int ReturnLowestMoveCostTile(BattleMap map, TacticActor actor, List<int> tiles)
+    {
+        if (tiles == null || tiles.Count <= 0) { return -1; }
         if (map.battleManager == null || map.battleManager.moveManager == null)
         {
             return mapUtility.ReturnClosestTile(actor.GetLocation(), tiles, map.mapSize);
@@ -144,9 +148,8 @@ public class BattleMapUtility : ScriptableObject
     }
     public int ReturnClosestTileSandwiched(BattleMap map, TacticActor actor, string tileType)
     {
-        int tile = -1;
-        int distance = map.mapSize * map.mapSize;
-        if (actor.GetTarget() == null || actor.GetTarget().GetHealth() <= 0 || actor.GetTarget().invisible){return tile;}
+        List<int> tiles = new List<int>();
+        if (actor.GetTarget() == null || actor.GetTarget().GetHealth() <= 0 || actor.GetTarget().invisible){return -1;}
         int targetLocation = actor.GetTarget().GetLocation();
         List<int> adjacentTiles = mapUtility.AdjacentTiles(targetLocation, map.mapSize);
         for (int i = 0; i < adjacentTiles.Count; i++)
@@ -163,17 +166,12 @@ public class BattleMapUtility : ScriptableObject
                     {
                         continue;
                     }
-                    int newDistance = mapUtility.DistanceBetweenTiles(lineTiles[j], actor.GetLocation(), map.mapSize);
-                    if (newDistance < distance)
-                    {
-                        distance = newDistance;
-                        tile = lineTiles[j];
-                        break;
-                    }
+                    tiles.Add(lineTiles[j]);
+                    break;
                 }
             }
         }
-        return tile;
+        return ReturnLowestMoveCostTile(map, actor, tiles);
     }
     public bool GuardCoveringAlly(BattleMap map, TacticActor guardActor)
     {

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 public class AttackManagerTester : MonoBehaviour
@@ -53,9 +54,12 @@ public class AttackManagerTester : MonoBehaviour
     public int guardRange;
     public TacticActor dummyGuard;
     public string guardStats;
+    public bool resetActorLayerScaleBeforeTest = true;
+    public Vector3 actorLayerBaseScale = new Vector3(0.6f, 0.6f, 1f);
 
     public void InitializeMap()
     {
+        ResetTestMapActorLayerScale();
         map.ForceStart();
         map.combatLog.ForceStart();
         map.combatLog.AddNewLog();
@@ -150,6 +154,23 @@ public class AttackManagerTester : MonoBehaviour
         battleManager.effectManager.StartBattle(dummyAttacker);
         battleManager.effectManager.StartBattle(dummyDefender);
         battleManager.effectManager.StartBattle(dummyGuard);
+    }
+
+    void ResetTestMapActorLayerScale()
+    {
+        if (!resetActorLayerScaleBeforeTest || map == null || map.mapTiles == null) { return; }
+        int layer = map.actorLayer;
+        FieldInfo initializedField = typeof(MapTile).GetField("layerAppearanceInitialized", BindingFlags.Instance | BindingFlags.NonPublic);
+        for (int i = 0; i < map.mapTiles.Count; i++)
+        {
+            MapTile tile = map.mapTiles[i];
+            if (tile == null || tile.layers == null || layer < 0 || layer >= tile.layers.Count || tile.layers[layer] == null) { continue; }
+            tile.layers[layer].rectTransform.localScale = actorLayerBaseScale;
+            if (initializedField != null)
+            {
+                initializedField.SetValue(tile, false);
+            }
+        }
     }
 
     [ContextMenu("Test Attack")]

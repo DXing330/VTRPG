@@ -6,6 +6,8 @@ using TMPro;
 
 public class BattleMapEditor : MonoBehaviour
 {
+    [Header("Debug Loading")]
+    public string debugBattleNameToLoad;
     void Start()
     {
         InitializeEnvironmentOptions();
@@ -79,10 +81,50 @@ public class BattleMapEditor : MonoBehaviour
     public void SetBattleID(string newID)
     {
         battleID = newID;
-        battleIDText.text = battleID;
+        if (battleIDText != null)
+        {
+            battleIDText.text = battleID;
+        }
     }
     public TMP_Text battleIDText;
     public BattleMapEditorSaver savedBattles;
+    [ContextMenu("Debug Load Battle By Name")]
+    public void DebugLoadBattleByName()
+    {
+        if (savedBattles == null)
+        {
+            Debug.LogWarning("BattleMapEditor debug load failed: missing savedBattles reference.");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(debugBattleNameToLoad))
+        {
+            Debug.LogWarning("BattleMapEditor debug load failed: debugBattleNameToLoad is empty.");
+            return;
+        }
+        savedBattles.LoadKeys();
+        if (!savedBattles.KeyExists(debugBattleNameToLoad))
+        {
+            Debug.LogWarning("BattleMapEditor debug load failed: no saved battle named " + debugBattleNameToLoad);
+            return;
+        }
+        LoadBattle(debugBattleNameToLoad);
+        Debug.Log("BattleMapEditor debug loaded battle: " + battleID);
+    }
+    [ContextMenu("Debug Refresh Saved Battle Keys")]
+    public void DebugRefreshSavedBattleKeys()
+    {
+        if (savedBattles == null)
+        {
+            Debug.LogWarning("BattleMapEditor debug refresh failed: missing savedBattles reference.");
+            return;
+        }
+        savedBattles.LoadKeys();
+        if (battleSelectList != null)
+        {
+            battleSelectList.SetSelectables(savedBattles.savedKeys);
+        }
+        Debug.Log("BattleMapEditor debug refreshed saved battle keys.");
+    }
     public void SaveBattle()
     {
         savedBattles.SaveBattle(this, battleID);

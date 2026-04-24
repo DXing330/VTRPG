@@ -8,6 +8,20 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "SavedBattles", menuName = "ScriptableObjects/DataContainers/SavedData/SavedBattles", order = 1)]
 public class BattleMapEditorSaver : MapEditorSaver
 {
+    public StatDatabase customBattleDB;
+    public string testSavedBattleName;
+    [ContextMenu("Show Saved Battle")]
+    public void ShowSavedBattle()
+    {
+        dataPath = BattleDataPath(testSavedBattleName);
+        if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
+        else
+        {
+            Debug.Log("No Battle Exists With That Name");
+            return;
+        }
+        Debug.Log(allData);
+    }
     public string mapEnemyDelim;
     protected string BattleDataPath(string battleName)
     {
@@ -16,16 +30,15 @@ public class BattleMapEditorSaver : MapEditorSaver
     public bool BattleExists(string battleName)
     {
         if (battleName.Length <= 0){return false;}
-        return File.Exists(BattleDataPath(battleName));
+        return customBattleDB.KeyExists(battleName);
+    }
+    public override void DeleteKey(string key)
+    {
+        if (!KeyExists(key)){return;}
+        customBattleDB.RemoveKey(key);
     }
     public void SaveBattle(BattleMapEditor bMap, string battleName)
     {
-        // Later can search and filter by key name.
-        if (AddKey(battleName))
-        {
-            SaveKeys();
-        }
-        dataPath = BattleDataPath(battleName);
         allData = "";
         allData += ReturnSaveMapDataString(bMap.mapEditor);
         // Keep track of the different between the saved map and the saved enemies. 
@@ -34,7 +47,7 @@ public class BattleMapEditorSaver : MapEditorSaver
         allData += "EnemyLocations=" + String.Join(delimiterTwo, bMap.enemyLocations) + delimiter;
         allData += "Weather=" + bMap.GetBattleWeather() + delimiter;
         allData += "Time=" + bMap.GetBattleTime();
-        File.WriteAllText(dataPath, allData);
+        customBattleDB.UpsertValue(battleName, allData);
     }
     public bool TryLoadBattleData(string battleName, out List<string> mapInfo, out List<string> terrainEffects, out List<int> elevations, out List<string> borders, out List<string> buildings, out List<string> enemies, out List<int> enemyLocations, out string weather, out string time)
     {
@@ -47,13 +60,10 @@ public class BattleMapEditorSaver : MapEditorSaver
         enemyLocations = new List<int>();
         weather = "";
         time = "";
-
-        dataPath = BattleDataPath(battleName);
-        if (!File.Exists(dataPath)){return false;}
-        allData = File.ReadAllText(dataPath);
+        allData = customBattleDB.ReturnValue(battleName);
+        if (allData.Length <= 0){return false;}
         string[] mapEnemyData = allData.Split(mapEnemyDelim);
         if (mapEnemyData.Length < 2){return false;}
-
         string[] mapData = mapEnemyData[0].Split(delimiter);
         for (int i = 0; i < mapData.Length; i++)
         {
@@ -75,9 +85,8 @@ public class BattleMapEditorSaver : MapEditorSaver
     public void LoadBattle(BattleMapEditor bMap, string battleName)
     {
         bMap.ResetBattleEnvironment();
-        dataPath = BattleDataPath(battleName);
-        if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
-        else
+        allData = customBattleDB.ReturnValue(battleName);
+        if (allData.Length <= 0)
         {
             bMap.InitializeNewMap();
             return;
@@ -185,5 +194,28 @@ public class BattleMapEditorSaver : MapEditorSaver
                 map.SetBattleTime(value);
                 return true;
         }
+    }
+    [ContextMenu("Import All Saved Battles To Custom DB")]
+    public void ImportAllSavedBattlesToCustomDB()
+    {
+        if (customBattleDB == null)
+        {
+            Debug.LogWarning("Battle import failed: missing customBattleDB reference.");
+            return;
+        }
+        LoadKeys();
+        for (int i = 0; i < savedKeys.Count; i++)
+        {
+            string battleName = savedKeys[i];
+            string battlePath = BattleDataPath(battleName);
+            if (!File.Exists(battlePath))
+            {
+                Debug.LogWarning("Battle import skipped missing file: " + battleName);
+                continue;
+            }
+            string rawBattleData = File.ReadAllText(battlePath);
+            customBattleDB.UpsertValue(battleName, rawBattleData);
+        }
+        Debug.Log("Imported " + savedKeys.Count + " saved battles into customBattleDB.");
     }
 }

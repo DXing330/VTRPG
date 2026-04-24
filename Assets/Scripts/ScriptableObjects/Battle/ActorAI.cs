@@ -149,6 +149,10 @@ public class ActorAI : ScriptableObject
         {
             currentActor.SetTarget(GetClosestEnemy(map.battlingActors, currentActor, moveManager));
         }
+        if (currentActor.GetTarget() == null)
+        {
+            return new List<int>();
+        }
         // Should not path to the target, instead path to the closest tile adjacent to the target.
         int target = currentActor.GetTarget().GetLocation();
         if (currentActor.GetAttackRange() <= 1)
@@ -230,6 +234,7 @@ public class ActorAI : ScriptableObject
                 possibleIndices.Add(i);
             }
         }
+        if (possibleIndices.Count <= 0) { return null; }
         return enemies[possibleIndices[Random.Range(0, possibleIndices.Count)]];
     }
 
