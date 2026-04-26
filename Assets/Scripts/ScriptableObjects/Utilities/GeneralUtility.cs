@@ -313,6 +313,13 @@ public class GeneralUtility : ScriptableObject
         return String.Join(delimiter, string_list);
     }
 
+    public List<string> ConvertStringToList(string stringList, string delimiter = "|")
+    {
+        if (string.IsNullOrEmpty(stringList)){return new List<string>();}
+        if (string.IsNullOrEmpty(delimiter)){delimiter = "|";}
+        return stringList.Split(new string[] { delimiter }, StringSplitOptions.None).ToList();
+    }
+
     public string ConvertArrayToString(string[] string_array, string delimiter = "|")
     {
         List<string> string_list = string_array.ToList();

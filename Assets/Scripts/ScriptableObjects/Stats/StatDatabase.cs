@@ -43,6 +43,12 @@ public class StatDatabase : ScriptableObject
     public void DBSetDirty()
     {
         #if UNITY_EDITOR
+        allKeys = string.Join(keyDelimiter, keys);
+        allValues = string.Join(keyDelimiter, values);
+        if (inputKeysAndValues)
+        {
+            allKeysAndValues = allKeys + keyValueDelimiter + allValues;
+        }
             EditorUtility.SetDirty(this);
         #endif
     }
@@ -292,12 +298,6 @@ public class StatDatabase : ScriptableObject
         {
             keys.Add(key);
             values.Add(updatedValue);
-        }
-        allKeys = string.Join(keyDelimiter, keys);
-        allValues = string.Join(keyDelimiter, values);
-        if (inputKeysAndValues)
-        {
-            allKeysAndValues = allKeys + keyValueDelimiter + allValues;
         }
         DBSetDirty();
     }

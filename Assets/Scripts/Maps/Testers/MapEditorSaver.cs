@@ -13,34 +13,20 @@ public class MapEditorSaver : SavedData
     [ContextMenu("Show Saved Map")]
     public void ShowSavedMap()
     {
-        dataPath = Application.persistentDataPath + "/" + filename + testSavedMapName;
-        if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
-        else
-        {
-            Debug.Log("No Map Exists With That Name");
-            return;
-        }
-        Debug.Log(allData);
-    }
-    public List<string> savedKeys;
-    public bool AddKey(string newKey)
-    {
-        if (savedKeys.Contains(newKey)){return false;}
-        savedKeys.Add(newKey);
-        return true;
+        Debug.Log(customMapDB.ReturnValue(testSavedMapName));
     }
     public virtual void DeleteKey(string key)
     {
         if (!KeyExists(key)){return;}
         customMapDB.RemoveKey(key);
     }
-    public bool KeyExists(string key)
+    public virtual bool KeyExists(string key)
     {
         return customMapDB.KeyExists(key);
     }
-    public void LoadKeys()
+    public virtual List<string> GetAllKeys()
     {
-        savedKeys = customMapDB.GetAllKeys();
+        return customMapDB.GetAllKeys();
     }
     public string currentMapName;
     public string delimiterTwo;
@@ -114,28 +100,5 @@ public class MapEditorSaver : SavedData
                 map.borders = value.Split(delimiterTwo).ToList();
                 return true;
         }
-    }
-    [ContextMenu("Import All Saved Maps To Custom DB")]
-    public void ImportAllSavedMapsToCustomDB()
-    {
-        if (customMapDB == null)
-        {
-            Debug.LogWarning("Map import failed: missing customMapDB reference.");
-            return;
-        }
-        LoadKeys();
-        for (int i = 0; i < savedKeys.Count; i++)
-        {
-            string mapName = savedKeys[i];
-            string dataPath = Application.persistentDataPath + "/" + filename + mapName;
-            if (!File.Exists(dataPath))
-            {
-                Debug.LogWarning("Map import skipped missing file: " + dataPath);
-                continue;
-            }
-            string rawMapData = File.ReadAllText(dataPath);
-            customMapDB.UpsertValue(mapName, rawMapData);
-        }
-        Debug.Log("Imported " + savedKeys.Count + " saved maps into customMapDB.");
     }
 }

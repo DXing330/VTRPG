@@ -45,7 +45,6 @@ public class MapEditor : MapManager
             Debug.LogWarning("MapEditor debug load failed: debugMapNameToLoad is empty.");
             return;
         }
-        savedData.LoadKeys();
         if (!savedData.KeyExists(debugMapNameToLoad))
         {
             Debug.LogWarning("MapEditor debug load failed: no saved map named " + debugMapNameToLoad);
@@ -63,10 +62,9 @@ public class MapEditor : MapManager
             Debug.LogWarning("MapEditor debug refresh failed: missing savedData reference.");
             return;
         }
-        savedData.LoadKeys();
         if (selectMapToLoad != null)
         {
-            selectMapToLoad.SetSelectables(savedData.savedKeys);
+            selectMapToLoad.SetSelectables(savedData.GetAllKeys());
         }
         Debug.Log("MapEditor debug refreshed saved map keys.");
     }
@@ -142,7 +140,7 @@ public class MapEditor : MapManager
             // Save to the new key.
             SetCMap(newName);
             savedData.SaveMap(this);
-            selectMapToLoad.SetSelectables(savedData.savedKeys);
+            selectMapToLoad.SetSelectables(savedData.GetAllKeys());
             break;
             case NameRaterState.newing:
             // Check if the new key is available.
@@ -155,7 +153,7 @@ public class MapEditor : MapManager
             // Make a new map.
             InitializeNewMap();
             savedData.SaveMap(this);
-            selectMapToLoad.SetSelectables(savedData.savedKeys);
+            selectMapToLoad.SetSelectables(savedData.GetAllKeys());
             break;
             case NameRaterState.loading:
             // Check if the new key exists.
@@ -269,7 +267,7 @@ public class MapEditor : MapManager
         buildings = new List<string>(cBuildings);
         tileElevations = new List<string>(cTileElevations);
         savedData.SaveMap(this);
-        selectMapToLoad.SetSelectables(savedData.savedKeys);
+        selectMapToLoad.SetSelectables(savedData.GetAllKeys());
     }
     public void UndoEdits()
     {
@@ -285,8 +283,7 @@ public class MapEditor : MapManager
     // Workflow: Select Tile -> Select Edits
     protected override void Start()
     {
-        savedData.LoadKeys();
-        selectMapToLoad.SetSelectables(savedData.savedKeys);
+        selectMapToLoad.SetSelectables(savedData.GetAllKeys());
         if (editBattle){return;}
         shapeSelect.SetSelectables(shapes);
         List<string> spans = new List<string>();

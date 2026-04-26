@@ -101,7 +101,6 @@ public class BattleMapEditor : MonoBehaviour
             Debug.LogWarning("BattleMapEditor debug load failed: debugBattleNameToLoad is empty.");
             return;
         }
-        savedBattles.LoadKeys();
         if (!savedBattles.KeyExists(debugBattleNameToLoad))
         {
             Debug.LogWarning("BattleMapEditor debug load failed: no saved battle named " + debugBattleNameToLoad);
@@ -118,10 +117,9 @@ public class BattleMapEditor : MonoBehaviour
             Debug.LogWarning("BattleMapEditor debug refresh failed: missing savedBattles reference.");
             return;
         }
-        savedBattles.LoadKeys();
         if (battleSelectList != null)
         {
-            battleSelectList.SetSelectables(savedBattles.savedKeys);
+            battleSelectList.SetSelectables(savedBattles.GetAllKeys());
         }
         Debug.Log("BattleMapEditor debug refreshed saved battle keys.");
     }
@@ -216,7 +214,7 @@ public class BattleMapEditor : MonoBehaviour
     }
     public void TryToLoadBattle()
     {
-        battleSelectList.SetSelectables(savedBattles.savedKeys);
+        battleSelectList.SetSelectables(savedBattles.GetAllKeys());
     }
     public void SelectLoadBattle()
     {

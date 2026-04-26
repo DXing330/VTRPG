@@ -13,14 +13,7 @@ public class BattleMapEditorSaver : MapEditorSaver
     [ContextMenu("Show Saved Battle")]
     public void ShowSavedBattle()
     {
-        dataPath = BattleDataPath(testSavedBattleName);
-        if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
-        else
-        {
-            Debug.Log("No Battle Exists With That Name");
-            return;
-        }
-        Debug.Log(allData);
+        Debug.Log(customBattleDB.ReturnValue(testSavedBattleName));
     }
     public string mapEnemyDelim;
     protected string BattleDataPath(string battleName)
@@ -32,10 +25,18 @@ public class BattleMapEditorSaver : MapEditorSaver
         if (battleName.Length <= 0){return false;}
         return customBattleDB.KeyExists(battleName);
     }
+    public override List<string> GetAllKeys()
+    {
+        return customBattleDB.GetAllKeys();
+    }
     public override void DeleteKey(string key)
     {
         if (!KeyExists(key)){return;}
         customBattleDB.RemoveKey(key);
+    }
+    public override bool KeyExists(string key)
+    {
+        return customBattleDB.KeyExists(key);
     }
     public void SaveBattle(BattleMapEditor bMap, string battleName)
     {
@@ -194,28 +195,5 @@ public class BattleMapEditorSaver : MapEditorSaver
                 map.SetBattleTime(value);
                 return true;
         }
-    }
-    [ContextMenu("Import All Saved Battles To Custom DB")]
-    public void ImportAllSavedBattlesToCustomDB()
-    {
-        if (customBattleDB == null)
-        {
-            Debug.LogWarning("Battle import failed: missing customBattleDB reference.");
-            return;
-        }
-        LoadKeys();
-        for (int i = 0; i < savedKeys.Count; i++)
-        {
-            string battleName = savedKeys[i];
-            string battlePath = BattleDataPath(battleName);
-            if (!File.Exists(battlePath))
-            {
-                Debug.LogWarning("Battle import skipped missing file: " + battleName);
-                continue;
-            }
-            string rawBattleData = File.ReadAllText(battlePath);
-            customBattleDB.UpsertValue(battleName, rawBattleData);
-        }
-        Debug.Log("Imported " + savedKeys.Count + " saved battles into customBattleDB.");
     }
 }
