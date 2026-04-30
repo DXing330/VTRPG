@@ -34,6 +34,12 @@ public class BattleTestScenario : ScriptableObject
     public List<string> partyOneBattleModifiers = new List<string>();
     public List<string> partyTwoBattleModifiers = new List<string>();
 
+    public bool includeInMatchupMatrix = true;
+    public string partyOneMatrixLabel = "";
+    public string partyTwoMatrixLabel = "";
+    public string partyOneMatrixGroup = "";
+    public string partyTwoMatrixGroup = "";
+
     public bool baselineEnabled = false;
     public float minTeamZeroWinRate = -1f;
     public float maxTeamZeroWinRate = -1f;
@@ -66,5 +72,110 @@ public class BattleTestScenario : ScriptableObject
             return Random.Range(int.MinValue, int.MaxValue);
         }
         return baseSeed + runIndex;
+    }
+
+    public string MatrixLabel(int team)
+    {
+        if (team == 0 && !string.IsNullOrEmpty(partyOneMatrixLabel))
+        {
+            return partyOneMatrixLabel.Trim();
+        }
+        if (team == 1 && !string.IsNullOrEmpty(partyTwoMatrixLabel))
+        {
+            return partyTwoMatrixLabel.Trim();
+        }
+
+        if (team == 0)
+        {
+            return BuildPartyLabel(partyOne);
+        }
+        if (team == 1)
+        {
+            return BuildPartyLabel(partyTwo);
+        }
+        return "Unknown Team";
+    }
+
+    public string MatrixGroup(int team)
+    {
+        if (team == 0 && !string.IsNullOrEmpty(partyOneMatrixGroup))
+        {
+            return partyOneMatrixGroup.Trim();
+        }
+        if (team == 1 && !string.IsNullOrEmpty(partyTwoMatrixGroup))
+        {
+            return partyTwoMatrixGroup.Trim();
+        }
+
+        return InferMatrixGroupFromScenarioName(team);
+    }
+
+    string BuildPartyLabel(List<BattleTestActorSpec> party)
+    {
+        if (party == null || party.Count == 0)
+        {
+            return "Empty Team";
+        }
+
+        List<string> names = new List<string>();
+        for (int i = 0; i < party.Count; i++)
+        {
+            BattleTestActorSpec actor = party[i];
+            if (actor == null)
+            {
+                continue;
+            }
+
+            string label = actor.personalName;
+            if (string.IsNullOrEmpty(label))
+            {
+                label = actor.spriteName;
+            }
+            if (string.IsNullOrEmpty(label))
+            {
+                label = actor.id;
+            }
+            if (string.IsNullOrEmpty(label))
+            {
+                label = "Actor " + (i + 1);
+            }
+            names.Add(label.Trim());
+        }
+
+        if (names.Count == 0)
+        {
+            return "Empty Team";
+        }
+        return string.Join(" / ", names.ToArray());
+    }
+
+    string InferMatrixGroupFromScenarioName(int team)
+    {
+        string normalized = ScenarioName().ToLowerInvariant();
+        if (team == 0)
+        {
+            if (normalized.Contains("cleric")
+                || normalized.Contains("warrior")
+                || normalized.Contains("defender")
+                || normalized.Contains("starter"))
+            {
+                return "Player Party";
+            }
+            return "Party One";
+        }
+
+        if (normalized.Contains("boss"))
+        {
+            return "Boss";
+        }
+        if (normalized.Contains("elite"))
+        {
+            return "Elite";
+        }
+        if (normalized.Contains("roguelike") || normalized.Contains("rl_f1"))
+        {
+            return "Regular";
+        }
+        return "Party Two";
     }
 }

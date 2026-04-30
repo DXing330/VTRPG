@@ -8,7 +8,6 @@ public class ShopSkillBookSlotDisplay : MonoBehaviour
     public int index;
     public SkillDisplay skillDisplay;
     public TMP_Text priceText;
-    public GameObject soldObject;
 
     public void SetSlot(string bookName, string price, bool sold, bool colorless = false)
     {
@@ -18,7 +17,6 @@ public class ShopSkillBookSlotDisplay : MonoBehaviour
             skillDisplay.SetHighlighted(false);
         }
         if (priceText != null){priceText.text = sold ? "Sold" : price;}
-        SetSold(sold);
     }
 
     public void ResetSlot()
@@ -27,15 +25,6 @@ public class ShopSkillBookSlotDisplay : MonoBehaviour
         if (skillDisplay != null)
         {
             skillDisplay.SetHighlighted(false);
-        }
-        SetSold(false);
-    }
-
-    public void SetSold(bool sold)
-    {
-        if (soldObject != null)
-        {
-            soldObject.SetActive(sold);
         }
     }
 

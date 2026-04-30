@@ -11,14 +11,12 @@ public class StSShopSaveData : SavedData
     public string delimiter2 = ",";
     // LCM (1*1,2*2,3*3), matching reward skillbook rarity weights.
     protected int SKILLWEIGHTBASE = 36;
-
     // --- Stock Counts ---
     public int normalBookCount = 4;
     public int rareBookCount = 1;
     public int colorlessBookCount = 2;
     public int consumableCount = 3;
     public int relicCount = 3;
-
     // --- First-Pass Prices ---
     public int commonBookPrice = 75;
     public int uncommonBookPrice = 100;
@@ -27,17 +25,13 @@ public class StSShopSaveData : SavedData
     public int consumablePrice = 50;
     public int relicPrice = 150;
     public int priestPrice = 150;
-
     // Saved shop stock. Bought/sold state is scene-local runtime state.
     public List<string> books;
     public List<string> bookPrices;
-
     public List<string> consumables;
     public List<string> consumablePrices;
-
     public List<string> relics;
     public List<string> relicPrices;
-
     public string priestServicePrice;
 
     // --- Shop Generation ---
@@ -47,24 +41,20 @@ public class StSShopSaveData : SavedData
         InitializeLists();
         ClearShopData();
         if (rewardTracker == null){return;}
-
         GenerateNormalBooks(rewardTracker);
         GenerateRareBooks(rewardTracker);
         GenerateColorlessBooks(rewardTracker);
         GenerateConsumables(rewardTracker);
         GenerateRelics(rewardTracker);
-
         priestServicePrice = priestPrice.ToString();
     }
 
     protected void GenerateNormalBooks(StSRewardSaveData rewardTracker)
     {
         if (rewardTracker.skillBookDB == null || rewardTracker.skillBookRarity == null){return;}
-
         List<string> possibleBooks = rewardTracker.skillBookDB.GetAllKeys();
         List<int> bookRarities = utility.ConvertStringListToIntList(rewardTracker.skillBookRarity.GetAllValues());
         List<int> rarityWeights = ReturnSkillBookRarityWeights();
-
         for (int i = 0; i < normalBookCount && possibleBooks.Count > 0; i++)
         {
             string bookName = "";
@@ -133,7 +123,6 @@ public class StSShopSaveData : SavedData
     protected void GenerateRelics(StSRewardSaveData rewardTracker)
     {
         if (rewardTracker.availableShopRelics == null){return;}
-
         List<string> possibleRelics = new List<string>(rewardTracker.availableShopRelics);
         for (int i = 0; i < relicCount && possibleRelics.Count > 0; i++)
         {

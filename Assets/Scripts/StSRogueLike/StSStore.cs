@@ -17,8 +17,7 @@ public class StSStore : MonoBehaviour
     public Sprite priestServiceSprite;
 
     // --- Skillbook Data ---
-    public StatDatabase skillBookData;
-    public StatDatabase colorlessSkillBookData;
+    public StatDatabase linkedSkillBookData;
     public PassiveDetailViewer passiveDetailViewer;
     public ActiveDescriptionViewer activeDetailViewer;
     public SpellDetailViewer spellDetailViewer;
@@ -37,15 +36,26 @@ public class StSStore : MonoBehaviour
 
     // --- Priest Service ---
     public ShopTextSlotDisplay priestServiceSlot;
+    public TMP_Text priestServicePrice;
+    public GameObject removeInjuryObject;
+    public GameObject priestActorSelectObject;
+    public GameObject priestInjurySelectObject;
     public SelectList priestActorSelect;
     public SelectList priestInjurySelect;
+    public TMP_Text selectedInjuryDetails;
     public StatDatabase allInjuries;
-
+    protected List<int> priestActorPartyIndexes = new List<int>();
+    protected int selectedPriestPartyIndex = -1;
+    // --- Standalone Testing ---
+    public bool generateShopOnStart = false;
     // --- Runtime Sold State ---
-    protected List<bool> bookSold = new List<bool>();
-    protected List<bool> consumableSold = new List<bool>();
-    protected List<bool> relicSold = new List<bool>();
-    protected bool priestServiceUsed = false;
+    public List<string> bookNames;
+    public List<string> relicNames;
+    public List<string> itemNames;
+    public List<bool> bookSold;
+    public List<bool> consumableSold;
+    public List<bool> relicSold;
+    public bool priestServiceUsed = false;
 
     // --- Current Selection State ---
     public string selectedSection = "";
@@ -53,33 +63,28 @@ public class StSStore : MonoBehaviour
 
     protected virtual void Start()
     {
+        if (generateShopOnStart)
+        {
+            GenerateStandaloneShop();
+        }
         LoadStore();
+    }
+
+    [ContextMenu("Generate Standalone Shop")]
+    public void GenerateStandaloneShop()
+    {
+        if (shopData == null || rewardData == null){return;}
+        shopData.GenerateShop(rewardData);
+        bookNames = new List<string>(shopData.books);
+        relicNames = new List<string>(shopData.relics);
+        itemNames = new List<string>(shopData.consumables);
     }
 
     // --- Scene Setup ---
     protected void LoadStore()
     {
-        ResetRuntimeSoldState();
         ResetSelection();
         UpdateAllDisplays();
-    }
-
-    protected void ResetRuntimeSoldState()
-    {
-        bookSold = NewFalseList(shopData != null ? shopData.books.Count : 0);
-        consumableSold = NewFalseList(shopData != null ? shopData.consumables.Count : 0);
-        relicSold = NewFalseList(shopData != null ? shopData.relics.Count : 0);
-        priestServiceUsed = false;
-    }
-
-    protected List<bool> NewFalseList(int count)
-    {
-        List<bool> values = new List<bool>();
-        for (int i = 0; i < count; i++)
-        {
-            values.Add(false);
-        }
-        return values;
     }
 
     protected void UpdateAllDisplays()
@@ -101,22 +106,19 @@ public class StSStore : MonoBehaviour
     // --- Slot Population ---
     protected void UpdateBookSlots()
     {
-        if (bookSlots == null || shopData == null){return;}
         for (int i = 0; i < bookSlots.Count; i++)
         {
-            if (bookSlots[i] == null){continue;}
             bookSlots[i].store = this;
             bookSlots[i].index = i;
-            if (IndexValid(shopData.books, i))
-            {
-                bool sold = IsRuntimeSold(bookSold, i);
-                bookSlots[i].gameObject.SetActive(!sold);
-                bookSlots[i].SetSlot(shopData.books[i], ReturnPriceText(shopData.bookPrices, i), sold, BookIsColorless(shopData.books[i]));
-            }
-            else
+            if (bookSold[i])
             {
                 bookSlots[i].ResetSlot();
                 bookSlots[i].gameObject.SetActive(false);
+            }
+            else
+            {
+                bookSlots[i].gameObject.SetActive(true);
+                bookSlots[i].SetSlot(shopData.books[i], ReturnPriceText(shopData.bookPrices, i), false, i >= 5);
             }
         }
     }
@@ -146,17 +148,8 @@ public class StSStore : MonoBehaviour
 
     protected void UpdatePriestServiceSlot()
     {
-        if (priestServiceSlot == null){return;}
-        priestServiceSlot.gameObject.SetActive(shopData != null && !priestServiceUsed);
-        priestServiceSlot.store = this;
-        priestServiceSlot.section = "PriestService";
-        priestServiceSlot.index = 0;
-        priestServiceSlot.SetSlot("Restore Injury", shopData != null ? shopData.priestServicePrice : "", priestServiceUsed, priestServiceSprite);
-        if (priestActorSelect != null && partyData != null)
-        {
-            priestActorSelect.SetSelectables(partyData.GetAllPartyNames());
-        }
-        UpdatePriestInjuries();
+        priestServiceSlot.gameObject.SetActive(!priestServiceUsed);
+        priestServicePrice.text = ReturnPriestPrice().ToString();
     }
 
     // --- Selection Entry Point ---
@@ -180,7 +173,6 @@ public class StSStore : MonoBehaviour
         SetBookHighlights(-1);
         SetTextHighlights(consumableSlots, -1);
         SetTextHighlights(relicSlots, -1);
-        if (priestServiceSlot != null){priestServiceSlot.SetHighlighted(false);}
     }
 
     protected void UpdateSelectionDisplay()
@@ -188,7 +180,6 @@ public class StSStore : MonoBehaviour
         ClearHighlights();
         ClearLeftPanel();
         if (selectedIndex < 0){return;}
-
         switch (selectedSection)
         {
             case "Book":
@@ -203,19 +194,15 @@ public class StSStore : MonoBehaviour
             SetTextHighlights(relicSlots, selectedIndex);
             UpdateRelicSelection();
             return;
-            case "PriestService":
-            if (priestServiceSlot != null){priestServiceSlot.SetHighlighted(true);}
-            UpdatePriestSelection();
-            return;
         }
     }
 
     protected void ClearLeftPanel()
     {
-        if (selectedNameText != null){selectedNameText.text = "";}
-        if (selectedPriceText != null){selectedPriceText.text = "";}
-        if (selectedDescriptionText != null){selectedDescriptionText.text = "";}
-        if (buyButtonObject != null){buyButtonObject.SetActive(false);}
+        selectedNameText.text = "";
+        selectedPriceText.text = "";
+        selectedDescriptionText.text = "";
+        buyButtonObject.SetActive(false);
     }
 
     protected void SetBookHighlights(int index)
@@ -266,39 +253,15 @@ public class StSStore : MonoBehaviour
 
     protected string ReturnSkillBookData(string bookName)
     {
-        if (skillBookData != null)
-        {
-            string normalData = skillBookData.ReturnValue(bookName);
-            if (normalData != ""){return normalData;}
-        }
-        if (colorlessSkillBookData != null)
-        {
-            return colorlessSkillBookData.ReturnValue(bookName);
-        }
-        return "";
+        return linkedSkillBookData.ReturnValue(bookName);
     }
 
-    protected bool BookIsColorless(string bookName)
-    {
-        if (skillBookData != null && skillBookData.ReturnValue(bookName) != "")
-        {
-            return false;
-        }
-        return colorlessSkillBookData != null && colorlessSkillBookData.ReturnValue(bookName) != "";
-    }
-
-    // --- Item / Relic Detail Display ---
+    // --- Item Detail Display ---
     protected void UpdateConsumableSelection()
     {
-        if (!IndexValid(shopData.consumables, selectedIndex)){return;}
         string itemName = shopData.consumables[selectedIndex];
         string description = itemName;
-        if (itemDetailViewer != null)
-        {
-            itemDetailViewer.ViewItem();
-            itemDetailViewer.ShowInfo(itemName);
-            description = itemDetailViewer.itemInfo.text;
-        }
+        description = activeDetailViewer.ReturnActiveDescriptionFromName(itemName);
         SetLeftPanel("Consumable", itemName, ReturnPriceText(shopData.consumablePrices, selectedIndex), description, !IsRuntimeSold(consumableSold, selectedIndex));
     }
 
@@ -310,86 +273,82 @@ public class StSStore : MonoBehaviour
     }
 
     // --- Priest Service Detail Display ---
+    public void OpenPriestActorSelect()
+    {
+        if (!CanStartPriestService())
+        {
+            return;
+        }
+        selectedPriestPartyIndex = -1;
+        removeInjuryObject.SetActive(true);
+        priestActorSelectObject.SetActive(true);
+        priestInjurySelectObject.SetActive(false);
+        priestActorSelect.SetSelectables(ReturnInjuredActorNames());
+    }
     public void SelectPriestActor()
     {
-        UpdatePriestInjuries();
-        if (selectedSection == "PriestService")
-        {
-            UpdateSelectionDisplay();
-        }
+        int selectedListIndex = priestActorSelect.GetSelected();
+        if (selectedListIndex < 0){return;}
+        selectedPriestPartyIndex = priestActorPartyIndexes[selectedListIndex];
+        priestInjurySelectObject.SetActive(true);
+        priestInjurySelect.SetSelectables(ReturnActorRemovableInjuries(selectedPriestPartyIndex));
     }
-
-    protected void UpdatePriestInjuries()
-    {
-        if (priestInjurySelect == null){return;}
-        priestInjurySelect.SetSelectables(ReturnSelectedActorRemovableInjuries());
-    }
-
     public void SelectPriestInjury()
     {
-        if (selectedSection == "PriestService")
-        {
-            UpdateSelectionDisplay();
-        }
+        // TODO Display the injury level and injury effects.
     }
-
-    protected void UpdatePriestSelection()
+    protected bool CanStartPriestService()
     {
-        string injuryName = GetSelectedPriestInjury();
-        string description = injuryName == "" ? "Select an actor and permanent injury to restore." : "Remove the permanent injury: " + injuryName;
-        SetLeftPanel("Priest Service", "Restore Injury", shopData.priestServicePrice, description, CanUsePriestService());
+        if (priestServiceUsed){return false;}
+        if (!partyData.inventory.EnoughGold(ReturnPriestPrice())){return false;}
+        if (ReturnInjuredActorNames().Count <= 0)
+        {
+            return false;
+        }
+        return true;
     }
-
-    protected List<string> ReturnSelectedActorRemovableInjuries()
+    protected List<string> ReturnInjuredActorNames()
+    {
+        priestActorPartyIndexes.Clear();
+        List<string> actorNames = new List<string>();
+        List<string> partyNames = partyData.GetAllPartyNames();
+        for (int i = 0; i < partyNames.Count; i++)
+        {
+            if (ReturnActorRemovableInjuries(i).Count > 0)
+            {
+                priestActorPartyIndexes.Add(i);
+                actorNames.Add(partyNames[i]);
+            }
+        }
+        return actorNames;
+    }
+    protected List<string> ReturnActorRemovableInjuries(int partyIndex)
     {
         List<string> injuries = new List<string>();
-        if (partyData == null || priestActorSelect == null || priestActorSelect.GetSelected() < 0)
-        {
-            return injuries;
-        }
-        TacticActor actor = partyData.ReturnActorAtIndex(priestActorSelect.GetSelected());
+        TacticActor actor = partyData.ReturnActorAtIndex(partyIndex);
         List<string> passives = actor.GetPassiveSkills();
         List<string> removableInjuries = allInjuries.GetAllKeys();
         for (int i = 0; i < passives.Count; i++)
         {
-            if (removableInjuries != null && removableInjuries.Contains(passives[i]))
+            if (removableInjuries.Contains(passives[i]))
             {
                 injuries.Add(passives[i]);
             }
         }
         return injuries;
     }
-
-    protected string GetSelectedPriestInjury()
-    {
-        if (priestInjurySelect == null || priestInjurySelect.GetSelected() < 0)
-        {
-            return "";
-        }
-        return priestInjurySelect.GetSelectedString();
-    }
-
-    protected bool CanUsePriestService()
-    {
-        if (shopData == null || priestServiceUsed){return false;}
-        if (priestActorSelect == null || priestActorSelect.GetSelected() < 0){return false;}
-        if (GetSelectedPriestInjury() == ""){return false;}
-        return partyData.inventory.EnoughGold(ReturnPriestPrice());
-    }
-
+    // Left Panel Details
     protected void SetLeftPanel(string section, string itemName, string price, string description, bool canBuy)
     {
-        if (selectedNameText != null){selectedNameText.text = itemName;}
-        if (selectedPriceText != null){selectedPriceText.text = price;}
-        if (selectedDescriptionText != null){selectedDescriptionText.text = description;}
-        if (buyButtonObject != null){buyButtonObject.SetActive(canBuy);}
+        selectedNameText.text = itemName;
+        selectedPriceText.text = price;
+        selectedDescriptionText.text = description;
+        buyButtonObject.SetActive(canBuy);
     }
-
     protected Sprite ReturnSlotIcon(string section, string itemName)
     {
         return variantSprites.SpriteDictionary(itemName);
     }
-
     // --- Buy Button ---
     public void TryBuySelected()
     {
@@ -404,12 +363,8 @@ public class StSStore : MonoBehaviour
             case "Relic":
             TryBuyRelic();
             return;
-            case "PriestService":
-            TryUsePriestService();
-            return;
         }
     }
-
     protected void TryBuyBook()
     {
         if (!IndexValid(shopData.books, selectedIndex)){return;}
@@ -419,7 +374,6 @@ public class StSStore : MonoBehaviour
         bookSold[selectedIndex] = true;
         UpdateAllDisplays();
     }
-
     protected void TryBuyConsumable()
     {
         if (!IndexValid(shopData.consumables, selectedIndex)){return;}
@@ -429,27 +383,13 @@ public class StSStore : MonoBehaviour
         consumableSold[selectedIndex] = true;
         UpdateAllDisplays();
     }
-
     protected void TryBuyRelic()
     {
         if (!IndexValid(shopData.relics, selectedIndex)){return;}
         if (IsRuntimeSold(relicSold, selectedIndex)){return;}
-
         // TODO: hook this into run relic ownership once relic save/runtime is finalized.
         Debug.Log("Relic purchase is not fully implemented yet. Needs a run-owned relic list.");
     }
-
-    public void TryUsePriestService()
-    {
-        if (!CanUsePriestService()){return;}
-        int actorIndex = priestActorSelect.GetSelected();
-        string injuryName = GetSelectedPriestInjury();
-        if (!RemoveInjuryFromActor(actorIndex, injuryName)){return;}
-        partyData.inventory.SpendGold(ReturnPriestPrice());
-        priestServiceUsed = true;
-        UpdateAllDisplays();
-    }
-
     protected bool TrySpendGold(string priceString)
     {
         int price = 0;
@@ -458,7 +398,6 @@ public class StSStore : MonoBehaviour
         partyData.inventory.SpendGold(price);
         return true;
     }
-
     protected int ReturnPriestPrice()
     {
         int price = 0;
@@ -466,26 +405,23 @@ public class StSStore : MonoBehaviour
         int.TryParse(shopData.priestServicePrice, out price);
         return price;
     }
-
-    protected bool RemoveInjuryFromActor(int actorIndex, string injuryName)
+    public void RemoveInjuryFromActor()
     {
-        if (partyData == null || actorIndex < 0 || injuryName == ""){return false;}
+        int actorIndex = priestActorSelect.GetSelected();
+        int injuryIndex = priestInjurySelect.GetSelected();
+        if (actorIndex < 0 || injuryIndex < 0){return;}
         TacticActor actor = partyData.ReturnActorAtIndex(actorIndex);
         List<string> passives = new List<string>(actor.GetPassiveSkills());
         List<string> levels = new List<string>(actor.GetPassiveLevels());
-        int injuryIndex = passives.IndexOf(injuryName);
-        if (injuryIndex < 0){return false;}
         passives.RemoveAt(injuryIndex);
-        if (injuryIndex < levels.Count)
-        {
-            levels.RemoveAt(injuryIndex);
-        }
+        levels.RemoveAt(injuryIndex);
         actor.SetPassiveSkills(passives);
         actor.SetPassiveLevels(levels);
         partyData.UpdatePartyMember(actor, actorIndex);
-        return true;
+        priestServiceUsed = true;
+        partyData.inventory.SpendGold(ReturnPriestPrice());
+        removeInjuryObject.SetActive(false);
     }
-
     // --- Leaving ---
     public void LeaveStore()
     {
@@ -494,24 +430,20 @@ public class StSStore : MonoBehaviour
             stsManager.ReturnToMap();
         }
     }
-
     // --- Helpers ---
     protected bool IndexValid(List<string> list, int index)
     {
         return list != null && index >= 0 && index < list.Count;
     }
-
     protected bool IndexValid(List<bool> list, int index)
     {
         return list != null && index >= 0 && index < list.Count;
     }
-
     protected bool IsRuntimeSold(List<bool> soldFlags, int index)
     {
         if (!IndexValid(soldFlags, index)){return false;}
         return soldFlags[index];
     }
-
     protected string ReturnPriceText(List<string> prices, int index)
     {
         if (!IndexValid(prices, index)){return "";}

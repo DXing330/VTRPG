@@ -15,17 +15,20 @@ public static class BattleSimulationReportWriter
         BattleSimulationSuiteResult previousResult = LoadPreviousSuiteResult(reportRoot, reportDirectory, result.suiteName);
         Dictionary<string, ScenarioStats> previousStats = previousResult == null ? new Dictionary<string, ScenarioStats>() : BuildScenarioStats(previousResult);
         Dictionary<string, BattleTestScenario> scenarioMap = BuildScenarioMap(suite);
+        MatchupMatrixSummary matchupMatrix = BuildMatchupMatrixSummary(result, scenarioMap);
 
         File.WriteAllText(Path.Combine(reportDirectory, "results.json"), JsonUtility.ToJson(result, true));
         File.WriteAllText(Path.Combine(reportDirectory, "failures.json"), BuildFailuresJson(result));
         File.WriteAllText(Path.Combine(reportDirectory, "summary.md"), BuildMarkdown(result, currentStats));
         File.WriteAllText(Path.Combine(reportDirectory, "review.md"), BuildReviewMarkdown(result, currentStats, previousStats, scenarioMap));
         File.WriteAllText(Path.Combine(reportDirectory, "comparison.md"), BuildComparisonMarkdown(result, previousResult, currentStats, previousStats));
+        File.WriteAllText(Path.Combine(reportDirectory, "matchup-matrix.md"), BuildMatchupMatrixMarkdown(result, matchupMatrix));
+        File.WriteAllText(Path.Combine(reportDirectory, "matchup-matrix.json"), JsonUtility.ToJson(matchupMatrix, true));
         File.WriteAllText(Path.Combine(reportDirectory, "skill-usage.md"), BuildSkillUsageMarkdown(result));
         File.WriteAllText(Path.Combine(reportDirectory, "ai-reasoning.md"), BuildAiReasoningMarkdown(result));
         File.WriteAllText(Path.Combine(reportDirectory, "debug.md"), BuildDebugMarkdown(result));
         File.WriteAllText(Path.Combine(reportDirectory, "boss-ai-debug.md"), BuildBossAiDebugMarkdown(result));
-        File.WriteAllText(Path.Combine(reportDirectory, "dashboard.html"), BuildDashboardHtml(result, currentStats));
+        File.WriteAllText(Path.Combine(reportDirectory, "dashboard.html"), BuildDashboardHtml(result, currentStats, matchupMatrix));
         WriteCombatLogs(reportDirectory, result);
         WriteFailureLogs(reportDirectory, result);
 
@@ -136,6 +139,97 @@ public static class BattleSimulationReportWriter
             }
         }
         return scenarioMap;
+    }
+
+    static MatchupMatrixSummary BuildMatchupMatrixSummary(BattleSimulationSuiteResult result, Dictionary<string, BattleTestScenario> scenarioMap)
+    {
+        MatchupMatrixSummary summary = new MatchupMatrixSummary();
+        summary.labelMatrix = BuildMatchupMatrix(result, scenarioMap, false);
+        summary.groupMatrix = BuildMatchupMatrix(result, scenarioMap, true);
+        return summary;
+    }
+
+    static MatchupMatrixData BuildMatchupMatrix(BattleSimulationSuiteResult result, Dictionary<string, BattleTestScenario> scenarioMap, bool useGroups)
+    {
+        MatchupMatrixData matrix = new MatchupMatrixData();
+        matrix.matrixKind = useGroups ? "group" : "label";
+
+        Dictionary<string, MatrixCellStats> cells = new Dictionary<string, MatrixCellStats>();
+        HashSet<string> labels = new HashSet<string>();
+        for (int i = 0; i < result.runs.Count; i++)
+        {
+            BattleSimulationRunResult run = result.runs[i];
+            if (run == null || run.failed)
+            {
+                continue;
+            }
+
+            BattleTestScenario scenario;
+            if (!scenarioMap.TryGetValue(run.scenarioName, out scenario) || scenario == null || !scenario.includeInMatchupMatrix)
+            {
+                continue;
+            }
+
+            string left = useGroups ? scenario.MatrixGroup(0) : scenario.MatrixLabel(0);
+            string right = useGroups ? scenario.MatrixGroup(1) : scenario.MatrixLabel(1);
+            if (string.IsNullOrEmpty(left) || string.IsNullOrEmpty(right))
+            {
+                continue;
+            }
+
+            labels.Add(left);
+            labels.Add(right);
+            AddMatrixObservation(cells, left, right, run, 0);
+            if (left != right)
+            {
+                AddMatrixObservation(cells, right, left, run, 1);
+            }
+        }
+
+        matrix.labels = new List<string>(labels);
+        matrix.labels.Sort(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string row in matrix.labels)
+        {
+            foreach (string column in matrix.labels)
+            {
+                string key = row + "|" + column;
+                MatrixCellStats cell;
+                if (cells.TryGetValue(key, out cell))
+                {
+                    matrix.cells.Add(cell);
+                }
+            }
+        }
+        return matrix;
+    }
+
+    static void AddMatrixObservation(Dictionary<string, MatrixCellStats> cells, string rowLabel, string columnLabel, BattleSimulationRunResult run, int rowTeam)
+    {
+        string key = rowLabel + "|" + columnLabel;
+        MatrixCellStats cell;
+        if (!cells.TryGetValue(key, out cell))
+        {
+            cell = new MatrixCellStats();
+            cell.rowLabel = rowLabel;
+            cell.columnLabel = columnLabel;
+            cells.Add(key, cell);
+        }
+
+        cell.runs++;
+        cell.totalRounds += run.rounds;
+        if (run.winningTeam == rowTeam)
+        {
+            cell.rowWins++;
+        }
+        else if (run.winningTeam == 0 || run.winningTeam == 1)
+        {
+            cell.rowLosses++;
+        }
+        else
+        {
+            cell.unknown++;
+        }
     }
 
     static BattleSimulationSuiteResult LoadPreviousSuiteResult(string reportRoot, string currentReportDirectory, string suiteName)
@@ -324,6 +418,105 @@ public static class BattleSimulationReportWriter
         return reasoning.confidence + " from " + form + " using " + condition + " -> " + rule + ". " + reasoning.note;
     }
 
+    static string BuildMatchupMatrixMarkdown(BattleSimulationSuiteResult result, MatchupMatrixSummary matchupMatrix)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("# Matchup Matrix");
+        builder.AppendLine();
+        builder.AppendLine("- Suite: " + result.suiteName);
+        builder.AppendLine("- Status: row-side win rate against the column side.");
+        builder.AppendLine("- Cell format: `win rate | row wins-losses-unknown | avg rounds | runs`.");
+        builder.AppendLine();
+
+        AppendMatchupMatrixSection(builder, "Roster Matchups", matchupMatrix.labelMatrix);
+        AppendMatchupMatrixSection(builder, "Group Matchups", matchupMatrix.groupMatrix);
+        return builder.ToString();
+    }
+
+    static void AppendMatchupMatrixSection(StringBuilder builder, string title, MatchupMatrixData matrix)
+    {
+        builder.AppendLine("## " + title);
+        builder.AppendLine();
+        if (matrix == null || matrix.labels == null || matrix.labels.Count == 0 || matrix.cells == null || matrix.cells.Count == 0)
+        {
+            builder.AppendLine("- No matchup data was collected.");
+            builder.AppendLine();
+            return;
+        }
+
+        Dictionary<string, MatrixCellStats> cellMap = new Dictionary<string, MatrixCellStats>();
+        for (int i = 0; i < matrix.cells.Count; i++)
+        {
+            MatrixCellStats cell = matrix.cells[i];
+            cellMap[cell.rowLabel + "|" + cell.columnLabel] = cell;
+        }
+
+        builder.Append("| Row vs Column |");
+        for (int i = 0; i < matrix.labels.Count; i++)
+        {
+            builder.Append(" " + EscapeMarkdown(matrix.labels[i]) + " |");
+        }
+        builder.AppendLine();
+
+        builder.Append("| --- |");
+        for (int i = 0; i < matrix.labels.Count; i++)
+        {
+            builder.Append(" --- |");
+        }
+        builder.AppendLine();
+
+        for (int rowIndex = 0; rowIndex < matrix.labels.Count; rowIndex++)
+        {
+            string rowLabel = matrix.labels[rowIndex];
+            builder.Append("| " + EscapeMarkdown(rowLabel) + " |");
+            for (int colIndex = 0; colIndex < matrix.labels.Count; colIndex++)
+            {
+                string colLabel = matrix.labels[colIndex];
+                MatrixCellStats cell;
+                if (cellMap.TryGetValue(rowLabel + "|" + colLabel, out cell))
+                {
+                    builder.Append(" " + EscapeMarkdown(MatrixCellValue(cell)) + " |");
+                }
+                else
+                {
+                    builder.Append(" - |");
+                }
+            }
+            builder.AppendLine();
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("| Row | Column | Row Win Rate | Record | Avg Rounds | Runs |");
+        builder.AppendLine("| --- | --- | ---: | --- | ---: | ---: |");
+        for (int i = 0; i < matrix.cells.Count; i++)
+        {
+            MatrixCellStats cell = matrix.cells[i];
+            builder.AppendLine("| "
+                + EscapeMarkdown(cell.rowLabel) + " | "
+                + EscapeMarkdown(cell.columnLabel) + " | "
+                + (cell.RowWinRate() * 100f).ToString("0.0") + "% | "
+                + cell.rowWins + "-" + cell.rowLosses + "-" + cell.unknown + " | "
+                + cell.AverageRounds().ToString("0.00") + " | "
+                + cell.runs + " |");
+        }
+        builder.AppendLine();
+    }
+
+    static string MatrixCellValue(MatrixCellStats cell)
+    {
+        if (cell == null || cell.runs <= 0)
+        {
+            return "-";
+        }
+        return (cell.RowWinRate() * 100f).ToString("0")
+            + "% | "
+            + cell.rowWins + "-" + cell.rowLosses + "-" + cell.unknown
+            + " | "
+            + cell.AverageRounds().ToString("0.0")
+            + "r | "
+            + cell.runs;
+    }
+
     static string BuildSkillUsageMarkdown(BattleSimulationSuiteResult result)
     {
         Dictionary<string, SkillUsageStats> skillStats = new Dictionary<string, SkillUsageStats>();
@@ -442,6 +635,7 @@ public static class BattleSimulationReportWriter
         builder.AppendLine();
         builder.AppendLine("- `summary.md`: full scenario and actor averages");
         builder.AppendLine("- `comparison.md`: latest-vs-previous deltas");
+        builder.AppendLine("- `matchup-matrix.md`: roster and group win-rate matrices");
         builder.AppendLine("- `skill-usage.md`: skill/action counts by actor");
         builder.AppendLine("- `ai-reasoning.md`: inferred boss rotation reasoning from combat-log actions");
         builder.AppendLine("- `debug.md`: exception stack traces and setup diagnostics for failed runs");
@@ -741,7 +935,7 @@ public static class BattleSimulationReportWriter
         return builder.ToString();
     }
 
-    static string BuildDashboardHtml(BattleSimulationSuiteResult result, Dictionary<string, ScenarioStats> currentStats)
+    static string BuildDashboardHtml(BattleSimulationSuiteResult result, Dictionary<string, ScenarioStats> currentStats, MatchupMatrixSummary matchupMatrix)
     {
         StringBuilder builder = new StringBuilder();
         builder.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><title>Battle Test Dashboard</title>");
@@ -757,7 +951,9 @@ public static class BattleSimulationReportWriter
             builder.AppendLine("<tr><td>" + Html(entry.Key) + "</td><td>" + stats.runs + "</td><td>" + stats.teamZeroWins + "</td><td>" + stats.teamOneWins + "</td><td>" + stats.AverageRounds().ToString("0.00") + "</td><td>" + stats.AverageLogEntries().ToString("0.00") + "</td></tr>");
         }
         builder.AppendLine("</table>");
-        builder.AppendLine("<p>Open <code>review.md</code>, <code>skill-usage.md</code>, or <code>combat-logs/</code> for deeper inspection.</p>");
+        AppendDashboardMatrix(builder, "Roster Matchups", matchupMatrix == null ? null : matchupMatrix.labelMatrix);
+        AppendDashboardMatrix(builder, "Group Matchups", matchupMatrix == null ? null : matchupMatrix.groupMatrix);
+        builder.AppendLine("<p>Open <code>review.md</code>, <code>matchup-matrix.md</code>, <code>skill-usage.md</code>, or <code>combat-logs/</code> for deeper inspection.</p>");
         builder.AppendLine("</body></html>");
         return builder.ToString();
     }
@@ -1033,11 +1229,100 @@ public static class BattleSimulationReportWriter
         return value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
     }
 
+    static void AppendDashboardMatrix(StringBuilder builder, string title, MatchupMatrixData matrix)
+    {
+        if (matrix == null || matrix.labels == null || matrix.labels.Count == 0 || matrix.cells == null || matrix.cells.Count == 0)
+        {
+            return;
+        }
+
+        Dictionary<string, MatrixCellStats> cellMap = new Dictionary<string, MatrixCellStats>();
+        for (int i = 0; i < matrix.cells.Count; i++)
+        {
+            MatrixCellStats cell = matrix.cells[i];
+            cellMap[cell.rowLabel + "|" + cell.columnLabel] = cell;
+        }
+
+        builder.AppendLine("<h2>" + Html(title) + "</h2>");
+        builder.AppendLine("<table><tr><th>Row vs Column</th>");
+        for (int i = 0; i < matrix.labels.Count; i++)
+        {
+            builder.AppendLine("<th>" + Html(matrix.labels[i]) + "</th>");
+        }
+        builder.AppendLine("</tr>");
+
+        for (int rowIndex = 0; rowIndex < matrix.labels.Count; rowIndex++)
+        {
+            string rowLabel = matrix.labels[rowIndex];
+            builder.AppendLine("<tr><th>" + Html(rowLabel) + "</th>");
+            for (int colIndex = 0; colIndex < matrix.labels.Count; colIndex++)
+            {
+                string colLabel = matrix.labels[colIndex];
+                MatrixCellStats cell;
+                if (cellMap.TryGetValue(rowLabel + "|" + colLabel, out cell))
+                {
+                    builder.AppendLine("<td>" + Html(MatrixCellValue(cell)) + "</td>");
+                }
+                else
+                {
+                    builder.AppendLine("<td>-</td>");
+                }
+            }
+            builder.AppendLine("</tr>");
+        }
+        builder.AppendLine("</table>");
+    }
+
     [Serializable]
     class BattleSimulationFailureReport
     {
         public bool failed;
         public List<string> failures = new List<string>();
+    }
+
+    [Serializable]
+    class MatchupMatrixSummary
+    {
+        public MatchupMatrixData labelMatrix = new MatchupMatrixData();
+        public MatchupMatrixData groupMatrix = new MatchupMatrixData();
+    }
+
+    [Serializable]
+    class MatchupMatrixData
+    {
+        public string matrixKind;
+        public List<string> labels = new List<string>();
+        public List<MatrixCellStats> cells = new List<MatrixCellStats>();
+    }
+
+    [Serializable]
+    class MatrixCellStats
+    {
+        public string rowLabel;
+        public string columnLabel;
+        public int runs;
+        public int rowWins;
+        public int rowLosses;
+        public int unknown;
+        public int totalRounds;
+
+        public float RowWinRate()
+        {
+            if (runs <= 0)
+            {
+                return 0f;
+            }
+            return (float)rowWins / runs;
+        }
+
+        public float AverageRounds()
+        {
+            if (runs <= 0)
+            {
+                return 0f;
+            }
+            return (float)totalRounds / runs;
+        }
     }
 
     class ScenarioStats

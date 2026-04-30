@@ -80,12 +80,29 @@ public class ActorAI : ScriptableObject
 
     public string ReturnAIAttackSkill(TacticActor actor)
     {
-        return actorAttackSkills.ReturnValue(actor.GetSpriteName());
+        string attackSkill = actorAttackSkills.ReturnValue(actor.GetSpriteName());
+        if (SkillWouldHealTarget(actor, actor.GetTarget(), attackSkill)) { return ""; }
+        return attackSkill;
     }
 
     public string ReturnSkillWithEffect(TacticActor actor, BattleMap map, string skillEffect)
     {
         return conditionChecker.GetAvailableSkillWithEffect(actor, map, skillEffect);
+    }
+
+    public bool SkillWouldHealTarget(TacticActor actor, TacticActor target, string skillName)
+    {
+        string skillData = activeData.ReturnValue(skillName);
+        string[] skillFields = skillData.Split(active.activeSkillDelimiter);
+        if (actor == null || target == null || skillName == "" || skillData == "" || skillFields.Length <= 9) { return false; }
+
+        string[] effects = skillFields[8].Split(active.effectDelimiter);
+        string[] specifics = skillFields[9].Split(active.effectDelimiter);
+        for (int i = 0; i < effects.Length; i++)
+        {
+            if ((effects[i] == "ElementalAttack" || effects[i] == "ElementalDamage") && target.ReturnDamageResistanceOfType(i < specifics.Length ? specifics[i] : "") > 100) { return true; }
+        }
+        return false;
     }
 
     public string ReturnSpellWithEffect(TacticActor actor, BattleMap map, string spellEffect)

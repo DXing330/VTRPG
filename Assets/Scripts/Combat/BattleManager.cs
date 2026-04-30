@@ -1377,6 +1377,7 @@ public class BattleManager : MonoBehaviour
         if (actor == null){actor = turnActor;}
         combatLog.UpdateNewestLog(actor.GetPersonalName() + " uses " + skillName + ".");
         activeManager.ActivateSkill(this);
+        map.UpdateMap();
     }
 
     public void ActivateSpell(TacticActor actor = null)
@@ -1384,6 +1385,7 @@ public class BattleManager : MonoBehaviour
         ResetState();
         if (actor == null) { actor = turnActor; }
         activeManager.ActivateSpell(this);
+        map.UpdateMap();
         combatLog.UpdateNewestLog(actor.GetPersonalName()+" casts  " + activeManager.magicSpell.GetSkillName());
     }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+// Views all kinds of items (equipment/passives/skillbooks/relics/consumables)
 public class ItemDetailViewer : MonoBehaviour
 {
     public TMP_Text itemName;
@@ -19,7 +20,9 @@ public class ItemDetailViewer : MonoBehaviour
     public StatDatabase dungeonItemDescriptions;
     public SelectStatTextList passiveSelect;
     public PassiveDetailViewer passiveDetails;
-
+    public StatDatabase relicData;
+    public StatDatabase skillBookData;
+    public SkillDisplay skillBookDisplay;
     public void ResetView()
     {
         itemName.text = "";
@@ -29,7 +32,6 @@ public class ItemDetailViewer : MonoBehaviour
             passiveSelect.SetStatsAndData(new List<string>(), new List<string>());
         }
     }
-
     public void ShowEquipmentInfo(string newInfo)
     {
         equipment.SetAllStats(newInfo);
@@ -37,31 +39,26 @@ public class ItemDetailViewer : MonoBehaviour
         itemInfo.text = "Grants the user: ";
         passiveSelect.SetStatsAndData(equipment.GetPassives(), equipment.GetPassiveLevels());
     }
-
     public void ViewPassiveDetails()
     {
         int index = passiveSelect.GetSelected();
         if (index < 0) { return; }
         passiveDetails.UpdatePassiveNames(equipment.GetPassives()[index], equipment.GetPassiveLevels()[index]);
     }
-
     public void ResetInfo()
     {
         itemName.text = "";
         itemInfo.text = "";
     }
-
     public void SetInfo(string newItem, string newDescription)
     {
         itemName.text = newItem;
         itemInfo.text = newDescription;
     }
-
     public void ShowDungeonItemInfo(string newItem)
     {
         SetInfo(newItem, dungeonItemDescriptions.ReturnValue(newItem));
     }
-
     public void ShowInfo(string newItem)
     {
         string data = "";
@@ -95,5 +92,15 @@ public class ItemDetailViewer : MonoBehaviour
             active.LoadSkillFromString(data, null);
             itemInfo.text = itemDescriptions.ReturnActiveDescription(active);
         }
+    }
+    public void ShowRelicInfo(string relicName)
+    {
+
+    }
+    public void ShowSkillBookInfo(string skillBookName)
+    {
+        string[] skillBookDataBlocks = skillBookData.ReturnValue(skillBookName).Split("_");
+        itemName.text = skillBookName;
+        itemInfo.text = skillBookDisplay.ReturnSkillBookDescription(skillBookDataBlocks[1], skillBookDataBlocks[0]);
     }
 }

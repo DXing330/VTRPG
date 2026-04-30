@@ -19,6 +19,18 @@ public static class BattleSimulationCli
         RunSuiteAtPath(R1SuitePath);
     }
 
+    [MenuItem("Window/Battle Tests/Run R1 Enemy Matrix")]
+    public static void RunR1EnemyMatrixFromWindowMenu()
+    {
+        RunEnemyMatchupSuiteAtPath(R1SuitePath, 1, true, false);
+    }
+
+    [MenuItem("Window/Battle Tests/Run R1 Enemy Matrix Quick")]
+    public static void RunR1EnemyMatrixQuickFromWindowMenu()
+    {
+        RunEnemyMatchupSuiteAtPath(R1SuitePath, 1, true, false, 3);
+    }
+
     [MenuItem("Window/Battle Tests/Run Fast Suite")]
     public static void RunFastSuiteFromWindowMenu()
     {
@@ -69,6 +81,32 @@ public static class BattleSimulationCli
         Debug.LogError("Select a BattleTestSuite or BattleTestScenario asset in the Project window first.");
     }
 
+    [MenuItem("Window/Battle Tests/Run Selected Suite Enemy Matrix")]
+    public static void RunSelectedSuiteEnemyMatrix()
+    {
+        BattleTestSuite suite = Selection.activeObject as BattleTestSuite;
+        if (suite == null)
+        {
+            Debug.LogError("Select a BattleTestSuite asset in the Project window first.");
+            return;
+        }
+
+        RunEnemyMatchupSuite(suite, 1, true, false);
+    }
+
+    [MenuItem("Window/Battle Tests/Run Selected Suite Enemy Matrix Quick")]
+    public static void RunSelectedSuiteEnemyMatrixQuick()
+    {
+        BattleTestSuite suite = Selection.activeObject as BattleTestSuite;
+        if (suite == null)
+        {
+            Debug.LogError("Select a BattleTestSuite asset in the Project window first.");
+            return;
+        }
+
+        RunEnemyMatchupSuite(suite, 1, true, false, 3);
+    }
+
     public static void RunSuiteAtPath(string suitePath)
     {
         AssetDatabase.Refresh();
@@ -106,6 +144,57 @@ public static class BattleSimulationCli
         transientSuite.scenarios.Add(scenario);
         RunSuite(transientSuite);
         ScriptableObject.DestroyImmediate(transientSuite);
+    }
+
+    public static void RunR1EnemyMatrixSuite()
+    {
+        RunEnemyMatchupSuiteAtPath(R1SuitePath, 1, true, false);
+    }
+
+    public static void RunR1EnemyMatrixQuickSuite()
+    {
+        RunEnemyMatchupSuiteAtPath(R1SuitePath, 1, true, false, 3);
+    }
+
+    public static void RunEnemyMatchupSuiteAtPath(string suitePath, int sourceTeam, bool orderedPairs, bool includeMirrorMatches)
+    {
+        RunEnemyMatchupSuiteAtPath(suitePath, sourceTeam, orderedPairs, includeMirrorMatches, 0);
+    }
+
+    public static void RunEnemyMatchupSuiteAtPath(string suitePath, int sourceTeam, bool orderedPairs, bool includeMirrorMatches, int runCountOverride)
+    {
+        AssetDatabase.Refresh();
+        BattleTestSuite suite = AssetDatabase.LoadAssetAtPath<BattleTestSuite>(suitePath);
+        if (suite == null)
+        {
+            Debug.LogError("Could not load battle test suite at " + suitePath + ".");
+            if (Application.isBatchMode)
+            {
+                EditorApplication.Exit(1);
+            }
+            return;
+        }
+
+        RunEnemyMatchupSuite(suite, sourceTeam, orderedPairs, includeMirrorMatches, runCountOverride);
+    }
+
+    static void RunEnemyMatchupSuite(BattleTestSuite sourceSuite, int sourceTeam, bool orderedPairs, bool includeMirrorMatches)
+    {
+        RunEnemyMatchupSuite(sourceSuite, sourceTeam, orderedPairs, includeMirrorMatches, 0);
+    }
+
+    static void RunEnemyMatchupSuite(BattleTestSuite sourceSuite, int sourceTeam, bool orderedPairs, bool includeMirrorMatches, int runCountOverride)
+    {
+        BattleTestSuite generatedSuite = null;
+        try
+        {
+            generatedSuite = BattleMatchupSuiteBuilder.BuildEnemyMatchupSuite(sourceSuite, sourceTeam, orderedPairs, includeMirrorMatches, runCountOverride);
+            RunSuite(generatedSuite);
+        }
+        finally
+        {
+            BattleMatchupSuiteBuilder.DestroyGeneratedSuite(generatedSuite);
+        }
     }
 
     static void RunSuite(BattleTestSuite suite)

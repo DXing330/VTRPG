@@ -31,6 +31,27 @@ public class SkillDisplay : MonoBehaviour
     public TMP_Text typeName;
     public TMP_Text skillDescription;
 
+    public string ReturnSkillBookDescription(string skillBookName, string type = "Skill")
+    {
+        string description = "";
+        switch (type)
+        {
+            // Skill
+            default:
+            description = descriptionViewer.ReturnActiveDescriptionFromName(skillBookName);
+            break;
+            case "Passive":
+            description = "Increase [" + skillBookName + "] passive level by 1.";
+            description += "\n" + "First Level:";
+            description += "\n" + passiveViewer.ReturnSpecificPassiveLevelEffect(skillBookName, 1);
+            break;
+            case "Spell":
+            description = spellViewer.ReturnSpellDescriptionFromName(skillBookName);
+            break;
+        }
+        return description;
+    }
+
     public void SetSkill(string newName, string type = "Skill", int rarity = 1)
     {
         skillName.text = newName;
@@ -38,21 +59,7 @@ public class SkillDisplay : MonoBehaviour
         skillRarity = rarity;
         leftPageImage.color = skillBookColors.GetColorByIndex(skillRarity);
         rightPageImage.color = skillBookColors.GetColorByIndex(skillRarity);
-        switch (type)
-        {
-            // Skill
-            default:
-            skillDescription.text = descriptionViewer.ReturnActiveDescriptionFromName(newName);
-            break;
-            case "Passive":
-            skillDescription.text = "Increase [" + newName + "] passive level by 1.";
-            skillDescription.text += "\n" + "First Level:";
-            skillDescription.text += "\n" + passiveViewer.ReturnSpecificPassiveLevelEffect(newName, 1);
-            break;
-            case "Spell":
-            skillDescription.text = spellViewer.ReturnSpellDescriptionFromName(newName);
-            break;
-        }
+        skillDescription.text = ReturnSkillBookDescription(newName, type);
         UpdatePageColors();
     }
 

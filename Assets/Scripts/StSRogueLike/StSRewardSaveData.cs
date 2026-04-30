@@ -27,7 +27,7 @@ public class StSRewardSaveData : SavedData
     public List<string> rewardSpecifics;
     public override void NewGame()
     {
-        // Sort the relics into new lists to track available relics.
+        // TODO Sort the relics into new lists to track available relics.
         rewards.Clear();
         rewardSpecifics.Clear();
     }

@@ -41,7 +41,7 @@ public class BattleMapEditorSaver : MapEditorSaver
     public void SaveBattle(BattleMapEditor bMap, string battleName)
     {
         allData = "";
-        allData += ReturnSaveMapDataString(bMap.mapEditor);
+        allData += "Map=" + bMap.mapEditor.cMap;
         // Keep track of the different between the saved map and the saved enemies. 
         allData += mapEnemyDelim;
         allData += "Enemies=" + String.Join(delimiterTwo, bMap.enemies) + delimiter;
@@ -65,7 +65,11 @@ public class BattleMapEditorSaver : MapEditorSaver
         if (allData.Length <= 0){return false;}
         string[] mapEnemyData = allData.Split(mapEnemyDelim);
         if (mapEnemyData.Length < 2){return false;}
-        string[] mapData = mapEnemyData[0].Split(delimiter);
+        string mapName = "";
+        if (!TryParseBattleMapName(mapEnemyData[0], out mapName)){return false;}
+        string mapRawData = customMapDB.ReturnValue(mapName);
+        if (mapRawData.Length <= 0){return false;}
+        string[] mapData = mapRawData.Split(delimiter);
         for (int i = 0; i < mapData.Length; i++)
         {
             if (!TryLoadMapDataStat(mapData[i], ref mapInfo, ref terrainEffects, ref elevations, ref borders, ref buildings))
@@ -113,6 +117,16 @@ public class BattleMapEditorSaver : MapEditorSaver
         }
         bMap.mapEditor.UndoEdits();
         bMap.UpdateMap();
+    }
+    protected bool TryParseBattleMapName(string data, out string mapName)
+    {
+        mapName = "";
+        string[] blocks = data.Split("=");
+        if (blocks.Length < 2){return false;}
+        if (blocks[0] != "Map"){return false;}
+        mapName = blocks[1];
+        if (mapName.Length <= 0){return false;}
+        return customMapDB.KeyExists(mapName);
     }
     protected bool TryLoadMapDataStat(string data, ref List<string> mapInfo, ref List<string> terrainEffects, ref List<int> elevations, ref List<string> borders, ref List<string> buildings)
     {

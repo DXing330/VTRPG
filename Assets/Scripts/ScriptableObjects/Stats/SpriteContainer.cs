@@ -231,6 +231,90 @@ public class SpriteContainer : ScriptableObject
         return GetSizeLocal(nKey);
     }
 
+    [ContextMenu("Log Linked Sprite Duplicate Names")]
+    public void LogLinkedSpriteDuplicateNames()
+    {
+        List<string> reportLines = new List<string>();
+        Dictionary<string, int> localNames = SpriteNameCounts(this);
+        AddInternalDuplicateReport(name, localNames, reportLines);
+
+        if (linkedSpriteContainers == null || linkedSpriteContainers.Count == 0)
+        {
+            Debug.Log(name+" has no linked sprite containers.", this);
+            return;
+        }
+
+        for (int i = 0; i < linkedSpriteContainers.Count; i++)
+        {
+            SpriteContainer linkedContainer = linkedSpriteContainers[i];
+            if (linkedContainer == null)
+            {
+                reportLines.Add("Linked container at index "+i+" is null.");
+                continue;
+            }
+            if (linkedContainer == this)
+            {
+                reportLines.Add("Linked container at index "+i+" references itself.");
+            }
+
+            Dictionary<string, int> linkedNames = SpriteNameCounts(linkedContainer);
+            AddInternalDuplicateReport(linkedContainer.name, linkedNames, reportLines);
+            AddOverlapReport(name, localNames, linkedContainer.name, linkedNames, reportLines);
+        }
+
+        for (int i = 0; i < linkedSpriteContainers.Count; i++)
+        {
+            SpriteContainer leftContainer = linkedSpriteContainers[i];
+            if (leftContainer == null){continue;}
+            Dictionary<string, int> leftNames = SpriteNameCounts(leftContainer);
+            for (int j = i + 1; j < linkedSpriteContainers.Count; j++)
+            {
+                SpriteContainer rightContainer = linkedSpriteContainers[j];
+                if (rightContainer == null){continue;}
+                AddOverlapReport(leftContainer.name, leftNames, rightContainer.name, SpriteNameCounts(rightContainer), reportLines);
+            }
+        }
+
+        if (reportLines.Count == 0)
+        {
+            Debug.Log("No duplicate sprite names found for "+name+" and its linked sprite containers.", this);
+            return;
+        }
+
+        Debug.LogWarning("Sprite duplicate check for "+name+":\n"+string.Join("\n", reportLines), this);
+    }
+
+    static Dictionary<string, int> SpriteNameCounts(SpriteContainer spriteContainer)
+    {
+        Dictionary<string, int> counts = new Dictionary<string, int>();
+        if (spriteContainer == null || spriteContainer.sprites == null){return counts;}
+        for (int i = 0; i < spriteContainer.sprites.Count; i++)
+        {
+            Sprite sprite = spriteContainer.sprites[i];
+            if (sprite == null){continue;}
+            if (!counts.ContainsKey(sprite.name))
+            {
+                counts.Add(sprite.name, 0);
+            }
+            counts[sprite.name]++;
+        }
+        return counts;
+    }
+
+    static void AddInternalDuplicateReport(string containerName, Dictionary<string, int> names, List<string> reportLines)
+    {
+        List<string> duplicates = names.Where(x => x.Value > 1).Select(x => x.Key).OrderBy(x => x).ToList();
+        if (duplicates.Count == 0){return;}
+        reportLines.Add(containerName+" has duplicate sprite references: "+string.Join(", ", duplicates));
+    }
+
+    static void AddOverlapReport(string leftName, Dictionary<string, int> leftNames, string rightName, Dictionary<string, int> rightNames, List<string> reportLines)
+    {
+        List<string> duplicates = leftNames.Keys.Where(x => rightNames.ContainsKey(x)).OrderBy(x => x).ToList();
+        if (duplicates.Count == 0){return;}
+        reportLines.Add(leftName+" overlaps "+rightName+": "+string.Join(", ", duplicates));
+    }
+
     public void ApplyToImage(Image image, string nKey, Color defaultColor, Vector3 defaultScale)
     {
         if (image == null){return;}
