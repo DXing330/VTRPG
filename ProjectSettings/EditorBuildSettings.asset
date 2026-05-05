@@ -35,13 +35,13 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Hiring.unity
     guid: a148008320739a64a86dd590e3ef7984
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/MageTower.unity
     guid: f3a13cf6e491aa945a4d1589f735b18d
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Market.unity
     guid: dde7a8be122336e4886f6f59065ca249
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/RequestBoard.unity
     guid: 9a2aaecae942e28499ca5bd689311f7c
   - enabled: 1

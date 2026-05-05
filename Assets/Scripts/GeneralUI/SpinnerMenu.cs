@@ -13,6 +13,17 @@ public class SpinnerMenu : MonoBehaviour
         ResetSelectedIndex();
     }
     public TMP_Text selectedText;
+    public void SetSelectedText(string newText)
+    {
+        // Set the index based on the text.
+        int indexOf = selectables.IndexOf(newText);
+        if (indexOf < 0)
+        {
+            ResetSelectedIndex();
+            return;
+        }
+        SetSelectedIndex(indexOf);
+    }
     public string selected;
     public string GetSelected(){return selected;}
     public int index;

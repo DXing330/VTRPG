@@ -8,6 +8,7 @@ using TMPro;
 public class RewardDisplayMenu : MonoBehaviour
 {
     public GeneralUtility utility;
+    public StSStateManager stsManager;
     public PartyDataManager partyData;
     public StSRewardSaveData rewardData;
     void Start()
@@ -66,7 +67,11 @@ public class RewardDisplayMenu : MonoBehaviour
             break;
             case "Equipment":
             break;
+            // TODO Implement Gaining Relics.
             case "Relic":
+            string relicName = rewardSpecifics[index];
+            rewardData.GainRelic(relicName, partyData, stsManager);
+            ClaimRewardAtIndex();
             break;
         }
     }

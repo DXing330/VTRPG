@@ -12,24 +12,46 @@ public class StSRewardSaveData : SavedData
     public string delimiter2 = ",";
     // LCM (1*1,2*2,3*3)
     protected int SKILLWEIGHTBASE = 36;
+    protected int RELICWEIGHTBASE = 32;
     public RNGUtility rewardSeed;
     public StatDatabase skillBookDB;
     public StatDatabase skillBookRarity;
     public StatDatabase colorlessSkillBookDB;
     public StatDatabase colorlessSkillBookRarity;
     public StatDatabase itemDB;
-    public StatDatabase relicDB;
+    public StatDatabase relicData;
     public StatDatabase relicLocations;
     public StatDatabase relicRarity;
+    // Event Relics/Boss Relics Will Be Handled By Events/Bosses.
     public List<string> availableRelics;
     public List<string> availableShopRelics;
+    protected void InitializeRelicLists()
+    {
+        availableRelics.Clear();
+        availableShopRelics.Clear();
+        List<string> allRelics = relicLocations.GetAllKeys();
+        for (int i = 0; i < allRelics.Count; i++)
+        {
+            string location = relicLocations.ReturnValue(allRelics[i]);
+            if (location == "" || location == "All")
+            {
+                availableRelics.Add(allRelics[i]);
+                continue;
+            }
+            if (location == "Shop")
+            {
+                availableShopRelics.Add(allRelics[i]);
+                continue;
+            }
+        }
+    }
     public List<string> rewards;
     public List<string> rewardSpecifics;
     public override void NewGame()
     {
-        // TODO Sort the relics into new lists to track available relics.
         rewards.Clear();
         rewardSpecifics.Clear();
+        InitializeRelicLists();
     }
     public override void Save()
     {
@@ -148,6 +170,24 @@ public class StSRewardSaveData : SavedData
     {
         return (utility.Exponent(10, goldLevel) + rewardSeed.Range(0, 10));
     }
+    public string GenerateRelic(bool shop = false)
+    {
+        // Determine the rarity.
+        List<int> rarityWeights = new List<int>();
+        rarityWeights.Add(RELICWEIGHTBASE / 2); // 16 Weight = Common
+        rarityWeights.Add(RELICWEIGHTBASE / 4); // 8 Weight = Uncommon
+        rarityWeights.Add(RELICWEIGHTBASE / 8); // 4 Weight = Rare
+        int rarity = DetermineRewardRarity(rarityWeights);
+        // Generate a relic of that rarity.
+        List<int> relicRarities = new List<int>();
+        for (int i = 0; i < availableRelics.Count; i++)
+        {
+            relicRarities.Add(utility.SafeParseInt(relicRarity.ReturnValue(availableRelics[i])));
+        }
+        string randomRelic = GetRewardOfRarity(rarity, availableRelics, relicRarities);
+        // If none then do nothing.
+        return randomRelic;
+    }
     // Reward From Different Battle Types
     // Basic 1-1-30-0-0-0, Elite 1-1-60-1-0-0, Boss = 1-2-100-0-1-1, Event = 1-1-30-?-0-0
     public void GenerateBattleRewards(string battleType)
@@ -181,9 +221,23 @@ public class StSRewardSaveData : SavedData
             rewards.Add("Item");
             rewardSpecifics.Add(itemDB.ReturnRandomKey());
         }
+        for (int i = 0; i < relicCount; i++)
+        {
+            string relicName = GenerateRelic();
+            rewards.Add("Relic");
+            rewardSpecifics.Add(relicName);
+        }
     }
     // Some Events/Relics Add Specifics Rewards
     public void AddReward(string type, string specifics)
     {
+        rewards.Add(type);
+        rewardSpecifics.Add(specifics);
+    }
+    public void GainRelic(string relicName, PartyDataManager partyData, StSStateManager stsManager)
+    {
+        List<string> allRelicStats = relicData.ReturnAllValues(relicName);
+        // TODO Determine counter/charges.
+        // TODO Apply on pickup effects.
     }
 }

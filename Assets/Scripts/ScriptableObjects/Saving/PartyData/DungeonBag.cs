@@ -151,13 +151,28 @@ public class DungeonBag : SavedData
             items.RemoveAt(indexOf);
         }
     }
+    // RELICS
+    public List<string> relics;
+    public void SetRelics(List<string> newList)
+    {
+        relics = new List<string>(newList);
+    }
+    public List<string> relicCounters;
+    public void SetRelicCounters(List<string> newList)
+    {
+        relicCounters = new List<string>(newList);
+    }
+    public void GainRelic(string relicName, string counter = "0")
+    {
+        relics.Add(relicName);
+        relicCounters.Add(counter);
+    }
     public override void NewGame()
     {
-        allData = newGameData;
-        if (allData.Contains(delimiter)){dataList = allData.Split(delimiter).ToList();}
-        else{return;}
-        maxCapacity = int.Parse(dataList[0]);
-        items = dataList[1].Split(delimiterTwo).ToList();
+        maxCapacity = 16;
+        items.Clear();
+        relics.Clear();
+        relicCounters.Clear();
         Save();
         Load();
     }
@@ -165,8 +180,10 @@ public class DungeonBag : SavedData
     {
         dataPath = Application.persistentDataPath+"/"+filename;
         allData = "";
-        allData += maxCapacity + delimiter;
-        allData += String.Join(delimiterTwo, items) + delimiter;
+        allData += "Max=" + maxCapacity + delimiter;
+        allData += "Items=" + String.Join(delimiterTwo, items) + delimiter;
+        allData += "Relics=" + String.Join(delimiterTwo, relics) + delimiter;
+        allData += "RelicCounters=" + String.Join(delimiterTwo, relicCounters) + delimiter;
         File.WriteAllText(dataPath, allData);
     }
     public override void Load()
@@ -177,18 +194,28 @@ public class DungeonBag : SavedData
         dataList = allData.Split(delimiter).ToList();
         for (int i = 0; i < dataList.Count; i++)
         {
-            LoadStat(dataList[i], i);
+            LoadStat(dataList[i]);
         }
     }
-    protected void LoadStat(string stat, int index)
+    protected void LoadStat(string stat)
     {
-        switch (index)
+        string[] statsBlocks = stat.Split("=");
+        if (statsBlocks.Length < 2){return;}
+        string key = statsBlocks[0];
+        string value = statsBlocks[1];
+        switch (key)
         {
-            case 0:
-            maxCapacity = int.Parse(stat);
+            case "Max":
+            maxCapacity = utility.SafeParseInt(stat, 16);
             break;
-            case 1:
+            case "Items":
             SetItems(stat.Split(delimiterTwo).ToList());
+            break;
+            case "Relics":
+            SetRelics(stat.Split(delimiterTwo).ToList());
+            break;
+            case "RelicCounters":
+            SetRelicCounters(stat.Split(delimiterTwo).ToList());
             break;
             default:
             break;
