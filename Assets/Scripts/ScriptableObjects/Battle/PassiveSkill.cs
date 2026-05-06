@@ -42,6 +42,12 @@ public class PassiveSkill : SkillEffect
                 case "SkillsUsed":
                 amount = actor.ReturnTotalRoundSkills();
                 break;
+                case "TempSkillCount":
+                amount = actor.GetTempActives().Count;
+                break;
+                case "PassiveSkillCount":
+                amount = actor.GetPassiveSkills().Count;
+                break;
                 case "Attacks":
                 amount = actor.ReturnTotalRoundAttacks();
                 break;
@@ -735,6 +741,15 @@ public class PassiveSkill : SkillEffect
                 return actor.ReturnPreviousRoundDefends() < int.Parse(conditionSpecifics);
             case "PrevDefendCount%":
                 return (actor.ReturnPreviousRoundDefends() % int.Parse(conditionSpecifics) == 0);
+            // STS Conditions
+            case "TempSkillOwnedCount<":
+                return (actor.GetTempActives().Count < int.Parse(conditionSpecifics));
+            case "TempSkillOwnedCount>":
+                return (actor.GetTempActives().Count > int.Parse(conditionSpecifics));
+            case "SkillOwnedCount<":
+                return (actor.GetActiveSkills().Count < int.Parse(conditionSpecifics));
+            case "SkillOwnedCount>":
+                return (actor.GetActiveSkills().Count > int.Parse(conditionSpecifics));
         }
         return true;
     }

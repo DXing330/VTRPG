@@ -65,6 +65,8 @@ public class ActorStats : ActorInitialStats
         currentSpeed = moveSpeed;
         currentWeight = weight;
         currentDodge = baseDodge;
+        // Temp Health Should Reset At Start Of Turn, Unlike ATK/DEF, since it is mainly used after the end of your turn during enemy turns.
+        ResetTempHealth();
         ResetResistances();
         ResetDamageBonuses();
         // Initiative is used to determine your turn in the round.
@@ -77,7 +79,6 @@ public class ActorStats : ActorInitialStats
     {
         ResetTempAttack();
         ResetTempDefense();
-        ResetTempHealth();
         ResetBonusAttackRange();
         CheckEndUniqueEffects();
         tempWeight = 0;
@@ -144,12 +145,31 @@ public class ActorStats : ActorInitialStats
     }
     public void ChangeInitiative(int change) { initiative += change; }
     public int tempHealth;
+    protected int minTempHealth = 0;
+    public void SetMinTempHealth(int amount)
+    {
+        minTempHealth = amount;
+    }
+    public void ChangeMinTempHealth(int amount)
+    {
+        minTempHealth += amount;
+    }
+    protected int tempHealthDecayPercentage = 70;
+    public void SetTempHealthDecay(int amount)
+    {
+        tempHealthDecayPercentage = amount;
+    }
+    public void ChangeTempHealthDecay(int amount)
+    {
+        tempHealthDecayPercentage += amount;
+    }
     // You can keep a little bit of temphealth to buff temphealth as a stat.
     public void ResetTempHealth()
     {
         // Barricade means you don't lose temp health except by damage.
         if (barricade){return;}
-        tempHealth = tempHealth / 2;
+        int decay = tempHealth * tempHealthDecayPercentage / 100;
+        tempHealth = Mathf.Max(minTempHealth, tempHealth - decay);
     }
     public void UpdateTempHealth(int changeAmount) { tempHealth += changeAmount; }
     public int GetTempHealth() { return tempHealth; }
@@ -473,11 +493,22 @@ public class ActorStats : ActorInitialStats
         otherActor.LearnRandomActive(this);
     }
     public List<string> tempActives;
-    public List<string> GetTempActives(){return tempActives;}
+    public void RefreshTempActives()
+    {
+        for (int i = tempActives.Count; i >= 0; i--)
+        {
+            if (tempActives[i].Length <= 1){tempActives.RemoveAt(i);}
+        }
+    }
+    public List<string> GetTempActives()
+    {
+        RefreshTempActives();
+        return tempActives;
+    }
     public void AddTempActive(string skillName)
     {
-        if (skillName.Length <= 1) { return; }
         tempActives.Add(skillName);
+        RefreshTempActives();
     }
     public bool TempActiveExists(string skillName)
     {
@@ -502,6 +533,7 @@ public class ActorStats : ActorInitialStats
     public List<string> GetActiveSkills()
     {
         List<string> allActives = new List<string>(activeSkills);
+        RefreshTempActives();
         allActives.AddRange(tempActives);
         return allActives;
     }

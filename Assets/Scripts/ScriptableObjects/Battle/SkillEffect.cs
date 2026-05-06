@@ -326,6 +326,9 @@ public class SkillEffect : ScriptableObject
             case "SetAttackActionCost":
                 target.SetAttackActionCost(int.Parse(effectSpecifics));
                 break;
+            case "BasicAttackDamage":
+                target.ChangeBasicAttackMultiplier(int.Parse(effectSpecifics));
+                break;
             case "TempRange":
                 target.UpdateBonusAttackRange(int.Parse(effectSpecifics));
                 break;
@@ -525,6 +528,12 @@ public class SkillEffect : ScriptableObject
                 break;
             case "Barricade":
                 target.GainBarricade(int.Parse(effectSpecifics));
+                break;
+            case "MinTempHealth":
+                target.ChangeMinTempHealth(int.Parse(effectSpecifics));
+                break;
+            case "TempHealthDecay":
+                target.ChangeTempHealthDecay(int.Parse(effectSpecifics));
                 break;
             case "Guard":
                 target.GainGuard(int.Parse(effectSpecifics));

@@ -108,6 +108,9 @@ public class StSStateManager : MonoBehaviour
         enemyList.AddCharacters(savedEnemies);
         return true;
     }
+    // TODO Apply The Acension Stat Modifiers Somehow When Making The Battle?
+    // OR Do It In The Battle With The Relic/Other Effects.
+    // Should Add A StartBattleManager For This Type Of Thing.
     public void MoveToTile(string tileType)
     {
         string newScene = "";

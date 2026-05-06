@@ -5,8 +5,6 @@ using UnityEngine;
 
 public class BattleManager : MonoBehaviour
 {
-    protected bool loadedCustomBattleMap = false;
-    protected List<int> customEnemyStartingLocations = new List<int>();
     public PartyDataManager partyData;
     public BattleState battleState;
     public BattleMap map;
@@ -90,42 +88,11 @@ public class BattleManager : MonoBehaviour
     {
         Start();
     }
+    public BattleStartManager startManager;
     protected void Start()
     {
-        // Get a new battle map.
-        map.ForceStart();
-        combatLog.ForceStart();
-        int partySizeCap = map.MapMaxPartyCapacity();
-        combatLog.AddNewLog();
-        UI.UpdateWinConString();
-        map.SetWeather(battleState.GetWeather());
-        combatLog.UpdateNewestLog("The weather is " + map.GetWeather());
-        map.SetTime(battleState.GetTime());
-        combatLog.UpdateNewestLog("The time is " + map.GetTime());
-        loadedCustomBattleMap = TryLoadCustomBattleMap();
-        if (!loadedCustomBattleMap)
-        {
-            // Always plains default map tile.
-            map.GetNewMapFeatures(battleMapFeatures.CurrentMapFeatures());
-            map.GetNewTerrainEffects(battleMapFeatures.CurrentMapTerrainFeatures());
-            interactableMaker.GetNewInteractables(map, battleMapFeatures.CurrentMapInteractables());
-            map.InitializeElevations();
-        }
-        moveManager.UpdateInfoFromBattleMap(map);
-        actorMaker.SetMapSize(map.mapSize);
-        // Spawn actors in patterns based on teams.
-        List<TacticActor> actors = new List<TacticActor>();
-        actors = actorMaker.SpawnTeamInPattern(battleState.GetAllySpawnPattern(), 0, playerParty.characters, playerParty.stats, playerParty.characterNames, playerParty.equipment, playerParty.characterIDs);
-        actorMaker.ApplyBattleModifiers(actors, playerParty.GetBattleModifiers());
-        for (int i = 0; i < Mathf.Min(partySizeCap, actors.Count); i++) { map.AddActorToBattle(actors[i]); }
-        actors = new List<TacticActor>();
-        actors = actorMaker.SpawnTeamInPattern(battleState.GetEnemySpawnPattern(), 1, enemyParty.characters, enemyParty.stats, enemyParty.characterNames, enemyParty.equipment, enemyParty.characterIDs);
-        actorMaker.ApplyBattleModifiers(actors, enemyParty.GetBattleModifiers());
-        for (int i = 0; i < Mathf.Min(partySizeCap, actors.Count); i++) { map.AddActorToBattle(actors[i]); }
-        // Apply relics/ascension/etc. battle modifier effects here.
-        // Use condition, effect, specifics for battle modifiers.
-        // Condition will include team.
-        // Get the modifiers from the battle state.
+        // Initialize Map/Teams
+        startManager.InitializeMap(map, this);
         battleStatsTracker.InitializeTracker(map.battlingActors);
         // Apply start of battle passives.
         for (int i = 0; i < map.battlingActors.Count; i++)
@@ -139,14 +106,6 @@ public class BattleManager : MonoBehaviour
             return;
         }
         // Start the combat.
-        if (loadedCustomBattleMap)
-        {
-            ApplyCustomEnemyStartingPositions();
-        }
-        else
-        {
-            map.RandomEnemyStartingPositions(battleState.GetEnemySpawnPattern());
-        }
         if (!setStartingPositions)
         {
             map.RandomAllyStartingPositions(battleState.GetAllySpawnPattern());
@@ -680,6 +639,7 @@ public class BattleManager : MonoBehaviour
         ActorAttacksActor(attacker, defender, payCost);
     }
 
+    // ALL/Only Basic Attacks Go Through Here, Skills Go Through Active Manager
     protected void ActorAttacksActor(TacticActor attacker, TacticActor defender, bool payCost = true)
     {
         if (payCost)
@@ -688,7 +648,7 @@ public class BattleManager : MonoBehaviour
             attacker.PayAttackCost();
         }
         combatLog.UpdateNewestLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName() + ".");
-        attackManager.ActorAttacksActor(attacker, defender, map);
+        attackManager.ActorAttacksActor(attacker, defender, map, attacker.GetBasicAttackMultiplier());
         if (AdjustTurnNumber())
         {
             return;
@@ -878,12 +838,16 @@ public class BattleManager : MonoBehaviour
                 turnActor.SetBaseHealth(turnActor.GetHealth());
                 // Check if there are any empty adjacent tiles.
                 int splitTile = map.ReturnRandomAdjacentEmptyTile(turnActor.GetLocation());
+                // If can't split then just do normal turn.
+                if (splitTile < 0)
+                {
+                    break;
+                }
                 // Create a copy in a random adjacent empty tile.
-                // Or this is a special case where you can stack actors?
-                // This will always take all your actions.
                 TacticActor clonedActor = actorMaker.CloneActor(turnActor, splitTile);
                 map.AddActorToBattle(clonedActor);
                 ApplyBattleModifiersToActor(clonedActor);
+                // This will always take all your actions.
                 turnActor.ResetActions();
                 break;
 
@@ -1138,7 +1102,10 @@ public class BattleManager : MonoBehaviour
                 turnActor.SetTarget(closestEnemy);
             }
             // If they can be attacked without moving then attack.
-            if (actorAI.EnemyInAttackRange(turnActor, turnActor.GetTarget(), map)) { ActorAttacksActor(turnActor, turnActor.GetTarget()); }
+            if (actorAI.EnemyInAttackRange(turnActor, turnActor.GetTarget(), map))
+            {
+                ActorAttacksActor(turnActor, turnActor.GetTarget());
+            }
             // Otherwise move.
             else
             {
@@ -1315,7 +1282,8 @@ public class BattleManager : MonoBehaviour
             actor.SetDirection(moveManager.DirectionBetweenLocations(prevLoc, path[i]));
             moveManager.MoveActorToTile(actor, path[i], map);
             actor.PayMoveCost(moveManager.MoveCostOfTile(path[i]));
-            if (actor.Grappling())
+            // A Grappled Actor Can't Start The Drag Chain
+            if (actor.Grappling() && !actor.Grappled())
             {
                 DragGrappledActor(actor.GetGrappledActor(), prevLoc);
             }
@@ -1339,7 +1307,8 @@ public class BattleManager : MonoBehaviour
             moveManager.MoveActorToTile(actor, path[i], map);
             // Only pay the move cost here if you're moving along a path.
             actor.PayMoveCost(moveManager.MoveCostOfTile(path[i]));
-            if (actor.Grappling())
+            // A Grappled Actor Can't Start The Drag Chain
+            if (actor.Grappling() && !actor.Grappled())
             {
                 DragGrappledActor(actor.GetGrappledActor(), prevLoc);
             }
@@ -1409,68 +1378,5 @@ public class BattleManager : MonoBehaviour
     public void Forfeit()
     {
         EndBattle(1, true);
-    }
-
-    protected bool TryLoadCustomBattleMap()
-    {
-        customEnemyStartingLocations.Clear();
-        if (!battleState.UsingCustomBattle()){return false;}
-        else if (battleState.UsingCustomBattle() && battleState.savedBattles == null)
-        {
-            Debug.Log("TryLoadCustomBattleMap aborted. UsingCustomBattle=" + battleState.UsingCustomBattle() + " savedBattlesNull=" + (battleState.savedBattles == null));
-            return false;
-        }
-        List<string> savedMapInfo;
-        List<string> savedTerrainEffects;
-        List<int> savedElevations;
-        List<string> savedBorders;
-        List<string> savedBuildings;
-        List<string> savedEnemies;
-        List<int> savedEnemyLocations;
-        string savedWeather;
-        string savedTime;
-        if (!battleState.savedBattles.TryLoadBattleData(battleState.GetCustomBattleName(), out savedMapInfo, out savedTerrainEffects, out savedElevations, out savedBorders, out savedBuildings, out savedEnemies, out savedEnemyLocations, out savedWeather, out savedTime))
-        {
-            Debug.Log("TryLoadCustomBattleMap failed to load saved data for: " + battleState.GetCustomBattleName());
-            return false;
-        }
-        map.SetMapInfo(savedMapInfo);
-        map.terrainEffectTiles = new List<string>(savedTerrainEffects);
-        map.mapElevations = new List<int>(savedElevations);
-        for (int i = 0; i < Mathf.Min(map.mapTiles.Count, savedBorders.Count); i++)
-        {
-            map.mapTiles[i].SetBorders(savedBorders[i].Split("|").ToList());
-            map.UpdateTileBorderSprites(i);
-        }
-        for (int i = 0; i < Mathf.Min(map.mapTiles.Count, savedElevations.Count); i++)
-        {
-            map.ChangeTileElevation(i, savedElevations[i]);
-        }
-        for (int i = 0; i < savedBuildings.Count; i++)
-        {
-            if (savedBuildings[i].Length <= 0){continue;}
-            map.AddBuilding(savedBuildings[i], i);
-        }
-        enemyParty.ResetLists();
-        enemyParty.AddCharacters(savedEnemies);
-        battleState.SetEnemyNames(savedEnemies);
-        customEnemyStartingLocations = new List<int>(savedEnemyLocations);
-        map.UpdateMap();
-        return true;
-    }
-
-    protected void ApplyCustomEnemyStartingPositions()
-    {
-        List<TacticActor> enemyTeam = map.AllTeamMembers(1);
-        if (customEnemyStartingLocations.Count <= 0)
-        {
-            map.RandomEnemyStartingPositions(battleState.GetEnemySpawnPattern());
-            return;
-        }
-        for (int i = 0; i < Mathf.Min(enemyTeam.Count, customEnemyStartingLocations.Count); i++)
-        {
-            enemyTeam[i].SetLocation(customEnemyStartingLocations[i]);
-        }
-        map.UpdateMap();
     }
 }

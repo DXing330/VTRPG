@@ -669,6 +669,15 @@ public class PassiveDetailViewer : MonoBehaviour
                 return " if the skill has been upgraded";
             case "SkillModded":
                 return " if the skill has been modified";
+            // STS Conditions
+            case "TempSkillOwnedCount<":
+                return " if " + conTarget + " has less than " + specifics + " temporary skills";
+            case "TempSkillOwnedCount>":
+                return " if " + conTarget + " has more than " + specifics + " temporary skills";
+            case "SkillOwnedCount<":
+                return " if " + conTarget + " has less than " + specifics + " skills";
+            case "SkillOwnedCount>":
+                return " if " + conTarget + " has more than " + specifics + " skills";
         }
         return "";
     }
@@ -718,6 +727,10 @@ public class PassiveDetailViewer : MonoBehaviour
                 return multiplier + "half your attack value";
             case "SkillsUsed":
                 return multiplier + "how many skills " + targetString + " used";
+            case "TempSkillCount":
+                return multiplier + "how many temporary skills " + targetString + " has";
+            case "PassiveSkillCount":
+                return multiplier + "how many passives " + targetString + " has";
             case "Attacks":
                 return multiplier + "how many times " + targetString + " attacked";
             case "Defends":

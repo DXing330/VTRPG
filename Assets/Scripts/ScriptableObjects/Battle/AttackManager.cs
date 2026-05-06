@@ -15,7 +15,7 @@ public class AttackManager : ScriptableObject
     public TerrainPassivesList borderPassives;
     public TerrainPassivesList buildingPassives;
     public int stabMultiplier = 150;
-    public int baseMultiplier;
+    public int baseMultiplier = 100;
     protected string damageRolls;
     protected string passiveEffectString;
     protected string finalDamageCalculation;

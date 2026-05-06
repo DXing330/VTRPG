@@ -1713,12 +1713,12 @@ public class BattleMap : MapManager
         List<int> emptyAdjacent = GetAdjacentEmptyTiles(tileNumber);
         if (emptyAdjacent.Count == 0)
         {
-            return tileNumber;
+            return -1;
         }
         int tile = emptyAdjacent[UnityEngine.Random.Range(0, emptyAdjacent.Count)];
         if (TileNotEmpty(tile))
         {
-            return tileNumber;
+            return -1;
         }
         return tile;
     }

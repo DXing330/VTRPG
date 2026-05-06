@@ -149,6 +149,19 @@ public class TacticActor : ActorStats
     public void ResetBonusActions(){bonusActions = 0;}
     public void GainBonusActions(int amount){bonusActions += amount;}
     public int GetActions(){return actions + bonusActions;}
+    public int basicAttackMultiplier = 100;
+    public void SetBasicAttackMultiplier(int newAmount)
+    {
+        basicAttackMultiplier = newAmount;
+    }
+    public int GetBasicAttackMultiplier()
+    {
+        return basicAttackMultiplier;
+    }
+    public void ChangeBasicAttackMultiplier(int newAmount)
+    {
+        basicAttackMultiplier += newAmount;
+    }
     public int attackActionCost = 2;
     public void SetAttackActionCost(int newCost)
     {
@@ -265,8 +278,15 @@ public class TacticActor : ActorStats
         ResetTempMovement();
         ResetBonusActions();
     }
+    protected void TrackEndTurnRemainingStats()
+    {
+        if (remainingActionsEachRound == null || remainingActionsEachRound.Count <= 0){return;}
+        remainingActionsEachRound[remainingActionsEachRound.Count - 1] = GetActions();
+        remainingMovementEachRound[remainingMovementEachRound.Count - 1] = GetMovement();
+    }
     public void EndTurn()
     {
+        TrackEndTurnRemainingStats();
         tempMovement = 0;
         // Allow some slight turn manipulation by saving your actions.
         /*if (actions > 0)
@@ -365,11 +385,13 @@ public class TacticActor : ActorStats
     protected void ResetRoundTrackers()
     {
         ResetRoundActionTracker();
+        ResetRoundRemainingActionTracker();
         ResetRoundAttackTracker();
         ResetRoundDefendTracker();
         ResetRoundSkillTracker();
         ResetRoundSpellTracker();
         ResetRoundMoveTracker();
+        ResetRoundRemainingMovementTracker();
         ResetLocationTracker();
         ResetHealthTracker();
     }
@@ -381,6 +403,8 @@ public class TacticActor : ActorStats
         skillsEachRound.Add(0);
         spellsEachRound.Add(0);
         movesEachRound.Add(0);
+        remainingActionsEachRound.Add(0);
+        remainingMovementEachRound.Add(0);
         locationsEachRound.Add(GetLocation());
         healthEachRound.Add(GetHealth());
     }
@@ -463,7 +487,27 @@ public class TacticActor : ActorStats
         }
         return actionsEachRound.Sum();
     }
-
+    public List<int> remainingActionsEachRound;
+    public void ResetRoundRemainingActionTracker()
+    {
+        remainingActionsEachRound.Clear();
+    }
+    public int ReturnCurrentRoundRemainingActions()
+    {
+        if (remainingActionsEachRound == null || remainingActionsEachRound.Count <= 0)
+        {
+            return -1;
+        }
+        return remainingActionsEachRound[remainingActionsEachRound.Count - 1];
+    }
+    public int ReturnPreviousRoundRemainingActions()
+    {
+        if (remainingActionsEachRound == null || remainingActionsEachRound.Count <= 1)
+        {
+            return -1;
+        }
+        return remainingActionsEachRound[remainingActionsEachRound.Count - 2];
+    }
     // Attack history.
     public List<int> attacksEachRound;
     public void ResetRoundAttackTracker()
@@ -691,7 +735,27 @@ public class TacticActor : ActorStats
     {
         return movesEachRound.Sum();
     }
-
+    public List<int> remainingMovementEachRound;
+    public void ResetRoundRemainingMovementTracker()
+    {
+        remainingMovementEachRound.Clear();
+    }
+    public int ReturnCurrentRoundRemainingMovement()
+    {
+        if (remainingMovementEachRound == null || remainingMovementEachRound.Count <= 0)
+        {
+            return -1;
+        }
+        return remainingMovementEachRound[remainingMovementEachRound.Count - 1];
+    }
+    public int ReturnPreviousRoundRemainingMovement()
+    {
+        if (remainingMovementEachRound == null || remainingMovementEachRound.Count <= 1)
+        {
+            return -1;
+        }
+        return remainingMovementEachRound[remainingMovementEachRound.Count - 2];
+    }
     // Keep track of who hurt you, how many times and how much.
     public List<TacticActor> hurtByList;
     public List<int> hurtCount;
@@ -951,7 +1015,6 @@ public class TacticActor : ActorStats
             }
         }
     }
-
     // Save/load stat summaries.
     public List<string> ReturnSpendableStats()
     {

@@ -157,10 +157,18 @@ public class DungeonBag : SavedData
     {
         relics = new List<string>(newList);
     }
+    public List<string> GetRelics()
+    {
+        return relics;
+    }
     public List<string> relicCounters;
     public void SetRelicCounters(List<string> newList)
     {
         relicCounters = new List<string>(newList);
+    }
+    public List<string> GetRelicCounters()
+    {
+        return relicCounters;
     }
     public void GainRelic(string relicName, string counter = "0")
     {
