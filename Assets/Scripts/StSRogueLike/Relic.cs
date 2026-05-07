@@ -23,10 +23,10 @@ public class Relic : ScriptableObject
         relicName = "Trash";
         relicType = RelicType.Constant;
         relicBaseCounters = 0;
-        relicCounterTiming = 0;
+        relicCounterTiming = "";
         relicTiming = RelicTiming.PickUp;
         condition = "";
-        specifics = "";
+        conditionSpecifics = "";
         target = "";
         effect = "";
         effectSpecifics = "";
@@ -45,10 +45,10 @@ public class Relic : ScriptableObject
         }
         relicType = (RelicType)System.Enum.Parse(typeof(RelicType), dataBlocks[0]);
         relicBaseCounters = int.Parse(dataBlocks[1]);
-        relicCounterTiming = int.Parse(dataBlocks[2]);
+        relicCounterTiming = dataBlocks[2];
         relicTiming = (RelicTiming)System.Enum.Parse(typeof(RelicTiming), dataBlocks[3]);
         condition = dataBlocks[4];
-        specifics = dataBlocks[5];
+        conditionSpecifics = dataBlocks[5];
         target = dataBlocks[6];
         effect = dataBlocks[7];
         effectSpecifics = dataBlocks[8];
@@ -58,13 +58,41 @@ public class Relic : ScriptableObject
     public string relicName;
     public RelicType relicType;
     public int relicBaseCounters;
-    public int relicCounterTiming;
+    public string relicCounterTiming;
+    public string GetCounterTiming()
+    {
+        return relicCounterTiming;
+    }
     public RelicTiming relicTiming;
+    public bool BattleRelic()
+    {
+        return (relicTiming == RelicTiming.Battle);
+    }
     public string condition;
-    public string specifics;
+    public string GetCondition()
+    {
+        return condition;
+    }
+    public string conditionSpecifics;
+    public string GetConditionSpecifics()
+    {
+        return conditionSpecifics;
+    }
     public string target;
+    public string GetTarget()
+    {
+        return target;
+    }
     public string effect;
+    public string GetEffect()
+    {
+        return effect;
+    }
     public string effectSpecifics;
+    public string GetEffectSpecifics()
+    {
+        return effectSpecifics;
+    }
     public string description;
     public string flavor;
 }

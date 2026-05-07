@@ -552,6 +552,14 @@ public class PassiveDetailViewer : MonoBehaviour
                 return " if " + conTarget + " attacked last round";
             case "PrevAttacked<>":
                 return " if " + conTarget + " did not attack last round";
+            case "RemainingActionCount":
+                return " if " + conTarget + " had exactly " + specifics + " actions remaing last round";
+            case "RemainingActionCount>":
+                return " if " + conTarget + " had more than " + specifics + " actions remaing last round";
+            case "RemainingActionCount<":
+                return " if " + conTarget + " had less than " + specifics + " actions remaing last round";
+            case "RemainingActionCount%":
+                return " if " + conTarget + " had a multiple of " + specifics + " actions remaing last round";
             case "ActionCount":
                 return " if " + conTarget + " used exactly " + specifics + " actions this round";
             case "ActionCount>":
@@ -624,6 +632,14 @@ public class PassiveDetailViewer : MonoBehaviour
                 return " if " + conTarget + " used less than " + specifics + " skills";
             case "TotalSkillCount%":
                 return " if " + conTarget + " used a multiple of " + specifics + " skills";
+            case "RemainingMoveCount":
+                return " if " + conTarget + " had exactly " + specifics + " movement remaining last round";
+            case "RemainingMoveCount>":
+                return " if " + conTarget + " had more than " + specifics + " movement remaining last round";
+            case "RemainingMoveCount<":
+                return " if " + conTarget + " had less than " + specifics + " movement remaining last round";
+            case "RemainingMoveCount%":
+                return " if " + conTarget + " had a multiple of " + specifics + " movement remaining last round";
             case "PrevMoveCount":
                 return " if " + conTarget + " moved exactly " + specifics + " tiles last round";
             case "PrevMoveCount>":
@@ -725,6 +741,10 @@ public class PassiveDetailViewer : MonoBehaviour
                 return multiplier + "your attack value";
             case "Attack/2":
                 return multiplier + "half your attack value";
+            case "Actions":
+                return multiplier + "how many actions " + targetString + " has";
+            case "RemainingActions":
+                return multiplier + "how many actions " + targetString + " had remaining last round";
             case "SkillsUsed":
                 return multiplier + "how many skills " + targetString + " used";
             case "TempSkillCount":
@@ -737,6 +757,8 @@ public class PassiveDetailViewer : MonoBehaviour
                 return multiplier + "how many times " + targetString + " was attacked";
             case "Moves":
                 return multiplier + "how many times " + targetString + " moved";
+            case "RemainingMovement":
+                return multiplier + "how much movement " + targetString + " had remaining last round";
             case "RoundAttacks":
                 return multiplier + "how many times " + targetString + " attacked this round";
         }

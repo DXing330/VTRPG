@@ -164,6 +164,7 @@ public class StSStateManager : MonoBehaviour
             // Generate Treasure.
             break;
             case "Boss":
+            gameState.UpdateState("Boss");
             break;
         }
         if (newScene != "")

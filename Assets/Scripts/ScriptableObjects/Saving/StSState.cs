@@ -8,6 +8,15 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "StSState", menuName = "ScriptableObjects/StS/StSState", order = 1)]
 public class StSState : SavedState
 {
+    public StSMapSaveData mapState;
+    public string GetBattleType()
+    {
+        if (GetState() == "Boss")
+        {
+            return "Boss";
+        }
+        return mapState.GetLatestTile();
+    }
     public int newGame;
     public bool StartingNewGame()
     {

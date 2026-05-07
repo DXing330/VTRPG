@@ -163,16 +163,17 @@ public class Inventory : SavedData
     {
         return assignedActorIDs[index];
     }
-    public void ActorUsesItem(string itemName, int actorID)
+    public bool ActorUsesItem(string itemName, int actorID)
     {
         for (int i = 0; i < items.Count; i++)
         {
             if (items[i] == itemName && assignedActorIDs[i] == actorID.ToString())
             {
                 RemoveItemAtIndex(i);
-                return;
+                return true;
             }
         }
+        return false;
     }
     public int ReturnQuantityOfItem(string itemName)
     {

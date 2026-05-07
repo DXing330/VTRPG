@@ -391,6 +391,7 @@ public class TacticActor : ActorStats
         ResetRoundSkillTracker();
         ResetRoundSpellTracker();
         ResetRoundMoveTracker();
+        ResetRoundItemTracker();
         ResetRoundRemainingMovementTracker();
         ResetLocationTracker();
         ResetHealthTracker();
@@ -403,6 +404,7 @@ public class TacticActor : ActorStats
         skillsEachRound.Add(0);
         spellsEachRound.Add(0);
         movesEachRound.Add(0);
+        itemsEachRound.Add(0);
         remainingActionsEachRound.Add(0);
         remainingMovementEachRound.Add(0);
         locationsEachRound.Add(GetLocation());
@@ -704,7 +706,54 @@ public class TacticActor : ActorStats
         if (spellsEachRound == null){return 0;}
         return spellsEachRound.Sum();
     }
-
+    // Item history.
+    public List<int> itemsEachRound;
+    public List<string> itemsUsed;
+    public bool ItemUsedAlready(string itemName)
+    {
+        return itemsUsed.Contains(itemName);
+    }
+    public string ReturnMostUsedItem()
+    {
+        if (itemsUsed == null || itemsUsed.Count <= 0){return "";}
+        return itemsUsed.GroupBy(s => s).OrderByDescending(g => g.Count()).First().Key;
+    }
+    public string ReturnMostRecentItem()
+    {
+        if (itemsUsed.Count < 1){return "";}
+        return itemsUsed[itemsUsed.Count - 1];
+    }
+    public void ResetRoundItemTracker()
+    {
+        itemsEachRound.Clear();
+        itemsUsed.Clear();
+    }
+    public void UpdateRoundItemTracker(string itemName)
+    {
+        if (itemsEachRound == null || itemsEachRound.Count == 0)
+        {
+            itemsEachRound = new List<int>();
+            itemsEachRound.Add(1);
+            itemsUsed.Add(itemName);
+            return;
+        }
+        itemsEachRound[itemsEachRound.Count - 1]++;
+        itemsUsed.Add(itemName);
+    }
+    public int ReturnCurrentRoundItems()
+    {
+        if (itemsEachRound.Count <= 0){return -1;}
+        return itemsEachRound[itemsEachRound.Count - 1];
+    }
+    public int ReturnPreviousRoundItems()
+    {
+        if (itemsEachRound.Count <= 1){return -1;}
+        return itemsEachRound[itemsEachRound.Count - 2];
+    }
+    public int ReturnTotalRoundItems()
+    {
+        return itemsEachRound.Sum();
+    }
     // Move history.
     public List<int> movesEachRound;
     public void ResetRoundMoveTracker()

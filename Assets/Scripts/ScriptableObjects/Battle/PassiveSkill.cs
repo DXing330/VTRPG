@@ -39,6 +39,9 @@ public class PassiveSkill : SkillEffect
                 case "Actions":
                 amount = actor.GetActions();
                 break;
+                case "RemainingActions":
+                amount = actor.ReturnPreviousRoundRemainingActions();
+                break;
                 case "SkillsUsed":
                 amount = actor.ReturnTotalRoundSkills();
                 break;
@@ -56,6 +59,9 @@ public class PassiveSkill : SkillEffect
                 break;
                 case "Moves":
                 amount = actor.ReturnTotalRoundMoves();
+                break;
+                case "RemainingMovement":
+                amount = actor.ReturnPreviousRoundRemainingMovement();
                 break;
                 case "RoundAttacks":
                 amount = actor.ReturnCurrentRoundAttacks();
@@ -645,6 +651,14 @@ public class PassiveSkill : SkillEffect
                 return actor.ReturnPreviousRoundAttacks() > 0;
             case "PrevAttacked<>":
                 return actor.ReturnPreviousRoundAttacks() == 0;
+            case "RemainingActionCount":
+                return actor.ReturnPreviousRoundRemainingActions() == int.Parse(conditionSpecifics);
+            case "RemainingActionCount>":
+                return actor.ReturnPreviousRoundRemainingActions() > int.Parse(conditionSpecifics);
+            case "RemainingActionCount<":
+                return actor.ReturnPreviousRoundRemainingActions() < int.Parse(conditionSpecifics);
+            case "RemainingActionCount%":
+                return (actor.ReturnPreviousRoundRemainingActions() % int.Parse(conditionSpecifics) == 0);
             case "ActionCount":
                 return actor.ReturnCurrentRoundActions() == int.Parse(conditionSpecifics);
             case "ActionCount>":
@@ -717,6 +731,14 @@ public class PassiveSkill : SkillEffect
                 return actor.ReturnTotalRoundSkills() < int.Parse(conditionSpecifics);
             case "TotalSkillCount%":
                 return (actor.ReturnTotalRoundSkills() % int.Parse(conditionSpecifics) == 0);
+            case "RemainingMoveCount":
+                return actor.ReturnPreviousRoundRemainingMovement() == int.Parse(conditionSpecifics);
+            case "RemainingMoveCount>":
+                return actor.ReturnPreviousRoundRemainingMovement() > int.Parse(conditionSpecifics);
+            case "RemainingMoveCount<":
+                return actor.ReturnPreviousRoundRemainingMovement() < int.Parse(conditionSpecifics);
+            case "RemainingMoveCount%":
+                return (actor.ReturnPreviousRoundRemainingMovement() % int.Parse(conditionSpecifics) == 0);
             case "PrevMoveCount":
                 return actor.ReturnPreviousRoundMoves() == int.Parse(conditionSpecifics);
             case "PrevMoveCount>":

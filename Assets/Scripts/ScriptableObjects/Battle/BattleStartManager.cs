@@ -43,7 +43,7 @@ public class BattleStartManager : ScriptableObject
         if (roguelike)
         {
             // Get the relic list and counter from the dungeon bag.
-            relicBattleManager.ApplyBattleRelicEffects(map.battlingActors, manager.partyData.dungeonBag.GetRelics(), manager.partyData.dungeonBag.GetRelicCounters());
+            relicBattleManager.ApplyBattleRelicEffects(map.battlingActors, manager.partyData.dungeonBag);
         }
         if (loadedCustomBattleMap)
         {
