@@ -619,6 +619,10 @@ public class PassiveSkill : SkillEffect
             return utility.Roll(-actor.GetLuck()) < int.Parse(conditionSpecifics);
             case "FirstStrike":
                 return actor.ReturnTotalRoundAttacks() <= 0;
+            case "ItemUsed<>":
+                return actor.ReturnTotalRoundItems() <= 0;
+            case "ItemUsed":
+                return actor.ReturnTotalRoundItems() > 0;
             case "Moved":
                 return actor.ReturnCurrentRoundMoves() > 0;
             case "Moved<>":

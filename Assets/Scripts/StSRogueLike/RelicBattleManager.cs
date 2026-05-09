@@ -31,11 +31,19 @@ public class RelicBattleManager : ScriptableObject
         // Load All Relics.
         for (int i = 0; i < relicNames.Count; i++)
         {
-            relic.LoadRelic(relicData.ReturnValue(relicNames[i]), relicNames[i]);
+            List<string> allRelicData = relicData.ReturnAllValues(relicNames[i]);
+            ApplyAllEffectsOfRelic(relicNames[i], allRelicData, allies, enemies, relicCounters, i);
+        }
+    }
+    protected void ApplyAllEffectsOfRelic(string relicName, List<string> relicStats, List<TacticActor> allies, List<TacticActor> enemies, List<string> relicCounters, int index)
+    {
+        for (int i = 0; i < relicStats.Count; i++)
+        {
+            relic.LoadRelic(relicStats[i], relicName);
             // Apply counters for each battle counter?
             if (relic.GetCounterTiming() == "Battle")
             {
-                relicCounters[i] = (int.Parse(relicCounters[i]) + 1).ToString();
+                relicCounters[index] = (int.Parse(relicCounters[index]) + 1).ToString();
             }
             // Determine which relics are battle relics.
             if (relic.BattleRelic())
@@ -43,11 +51,11 @@ public class RelicBattleManager : ScriptableObject
                 // Battle Relics Either Target Allies Or Enemies
                 if (relic.GetTarget() == "Allies")
                 {
-                    ApplyBattleRelicEffect(allies, relicCounters, i);
+                    ApplyBattleRelicEffect(allies, relicCounters, index);
                 }
                 else
                 {
-                    ApplyBattleRelicEffect(enemies, relicCounters, i);
+                    ApplyBattleRelicEffect(enemies, relicCounters, index);
                 }
             }
         }

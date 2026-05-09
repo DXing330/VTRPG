@@ -520,6 +520,10 @@ public class PassiveDetailViewer : MonoBehaviour
                 return " if the attack was not dodged";
             case "FirstStrike":
                 return " if " + conTarget + " has not attacked yet";
+            case "ItemUsed<>":
+                return " if " + conTarget + " has not used an item";
+            case "ItemUsed":
+                return " if " + conTarget + " has used an item";
             case "Moved":
                 return " if " + conTarget + " moved this round";
             case "Moved<>":
@@ -844,11 +848,15 @@ public class PassiveDetailViewer : MonoBehaviour
                 return " " + target + " gain " + specifics + " movement";
             case "Skill":
                 return " gain the " + specifics + " skill";
+            case "EquipmentSkill":
+                return " gain the " + specifics + " skill";
             case "TemporarySkill":
                 return " gain the " + specifics + " skill which can be used once";
             case "SingleTemporarySkill":
                 return " gain the " + specifics + " skill which can only be used once";
             case "Spell":
+                return " gain the " + specifics + " spell";
+            case "EquipmentSpell":
                 return " gain the " + specifics + " spell";
             case "TemporarySpell":
                 return " gain the " + specifics + " spell once";

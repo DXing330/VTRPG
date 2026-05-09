@@ -530,7 +530,7 @@ public class ActorStats : ActorInitialStats
         if (index < 0 || index >= activeSkills.Count) { return ""; }
         return activeSkills[index];
     }
-    public List<string> GetActiveSkills()
+    public virtual List<string> GetActiveSkills()
     {
         List<string> allActives = new List<string>(activeSkills);
         RefreshTempActives();
@@ -563,7 +563,7 @@ public class ActorStats : ActorInitialStats
             tempSpells.RemoveAt(indexOf);
         }
     }
-    public List<string> GetSpells()
+    public virtual List<string> GetSpells()
     {
         List<string> allSpells = new List<string>(spells);
         allSpells.AddRange(tempSpells);

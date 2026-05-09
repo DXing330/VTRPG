@@ -172,8 +172,17 @@ public class DungeonBag : SavedData
     }
     public void GainRelic(string relicName, string counter = "0")
     {
+        int index = relics.IndexOf(relicName);
+        if (index >= 0){return;}
         relics.Add(relicName);
         relicCounters.Add(counter);
+    }
+    public void RemoveRelic(string relicName)
+    {
+        int index = relics.IndexOf(relicName);
+        if (index < 0){return;}
+        relics.RemoveAt(index);
+        relicCounters.RemoveAt(index);
     }
     public override void NewGame()
     {
@@ -214,16 +223,16 @@ public class DungeonBag : SavedData
         switch (key)
         {
             case "Max":
-            maxCapacity = utility.SafeParseInt(stat, 16);
+            maxCapacity = utility.SafeParseInt(value, 16);
             break;
             case "Items":
-            SetItems(stat.Split(delimiterTwo).ToList());
+            SetItems(value.Split(delimiterTwo).ToList());
             break;
             case "Relics":
-            SetRelics(stat.Split(delimiterTwo).ToList());
+            SetRelics(value.Split(delimiterTwo).ToList());
             break;
             case "RelicCounters":
-            SetRelicCounters(stat.Split(delimiterTwo).ToList());
+            SetRelicCounters(value.Split(delimiterTwo).ToList());
             break;
             default:
             break;

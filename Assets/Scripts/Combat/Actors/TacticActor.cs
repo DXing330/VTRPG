@@ -39,12 +39,12 @@ public class TacticActor : ActorStats
     {
         return nextSkillMods != null && nextSkillMods.Count > 0;
     }
-
     // Equipment.
     public void ResetEquipment()
     {
         ResetWeapon();
         ResetArmor();
+        ResetEquipmentSkillsAndSpells();
     }
     public string weaponType;
     public void ResetWeapon()
@@ -92,7 +92,38 @@ public class TacticActor : ActorStats
     public string armorStats;
     public void SetArmorStats(string newInfo){armorStats = newInfo;}
     public string GetArmorStats(){return armorStats;}
-
+    public List<string> equipmentSkills;
+    public void AddEquipmentSkill(string newSkill)
+    {
+        if (equipmentSkills.Contains(newSkill)){return;}
+        equipmentSkills.Add(newSkill);
+    }
+    public List<string> equipmentSpells;
+    public void AddEquipmentSpell(string newSkill)
+    {
+        if (equipmentSpells.Contains(newSkill)){return;}
+        equipmentSpells.Add(newSkill);
+    }
+    public void ResetEquipmentSkillsAndSpells()
+    {
+        equipmentSkills.Clear();
+        equipmentSpells.Clear();
+    }
+    public override List<string> GetActiveSkills()
+    {
+        List<string> allActives = new List<string>(activeSkills);
+        RefreshTempActives();
+        allActives.AddRange(tempActives);
+        allActives.AddRange(equipmentSkills);
+        return allActives;
+    }
+    public override List<string> GetSpells()
+    {
+        List<string> allSpells = new List<string>(spells);
+        allSpells.AddRange(tempSpells);
+        allSpells.AddRange(equipmentSpells);
+        return allSpells;
+    }
     // Actor identity and battle membership.
     public GameObject actorObject;
     public void DestroyActor(){DestroyImmediate(actorObject);}
@@ -277,6 +308,7 @@ public class TacticActor : ActorStats
         base.EndTurnResetStats();
         ResetTempMovement();
         ResetBonusActions();
+        ResetEquipmentSkillsAndSpells();
     }
     protected void TrackEndTurnRemainingStats()
     {

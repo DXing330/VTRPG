@@ -89,10 +89,11 @@ public class BattleManager : MonoBehaviour
         Start();
     }
     public BattleStartManager startManager;
+    public bool roguelikeBattle = false;
     protected void Start()
     {
         // Initialize Map/Teams
-        startManager.InitializeMap(map, this);
+        startManager.InitializeMap(map, this, roguelikeBattle);
         battleStatsTracker.InitializeTracker(map.battlingActors);
         // Apply start of battle passives.
         for (int i = 0; i < map.battlingActors.Count; i++)
@@ -157,9 +158,7 @@ public class BattleManager : MonoBehaviour
         }
     }
     public bool interactable = true;
-    public bool longDelays = true;
-    public float longDelayTime = 0.1f;
-    public float shortDelayTime = 0.01f;
+    public float delayTime = 0.1f;
     public int roundNumber;
     public int GetRoundNumber(){return roundNumber;}
     public int turnNumber;

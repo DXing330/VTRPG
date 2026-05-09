@@ -25,8 +25,8 @@ public class SkillEffect : ScriptableObject
             case "PassiveAtLevel":
                 string[] passiveAtLevel = effectSpecifics.Split("Equals");
                 target.AddPassiveSkill(passiveAtLevel[0], passiveAtLevel[1]);
-                int newPassiveAtLevel = target.GetLevelFromPassive(effectSpecifics);
-                passiveOrganizer.AddSortedPassiveNewLevel(target, effectSpecifics, newPassiveAtLevel);
+                int newPassiveAtLevel = target.GetLevelFromPassive(passiveAtLevel[0]);
+                passiveOrganizer.AddSortedPassiveNewLevel(target, passiveAtLevel[0], newPassiveAtLevel);
                 break;
             case "TemporaryPassive":
                 if (target.AddTempPassive(effectSpecifics, level))
@@ -377,6 +377,10 @@ public class SkillEffect : ScriptableObject
                 // Add an active skill.
                 target.AddActiveSkill(effectSpecifics);
                 break;
+            // Dependent On Equipment
+            case "EquipmentSkill":
+                target.AddEquipmentSkill(effectSpecifics);
+                break;
             case "TemporarySkill":
                 target.AddTempActive(effectSpecifics);
                 break;
@@ -389,6 +393,9 @@ public class SkillEffect : ScriptableObject
                 break;
             case "Spell":
                 target.LearnSpell(effectSpecifics);
+                break;
+            case "EquipmentSpell":
+                target.AddEquipmentSpell(effectSpecifics);
                 break;
             case "TemporarySpell":
                 target.LearnTempSpell(effectSpecifics);
