@@ -142,6 +142,9 @@ public class ActiveSkill : SkillEffect
             energyCost = "0";
             actionCost = "0";
             break;
+            case "DoublePower":
+            ApplyPowerMod(true);
+            break;
             case "Power":
             ApplyPowerMod();
             break;
@@ -196,7 +199,7 @@ public class ActiveSkill : SkillEffect
         }
     }
 
-    protected virtual void ApplyPowerMod()
+    protected virtual void ApplyPowerMod(bool doubled = false)
     {
         List<string> powers = GetAllPowerStrings();
         List<string> specificsList = GetAllSpecifics();
@@ -213,7 +216,7 @@ public class ActiveSkill : SkillEffect
                 if (modifiedPowerIndexes.Contains(powerIndex)){break;}
                 int powerInt = utility.SafeParseInt(GetMatchingString(powers, i, "1"), 0);
                 if (powerInt <= 0){break;}
-                powers[powerIndex] = PowerModdedInt(powerInt).ToString();
+                powers[powerIndex] = PowerModdedInt(powerInt, doubled).ToString();
                 modifiedPowerIndexes.Add(powerIndex);
                 break;
                 case "Specifics":
@@ -221,7 +224,7 @@ public class ActiveSkill : SkillEffect
                 if (modifiedSpecificsIndexes.Contains(specificsIndex)){break;}
                 int specificsInt = utility.SafeParseInt(GetMatchingString(specificsList, i, "0"), 0);
                 if (specificsInt <= 0){break;}
-                specificsList[specificsIndex] = PowerModdedInt(specificsInt).ToString();
+                specificsList[specificsIndex] = PowerModdedInt(specificsInt, doubled).ToString();
                 modifiedSpecificsIndexes.Add(specificsIndex);
                 break;
             }
@@ -229,10 +232,14 @@ public class ActiveSkill : SkillEffect
         power = String.Join(effectDelimiter, powers);
         specifics = String.Join(effectDelimiter, specificsList);
     }
-
-    protected int PowerModdedInt(int value)
+    // Default is 50% boost.
+    protected int PowerModdedInt(int value, bool doubled = false)
     {
         if (value == 1){return 2;}
+        if (doubled)
+        {
+            return value * 2;
+        }
         return (value * 3) / 2;
     }
 

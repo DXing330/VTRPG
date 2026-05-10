@@ -11,11 +11,8 @@ public class TacticActor : ActorStats
     public List<string> nextSkillMods = new List<string>();
     public void AddNextSkillMod(string mod)
     {
-        if (String.IsNullOrEmpty(mod)){return;}
-        if (nextSkillMods == null)
-        {
-            nextSkillMods = new List<string>();
-        }
+        // Can't stack same mod infinitely.
+        if (nextSkillMods.Contains(mod)){return;}
         nextSkillMods.Add(mod);
     }
     public List<string> GetNextSkillMods()

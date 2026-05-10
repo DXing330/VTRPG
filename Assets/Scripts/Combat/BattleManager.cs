@@ -647,7 +647,8 @@ public class BattleManager : MonoBehaviour
             attacker.PayAttackCost();
         }
         combatLog.UpdateNewestLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName() + ".");
-        attackManager.ActorAttacksActor(attacker, defender, map, attacker.GetBasicAttackMultiplier());
+        // Show Attack Speed Rolls In The combatLog?
+        attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier());
         if (AdjustTurnNumber())
         {
             return;

@@ -85,6 +85,7 @@ public class ActorStats : ActorInitialStats
         currentCritDamage = baseCritDamage;
         currentCrit = baseCrit;
         currentHitChance = baseHitChance;
+        currentAttackSpeed = baseAttackSpeed;
     }
     public List<string> ReturnStats()
     {
@@ -171,7 +172,21 @@ public class ActorStats : ActorInitialStats
         int decay = tempHealth * tempHealthDecayPercentage / 100;
         tempHealth = Mathf.Max(minTempHealth, tempHealth - decay);
     }
-    public void UpdateTempHealth(int changeAmount) { tempHealth += changeAmount; }
+    // For Vambrace.
+    protected int doubleTempHealthStacks = 0;
+    public void DoubleTempHealthGained(int stacks = 1)
+    {
+        doubleTempHealthStacks += stacks;
+    }
+    public void UpdateTempHealth(int changeAmount)
+    {
+        if (doubleTempHealthStacks > 0)
+        {
+            doubleTempHealthStacks--;
+            changeAmount = changeAmount * 2;
+        }
+        tempHealth += changeAmount;
+    }
     public int GetTempHealth() { return tempHealth; }
     public void Heal(int amount)
     {
@@ -408,22 +423,27 @@ public class ActorStats : ActorInitialStats
         ResetBufferStacks();
         ResetArtifactStacks();
     }
-    public void UpdateBaseHitChance(int amount){baseHitChance += amount;}
     public int currentHitChance;
     public int GetHitChance(){return currentHitChance;}
     public void UpdateHitChance(int amount){currentHitChance += amount;}
-    public void UpdateBaseDodge(int amount){baseDodge += amount;}
+    public void UpdateBaseHitChance(int amount){baseHitChance += amount;}
     public int currentDodge;
     public int GetDodgeChance(){return currentDodge;}
     public void UpdateDodgeChance(int amount){currentDodge += amount;}
-    public void UpdateBaseCritChance(int amount){baseCrit += amount;}
+    public void UpdateBaseDodge(int amount){baseDodge += amount;}
     public int currentCrit;
     public int GetCritChance(){return currentCrit;}
     public void UpdateCritChance(int amount){currentCrit += amount;}
-    public void UpdateBaseCritDamage(int amount){baseCritDamage += amount;}
+    public void UpdateBaseCritChance(int amount){baseCrit += amount;}
     public int currentCritDamage;
     public int GetCritDamage(){return currentCritDamage;}
     public void UpdateCritDamage(int amount){currentCritDamage += amount;}
+    public void UpdateBaseCritDamage(int amount){baseCritDamage += amount;}
+    public int currentAttackSpeed;
+    public int GetAttackSpeed(){return currentAttackSpeed;}
+    public void UpdateAttackSpeed(int amount){currentAttackSpeed += amount;}
+    public void UpdateBaseAttackSpeed(int amount){baseAttackSpeed += amount;}
+    
     public string ReturnRandomActiveSkill()
     {
         if (activeSkills.Count <= 0){return "";}
@@ -495,7 +515,7 @@ public class ActorStats : ActorInitialStats
     public List<string> tempActives;
     public void RefreshTempActives()
     {
-        for (int i = tempActives.Count; i >= 0; i--)
+        for (int i = tempActives.Count - 1; i >= 0; i--)
         {
             if (tempActives[i].Length <= 1){tempActives.RemoveAt(i);}
         }
@@ -700,6 +720,12 @@ public class ActorStats : ActorInitialStats
         }
         return SBD;
     }
+    // For Unsettling Lamp.
+    protected int doubleStatusStacks = 0;
+    public void DoubleStatusGained(int stacks = 1)
+    {
+        doubleStatusStacks += stacks;
+    }
     public override void AddStatus(string newCondition, int duration)
     {
         if (newCondition.Length <= 1 || newCondition.Trim().Length <= 1) { return; }
@@ -709,12 +735,28 @@ public class ActorStats : ActorInitialStats
         // Artifact stacks block new statuses.
         // Can this be gamed to prevent curses? Maybe.
         if (ConsumeArtifactStack()){return;}
+        // Check for dubs.
+        bool doubled = false;
+        if (doubleStatusStacks > 0)
+        {
+            doubled = true;
+            doubleStatusStacks--;
+        }
         // Permanent statuses can stack up infinitely and are a win condition.
         if (duration < 0)
         {
             statuses.Add(newCondition);
             statusDurations.Add(duration);
+            if (doubled)
+            {
+                statuses.Add(newCondition);
+                statusDurations.Add(duration);
+            }
             return;
+        }
+        if (doubled)
+        {
+            duration = duration * 2;
         }
         int indexOf = statuses.IndexOf(newCondition);
         if (indexOf < 0)

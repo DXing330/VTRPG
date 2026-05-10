@@ -8,6 +8,15 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "PartyData", menuName = "ScriptableObjects/DataContainers/SavedData/PartyData", order = 1)]
 public class PartyData : SavedData
 {
+    public StatDatabase actorDatabase;
+    protected void InitializePartyStats()
+    {
+        partyStats.Clear();
+        for (int i = 0; i < partyNames.Count; i++)
+        {
+            partyStats.Add(actorDatabase.ReturnValue(partyNames[i]));
+        }
+    }
     public int restHealth;
     public string exhaustStatus;
     public int exhaustDamage;
@@ -91,8 +100,25 @@ public class PartyData : SavedData
         if (index < 0 || index >= partyEquipment.Count){return;}
         partyEquipment[index] = equip;
     }
+    public List<string> partyEquipmentIDs;
+    public string GetEquipmentAtID(string ID)
+    {
+        int indexOf = partyEquipmentIDs.IndexOf(ID);
+        if (indexOf < 0){return "";}
+        return partyEquipment[indexOf];
+    }
+    public void SetEquipmentAtID(string equip, string ID)
+    {
+        int indexOf = partyEquipmentIDs.IndexOf(ID);
+        if (indexOf < 0)
+        {
+            partyEquipmentIDs.Add(ID);
+            partyEquipment.Add(equip);
+            return;
+        }
+        partyEquipment[indexOf] = equip;
+    }
     // This is not needed, we can store everything in the stats.
-    //public List<string> partyCurrentStats;
     public void SetCurrentStats(string newStats, int index)
     {
         dummyActor.SetInitialStatsFromString(partyStats[index]);
@@ -106,8 +132,10 @@ public class PartyData : SavedData
     public void ClearAllStats()
     {
         partyNames.Clear();
+        partyIDs.Clear();
         partyStats.Clear();
         partyEquipment.Clear();
+        partyEquipmentIDs.Clear();
     }
     public List<string> GetStatsAtIndex(int index)
     {
@@ -116,6 +144,7 @@ public class PartyData : SavedData
         allStats.Add(partyIDs[index]);
         allStats.Add(partyStats[index]);
         allStats.Add(partyEquipment[index]);
+        allStats.Add(partyEquipmentIDs[index]);
         return allStats;
     }
     public void RemoveStatsAtIndex(int index)
@@ -124,6 +153,7 @@ public class PartyData : SavedData
         partyIDs.RemoveAt(index);
         partyStats.RemoveAt(index);
         partyEquipment.RemoveAt(index);
+        partyEquipmentIDs.RemoveAt(index);
     }
     // Acts as a full restore.
     public void ClearCurrentStats()
@@ -273,6 +303,7 @@ public class PartyData : SavedData
         partyIDs.Clear();
         partyStats.Clear();
         partyEquipment.Clear();
+        partyEquipmentIDs.Clear();
     }
     public override void Save()
     {
@@ -285,6 +316,7 @@ public class PartyData : SavedData
         allData += "ID=" + String.Join(delimiterTwo, partyIDs) + delimiter;
         allData += "Stats=" + String.Join(delimiterTwo, partyStats) + delimiter;
         allData += "Equip=" + String.Join(delimiterTwo, partyEquipment) + delimiter;
+        allData += "EquipID=" + String.Join(delimiterTwo, partyEquipmentIDs) + delimiter;
         File.WriteAllText(dataPath, allData);
     }
     public override void NewGame()
@@ -298,6 +330,7 @@ public class PartyData : SavedData
         {
             LoadStat(dataList[i]);
         }
+        InitializePartyStats();
         Save();
     }
     public override void Load()
@@ -335,6 +368,9 @@ public class PartyData : SavedData
             break;
             case "Equip":
             partyEquipment = data.Split(delimiterTwo).ToList();
+            break;
+            case "EquipID":
+            partyEquipmentIDs = data.Split(delimiterTwo).ToList();
             break;
         }
     }
@@ -427,6 +463,7 @@ public class PartyData : SavedData
         partyIDs.Add(ID);
         partyNames.Add(personalName);
         partyEquipment.Add("");
+        partyEquipmentIDs.Add(ID);
     }
     public bool MemberExists(string spriteName)
     {
@@ -458,10 +495,12 @@ public class PartyData : SavedData
         if (partyEquipment.Count >= partyNames.Count)
         {
             partyEquipment[partyNames.Count - 1] = equipment;
+            partyEquipmentIDs[partyNames.Count - 1] = ID;
         }
         else
         {
             partyEquipment.Add(equipment);
+            partyEquipmentIDs.Add(ID);
         }
     }
     public void RemoveExhaustion(int index)

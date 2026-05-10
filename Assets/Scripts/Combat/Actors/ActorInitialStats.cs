@@ -110,6 +110,8 @@ public class ActorInitialStats : ActorPassives
                 return GetBaseHitChance().ToString();
             case "Dodge":
                 return GetBaseDodge().ToString();
+            case "AttackSpeed":
+                return GetBaseAttackSpeed().ToString();
             case "Passives":
                 return GetPassiveString();
             case "PassiveLevels":
@@ -208,6 +210,9 @@ public class ActorInitialStats : ActorPassives
                 break;
             case "Dodge":
                 SetBaseDodge(utility.SafeParseInt(newStat));
+                break;
+            case "AttackSpeed":
+                SetBaseAttackSpeed(utility.SafeParseInt(newStat));
                 break;
             case "Passives":
                 SetPassiveSkills(newStat.Split(passiveDelimiter).ToList());
@@ -403,6 +408,9 @@ public class ActorInitialStats : ActorPassives
     public int baseDodge;
     public int GetBaseDodge(){return baseDodge;}
     public void SetBaseDodge(int newInfo){baseDodge = newInfo;}
+    public int baseAttackSpeed;
+    public int GetBaseAttackSpeed(){return baseAttackSpeed;}
+    public void SetBaseAttackSpeed(int newInfo){baseAttackSpeed = newInfo;}
     public int baseEnergy;
     public void UpdateBaseEnergy(int changeAmount)
     {

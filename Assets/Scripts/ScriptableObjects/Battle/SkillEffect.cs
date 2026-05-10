@@ -37,6 +37,9 @@ public class SkillEffect : ScriptableObject
             case "NextSkillMod":
                 target.AddNextSkillMod(effectSpecifics);
                 break;
+            // TODO: pick skill, add mod for that skill.
+            case "RandomSkillMod":
+                break;
             case "Status":
                 int duration = level;
                 if (level <= baseStatusDuration && level >= 0) { duration = baseStatusDuration; }
@@ -67,6 +70,9 @@ public class SkillEffect : ScriptableObject
                     AffectActor(target, "Status", statuses[i], durations);
                 }
                 break;
+            case "DoubleStatuses":
+                target.DoubleStatusGained(int.Parse(effectSpecifics));
+                break;
             case "Buff":
                 // If it's a new buff, then immediately apply it's effects.
                 int bDuration = level;
@@ -94,6 +100,9 @@ public class SkillEffect : ScriptableObject
             // Temp health is always a shield.
             case "TempHealth":
                 target.UpdateTempHealth(int.Parse(effectSpecifics));
+                break;
+            case "DoubleTempHealthStacks":
+                target.DoubleTempHealthGained(int.Parse(effectSpecifics));
                 break;
             // Default is increasing health.
             case "Health":
@@ -470,6 +479,12 @@ public class SkillEffect : ScriptableObject
                 break;
             case "Dodge":
                 target.UpdateDodgeChance(int.Parse(effectSpecifics));
+                break;
+            case "BaseAttackSpeed":
+                target.UpdateBaseAttackSpeed(int.Parse(effectSpecifics));
+                break;
+            case "AttackSpeed":
+                target.UpdateAttackSpeed(int.Parse(effectSpecifics));
                 break;
             case "BaseCritChance":
                 target.UpdateBaseCritChance(int.Parse(effectSpecifics));

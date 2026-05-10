@@ -296,6 +296,29 @@ public class AttackManager : ScriptableObject
         bonusDamage = 0;
         bonusDefense = 0;
     }
+    // Extra Attacks From Attack Speed
+    protected int RollExtraAttacks(TacticActor attacker)
+    {
+        int attackSpeed = attacker.GetAttackSpeed();
+        int extraAttacks = attackSpeed / 100;
+        if (Random.Range(0, 100) < (attackSpeed % 100))
+        {
+            extraAttacks++;
+        }
+        return Mathf.Max(0, extraAttacks);
+    }
+    // Attack Speed Wrapper
+    public void ActorAttacksActorWithAttackSpeed(TacticActor attacker, TacticActor target, BattleMap map, int attackMultiplier = -1, string type = "Physical")
+    {
+        int attackCount = 1 + RollExtraAttacks(attacker);
+        for (int i = 0; i < attackCount; i++)
+        {
+            ActorAttacksActor(attacker, target, map, attackMultiplier, type);
+            // Stop if someone dies.
+            if (target == null || target.GetHealth() <= 0){break;}
+            if (attacker == null || attacker.GetHealth() <= 0){break;}
+        }
+    }
     // Basic attack damage calculation
     // All Basic Attacks Should Pass Through Here.
     public void ActorAttacksActor(TacticActor attacker, TacticActor target, BattleMap map, int attackMultiplier = -1, string type = "Physical")

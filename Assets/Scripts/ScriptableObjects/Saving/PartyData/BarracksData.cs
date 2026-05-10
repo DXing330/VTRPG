@@ -22,10 +22,12 @@ public class BarracksData : PartyData
         if (partyEquipment.Count >= partyNames.Count)
         {
             partyEquipment[partyNames.Count - 1] = equipment;
+            partyEquipmentIDs[partyNames.Count - 1] = ID;
         }
         else
         {
             partyEquipment.Add(equipment);
+            partyEquipmentIDs.Add(ID);
         }
     }
 

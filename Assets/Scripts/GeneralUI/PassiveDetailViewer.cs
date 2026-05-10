@@ -897,7 +897,11 @@ public class PassiveDetailViewer : MonoBehaviour
             case "TempHealth%":
                 return " " + target + " gain a shield that absorbs damage equal to " + specifics + "% of max health, until the end of next turn";
             case "TempHealth":
-                return " " + target + " gain a shield that absorbs damage equal to " + specifics + ", until the end of next turn";
+                return " " + target + " gain a shield that absorbs damage equal to " + specifics + ", until the end of turn";
+            case "DoubleTempHealthStacks":
+                return " the next " + specifics + " time(s) " + target + " gains a shield that absorbs damage gain double that shield amount";
+            case "DoubleStatuses":
+                return " the next " + specifics + " time(s) " + target + " gains a status, double that status";
             case "MentalState":
                 return " change mental state to " + specifics;
             case "Amnesia":
@@ -950,6 +954,10 @@ public class PassiveDetailViewer : MonoBehaviour
                 return " move to a random backward tile";
             case "SetAttackActionCost":
                 return " set the action cost of basic attacks to " + specifics;
+            case "NextSkillMod":
+                return " grant the " + specifics + " modifier to the next skill used";
+            case "RandomSkillMod":
+                return " grant the " + specifics + " modifier to a random skill";
         }
         return " increase " + effect + " of " + target + " by " + specifics;
     }

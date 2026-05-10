@@ -194,7 +194,7 @@ public class ActiveManager : MonoBehaviour
                 }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map, power);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
                 }
                 return;
             case "BreakSummonLink":
@@ -303,7 +303,7 @@ public class ActiveManager : MonoBehaviour
                 if (targetActor == null) { return; }
                 if (battle.moveManager.TeleportToTarget(skillUser, targetActor, specifics, battle.map))
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, targetActor, battle.map, power);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targetActor, battle.map, power);
                 }
                 return;
             case "Attack+Grapple":
@@ -314,7 +314,7 @@ public class ActiveManager : MonoBehaviour
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map, power);
+                        battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
                     }
                 }
                 return;
@@ -364,7 +364,7 @@ public class ActiveManager : MonoBehaviour
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map, power);
+                        battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
                     }
                 }
                 return;
@@ -372,7 +372,7 @@ public class ActiveManager : MonoBehaviour
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map, power);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
                     skillUser.UpdateHealth(Mathf.Max(1, skillUser.GetAttack() - targets[i].GetDefense()), false);
                 }
                 return;
@@ -380,7 +380,7 @@ public class ActiveManager : MonoBehaviour
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
                     active.AffectActor(targets[i], "Status", specifics, power);
                 }
                 return;
@@ -388,7 +388,7 @@ public class ActiveManager : MonoBehaviour
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
                     if (specifics == "Charmed" || specifics == "Taunted")
                     {
                         targets[i].SetTarget(skillUser);
@@ -400,7 +400,7 @@ public class ActiveManager : MonoBehaviour
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
                 }
                 battle.moveManager.DisplaceSkill(skillUser, targetedTiles, specifics, power, battle.map);
                 return;
@@ -408,7 +408,7 @@ public class ActiveManager : MonoBehaviour
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
                 }
                 battle.moveManager.MoveSkill(skillUser, specifics, power, battle.map);
                 return;
@@ -433,7 +433,7 @@ public class ActiveManager : MonoBehaviour
                 int attackTargetTile = battle.moveManager.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection());
                 if (battle.map.GetActorOnTile(attackTargetTile) != null)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, battle.map.GetActorOnTile(attackTargetTile), battle.map);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, battle.map.GetActorOnTile(attackTargetTile), battle.map);
                 }
                 return;
             case "MoveThrough+Attack":
@@ -443,7 +443,7 @@ public class ActiveManager : MonoBehaviour
                     return;
                 }
                 battle.moveManager.MoveThroughSkill(skillUser, targetTile, battle.map);
-                battle.attackManager.ActorAttacksActor(skillUser, battle.map.GetActorOnTile(targetTile), battle.map, power);
+                battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, battle.map.GetActorOnTile(targetTile), battle.map, power);
                 return;
             case "Charge+Attack":
                 int startChargeTile = skillUser.GetLocation();
@@ -465,7 +465,7 @@ public class ActiveManager : MonoBehaviour
                 int chargeInto = battle.moveManager.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection());
                 if (battle.map.GetActorOnTile(chargeInto) != null)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, battle.map.GetActorOnTile(chargeInto), battle.map, power);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, battle.map.GetActorOnTile(chargeInto), battle.map, power);
                 }
                 return;
             case "Displace":
@@ -486,7 +486,7 @@ public class ActiveManager : MonoBehaviour
             case "Attack+TerrainEffect":
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map, power);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
                 }
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
@@ -527,7 +527,7 @@ public class ActiveManager : MonoBehaviour
                 for (int i = 0; i < targets.Count; i++)
                 {
                     // Do an attack with stab and stuff.
-                    battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map, power, specifics);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power, specifics);
                     // Also apply the elemental damage effects.
                     active.AffectActor(targets[i], specifics + "Damage", skillUser.GetMagicPower().ToString(), 1, battle.map.combatLog);
                     // Also affect the map.
@@ -552,7 +552,7 @@ public class ActiveManager : MonoBehaviour
             case "Attack+Amnesia":
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActor(skillUser, targets[i], battle.map, power);
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
                         targets[i].RemoveRandomActiveSkill();
@@ -591,7 +591,7 @@ public class ActiveManager : MonoBehaviour
                         case "Attack":
                         if (battle.map.FacingActor(targets[i]))
                         {
-                            battle.attackManager.ActorAttacksActor(targets[i], battle.map.ReturnClosestFacingActor(targets[i]), battle.map);
+                            battle.attackManager.ActorAttacksActorWithAttackSpeed(targets[i], battle.map.ReturnClosestFacingActor(targets[i]), battle.map);
                         }
                         break;
                         case "Forward":
