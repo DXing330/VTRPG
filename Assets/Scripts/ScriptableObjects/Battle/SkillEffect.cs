@@ -34,6 +34,9 @@ public class SkillEffect : ScriptableObject
                     passiveOrganizer.AddSortedPassive(target, effectSpecifics);
                 }
                 break;
+            case "TurnSkillMod":
+                target.AddTurnSkillMod(effectSpecifics);
+                break;
             case "NextSkillMod":
                 target.AddNextSkillMod(effectSpecifics);
                 break;

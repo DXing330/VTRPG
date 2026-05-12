@@ -1339,6 +1339,32 @@ public class BattleManager : MonoBehaviour
         }
         return false;
     }
+    // TODO AUTO CASTING SKILLS/SPELLS
+    public void AutoSkill(TacticActor skillUser, string effect, string specifics)
+    {
+        // Determine what skill to use.
+        string skillName = "";
+        switch (effect)
+        {
+            default:
+            return;
+            case "LastUsed":
+            skillName = skillUser.ReturnMostRecentSkill();
+            break;
+        }
+        Debug.Log("AUTOSKILL NAME: " + skillName);
+        if (skillName == ""){return;}
+        // Load The Active By Name?
+        activeManager.SetSkillFromName(skillName, skillUser);
+        // Determine what targets and if targets are valid.
+        // The Actor AI uses the same scriptable object so the skill should already be loaded and ready to check.
+        int targetedTile = actorAI.ChooseSkillTargetLocation(skillUser, map, moveManager);
+        Debug.Log("AUTOSKILL TARGET: " + targetedTile);
+        if (targetedTile < 0){return;}
+        activeManager.GetTargetedTiles(targetedTile, moveManager.actorPathfinder);
+        // Use The Skill For Free.
+        activeManager.ActivateSkill(this, false);
+    }
 
     public void ActivateSkill(string skillName, TacticActor actor = null)
     {

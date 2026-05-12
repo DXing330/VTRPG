@@ -275,7 +275,6 @@ public class ActorAI : ScriptableObject
         if (target.GetHealth() <= 0) { return false; }
         return map.TileInAttackRange(currentActor, target.GetLocation());
     }
-
     public int ChooseSkillTargetLocation(TacticActor currentActor, BattleMap map, MoveCostManager moveManager)
     {
         if (active.GetRange(currentActor) == 0)
@@ -283,8 +282,8 @@ public class ActorAI : ScriptableObject
             return currentActor.GetLocation();
         }
         List<int> targetableTiles = moveManager.actorPathfinder.FindTilesInRange(currentActor.GetLocation(), active.GetRange(currentActor));
-        if (targetableTiles.Count <= 0) { return -1; }
-        if (targetableTiles.Count == 1) { return targetableTiles[0]; }
+        if (targetableTiles.Count <= 0){return -1;}
+        if (targetableTiles.Count == 1){return targetableTiles[0];}
         // TODO this is more complicated since move is often displacement as well.
         if (active.GetSkillType() == "Move")
         {
@@ -336,7 +335,6 @@ public class ActorAI : ScriptableObject
         }
         return -1;
     }
-
     public bool ValidSkillTargets(TacticActor currentActor, BattleMap map, ActiveManager activeManager, bool spell = false)
     {
         // Determine the type of skill being used.
@@ -374,7 +372,6 @@ public class ActorAI : ScriptableObject
         }
         return true;
     }
-
     public int ChooseSpellTargetLocation(TacticActor actor, BattleMap map, MoveCostManager moveManager, MagicSpell spell)
     {
         if (spell.GetRange(actor) == 0)

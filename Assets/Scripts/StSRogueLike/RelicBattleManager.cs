@@ -62,16 +62,29 @@ public class RelicBattleManager : ScriptableObject
     }
     protected void ApplyBattleRelicEffect(List<TacticActor> actors, List<string> relicCounters, int index)
     {
-        // TODO check conditions.
-        // Check Counter Conditions.
-        if (relic.GetCondition() == "Counter")
+        // Check For Charges
+        if (relic.ChargedRelic())
         {
-            // Enough Counters > Reset Counters.
+            // Enough Charges -> Subtract Charges.
+            if (int.Parse(relicCounters[index]) > 0)
+            {
+                relicCounters[index] = (int.Parse(relicCounters[index]) - 1).ToString();
+            }
+            // No Charges -> Do Nothing.
+            else
+            {
+                return;
+            }
+        }
+        // Check Counter Conditions.
+        else if (relic.GetCondition() == "Counter")
+        {
+            // Enough Counters -> Reset Counters.
             if (int.Parse(relicCounters[index]) >= int.Parse(relic.GetConditionSpecifics()))
             {
                 relicCounters[index] = "0";
             }
-            // Not enough counters > do nothing.
+            // Not enough counters -> Do Nothing.
             else
             {
                 return;

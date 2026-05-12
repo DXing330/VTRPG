@@ -40,13 +40,11 @@ public class ActiveManager : MonoBehaviour
     public int state;
     public List<int> targetableTiles;
     public List<int> targetedTiles;
-
     public bool SkillExists(string skillName)
     {
         if (skillName.Length <= 0){return false;}
         return activeData.KeyExists(skillName);
     }
-
     public void SetSkillFromName(string skillName, TacticActor newSkillUser)
     {
         skillUser = newSkillUser;
@@ -57,13 +55,11 @@ public class ActiveManager : MonoBehaviour
         }
         active.LoadSkillFromString(sData, skillUser);
     }
-
     protected void ResetTargetableTiles()
     {
         targetableTiles.Clear();
         targetedTiles.Clear();
     }
-
     public List<int> GetTargetableTiles(int start, MapPathfinder pathfinder, bool spell = false)
     {
         string shape = active.GetRangeShape();
@@ -72,11 +68,8 @@ public class ActiveManager : MonoBehaviour
         if (targetableTiles.Count <= 0) { targetableTiles.Add(start); }
         return targetableTiles;
     }
-
     public List<int> ReturnTargetableTiles(){return targetableTiles;}
-
     public void ResetTargetedTiles(){targetedTiles.Clear();}
-
     public void CheckIfSingleTargetableTile()
     {
         if (targetableTiles.Count == 1)
@@ -84,7 +77,6 @@ public class ActiveManager : MonoBehaviour
             targetedTiles = new List<int>(targetableTiles);
         }
     }
-
     public List<int> GetTargetedTiles(int start, MapPathfinder pathfinder, bool spellCast = false)
     {
         active.SetSelectedTile(start);
@@ -112,11 +104,8 @@ public class ActiveManager : MonoBehaviour
         targetedTiles = targetedTiles.Distinct().ToList();
         return targetedTiles;
     }
-
     public List<int> ReturnTargetedTiles(){return targetedTiles;}
-
     public bool ExistTargetedTiles(){return targetedTiles.Count > 0;}
-
     protected List<int> GetTiles(int startTile, string shape, MapPathfinder pathfinder, bool targetable = true, bool spellCast = false)
     {
         int range = active.GetRange(skillUser, map);
@@ -132,7 +121,6 @@ public class ActiveManager : MonoBehaviour
         int direction = pathfinder.DirectionBetweenLocations(skillUser.GetLocation(), startTile);
         return pathfinder.mapUtility.GetTilesByShapeSpan(startTile, shape, range, pathfinder.mapSize, skillUser.GetLocation());
     }
-
     protected void ApplyActiveEffects(BattleManager battle, List<TacticActor> targets, string effect, string specifics, int power, int selectedTile = -1, bool spellCast = false)
     {
         int targetTile = -1;
@@ -696,13 +684,11 @@ public class ActiveManager : MonoBehaviour
         // Covers status/mental state/amnesia/stat changes/etc.
         active.AffectActors(targets, effect, specifics, power);
     }
-
     // All Skill Usage Should Go Through Here
     public bool ActivateSkill(BattleManager battle, bool cost = true)
     {
         return ActivateSkillInternal(battle, cost, cost);
     }
-
     protected bool ActivateSkillInternal(BattleManager battle, bool spendEnergy, bool spendAction)
     {
         if (spendEnergy || spendAction)
@@ -730,11 +716,9 @@ public class ActiveManager : MonoBehaviour
             ApplyActiveEffects(battle, targets, effects[i], active.GetSpecificsAt(i), active.GetPowerAt(i), active.GetSelectedTile());
         }
         passive.ApplyAfterSkillPassives(skillUser, targets, map, active, temp);
-        // TODO Trigger After Skill Auras Here.
         battle.map.ApplyAuraEffects(skillUser, "Skill");
         return true;
     }
-
     protected bool CanPaySkillCost(bool spendEnergy, bool spendAction)
     {
         if (skillUser.GetSilenced()){return false;}
@@ -742,12 +726,10 @@ public class ActiveManager : MonoBehaviour
         if (spendAction && skillUser.GetActions() < active.GetActionCost(skillUser, map)){return false;}
         return true;
     }
-
     public bool CheckTriggeredSkillCost(BattleMap map)
     {
         return CanPaySkillCost(true, false);
     }
-
     protected void ResolveTriggeredSkill(BattleManager battle, string triggerData)
     {
         if (triggeredSkillDepth >= triggeredSkillDepthLimit || triggeredSkillDepth >= triggeredSkillStackDepthLimit)
@@ -793,7 +775,6 @@ public class ActiveManager : MonoBehaviour
             RestoreState(savedState);
         }
     }
-
     protected void LogTriggeredSkillLoadedDetails(string label)
     {
         if (triggeredSkillResolver == null){return;}
@@ -814,7 +795,6 @@ public class ActiveManager : MonoBehaviour
                 + " | Actions=" + triggeredSkillActionsBeforeCast + "->" + skillUser.GetActions());
         }
     }
-
     protected ActiveManagerState SaveState()
     {
         ActiveManagerState state = new ActiveManagerState();
@@ -838,7 +818,6 @@ public class ActiveManager : MonoBehaviour
         state.targetedTiles = targetedTiles == null ? new List<int>() : new List<int>(targetedTiles);
         return state;
     }
-
     protected void RestoreState(ActiveManagerState state)
     {
         skillUser = state.skillUser;
@@ -849,7 +828,6 @@ public class ActiveManager : MonoBehaviour
         targetableTiles = new List<int>(state.targetableTiles);
         targetedTiles = new List<int>(state.targetedTiles);
     }
-
     protected class ActiveManagerState
     {
         public TacticActor skillUser;
@@ -858,12 +836,10 @@ public class ActiveManager : MonoBehaviour
         public List<int> targetableTiles;
         public List<int> targetedTiles;
     }
-
     public bool CheckSkillCost(BattleMap map)
     {
         return active.Activatable(skillUser, map);
     }
-
     public bool CheckSpellCost(BattleMap map)
     {
         return magicSpell.Activatable(skillUser, map);

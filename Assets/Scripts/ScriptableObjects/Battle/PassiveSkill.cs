@@ -152,6 +152,10 @@ public class PassiveSkill : SkillEffect
             return active.GetSpan(actor) < int.Parse(specifics);
             case "SkillShape":
             return active.GetShape() == specifics;
+            case "IsTemporarySkill":
+            return actor.TempActiveExists(active.GetSkillName());
+            case "NotTemporarySkill":
+            return !actor.TempActiveExists(active.GetSkillName());
         }
         // Else check if the condition is related to the active user.
         return CheckStartEndCondition(condition, specifics, actor, map);
@@ -306,7 +310,7 @@ public class PassiveSkill : SkillEffect
             }
         }
     }
-
+    // 
     public void ApplyPassiveEffectToTarget(TacticActor actor, BattleMap map, string target, string effect, string specifics)
     {
         List<TacticActor> targets = new List<TacticActor>();
@@ -343,6 +347,11 @@ public class PassiveSkill : SkillEffect
             case "AllEnemies":
                 break;
             case "AdjacentActors":
+                targets = map.GetAdjacentActors(actor.GetLocation());
+                for (int j = 0; j < targets.Count; j++)
+                {
+                    AffectActor(targets[j], effect, specifics);
+                }
                 break;
             case "BackAllies":
                 tiles.Add(map.ReturnTileInRelativeDirection(actor, 2));
@@ -364,6 +373,12 @@ public class PassiveSkill : SkillEffect
                 break;
             case "Map":
                 AffectMap(actor, effect, specifics, map);
+                break;
+            // TODO Determine Skill Based On Effect/Specifics, Determine Targets Based On AI Manager.
+            case "AutoSkill":
+                map.battleManager.AutoSkill(actor, effect, specifics);
+                break;
+            case "AutoSpell":
                 break;
         }
     }

@@ -113,6 +113,11 @@ public class ActiveSkill : SkillEffect
         {
             mods.Add(skillName + activeSkillDelimiter + nextMods[i]);
         }
+        List<string> turnMods = actor.GetTurnSkillMods();
+        for (int i = 0; i < turnMods.Count; i++)
+        {
+            mods.Add(skillName + activeSkillDelimiter + turnMods[i]);
+        }
         for (int i = 0; i < mods.Count; i++)
         {
             string[] modDetails = mods[i].Split(activeSkillDelimiter);
@@ -121,7 +126,6 @@ public class ActiveSkill : SkillEffect
             ApplySingleActorMod(actor, modDetails);
         }
     }
-
     protected virtual void ApplySingleActorMod(TacticActor actor, string[] modDetails)
     {
         if (modDetails.Length < 2){return;}
@@ -198,7 +202,6 @@ public class ActiveSkill : SkillEffect
             break;
         }
     }
-
     protected virtual void ApplyPowerMod(bool doubled = false)
     {
         List<string> powers = GetAllPowerStrings();
@@ -242,7 +245,6 @@ public class ActiveSkill : SkillEffect
         }
         return (value * 3) / 2;
     }
-
     protected int NormalizeIndex(List<string> entries, int index)
     {
         if (entries.Count <= 1){return 0;}

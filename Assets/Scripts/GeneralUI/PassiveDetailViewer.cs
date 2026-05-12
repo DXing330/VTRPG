@@ -668,12 +668,30 @@ public class PassiveDetailViewer : MonoBehaviour
                 return " if " + conTarget + " was attacked less than " + specifics + " time(s) last round";
             case "PrevDefendCount%":
                 return " if " + conTarget + " was attacked a multiple of " + specifics + " time(s) last round";
+            // CHECK SKILL CONDITIONS
             case "SkillName":
                 return " if it is a [" + specifics + "] type";
             case "SkillType":
                 return " if it is a " + specifics + " type";
             case "SkillEffect":
                 return " if it has a " + specifics + " type";
+            case "SkillRange>":
+                return " if the skill has range more than " + specifics;
+            case "SkillRange<":
+                return " if the skill has range less than " + specifics;
+            case "SkillRangeShape":
+                return " if it is a " + specifics + " range type";
+            case "SkillSpan>":
+                return " if the skill has span more than " + specifics;
+            case "SkillSpan<":
+                return " if the skill has span less than " + specifics;
+            case "SkillShape":
+                return " if it is a " + specifics + " span type";
+            case "IsTemporarySkill":
+                return " if the skill is a temporary skill";
+            case "NotTemporarySkill":
+                return " if the skill is not a temporary skill";
+            // AFTER BATTLE CONDITIONS
             case "FirstDefend":
                 return " if attacked for the first time";
             case "Damage>":
@@ -689,7 +707,7 @@ public class PassiveDetailViewer : MonoBehaviour
                 return " if the skill has been upgraded";
             case "SkillModded":
                 return " if the skill has been modified";
-            // STS Conditions
+            // STS CONDITIONS
             case "TempSkillOwnedCount<":
                 return " if " + conTarget + " has less than " + specifics + " temporary skills";
             case "TempSkillOwnedCount>":
@@ -806,6 +824,16 @@ public class PassiveDetailViewer : MonoBehaviour
         return "";
     }
 
+    protected string AutoSkillText(string effect, string specifics)
+    {
+        switch (effect)
+        {
+            case "LastUsed":
+                return " activate the last skill that was used";
+        }
+        return "";
+    }
+
     protected string PassiveEffect(string effect, string specifics, string target)
     {
         specifics = AdjustSpecificsText(specifics);
@@ -816,6 +844,10 @@ public class PassiveDetailViewer : MonoBehaviour
         if (target == "Skill")
         {
             return AffectSkillText(effect, specifics);
+        }
+        if (target == "AutoSkill")
+        {
+            return AutoSkillText(effect, specifics);
         }
         if (effect.EndsWith("Damage"))
         {

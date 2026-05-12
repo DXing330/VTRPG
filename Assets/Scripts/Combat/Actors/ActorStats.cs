@@ -422,6 +422,8 @@ public class ActorStats : ActorInitialStats
         ResetUniqueEffects();
         ResetBufferStacks();
         ResetArtifactStacks();
+        doubleTempHealthStacks = 0;
+        doubleStatusStacks = 0;
     }
     public int currentHitChance;
     public int GetHitChance(){return currentHitChance;}

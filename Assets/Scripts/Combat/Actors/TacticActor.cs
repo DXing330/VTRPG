@@ -8,6 +8,25 @@ using UnityEngine;
 public class TacticActor : ActorStats
 {
     // Skill modifiers.
+    public List<string> turnSkillMods = new List<string>();
+    public void AddTurnSkillMod(string mod)
+    {
+        // Can't stack same mod infinitely.
+        if (turnSkillMods.Contains(mod)){return;}
+        turnSkillMods.Add(mod);
+    }
+    public List<string> GetTurnSkillMods()
+    {
+        return turnSkillMods;
+    }
+    public void ClearTurnSkillMods()
+    {
+        turnSkillMods = new List<string>();
+    }
+    public bool HasTurnSkillMods()
+    {
+        return turnSkillMods != null && turnSkillMods.Count > 0;
+    }
     public List<string> nextSkillMods = new List<string>();
     public void AddNextSkillMod(string mod)
     {
@@ -17,20 +36,11 @@ public class TacticActor : ActorStats
     }
     public List<string> GetNextSkillMods()
     {
-        if (nextSkillMods == null)
-        {
-            nextSkillMods = new List<string>();
-        }
         return nextSkillMods;
     }
     public void ClearNextSkillMods()
     {
-        if (nextSkillMods == null)
-        {
-            nextSkillMods = new List<string>();
-            return;
-        }
-        nextSkillMods.Clear();
+        nextSkillMods = new List<string>();
     }
     public bool HasNextSkillMods()
     {
@@ -306,6 +316,7 @@ public class TacticActor : ActorStats
         ResetTempMovement();
         ResetBonusActions();
         ResetEquipmentSkillsAndSpells();
+        ClearTurnSkillMods();
     }
     protected void TrackEndTurnRemainingStats()
     {
@@ -569,7 +580,6 @@ public class TacticActor : ActorStats
     {
         return attacksEachRound.Sum();
     }
-
     // Defense history.
     public List<int> defendsEachRound;
     public void ResetRoundDefendTracker()
@@ -600,7 +610,6 @@ public class TacticActor : ActorStats
     {
         return defendsEachRound.Sum();
     }
-
     // Skill history.
     public List<int> skillsEachRound;
     public List<string> skillsUsed;
@@ -677,7 +686,6 @@ public class TacticActor : ActorStats
     {
         return skillsEachRound.Sum();
     }
-
     // Spell history.
     public List<int> spellsEachRound;
     public List<string> spellsUsed;
@@ -883,7 +891,6 @@ public class TacticActor : ActorStats
     {
         return hurtByList.Contains(actor);
     }
-    // Tracking HurtBy stuff.
     public TacticActor GetHurtBy(bool most = true)
     {
         RefreshHurtBy();
@@ -936,7 +943,6 @@ public class TacticActor : ActorStats
         }
         return hurtByList[index];
     }
-
     // Targeting.
     public TacticActor target;
     public void ResetTarget(){ target = null; }
@@ -957,7 +963,6 @@ public class TacticActor : ActorStats
         if (target.invisible){return false;}
         return true;
     }
-
     // Grappling.
     public TacticActor grappledActor;
     public TacticActor GetGrappledActor(){return grappledActor;}
@@ -1041,7 +1046,6 @@ public class TacticActor : ActorStats
         }
         return false;
     }
-
     // Summons.
     protected void ResetSummonTrackers()
     {

@@ -57,6 +57,10 @@ public class Relic : ScriptableObject
     }
     public string relicName;
     public RelicType relicType;
+    public bool ChargedRelic()
+    {
+        return (relicType == RelicType.Charged);
+    }
     public int relicBaseCounters;
     public string relicCounterTiming;
     public string GetCounterTiming()
