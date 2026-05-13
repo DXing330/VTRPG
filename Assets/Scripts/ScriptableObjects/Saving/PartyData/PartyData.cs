@@ -438,12 +438,6 @@ public class PartyData : SavedData
         }
         return oldEquip;
     }
-    public void MemberLearnsSpell(string newSpell, int index)
-    {
-        dummyActor.SetInitialStatsFromString(partyStats[index]);
-        dummyActor.LearnSpell(newSpell);
-        partyStats[index] = dummyActor.GetInitialStats();
-    }
     public void SetMemberStats(TacticActor newDummy, int index)
     {
         partyStats[index] = newDummy.GetInitialStats();

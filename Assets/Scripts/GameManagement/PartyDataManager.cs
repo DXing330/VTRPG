@@ -8,6 +8,9 @@ public class PartyDataManager : MonoBehaviour
     {
         SetFullParty();
     }
+    // For out of combat party changes.
+    public GeneralUtility utility;
+    public SkillEffect partyEffects;
     // This is the one that the battle will actually read.
     public StatDatabase actorStats;
     public TacticActor dummyActor;
@@ -218,121 +221,50 @@ public class PartyDataManager : MonoBehaviour
         SetFullParty();
     }
 
-    public string EquipToPartyMember(string equip, int selected, Equipment dummy)
+    public string EquipToPartyMember(string equip, int index, Equipment dummy)
     {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        int tempCount = tempPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            return permanentPartyData.EquipToMember(equip, selected, dummy);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            return mainPartyData.EquipToMember(equip, selected - permanentCount, dummy);
-        }
-        else
-        {
-            return tempPartyData.EquipToMember(equip, selected - permanentCount - mainCount, dummy);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return "";}
+        return section.EquipToMember(equip, localIndex, dummy);
     }
 
-    public string UnequipFromPartyMember(int selected, string slot, Equipment dummy)
+    public string UnequipFromPartyMember(int index, string slot, Equipment dummy)
     {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        int tempCount = tempPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            return permanentPartyData.UnequipFromMember(selected, slot, dummy);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            return mainPartyData.UnequipFromMember(selected - permanentCount, slot, dummy);
-        }
-        else
-        {
-            return tempPartyData.UnequipFromMember(selected - permanentCount - mainCount, slot, dummy);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return "";}
+        return section.UnequipFromMember(localIndex, slot, dummy);
     }
 
-    public int ReturnPartyMemberIDFromIndex(int selected)
+    public int ReturnPartyMemberIDFromIndex(int index)
     {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            return permanentPartyData.GetIDAtIndex(selected);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            return mainPartyData.GetIDAtIndex(selected - permanentCount);
-        }
-        else
-        {
-            return tempPartyData.GetIDAtIndex(selected - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return -1;}
+        return section.GetIDAtIndex(localIndex);
     }
 
-    public void SetPartyMemberEquipFromIndex(string equip, int selected)
+    public void SetPartyMemberEquipFromIndex(string equip, int index)
     {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            permanentPartyData.SetEquipmentAtIndex(equip, selected);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            mainPartyData.SetEquipmentAtIndex(equip, selected - permanentCount);
-        }
-        else
-        {
-            tempPartyData.SetEquipmentAtIndex(equip, selected - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return;}
+        section.SetEquipmentAtIndex(equip, localIndex);
     }
 
-    public string ReturnPartyMemberEquipFromIndex(int selected)
+    public string ReturnPartyMemberEquipFromIndex(int index)
     {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            return permanentPartyData.GetEquipmentAtIndex(selected);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            return mainPartyData.GetEquipmentAtIndex(selected - permanentCount);
-        }
-        else
-        {
-            return tempPartyData.GetEquipmentAtIndex(selected - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return "";}
+        return section.GetEquipmentAtIndex(localIndex);
     }
-
-    public int ReturnPartyMemberCurrentHealthFromIndex(int selected)
+    public int ReturnPartyMemberCurrentHealthFromIndex(int index)
     {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            return permanentPartyData.GetCurrentHealthAtIndex(selected);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            return mainPartyData.GetCurrentHealthAtIndex(selected - permanentCount);
-        }
-        else
-        {
-            return tempPartyData.GetCurrentHealthAtIndex(selected - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return -1;}
+        return section.GetCurrentHealthAtIndex(localIndex);
     }
-
     public string ReturnMainPartyEquipment(int selected)
     {
         return mainPartyData.partyEquipment[selected];
     }
-
     public int ReturnTotalPartyCount()
     {
         int count = 0;
@@ -341,7 +273,6 @@ public class PartyDataManager : MonoBehaviour
         count += tempPartyData.PartyCount();
         return count;
     }
-
     public TacticActor ReturnActorFromID(int id)
     {
         TacticActor actor = permanentPartyData.ReturnActorFromID(id);
@@ -355,119 +286,82 @@ public class PartyDataManager : MonoBehaviour
         }
         return actor;
     }
-
     public int ReturnIDAtIndex(int index)
     {
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return -1;}
+        return section.GetIDAtIndex(localIndex);
+    }
+    // All Party Functions Should Use This To Determine Which Section Of The Party To Edit And What Index To Edit.
+    public (PartyData section, int localIndex) ResolvePartyIndex(int index)
+    {
+        if (index < 0)
+        {
+            return (null, -1);
+        }
         int permanentCount = permanentPartyData.PartyCount();
         int mainCount = mainPartyData.PartyCount();
+        int tempCount = tempPartyData.PartyCount();
         if (index < permanentCount)
         {
-            return permanentPartyData.GetIDAtIndex(index);
+            return (permanentPartyData, index);
         }
         else if (index < permanentCount + mainCount)
         {
-            return mainPartyData.GetIDAtIndex(index - permanentCount);
+            return (mainPartyData, index - permanentCount);
         }
-        else
+        else if (index < permanentCount + mainCount + tempCount)
         {
-            return tempPartyData.GetIDAtIndex(index - permanentCount - mainCount);
+            return (tempPartyData, index - permanentCount - mainCount);
         }
+        return (null, -1);
     }
-
     public TacticActor ReturnActorAtIndex(int index)
     {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        if (index < permanentCount)
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return null;}
+        return section.ReturnActorAtIndex(localIndex);
+    }
+    public void RenamePartyMember(string newInfo, int index)
+    {
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return;}
+        section.ChangeName(newInfo, localIndex);
+        SetFullParty();
+    }
+    public void ApplyEffectToPartyMember(string effect, string specifics, string power, int index)
+    {
+        if (index < 0){return;}
+        TacticActor partyMember = ReturnActorAtIndex(index);
+        partyEffects.AffectActor(partyMember, effect, specifics, utility.SafeParseInt(power, 1));
+        UpdatePartyMember(partyMember, index);
+    }
+    public void ApplyEffectToParty(string effect, string specifics, string power = "1", bool fullParty = true, int memberIndex = -1)
+    {
+        if (!fullParty)
         {
-            return permanentPartyData.ReturnActorAtIndex(index);
+            ApplyEffectToPartyMember(effect, specifics, power, memberIndex);
+            return;
         }
-        else if (index < permanentCount + mainCount)
+        int partyCount = ReturnTotalPartyCount();
+        for (int i = 0; i < partyCount; i++)
         {
-            return mainPartyData.ReturnActorAtIndex(index - permanentCount);
-        }
-        else
-        {
-            return tempPartyData.ReturnActorAtIndex(index - permanentCount - mainCount);
+            ApplyEffectToPartyMember(effect, specifics, power, i);
         }
     }
-
-    public void RenamePartyMember(string newInfo, int selected)
+    public void UpdatePartyMember(TacticActor dummyActor, int index)
     {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        int tempCount = tempPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            permanentPartyData.ChangeName(newInfo, selected);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            mainPartyData.ChangeName(newInfo, selected - permanentCount);
-        }
-        else
-        {
-            tempPartyData.ChangeName(newInfo, selected - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return;}
+        section.SetMemberStats(dummyActor, localIndex);
         SetFullParty();
     }
 
-    public void AddSpellToPartyMember(string newInfo, int selected)
+    public void RemovePartyMember(int index)
     {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        int tempCount = tempPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            permanentPartyData.MemberLearnsSpell(newInfo, selected);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            mainPartyData.MemberLearnsSpell(newInfo, selected - permanentCount);
-        }
-        else
-        {
-            tempPartyData.MemberLearnsSpell(newInfo, selected - permanentCount - mainCount);
-        }
-    }
-
-    public void UpdatePartyMember(TacticActor dummyActor, int selected)
-    {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        int tempCount = tempPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            permanentPartyData.SetMemberStats(dummyActor, selected);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            mainPartyData.SetMemberStats(dummyActor, selected - permanentCount);
-        }
-        else
-        {
-            tempPartyData.SetMemberStats(dummyActor, selected - permanentCount - mainCount);
-        }
-        SetFullParty();
-    }
-
-    public void RemovePartyMember(int selected)
-    {
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        int tempCount = tempPartyData.PartyCount();
-        if (selected < permanentCount)
-        {
-            permanentPartyData.RemoveStatsAtIndex(selected);
-        }
-        else if (selected < permanentCount + mainCount)
-        {
-            mainPartyData.RemoveStatsAtIndex(selected - permanentCount);
-        }
-        else
-        {
-            tempPartyData.RemoveStatsAtIndex(selected - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return;}
+        section.RemoveStatsAtIndex(localIndex);
         SetFullParty();
     }
 
@@ -536,100 +430,37 @@ public class PartyDataManager : MonoBehaviour
 
     public string ReturnPartyMemberStatsAtIndex(int index)
     {
-        if (index < 0) { return ""; }
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        if (index < permanentCount)
-        {
-            return permanentPartyData.GetMemberStatsAtIndex(index);
-        }
-        else if (index < permanentCount + mainCount)
-        {
-            return mainPartyData.GetMemberStatsAtIndex(index - permanentCount);
-        }
-        else
-        {
-            return tempPartyData.GetMemberStatsAtIndex(index - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return "";}
+        return section.GetMemberStatsAtIndex(localIndex);
     }
 
     protected string CodeNameAtIndex(int index)
     {
-        if (index < 0) { return ""; }
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        if (index < permanentCount)
-        {
-            return permanentPartyData.GetNameAtIndex(index);
-        }
-        else if (index < permanentCount + mainCount)
-        {
-            return mainPartyData.GetNameAtIndex(index - permanentCount);
-        }
-        else
-        {
-            return tempPartyData.GetNameAtIndex(index - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return "";}
+        return section.GetNameAtIndex(localIndex);
     }
 
     protected string SpriteNameAtIndex(int index)
     {
-        if (index < 0){ return ""; }
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        if (index < permanentCount)
-        {
-            return permanentPartyData.GetSpriteNameAtIndex(index);
-        }
-        else if (index < permanentCount + mainCount)
-        {
-            return mainPartyData.GetSpriteNameAtIndex(index - permanentCount);
-        }
-        else
-        {
-            return tempPartyData.GetSpriteNameAtIndex(index - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return "";}
+        return section.GetSpriteNameAtIndex(localIndex);
     }
 
     protected bool MatchID(int ID, int index)
     {
-        if (index < 0) { return false; }
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        int testID = -1;
-        if (index < permanentCount)
-        {
-            testID = permanentPartyData.GetIDAtIndex(index);
-        }
-        else if (index < permanentCount + mainCount)
-        {
-            testID = mainPartyData.GetIDAtIndex(index - permanentCount);
-        }
-        else
-        {
-            testID = tempPartyData.GetIDAtIndex(index - permanentCount - mainCount);
-        }
-        return (testID == ID);
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return false;}
+        return (section.GetIDAtIndex(localIndex) == ID);
     }
 
     protected void UpdatePartyMemberAfterBattle(string stats, int index)
     {
-        if (index < 0){ return; }
-        int permanentCount = permanentPartyData.PartyCount();
-        int mainCount = mainPartyData.PartyCount();
-        int tempCount = tempPartyData.PartyCount();
-        if (index < permanentCount)
-        {
-            permanentPartyData.SetCurrentStats(stats, index);
-        }
-        else if (index < permanentCount + mainCount)
-        {
-            mainPartyData.SetCurrentStats(stats, index - permanentCount);
-        }
-        else
-        {
-            tempPartyData.SetCurrentStats(stats, index - permanentCount - mainCount);
-        }
+        (PartyData section, int localIndex) = ResolvePartyIndex(index);
+        if (section == null){return;}
+        section.SetCurrentStats(stats, localIndex);
     }
 
     public void PartyDefeated()

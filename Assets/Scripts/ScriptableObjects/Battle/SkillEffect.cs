@@ -592,6 +592,28 @@ public class SkillEffect : ScriptableObject
             case "Intangible":
                 target.GainIntangible(int.Parse(effectSpecifics));
                 break;
+            case "ItemSlots":
+                target.UpdateItemSlots(int.Parse(effectSpecifics));
+                break;
+            case "RandomCurse":
+                // Lose a random base stat (HP/ATK/DEF/ENGY)
+                int roll = UnityEngine.Random.Range(0, 4);
+                switch (roll)
+                {
+                    case 0:
+                    target.UpdateBaseAttack(-1);
+                    break;
+                    case 1:
+                    target.UpdateBaseDefense(-1);
+                    break;
+                    case 2:
+                    target.UpdateBaseEnergy(-1);
+                    break;
+                    case 3:
+                    target.UpdateBaseHealth(-1);
+                    break;
+                }
+                break;
         }
     }
 

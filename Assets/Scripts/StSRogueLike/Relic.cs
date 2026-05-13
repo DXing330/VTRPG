@@ -57,11 +57,16 @@ public class Relic : ScriptableObject
     }
     public string relicName;
     public RelicType relicType;
+    public bool TrackCounters()
+    {
+        return (relicType == RelicType.Charged || relicType == RelicType.Counter);
+    }
     public bool ChargedRelic()
     {
         return (relicType == RelicType.Charged);
     }
     public int relicBaseCounters;
+    public int GetBaseCounters(){return relicBaseCounters;}
     public string relicCounterTiming;
     public string GetCounterTiming()
     {
@@ -71,6 +76,10 @@ public class Relic : ScriptableObject
     public bool BattleRelic()
     {
         return (relicTiming == RelicTiming.Battle);
+    }
+    public bool PickUpRelic()
+    {
+        return (relicTiming == RelicTiming.PickUp);
     }
     public string condition;
     public string GetCondition()

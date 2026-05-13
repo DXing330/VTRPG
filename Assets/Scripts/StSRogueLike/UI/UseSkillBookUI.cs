@@ -242,21 +242,20 @@ public class UseSkillBookUI : MonoBehaviour
     public void ConfirmUse()
     {
         if (!CanUseSelectedBookOnActor()){return;}
-        // Teach the actor.
+        partyData.ApplyEffectToPartyMember(skillType, skillName, "1", actorSelect.GetSelected());
+        /* Teach the actor.
         switch (skillType)
         {
             case "Passive":
-            selectedActor.AddPassiveSkill(skillName);
-            partyData.UpdatePartyMember(selectedActor, actorSelect.GetSelected());
+            partyData.ApplyEffectToPartyMember("Passive", skillName, "1", actorSelect.GetSelected());
             break;
             case "Skill":
-            selectedActor.AddActiveSkill(skillName);
-            partyData.UpdatePartyMember(selectedActor, actorSelect.GetSelected());
+            partyData.ApplyEffectToPartyMember("Skill", skillName, "1", actorSelect.GetSelected());
             break;
             case "Spell":
-            partyData.AddSpellToPartyMember(skillName, actorSelect.GetSelected());
+            partyData.ApplyEffectToPartyMember("Spell", skillName, "1", actorSelect.GetSelected());
             break;
-        }
+        }*/
         // Remove the skillbook from the party.
         partyData.spellBook.LoseBookAtIndex(skillBookSelect.GetSelected());
         InitialSetUp();

@@ -170,7 +170,7 @@ public class DungeonBag : SavedData
     {
         return relicCounters;
     }
-    public void GainRelic(string relicName, string counter = "0")
+    public void GainRelic(string relicName, string counter = "-1")
     {
         int index = relics.IndexOf(relicName);
         if (index >= 0){return;}

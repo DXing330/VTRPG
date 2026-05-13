@@ -234,10 +234,40 @@ public class StSRewardSaveData : SavedData
         rewards.Add(type);
         rewardSpecifics.Add(specifics);
     }
+    // TODO ALL Relic Gains Should Go Through Here And Then Check For Pickup Effects.
+    public Relic dummyRelic;
     public void GainRelic(string relicName, PartyDataManager partyData, StSStateManager stsManager)
     {
         List<string> allRelicStats = relicData.ReturnAllValues(relicName);
-        // TODO Determine counter/charges.
-        // TODO Apply on pickup effects.
+        int counters = -1;
+        for (int i = 0; i < allRelicStats.Count; i++)
+        {
+            dummyRelic.LoadRelic(allRelicStats[i], relicName);
+            if (dummyRelic.TrackCounters())
+            {
+                counters = dummyRelic.GetBaseCounters();
+            }
+            // TODO Apply on pickup effects.
+            if (dummyRelic.PickUpRelic())
+            {
+                // PickUpEffects should not have any conditions.
+                ApplyPickUpEffect(dummyRelic, partyData);
+            }
+        }
+        partyData.dungeonBag.GainRelic(relicName, counters.ToString());
+        // Don't Save Here, Save During The Normal Save Timing.
+    }
+    // Lots of relics activate run modifiers.
+    public StSRunModifiersSaveData runModifiers;
+    protected void ApplyPickUpEffect(Relic relic, PartyDataManager partyData)
+    {
+        switch (relic.GetTarget())
+        {
+            default:
+            break;
+            case "Allies":
+            partyData.ApplyEffectToParty(relic.GetEffect(), relic.GetEffectSpecifics());
+            break;
+        }
     }
 }
