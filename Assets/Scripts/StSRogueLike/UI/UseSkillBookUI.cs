@@ -10,6 +10,10 @@ public class UseSkillBookUI : MonoBehaviour
 {
     // Actual Game Stuff.
     public PartyDataManager partyData;
+    public void SetPartyData(PartyDataManager newPartyData)
+    {
+        partyData = newPartyData;
+    }
     public StatDatabase skillBookData;
     // UI Stuff.
     void Start()

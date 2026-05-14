@@ -16,6 +16,7 @@ public class RewardDisplayMenu : MonoBehaviour
         rewardData.Load();
         LoadFromData();
         UpdateRewardDisplay();
+        selectMenu.SetPartyData(partyData);
     }
     protected void LoadFromData()
     {
@@ -68,6 +69,8 @@ public class RewardDisplayMenu : MonoBehaviour
             case "Equipment":
             break;
             // TODO Implement Gaining Relics.
+            // Picking a relic from this menu shouldn't popup another relic to select?
+            // Only relics from shops/bosses should have a popup for another reward menu.
             case "Relic":
             string relicName = rewardSpecifics[index];
             rewardData.GainRelic(relicName, partyData, stsManager);

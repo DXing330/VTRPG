@@ -62,7 +62,12 @@ public class BattleStartManager : ScriptableObject
         List<TacticActor> actors = new List<TacticActor>();
         actors = actorMaker.SpawnTeamInPattern(battleState.GetAllySpawnPattern(), 0, playerParty.characters, playerParty.stats, playerParty.characterNames, playerParty.equipment, playerParty.characterIDs);
         actorMaker.ApplyBattleModifiers(actors, playerParty.GetBattleModifiers());
-        for (int i = 0; i < Mathf.Min(partySizeCap, actors.Count); i++){ map.AddActorToBattle(actors[i]); }
+        for (int i = 0; i < Mathf.Min(partySizeCap, actors.Count); i++)
+        {
+            // Add the assigned items to the actors from the inventory.
+            actors[i].SetAssignedItems(map.battleManager.partyData.inventory.GetItemsAssignedToActorID(actors[i].GetID()));
+            map.AddActorToBattle(actors[i]);
+        }
         actors = new List<TacticActor>();
         actors = actorMaker.SpawnTeamInPattern(battleState.GetEnemySpawnPattern(), 1, enemyParty.characters, enemyParty.stats, enemyParty.characterNames, enemyParty.equipment, enemyParty.characterIDs);
         actorMaker.ApplyBattleModifiers(actors, enemyParty.GetBattleModifiers());

@@ -159,21 +159,56 @@ public class Inventory : SavedData
         }
         return count;
     }
+    // After Battling, Check What Items The Actor Has Left.
+    public void UpdateItemsAssignedAfterBattle(List<string> currentAssigned, int actorID)
+    {
+        List<string> currentItems = new List<string>(currentAssigned);
+        // Check if any items were consumed.
+        List<string> originalItems = GetItemsAssignedToActorID(actorID);
+        for (int i = 0; i < originalItems.Count; i++)
+        {
+            // If the item is still there then no changes.
+            if (currentItems.Contains(originalItems[i]))
+            {
+                currentItems.Remove(originalItems[i]);
+                continue;
+            }
+            // If the original item is gone, then remove it.
+            ActorUsesItem(originalItems[i], actorID);
+        }
+        // If any items were gained beyond the original items, add them to the inventory? Or assign them?
+        for (int i = 0; i < currentItems.Count; i++)
+        {
+            GainItem(currentItems[i]);
+        }
+    }
+    public List<string> GetItemsAssignedToActorID(int actorID)
+    {
+        List<string> assigned = new List<string>();
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (assignedActorIDs[i] == actorID.ToString())
+            {
+                assigned.Add(items[i]);
+            }
+        }
+        return assigned;
+    }
     public string GetAssignedActorIDFromIndex(int index)
     {
         return assignedActorIDs[index];
     }
-    public bool ActorUsesItem(string itemName, int actorID)
+    // TODO Replace This Check To The End Of Battle To Allow Stealing and Recycling Of Items
+    public void ActorUsesItem(string itemName, int actorID)
     {
         for (int i = 0; i < items.Count; i++)
         {
             if (items[i] == itemName && assignedActorIDs[i] == actorID.ToString())
             {
                 RemoveItemAtIndex(i);
-                return true;
+                return;
             }
         }
-        return false;
     }
     public int ReturnQuantityOfItem(string itemName)
     {

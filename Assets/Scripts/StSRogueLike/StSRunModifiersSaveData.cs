@@ -83,10 +83,15 @@ public class StSRunModifiersSaveData : SavedData
         int indexOf = flags.IndexOf(flagName);
         int charges = utility.SafeParseInt(flagCharges[indexOf]);
         charges--;
-        if (charges <= 0)
+        if (charges == 0)
         {
             DisableFlag(flagName);
         }
+        else if (charges < 0)
+        {
+            return;
+        }
+        // Only update flags with positive charges.
         else
         {
             flagCharges[indexOf] = charges.ToString();

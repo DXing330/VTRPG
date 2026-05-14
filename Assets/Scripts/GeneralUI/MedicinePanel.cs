@@ -14,6 +14,10 @@ public class MedicinePanel : MonoBehaviour
     public string usableTags = "Medicine";
     List<string> currentUsableItems;
     public PartyDataManager partyData;
+    public void SetPartyData(PartyDataManager newPartyData)
+    {
+        partyData = newPartyData;
+    }
     public ActorSpriteHPList actorSelect;
     public TacticActor dummyActor;
     public TMP_Text actorHealthText;

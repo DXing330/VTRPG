@@ -10,6 +10,10 @@ using TMPro;
 public class RewardSelectMenu : MonoBehaviour
 {
     public PartyDataManager partyData;
+    public void SetPartyData(PartyDataManager newPartyData)
+    {
+        partyData = newPartyData;
+    }
     public StSRewardSaveData rewardData;
     public RewardDisplayMenu rewardMenu;
     public int selectedIndex = -1;

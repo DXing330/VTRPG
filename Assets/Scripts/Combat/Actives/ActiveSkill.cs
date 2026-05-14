@@ -146,6 +146,7 @@ public class ActiveSkill : SkillEffect
             energyCost = "0";
             actionCost = "0";
             break;
+            case "Instinct":
             case "DoublePower":
             ApplyPowerMod(true);
             break;
@@ -199,6 +200,15 @@ public class ActiveSkill : SkillEffect
             break;
             case "RangeShape":
             if (modDetails.Length > 2){rangeShape = modDetails[2];}
+            break;
+            // ADD EFFECTS TO THE SKILL.
+            case "Swift":
+            break;
+            case "Momentum":
+            break;
+            case "Sharp":
+            break;
+            case "Androit":
             break;
         }
     }

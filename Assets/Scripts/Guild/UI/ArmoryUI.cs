@@ -13,6 +13,10 @@ public class ArmoryUI : MonoBehaviour
     public Equipment dummyEquip;
     public EquipmentInventory equipmentInventory;
     public PartyDataManager partyData;
+    public void SetPartyData(PartyDataManager newPartyData)
+    {
+        partyData = newPartyData;
+    }
     public SelectStatTextList actorStats;
     public SelectStatTextList actorStatuses;
     public SelectStatTextList actorPassives;

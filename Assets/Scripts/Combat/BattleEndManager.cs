@@ -88,31 +88,12 @@ public class BattleEndManager : MonoBehaviour
             if (actors[i].GetTeam() != 0 || actors[i].GetID() < 0){continue;}
             IDs.Add(actors[i].GetID());
             stats.Add(actors[i].ReturnPersistentStats());
+            // Update The End Of Battle Items, Removing Items That Are No Longer Assigned.
+            partyData.inventory.UpdateItemsAssignedAfterBattle(actors[i].GetAssignedItems(), actors[i].GetID());
         }
         partyData.UpdatePartyAfterBattle(IDs, stats);
         partyData.Save();
     }
-
-    /*public void UpdateOverworldAfterBattle(int winningTeam)
-    {
-        if (winningTeam != 0 || subGame) { return; }
-        if (overworldState == null){return;}
-        string battleType = overworldState.GetBattleType();
-        int location = overworldState.GetLocation();
-        if (battleType == "") { return; }
-        switch (battleType)
-        {
-            case "Quest":
-                overworld.RemoveFeatureAtLocation(location);
-                partyData.guildCard.CompleteDefeatQuest(location);
-                break;
-            case "Feature":
-                overworld.RemoveFeatureAtLocation(location);
-                break;
-            case "Event":
-                break;
-        }
-    }*/
 
     public void PartyDefeated()
     {

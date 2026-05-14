@@ -188,10 +188,7 @@ public class ActiveSelectList : SelectList
         battle.UI.battleStats.UpdateStats();
         // Deal with stealing items later.
         // Check if the skill you just used was an item.
-        if (inventory.ActorUsesItem(selected, battle.GetTurnActor().GetID()))
-        {
-            battle.GetTurnActor().UpdateRoundItemTracker(selected);
-        }
+        battle.GetTurnActor().UsedAssignedItem(selected);
         ResetState();
         mainPanel.SetActive(false);
     }

@@ -56,6 +56,7 @@ public class Relic : ScriptableObject
         flavor = dataBlocks[10];
     }
     public string relicName;
+    public string GetName(){return relicName;}
     public RelicType relicType;
     public bool TrackCounters()
     {

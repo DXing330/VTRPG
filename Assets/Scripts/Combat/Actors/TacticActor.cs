@@ -116,12 +116,31 @@ public class TacticActor : ActorStats
         equipmentSkills.Clear();
         equipmentSpells.Clear();
     }
+    public List<string> assignedItems;
+    public void SetAssignedItems(List<string> newInfo){assignedItems = newInfo;}
+    public List<string> GetAssignedItems(){return assignedItems;}
+    public void GainItem(string newItem)
+    {
+        assignedItems.Add(newItem);
+    }
+    public bool UsedAssignedItem(string itemName)
+    {
+        int indexOf = assignedItems.IndexOf(itemName);
+        if (indexOf >= 0)
+        {
+            assignedItems.RemoveAt(indexOf);
+            UpdateRoundItemTracker(itemName);
+            return true;
+        }
+        return false;
+    }
     public override List<string> GetActiveSkills()
     {
         List<string> allActives = new List<string>(activeSkills);
         RefreshTempActives();
         allActives.AddRange(tempActives);
         allActives.AddRange(equipmentSkills);
+        allActives.AddRange(assignedItems);
         return allActives;
     }
     public override List<string> GetSpells()
