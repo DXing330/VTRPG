@@ -11,6 +11,7 @@ public class IconDisplay : MonoBehaviour
     public Color defaultHighlightColor = new Color32(255, 250, 235, 165);
     protected Color defaultIconColor = Color.white;
     protected Vector3 defaultIconScale = Vector3.one;
+    protected float highlightSizeIncrease = 1.1f;
     protected bool initializedAppearance = false;
 
     protected void InitializeAppearance()
@@ -23,20 +24,18 @@ public class IconDisplay : MonoBehaviour
 
     protected void RestoreDefaultAppearance()
     {
-        if (iconImage == null){return;}
         iconImage.color = defaultIconColor;
         iconImage.rectTransform.localScale = defaultIconScale;
     }
 
-    public void SetIcon(Sprite icon, string text = "")
+    public void SetIcon(string iconName, SpriteContainer sprites, string text = "")
     {
-        InitializeAppearance();
         RestoreDefaultAppearance();
-        if (iconImage != null)
-        {
-            iconImage.sprite = icon;
-            iconImage.enabled = icon != null;
-        }
+        sprites.ApplyToImage(iconImage, iconName, defaultIconColor, defaultIconScale);
+        sprites.ApplyToImage(highlightImage, iconName, defaultIconColor, defaultIconScale);
+        // Make the highlightImage white, and a little bigger.
+        highlightImage.color = defaultIconColor;
+        highlightImage.transform.localScale *= highlightSizeIncrease;
         SetText(text);
     }
 

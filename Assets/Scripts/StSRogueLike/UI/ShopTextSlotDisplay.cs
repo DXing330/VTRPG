@@ -7,12 +7,9 @@ public class ShopTextSlotDisplay : MonoBehaviour
     public int index;
     public IconDisplay iconDisplay;
 
-    public void SetSlot(string itemName, string price, bool sold, Sprite icon = null)
+    public void SetSlot(string itemName, SpriteContainer sprites, string price, bool sold)
     {
-        if (iconDisplay != null)
-        {
-            iconDisplay.SetIcon(icon, price);
-        }
+        iconDisplay.SetIcon(itemName, sprites, price);
         SetHighlighted(false);
     }
 

@@ -37,7 +37,8 @@ public class StSRewardSaveData : SavedData
             availableShopRelics.Remove(relicName);
         }
     }
-    protected void InitializeRelicLists()
+    // ONLY CALLED BY NEWGAME OR DEBUGGERS
+    public void InitializeRelicLists()
     {
         availableRelics.Clear();
         availableShopRelics.Clear();
@@ -266,10 +267,10 @@ public class StSRewardSaveData : SavedData
     }
     // TODO ALL Relic Gains Should Go Through Here And Then Check For Pickup Effects.
     public Relic dummyRelic;
-    // BOOL since some relic cause selecting card rewards or selecting skills to enchant, which requires a UI popup.
-    public bool GainRelic(string relicName, PartyDataManager partyData, StSStateManager stsManager)
+    // String since some relic cause selecting card rewards or selecting skills to enchant, which requires different UI popups.
+    public string GainRelic(string relicName, PartyDataManager partyData, StSStateManager stsManager)
     {
-        bool rewardPopUp = false;
+        string rewardPopUp = "";
         List<string> allRelicStats = relicData.ReturnAllValues(relicName);
         int counters = -1;
         for (int i = 0; i < allRelicStats.Count; i++)
@@ -292,26 +293,25 @@ public class StSRewardSaveData : SavedData
     }
     // Lots of relics activate run modifiers.
     public StSRunModifiersSaveData runModifiers;
-    protected bool ApplyPickUpEffect(Relic relic, PartyDataManager partyData, StSStateManager stsManager)
+    protected string ApplyPickUpEffect(Relic relic, PartyDataManager partyData, StSStateManager stsManager)
     {
         // This means pick some amount of skills for the effect to apply.
-        if (relic.GetTarget().Contains("AllySkill")){return true;}
+        if (relic.GetTarget().Contains("AllySkill")){return "AllySkill";}
+        if (relic.GetTarget().Contains("RewardSelect")){return "RewardSelect";}
         switch (relic.GetTarget())
         {
             default:
-            return false;
+            return "";
             case "Allies":
             partyData.ApplyEffectToParty(relic.GetEffect(), relic.GetEffectSpecifics());
-            return false;
-            case "RewardSelect":
-            return true;
+            return "";
             case "gameBool":
             runModifiers.EnableFlag(relic.GetEffect(), relic.GetEffectSpecifics(), "Relic", relic.GetName());
-            return false;
+            return "";
             // TODO Move This Somewhere More Central, A Few Relics Need This Timing?
             case "Gold":
             partyData.inventory.GainGold(utility.SafeParseInt(relic.GetEffect()));
-            return false;
+            return "";
             case "Relics":
             int relicCount = utility.SafeParseInt(relic.GetEffectSpecifics());
             // No relic gained can grant relics on pickup so it doesn't loop, even if it did it would quickly run out of relics that make relics.
@@ -319,24 +319,59 @@ public class StSRewardSaveData : SavedData
             {
                 GainRelic(GenerateRelic(), partyData, stsManager);
             }
-            return false;
+            return "";
             case "SkillBooks":
             int bookCount = utility.SafeParseInt(relic.GetEffectSpecifics());
             for (int i = 0; i < bookCount; i++)
             {
                 partyData.spellBook.GainBook(GenerateSkillBook());
             }
-            return false;
+            return "";
             case "ColorlessSkillBooks":
             int cBookCount = utility.SafeParseInt(relic.GetEffectSpecifics());
             for (int i = 0; i < cBookCount; i++)
             {
                 partyData.spellBook.GainBook(GenerateSkillBook(null, false, true));
             }
-            return false;
-            // Can pick and manage inventory if too full?
-            case "Potions":
-            return true;
+            return "";
         }
+    }
+    // ONLY Called If ApplyPickUpEffect Returns RewardSelect;
+    public (List<string>, List<string>) ReturnRelicPickUpRewards(string relicName)
+    {
+        rewards.Clear();
+        rewardSpecifics.Clear();
+        List<string> allRelicStats = relicData.ReturnAllValues(relicName);
+        // Only look for pickup values.
+        for (int i = 0; i < allRelicStats.Count; i++)
+        {
+            dummyRelic.LoadRelic(allRelicStats[i], relicName);
+            if (dummyRelic.PickUpRelic() && dummyRelic.GetTarget() == "RewardSelect")
+            {
+                break;
+            }
+        }
+        int rewardCount = utility.SafeParseInt(dummyRelic.GetEffectSpecifics(), 1);
+        for (int i = 0; i < rewardCount; i++)
+        {
+            switch (dummyRelic.GetEffect())
+            {
+                default:
+                break;
+                case "Relics":
+                string genRelic = GenerateRelic();
+                rewards.Add("Relic");
+                rewardSpecifics.Add(genRelic);
+                break;
+                case "Potions":
+                rewards.Add("Item");
+                rewardSpecifics.Add(itemDB.ReturnRandomKey());
+                break;
+                case "SkillBooks":
+                GenerateSkillBookChoices();
+                break;
+            }
+        }
+        return (rewards, rewardSpecifics);
     }
 }

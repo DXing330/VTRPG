@@ -19,6 +19,7 @@ public class RewardDisplayPanel : MonoBehaviour
     public TMP_Text rewardText;
     public void UpdateRewardDisplay()
     {
+        // TODO Show Relic/Potion Sprites, Instead Of Defaults.
         rewardImage.sprite = rewardSprites.SpriteDictionary(reward);
         switch (reward)
         {

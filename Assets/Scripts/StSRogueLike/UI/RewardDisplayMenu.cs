@@ -11,10 +11,15 @@ public class RewardDisplayMenu : MonoBehaviour
     public StSStateManager stsManager;
     public PartyDataManager partyData;
     public StSRewardSaveData rewardData;
+    // Some are called inside other scenes, but mainly it is from the battle rewards.
+    public bool battleRewards = true;
     void Start()
     {
-        rewardData.Load();
-        LoadFromData();
+        if (battleRewards)
+        {
+            rewardData.Load();
+            LoadFromData();
+        }
         UpdateRewardDisplay();
         selectMenu.SetPartyData(partyData);
     }
@@ -43,7 +48,16 @@ public class RewardDisplayMenu : MonoBehaviour
         }
     }
     public List<string> rewards; // Gold/Relic/Item/Equipment/Skillbook
+    // Some things will manually set the rewards.
+    public void SetRewards(List<string> newRewards)
+    {
+        rewards = newRewards;
+    }
     public List<string> rewardSpecifics; // Amount/Specifics/Specifics/Specifics/Specifics[,]
+    public void SetRewardSpecifics(List<string> newRewards)
+    {
+        rewardSpecifics = newRewards;
+    }
     public GameObject selectMenuObject;
     public RewardSelectMenu selectMenu;
     public int selectedIndex;

@@ -123,13 +123,11 @@ public class StSShopSaveData : SavedData
     protected void GenerateRelics(StSRewardSaveData rewardTracker)
     {
         if (rewardTracker.availableShopRelics == null){return;}
-        List<string> possibleRelics = new List<string>(rewardTracker.availableShopRelics);
-        for (int i = 0; i < relicCount && possibleRelics.Count > 0; i++)
+        for (int i = 0; i < relicCount; i++)
         {
-            int index = rewardTracker.rewardSeed.Range(0, possibleRelics.Count);
-            relics.Add(possibleRelics[index]);
+            string relic = rewardTracker.GenerateRelic(true);
+            relics.Add(relic);
             relicPrices.Add(relicPrice.ToString());
-            possibleRelics.RemoveAt(index);
         }
     }
 
