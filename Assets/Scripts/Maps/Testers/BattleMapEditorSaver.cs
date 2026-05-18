@@ -48,9 +48,15 @@ public class BattleMapEditorSaver : MapEditorSaver
         allData += "EnemyLocations=" + String.Join(delimiterTwo, bMap.enemyLocations) + delimiter;
         allData += "Weather=" + bMap.GetBattleWeather() + delimiter;
         allData += "Time=" + bMap.GetBattleTime();
+        allData += "AllyLocations=" + String.Join(delimiterTwo, bMap.allyLocations) + delimiter;
         customBattleDB.UpsertValue(battleName, allData);
     }
     public bool TryLoadBattleData(string battleName, out List<string> mapInfo, out List<string> terrainEffects, out List<int> elevations, out List<string> borders, out List<string> buildings, out List<string> enemies, out List<int> enemyLocations, out string weather, out string time)
+    {
+        List<int> allyLocations;
+        return TryLoadBattleData(battleName, out mapInfo, out terrainEffects, out elevations, out borders, out buildings, out enemies, out enemyLocations, out weather, out time, out allyLocations);
+    }
+    public bool TryLoadBattleData(string battleName, out List<string> mapInfo, out List<string> terrainEffects, out List<int> elevations, out List<string> borders, out List<string> buildings, out List<string> enemies, out List<int> enemyLocations, out string weather, out string time, out List<int> allyLocations)
     {
         mapInfo = new List<string>();
         terrainEffects = new List<string>();
@@ -61,6 +67,7 @@ public class BattleMapEditorSaver : MapEditorSaver
         enemyLocations = new List<int>();
         weather = "";
         time = "";
+        allyLocations = new List<int>();
         allData = customBattleDB.ReturnValue(battleName);
         if (allData.Length <= 0){return false;}
         string[] mapEnemyData = allData.Split(mapEnemyDelim);
@@ -80,7 +87,7 @@ public class BattleMapEditorSaver : MapEditorSaver
         string[] enemyData = mapEnemyData[1].Split(delimiter);
         for (int i = 0; i < enemyData.Length; i++)
         {
-            if (!TryLoadEnemyDataStat(enemyData[i], ref enemies, ref enemyLocations, ref weather, ref time))
+            if (!TryLoadEnemyDataStat(enemyData[i], ref enemies, ref enemyLocations, ref weather, ref time, ref allyLocations))
             {
                 return false;
             }
@@ -155,13 +162,13 @@ public class BattleMapEditorSaver : MapEditorSaver
                 return true;
         }
     }
-    protected bool TryLoadEnemyDataStat(string data, ref List<string> enemies, ref List<int> enemyLocations)
+    protected bool TryLoadEnemyDataStat(string data, ref List<string> enemies, ref List<int> enemyLocations, ref List<int> allyLocations)
     {
         string weather = "";
         string time = "";
-        return TryLoadEnemyDataStat(data, ref enemies, ref enemyLocations, ref weather, ref time);
+        return TryLoadEnemyDataStat(data, ref enemies, ref enemyLocations, ref weather, ref time, ref allyLocations);
     }
-    protected bool TryLoadEnemyDataStat(string data, ref List<string> enemies, ref List<int> enemyLocations, ref string weather, ref string time)
+    protected bool TryLoadEnemyDataStat(string data, ref List<string> enemies, ref List<int> enemyLocations, ref string weather, ref string time, ref List<int> allyLocations)
     {
         string[] blocks = data.Split("=");
         if (blocks.Length < 2){return false;}
@@ -182,6 +189,9 @@ public class BattleMapEditorSaver : MapEditorSaver
                 return true;
             case "Time":
                 time = value;
+                return true;
+            case "AllyLocations":
+                allyLocations = utility.ConvertStringListToIntList(value.Split(delimiterTwo).ToList());
                 return true;
         }
     }
@@ -207,6 +217,10 @@ public class BattleMapEditorSaver : MapEditorSaver
                 return true;
             case "Time":
                 map.SetBattleTime(value);
+                return true;
+            case "AllyLocations":
+                map.allyLocations = value.Split(delimiterTwo).ToList();
+                utility.RemoveEmptyListItems(map.allyLocations);
                 return true;
         }
     }

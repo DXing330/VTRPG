@@ -215,19 +215,26 @@ public class MapEditor : MapManager
             UpdateTileBorderSprites(i);
         }
     }
-    public void UpdateMapWithActors(List<string> actors, List<string> actorLocations)
+    public void UpdateMapWithActors(List<string> actors, List<string> actorLocations, List<string> allyLocations)
     {
         UpdateMap();
         List<string> actorTiles = new List<string>();
         for (int i = 0; i < cMapInfo.Count; i++)
         {
             actorTiles.Add("");
+            mapTiles[i].ResetHighlight();
         }
         for (int i = 0; i < actorLocations.Count; i++)
         {
             actorTiles[int.Parse(actorLocations[i])] = actors[i];
         }
         mapDisplayers[2].DisplayCurrentTiles(mapTiles, actorTiles, currentTiles);
+        for (int i = 0; i < allyLocations.Count; i++)
+        {
+            int tile = int.Parse(allyLocations[i]);
+            if (tile < 0 || tile >= mapTiles.Count){continue;}
+            mapTiles[tile].HighlightTile(colorDictionary.GetColorByName("Green"));
+        }
     }
     public ColorDictionary colorDictionary;
     public void HighlightTile(int tile)

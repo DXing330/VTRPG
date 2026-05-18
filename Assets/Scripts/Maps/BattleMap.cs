@@ -539,10 +539,14 @@ public class BattleMap : MapManager
         return actors;
     }
     // Should highlight all valid starting tiles to make this clear.
-    public bool ValidStartingTile(string pattern, int tileNumber)
+    public bool ValidStartingTile(string pattern, int tileNumber, List<int> overrideStartingPositions = null)
     {
         int startTileCount = mapSize * mapSize / 2 - (mapSize * mapSize / 2) % mapSize;
         List<int> startingTiles = mapPatterns.ReturnTilesOfPattern(pattern, startTileCount, mapSize);
+        if (overrideStartingPositions != null && overrideStartingPositions.Count > 1)
+        {
+            startingTiles = overrideStartingPositions;
+        }
         return startingTiles.Contains(tileNumber);
     }
     public List<string> excludedStartingTiles;
@@ -1310,10 +1314,14 @@ public class BattleMap : MapManager
         mapDisplayers[layer].HighlightCurrentTiles(mapTiles,highlightedTiles, currentTiles);
     }
 
-    public void UpdateStartingPositionTiles(string pattern, int selectedTile = -1)
+    public void UpdateStartingPositionTiles(string pattern, int selectedTile = -1, List<int> overrideStartingPositions = null)
     {
         int startTileCount = mapSize * mapSize / 2 - (mapSize * mapSize / 2) % mapSize;
         List<int> startingTiles = mapPatterns.ReturnTilesOfPattern(pattern, startTileCount, mapSize);
+        if (overrideStartingPositions != null && overrideStartingPositions.Count > 1)
+        {
+            startingTiles = overrideStartingPositions;
+        }
         UpdateHighlights(startingTiles, "Green", 4);
         if (selectedTile >= 0)
         {

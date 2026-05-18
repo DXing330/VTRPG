@@ -309,6 +309,7 @@ public class BattleMapEditor : MonoBehaviour
         mapEditor.InitializeNewMap();
         enemies.Clear();
         enemyLocations.Clear();
+        allyLocations.Clear();
         InitializeEnvironmentOptions();
     }
     public List<string> enemies;
@@ -319,10 +320,26 @@ public class BattleMapEditor : MonoBehaviour
         enemyLocations.Clear();
         UpdateMap();
     }
+    public void ToggleEnemy()
+    {
+        if (selectedTile < 0){return;}
+        // Don't do anything for ally location tiles.
+        if (allyLocations.Contains(selectedTile.ToString())){return;}
+        // If already an enemy then remove it.
+        if (enemyLocations.Contains(selectedTile.ToString()))
+        {
+            RemoveEnemy();
+        }
+        else
+        {
+            AddEnemy();
+        }
+    }
     public void AddEnemy()
     {
         if (selectedTile < 0 || selectedEnemy == ""){return;}
         if (enemyLocations.Contains(selectedTile.ToString())){return;}
+        if (allyLocations.Contains(selectedTile.ToString())){return;}
         enemies.Add(selectedEnemy);
         enemyLocations.Add(selectedTile.ToString());
         UpdateMap();
@@ -336,6 +353,49 @@ public class BattleMapEditor : MonoBehaviour
             {
                 enemyLocations.RemoveAt(i);
                 enemies.RemoveAt(i);
+                break;
+            }
+        }
+        UpdateMap();
+    }
+    public List<string> allyLocations;
+    public void ResetAllyLocations()
+    {
+        allyLocations.Clear();
+        UpdateMap();
+    }
+    public void ToggleAllyLocation()
+    {
+         if (selectedTile < 0){return;}
+         string tileString = selectedTile.ToString();
+         if (enemyLocations.Contains(tileString)){return;}
+         if (allyLocations.Contains(tileString))
+         {
+            RemoveAllyLocation();
+         }
+         else
+         {
+            AddAllyLocation();
+         }
+    }
+    protected void AddAllyLocation()
+    {
+        if (selectedTile < 0){return;}
+        string tileString = selectedTile.ToString();
+        if (allyLocations.Contains(tileString)){return;}
+        if (enemyLocations.Contains(tileString)){return;}
+        allyLocations.Add(tileString);
+        UpdateMap();
+    }
+    protected void RemoveAllyLocation()
+    {
+        if (selectedTile < 0){return;}
+        for (int i = 0; i < allyLocations.Count; i++)
+        {
+            if (int.Parse(allyLocations[i]) == selectedTile)
+            {
+                allyLocations.RemoveAt(i);
+                break;
             }
         }
         UpdateMap();
@@ -344,11 +404,15 @@ public class BattleMapEditor : MonoBehaviour
     public void ClickOnTile(int tileNumber)
     {
         selectedTile = tileNumber;
-        mapEditor.HighlightTile(selectedTile);
+        UpdateMap();
     }
     public void UpdateMap()
     {
-        mapEditor.UpdateMapWithActors(enemies, enemyLocations);   
+        mapEditor.UpdateMapWithActors(enemies, enemyLocations, allyLocations);
+        if (selectedTile >= 0)
+        {
+            mapEditor.mapTiles[selectedTile].HighlightTile(mapEditor.colorDictionary.GetColorByName("Blue"));
+        }
     }
     // Enemy Equipment?
     // Enemy Buffs?

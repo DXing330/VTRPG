@@ -10,6 +10,7 @@ public class BattleManager : MonoBehaviour
     public BattleMap map;
     public ActorAI actorAI;
     public bool setStartingPositions = false;
+    protected List<int> customAllyStartingTiles = new List<int>();
     public bool autoBattle = false;
     public bool controlAI = false;
     public void SetControlAI(bool newInfo)
@@ -94,6 +95,11 @@ public class BattleManager : MonoBehaviour
     {
         // Initialize Map/Teams
         startManager.InitializeMap(map, this, roguelikeBattle);
+        customAllyStartingTiles.Clear();
+        if (startManager.HasCustomAllyStartingLocations())
+        {
+            customAllyStartingTiles = startManager.GetCustomAllyStartingTiles(map, map.AllTeamMembers(0).Count);
+        }
         battleStatsTracker.InitializeTracker(map.battlingActors);
         // Apply start of battle passives.
         for (int i = 0; i < map.battlingActors.Count; i++)
@@ -109,7 +115,14 @@ public class BattleManager : MonoBehaviour
         // Start the combat.
         if (!setStartingPositions)
         {
-            map.RandomAllyStartingPositions(battleState.GetAllySpawnPattern());
+            if (startManager.HasCustomAllyStartingLocations())
+            {
+                startManager.ApplyCustomAllyStartingPositions(map);
+            }
+            else
+            {
+                map.RandomAllyStartingPositions(battleState.GetAllySpawnPattern());
+            }
             NextRound();
             ChangeTurn();
             if (autoBattle) { NPCTurn(); }
@@ -119,7 +132,8 @@ public class BattleManager : MonoBehaviour
         {
             // Update the UI so that you can start the battle after you finish setting positions.
             UI.AdjustStartingPositions();
-            map.UpdateStartingPositionTiles(battleState.GetAllySpawnPattern());
+            // TODO Replace This With Custom Ally Starting Positions.
+            map.UpdateStartingPositionTiles(battleState.GetAllySpawnPattern(), -1, customAllyStartingTiles);
         }
     }
     public void FinishSettingStartingPositions()
@@ -441,7 +455,7 @@ public class BattleManager : MonoBehaviour
     protected void AdjustStartingPosition(int tileNumber)
     {
         // Can only set the actors in the first few columns.
-        if (!map.ValidStartingTile(battleState.GetAllySpawnPattern(), tileNumber))
+        if (!map.ValidStartingTile(battleState.GetAllySpawnPattern(), tileNumber, customAllyStartingTiles))
         {
             return;
         }
@@ -504,7 +518,7 @@ public class BattleManager : MonoBehaviour
         if (setStartingPositions)
         {
             AdjustStartingPosition(tileNumber);
-            map.UpdateStartingPositionTiles(battleState.GetAllySpawnPattern(), prevStartingPosition);
+            map.UpdateStartingPositionTiles(battleState.GetAllySpawnPattern(), prevStartingPosition, customAllyStartingTiles);
             return;
         }
         if (!interactable){return;}

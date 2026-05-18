@@ -13,6 +13,7 @@ public class BattleStartManager : ScriptableObject
     public CharacterList enemyParty;
     protected bool loadedCustomBattleMap = false;
     protected List<int> customEnemyStartingLocations = new List<int>();
+    protected List<int> customAllyStartingLocations = new List<int>();
     // Determines How The Battle Is Started.
     public void InitializeMap(BattleMap map, BattleManager manager, bool roguelike = false)
     {
@@ -27,6 +28,7 @@ public class BattleStartManager : ScriptableObject
         manager.combatLog.UpdateNewestLog("The time is " + battleState.GetTime());
         // Custom Map Stuff
         customEnemyStartingLocations.Clear();
+        customAllyStartingLocations.Clear();
         loadedCustomBattleMap = TryLoadCustomBattleMap(map);
         if (!loadedCustomBattleMap)
         {
@@ -83,6 +85,7 @@ public class BattleStartManager : ScriptableObject
     protected bool TryLoadCustomBattleMap(BattleMap map)
     {
         customEnemyStartingLocations.Clear();
+        customAllyStartingLocations.Clear();
         if (!battleState.UsingCustomBattle()){return false;}
         else if (battleState.UsingCustomBattle() && battleState.savedBattles == null)
         {
@@ -98,7 +101,8 @@ public class BattleStartManager : ScriptableObject
         List<int> savedEnemyLocations;
         string savedWeather;
         string savedTime;
-        if (!battleState.savedBattles.TryLoadBattleData(battleState.GetCustomBattleName(), out savedMapInfo, out savedTerrainEffects, out savedElevations, out savedBorders, out savedBuildings, out savedEnemies, out savedEnemyLocations, out savedWeather, out savedTime))
+        List<int> savedAllyLocations;
+        if (!battleState.savedBattles.TryLoadBattleData(battleState.GetCustomBattleName(), out savedMapInfo, out savedTerrainEffects, out savedElevations, out savedBorders, out savedBuildings, out savedEnemies, out savedEnemyLocations, out savedWeather, out savedTime, out savedAllyLocations))
         {
             Debug.Log("TryLoadCustomBattleMap failed to load saved data for: " + battleState.GetCustomBattleName());
             return false;
@@ -124,6 +128,7 @@ public class BattleStartManager : ScriptableObject
         enemyParty.AddCharacters(savedEnemies);
         battleState.SetEnemyNames(savedEnemies);
         customEnemyStartingLocations = new List<int>(savedEnemyLocations);
+        customAllyStartingLocations = new List<int>(savedAllyLocations);
         map.UpdateMap();
         return true;
     }
@@ -141,5 +146,65 @@ public class BattleStartManager : ScriptableObject
             enemyTeam[i].SetLocation(customEnemyStartingLocations[i]);
         }
         map.UpdateMap();
+    }
+    protected bool TileUsedByEnemy(List<int> enemyTiles, int tile)
+    {
+        return enemyTiles.Contains(tile);
+    }
+    public bool HasCustomAllyStartingLocations()
+    {
+        return customAllyStartingLocations.Count > 0;
+    }
+    public List<int> GetCustomAllyStartingTiles(BattleMap map, int allyCount)
+    {
+        return ExpandCustomAllyStartingLocations(map, allyCount);
+    }
+    public void ApplyCustomAllyStartingPositions(BattleMap map)
+    {
+        List<TacticActor> allyTeam = map.AllTeamMembers(0);
+        if (!HasCustomAllyStartingLocations())
+        {
+            map.RandomAllyStartingPositions(battleState.GetAllySpawnPattern());
+            return;
+        }
+        List<int> allyTiles = ExpandCustomAllyStartingLocations(map, allyTeam.Count);
+        for (int i = 0; i < Mathf.Min(allyTeam.Count, allyTiles.Count); i++)
+        {
+            allyTeam[i].SetLocation(allyTiles[i]);
+        }
+        map.UpdateMap();
+    }
+    public List<int> ExpandCustomAllyStartingLocations(BattleMap map, int allyCount, List<int> currentStarting = null)
+    {
+        if (customAllyStartingLocations.Count >= allyCount)
+        {
+            return customAllyStartingLocations;
+        }
+        if (currentStarting == null)
+        {
+            currentStarting = new List<int>(customAllyStartingLocations);
+        }
+        // You shouldn't be allowed more than half the map tiles.
+        if (currentStarting.Count >= (map.mapSize * map.mapSize) / 2)
+        {
+            return currentStarting;
+        }
+        // Get the borders of the currentStarting.
+        List<int> frontier = map.mapUtility.AdjacentBorders(currentStarting, map.mapSize);
+        currentStarting.AddRange(frontier);
+        currentStarting = currentStarting.Distinct().ToList();
+        // Remove Any Enemy Tiles.
+        for (int i = currentStarting.Count - 1; i >= 0; i--)
+        {
+            if (TileUsedByEnemy(customEnemyStartingLocations, currentStarting[i]))
+            {
+                currentStarting.RemoveAt(i);
+            }
+        }
+        if (currentStarting.Count < allyCount)
+        {
+            return ExpandCustomAllyStartingLocations(map, allyCount, currentStarting);
+        }
+        return currentStarting;
     }
 }
