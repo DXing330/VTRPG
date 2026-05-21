@@ -45,6 +45,7 @@ public class StSStore : MonoBehaviour
     public GameObject removeInjuryObject;
     public GameObject priestActorSelectObject;
     public GameObject priestInjurySelectObject;
+    public GameObject injuryDetailsObject;
     public SelectList priestActorSelect;
     public SelectList priestInjurySelect;
     public TMP_Text selectedInjuryDetails;
@@ -272,19 +273,29 @@ public class StSStore : MonoBehaviour
         removeInjuryObject.SetActive(true);
         priestActorSelectObject.SetActive(true);
         priestInjurySelectObject.SetActive(false);
+        injuryDetailsObject.SetActive(false);
         priestActorSelect.SetSelectables(ReturnInjuredActorNames());
     }
     public void SelectPriestActor()
     {
-        int selectedListIndex = priestActorSelect.GetSelected();
-        if (selectedListIndex < 0){return;}
-        selectedPriestPartyIndex = priestActorPartyIndexes[selectedListIndex];
+        int selectedIndex = priestActorSelect.GetSelected();
+        if (selectedIndex < 0){return;}
+        selectedPriestPartyIndex = priestActorPartyIndexes[selectedIndex];
         priestInjurySelectObject.SetActive(true);
         priestInjurySelect.SetSelectables(ReturnActorRemovableInjuries(selectedPriestPartyIndex));
     }
     public void SelectPriestInjury()
     {
-        // TODO Display the injury level and injury effects.
+        int selectedIndex = priestInjurySelect.GetSelected();
+        if (selectedIndex < 0){return;}
+        injuryDetailsObject.SetActive(true);
+        int actorIndex = priestActorSelect.GetSelected();
+        string injuryType = priestInjurySelect.GetSelectedString();
+        if (actorIndex < 0 || injuryType == ""){return;}
+        TacticActor actor = partyData.ReturnActorAtIndex(selectedPriestPartyIndex);
+        int injuryLevel = actor.GetLevelFromPassive(injuryType);
+        List<string> injuryDetails = passiveDetailViewer.ReturnSpecificPassiveUpToLevelEffects(injuryType, injuryLevel);
+        selectedInjuryDetails.text = string.Join("\n", injuryDetails);
     }
     protected bool CanStartPriestService()
     {
@@ -390,8 +401,21 @@ public class StSStore : MonoBehaviour
             rewardDisplay.SetRewardSpecifics(relicRewardSpecifics);
             rewardDisplayObject.SetActive(true);
         }
+        else if (popUpRelic == "AllySkill")
+        {
+            // Split by "Count" to determine how many skills are allowed to be selected;
+            // TODO Apply Mods To Ally Skills This Will Be Handled In A Standalone Script, Just Have A GameObject which will be activated and maybe attached the script and set the partydata as well as the count/mod to be applied.
+            // Get what type of mod is too be applied to the skill.
+            // Activate the select list of all the skills and set how many skill are allowed to be selected.
+            // Player can review and select skills up to the count before confirming.
+            // Skills should highlight in the multiselect menu when they are selected.
+            // Clicking a skill should show the actor who owns the skill and the current skill details, with all current actor mods, as well as the potential new skill details with the new mod added.
+            // After done, clicking confirm will close the menu and apply the changes to the actor.
+        }
         //Debug.Log("Relic purchase is not fully implemented yet. Needs a run-owned relic list.");
     }
+    // TODO Add A Function For Apply The Reward Mods To The Selected Skill, Should Be Standalone Since Other Scenes Will Want It?
+    //public void ApplySkillModsToSelectedSkills()
     protected bool TrySpendGold(string priceString)
     {
         int price = 0;
@@ -410,20 +434,16 @@ public class StSStore : MonoBehaviour
     }
     public void RemoveInjuryFromActor()
     {
-        int actorIndex = priestActorSelect.GetSelected();
-        int injuryIndex = priestInjurySelect.GetSelected();
-        if (actorIndex < 0 || injuryIndex < 0){return;}
-        TacticActor actor = partyData.ReturnActorAtIndex(actorIndex);
-        List<string> passives = new List<string>(actor.GetPassiveSkills());
-        List<string> levels = new List<string>(actor.GetPassiveLevels());
-        passives.RemoveAt(injuryIndex);
-        levels.RemoveAt(injuryIndex);
-        actor.SetPassiveSkills(passives);
-        actor.SetPassiveLevels(levels);
-        partyData.UpdatePartyMember(actor, actorIndex);
+        //int injuryIndex = priestInjurySelect.GetSelected();
+        string injuryName = priestInjurySelect.GetSelectedString();
+        if (selectedPriestPartyIndex < 0 || injuryName == ""){return;}
+        TacticActor actor = partyData.ReturnActorAtIndex(selectedPriestPartyIndex);
+        actor.RemovePassive(injuryName);
+        partyData.UpdatePartyMember(actor, selectedPriestPartyIndex);
         priestServiceUsed = true;
-        partyData.inventory.SpendGold(ReturnPriestPrice());
+        TrySpendGold(ReturnPriestPrice().ToString());
         removeInjuryObject.SetActive(false);
+        UpdateAllDisplays();
     }
     // --- Leaving ---
     public void LeaveStore()

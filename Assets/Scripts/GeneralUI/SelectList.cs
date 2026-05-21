@@ -120,7 +120,6 @@ public class SelectList : MonoBehaviour
         currentPage = utility.ChangePage(currentPage, right, textObjects, selectable);
         UpdateCurrentPage(utility.GetCurrentPageStrings(currentPage, textObjects, selectable));
     }
-
     protected virtual void ResetPage()
     {
         for (int i = 0; i < textObjects.Count; i++)
@@ -129,14 +128,12 @@ public class SelectList : MonoBehaviour
             textObjects[i].SetActive(false);
         }
     }
-
     public void StartingPage()
     {
         currentPage = 0;
         ResetSelected();
         UpdateCurrentPage(utility.GetCurrentPageStrings(currentPage, textObjects, selectable));
     }
-
     protected void UpdateCurrentPage(List<string> newPageStrings)
     {
         ResetPage();
@@ -147,7 +144,6 @@ public class SelectList : MonoBehaviour
             textList[i].text = newPageStrings[i];
         }
     }
-
     public virtual void Select(int index)
     {
         selectedIndex = (currentPage*textObjects.Count) + index;

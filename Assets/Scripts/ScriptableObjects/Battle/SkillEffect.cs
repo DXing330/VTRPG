@@ -338,7 +338,7 @@ public class SkillEffect : ScriptableObject
             case "SetAttackActionCost":
                 target.SetAttackActionCost(int.Parse(effectSpecifics));
                 break;
-            case "BasicAttackDamage":
+            case "BasicAttackPower":
                 target.ChangeBasicAttackMultiplier(int.Parse(effectSpecifics));
                 break;
             case "TempRange":
@@ -495,11 +495,11 @@ public class SkillEffect : ScriptableObject
             case "CritChance":
                 target.UpdateCritChance(int.Parse(effectSpecifics));
                 break;
-            case "BaseCritDamage":
-                target.UpdateBaseCritDamage(int.Parse(effectSpecifics));
+            case "BaseCritPower":
+                target.UpdateBaseCritPower(int.Parse(effectSpecifics));
                 break;
-            case "CritDamage":
-                target.UpdateCritDamage(int.Parse(effectSpecifics));
+            case "CritPower":
+                target.UpdateCritPower(int.Parse(effectSpecifics));
                 break;
             case "DisableDeathActives":
                 target.DisableDeathActives();

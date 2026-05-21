@@ -29,14 +29,12 @@ public class PartyDataManager : MonoBehaviour
     public DungeonBag dungeonBag;
     public GuildCard guildCard;
     public SpellBook spellBook;
-
     public void Save()
     {
         for (int i = 0; i < allParties.Count; i++) { allParties[i].Save(); }
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].Save(); }
         SetFullParty();
     }
-
     [ContextMenu("Debug Load")]
     public void Load()
     {
@@ -44,19 +42,16 @@ public class PartyDataManager : MonoBehaviour
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].Load(); }
         SetFullParty();
     }
-
     public void NewGame()
     {
         for (int i = 0; i < allParties.Count; i++) { allParties[i].NewGame(); }
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].NewGame(); }
     }
-
     // Since when starting a new run, the partydata is already set but you want to reset equipment and other stuff.
     public void OtherDataNewName()
     {
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].NewGame(); }
     }
-
     public virtual void NewDay(int dayCount)
     {
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].NewDay(dayCount); }
@@ -85,12 +80,10 @@ public class PartyDataManager : MonoBehaviour
         // Or they might rest and heal if we're optimistic.
         SetFullParty();
     }
-
     public virtual void AddHours(int hours)
     {
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].AddHours(hours); }
     }
-
     public void RemoveExhaustion()
     {
         for (int i = 0; i < allParties.Count; i++)
@@ -101,12 +94,10 @@ public class PartyDataManager : MonoBehaviour
             }
         }
     }
-
     public virtual void Rest()
     {
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].Rest(); }
     }
-
     public void NaturalRegeneration(List<string> regenPassives)
     {
         for (int i = 0; i < allParties.Count; i++)
@@ -114,7 +105,6 @@ public class PartyDataManager : MonoBehaviour
             allParties[i].NaturalRegeneration(regenPassives);
         }
     }
-
     public bool DungeonHunger()
     {
         bool permStarved = false;
@@ -131,7 +121,6 @@ public class PartyDataManager : MonoBehaviour
         SetFullParty();
         return false;
     }
-
     public bool StatusDamage(List<string> damagingStatuses)
     {
         bool permanentPartyDeath = false;
@@ -149,13 +138,11 @@ public class PartyDataManager : MonoBehaviour
         SetFullParty();
         return false;
     }
-
     public bool PartyMemberClassExists(string spriteName)
     {
         if (permanentPartyData.MemberExists(spriteName) || mainPartyData.MemberExists(spriteName)){ return true; }
         return false;
     }
-
     public void AddTempPartyMember(string name)
     {
         int nextID = guildCard.GetNextID();
@@ -164,18 +151,15 @@ public class PartyDataManager : MonoBehaviour
         tempPartyData.AddMember(actorStats.ReturnValue(name), name, nextID.ToString());
         SetFullParty();
     }
-
     public bool TempPartyMemberExists(string name)
     {
         return tempPartyData.MemberExists(name);
     }
-
     public void RemoveTempPartyMember(string name)
     {
         tempPartyData.RemoveMember(name);
         SetFullParty();
     }
-
     public void RemoveAllTempPartyMember(string name)
     {
         for (int i = 0; i < tempPartyData.PartyCount(); i++)
@@ -184,13 +168,11 @@ public class PartyDataManager : MonoBehaviour
         }
         SetFullParty();
     }
-
     public bool OpenSlots()
     {
         // Default is 2 party members, plus 2 permanent for the classic 4?
         return mainPartyData.PartyCount() < guildCard.GetGuildRank() + guildCard.GetPartyLimit();
     }
-
     public void ForceNewGameData(string newData)
     {
         NewGame();
@@ -202,12 +184,10 @@ public class PartyDataManager : MonoBehaviour
             HireMember(actorStats.ReturnValue(spriteNames[i]), personalNames[i]);
         }
     }
-
     public void HireMemberBySpriteName(string spriteName)
     {
         HireMember(actorStats.ReturnValue(spriteName), spriteName);
     }
-
     // Add Random Attributes Here.
     public void HireMember(string stats, string personalName)
     {
@@ -220,40 +200,50 @@ public class PartyDataManager : MonoBehaviour
         mainPartyData.AddMember(stats, personalName, nextID.ToString());
         SetFullParty();
     }
-
     public string EquipToPartyMember(string equip, int index, Equipment dummy)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return "";}
         return section.EquipToMember(equip, localIndex, dummy);
     }
-
     public string UnequipFromPartyMember(int index, string slot, Equipment dummy)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return "";}
         return section.UnequipFromMember(localIndex, slot, dummy);
     }
-
     public int ReturnPartyMemberIDFromIndex(int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return -1;}
         return section.GetIDAtIndex(localIndex);
     }
-
     public void SetPartyMemberEquipFromIndex(string equip, int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return;}
         section.SetEquipmentAtIndex(equip, localIndex);
     }
-
     public string ReturnPartyMemberEquipFromIndex(int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return "";}
         return section.GetEquipmentAtIndex(localIndex);
+    }
+    public (List<string> passiveNames, List<string> passiveData) GetActorPassivesWithEquipmentPassives(TacticActor actor, Equipment dummyEquip, string currentlyEquipped = "")
+    {
+        if (currentlyEquipped.Length > 0)
+        {
+            string[] allEquipped = currentlyEquipped.Split("@");
+            for (int i = 0; i < allEquipped.Length; i++)
+            {
+                dummyEquip.SetAllStats(allEquipped[i]);
+                dummyEquip.EquipToActor(actor);
+            }
+        }
+        List<string> passiveNames = new List<string>(actor.GetPassiveSkills());
+        List<string> passiveData = new List<string>(actor.GetPassiveLevels());
+        return (passiveNames, passiveData);
     }
     public int ReturnPartyMemberCurrentHealthFromIndex(int index)
     {
@@ -291,6 +281,14 @@ public class PartyDataManager : MonoBehaviour
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return -1;}
         return section.GetIDAtIndex(localIndex);
+    }
+    public int ReturnIndexAtID(int ID)
+    {
+        for (int i = 0; i < ReturnTotalPartyCount(); i++)
+        {
+            if (ReturnIDAtIndex(i) == ID){return i;}
+        }
+        return -1;
     }
     // All Party Functions Should Use This To Determine Which Section Of The Party To Edit And What Index To Edit.
     public (PartyData section, int localIndex) ResolvePartyIndex(int index)
@@ -356,7 +354,6 @@ public class PartyDataManager : MonoBehaviour
         section.SetMemberStats(dummyActor, localIndex);
         SetFullParty();
     }
-
     public void RemovePartyMember(int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
@@ -364,7 +361,6 @@ public class PartyDataManager : MonoBehaviour
         section.RemoveStatsAtIndex(localIndex);
         SetFullParty();
     }
-
     public void HealParty(bool full = true)
     {
         if (full)
@@ -381,7 +377,6 @@ public class PartyDataManager : MonoBehaviour
         }
         SetFullParty();
     }
-
     public void UpdatePartyAfterBattle(List<int> IDs, List<string> stats)
     {
         for (int i = 0; i < allParties.Count; i++)
@@ -421,48 +416,41 @@ public class PartyDataManager : MonoBehaviour
         tempPartyData.RemoveDefeatedMembers();
         SetFullParty();
     }
-
     public void RemoveDeadPartyMembers()
     {
         mainPartyData.RemoveDeadMembers();
         tempPartyData.RemoveDeadMembers();
     }
-
     public string ReturnPartyMemberStatsAtIndex(int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return "";}
         return section.GetMemberStatsAtIndex(localIndex);
     }
-
     protected string CodeNameAtIndex(int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return "";}
         return section.GetNameAtIndex(localIndex);
     }
-
     protected string SpriteNameAtIndex(int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return "";}
         return section.GetSpriteNameAtIndex(localIndex);
     }
-
     protected bool MatchID(int ID, int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return false;}
         return (section.GetIDAtIndex(localIndex) == ID);
     }
-
     protected void UpdatePartyMemberAfterBattle(string stats, int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return;}
         section.SetCurrentStats(stats, localIndex);
     }
-
     public void PartyDefeated()
     {
         fullParty.ResetLists();
@@ -472,7 +460,6 @@ public class PartyDataManager : MonoBehaviour
         Save();
         SetFullParty();
     }
-
     public List<string> GetAllPartyNames()
     {
         List<string> names = new List<string>();
@@ -481,7 +468,6 @@ public class PartyDataManager : MonoBehaviour
         names.AddRange(tempPartyData.GetNames());
         return names;
     }
-
     [ContextMenu("SetParty")]
     public void SetFullParty()
     {

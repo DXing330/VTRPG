@@ -82,7 +82,7 @@ public class ActorStats : ActorInitialStats
         ResetBonusAttackRange();
         CheckEndUniqueEffects();
         tempWeight = 0;
-        currentCritDamage = baseCritDamage;
+        currentCritPower = baseCritPower;
         currentCrit = baseCrit;
         currentHitChance = baseHitChance;
         currentAttackSpeed = baseAttackSpeed;
@@ -437,10 +437,10 @@ public class ActorStats : ActorInitialStats
     public int GetCritChance(){return currentCrit;}
     public void UpdateCritChance(int amount){currentCrit += amount;}
     public void UpdateBaseCritChance(int amount){baseCrit += amount;}
-    public int currentCritDamage;
-    public int GetCritDamage(){return currentCritDamage;}
-    public void UpdateCritDamage(int amount){currentCritDamage += amount;}
-    public void UpdateBaseCritDamage(int amount){baseCritDamage += amount;}
+    public int currentCritPower;
+    public int GetCritPower(){return currentCritPower;}
+    public void UpdateCritPower(int amount){currentCritPower += amount;}
+    public void UpdateBaseCritPower(int amount){baseCritPower += amount;}
     public int currentAttackSpeed;
     public int GetAttackSpeed(){return currentAttackSpeed;}
     public void UpdateAttackSpeed(int amount){currentAttackSpeed += amount;}

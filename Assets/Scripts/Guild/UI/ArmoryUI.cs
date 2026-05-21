@@ -124,14 +124,12 @@ public class ArmoryUI : MonoBehaviour
         if (allActors.GetSelected() < 0 || selectedActor == null){return;}
         activeViewer.SelectActive(selectedActor);
     }
-
     public virtual void ResetView()
     {
         actorStats.PublicResetPage();
         actorPassives.PublicResetPage();
         actorEquipment.ResetTextText();
     }
-
     protected void UpdateActorStats()
     {
         selectedActor.SetInitialStatsFromString(allActors.allActorData[allActors.GetSelected()]);
@@ -144,7 +142,6 @@ public class ArmoryUI : MonoBehaviour
         UpdateActorActives();
         UpdateActorDivineSpells();
     }
-    
     protected void UpdateActorActives()
     {
         List<string> allActives = selectedActor.GetActiveSkills();
@@ -162,7 +159,6 @@ public class ArmoryUI : MonoBehaviour
         }
         actorActives.SetStatsAndData(allActives);
     }
-
     protected void UpdateActorDivineSpells()
     {
         List<string> allSpells = selectedActor.GetSpells();
@@ -181,20 +177,17 @@ public class ArmoryUI : MonoBehaviour
         allSpells = allSpells.Distinct().ToList();
         actorDivineSpells.SetStatsAndData(allSpells);
     }
-
     public virtual void UpdateSelectedActor()
     {
         EndSelectingEquipment();
         passiveViewer.DisablePanel();
         UpdateActorStats();
     }
-
     public virtual void UpdateSelectedActorWithCurrentHealth()
     {
         UpdateSelectedActor();
         actorStats.UpdateActorStatTexts(selectedActor, true);
     }
-
     public virtual void ViewPassiveDetails()
     {
         if (allActors.GetSelected() < 0) { return; }
@@ -202,13 +195,11 @@ public class ArmoryUI : MonoBehaviour
         selectedPassiveLevel = actorPassives.statTexts[actorPassives.GetSelected() % actorPassives.statTexts.Count].GetText();
         passiveViewer.UpdatePassiveNames(selectedPassive, selectedPassiveLevel);
     }
-
     public virtual void ViewCustomPassiveDetails()
     {
         if (allActors.GetSelected() < 0 || selectedActor == null){return;}
         passiveViewer.ViewCustomPassives(selectedActor);
     }
-
     public virtual void BeginSelectingEquipment()
     {
         if (allActors.GetSelected() < 0){return;}
@@ -250,7 +241,6 @@ public class ArmoryUI : MonoBehaviour
         selectEquipment.UpdateEquipNames();
         selectEquipment.ResetSelected();
     }
-
     public virtual void EndSelectingEquipment()
     {
         selectEquipment.ResetSelected();
@@ -266,7 +256,6 @@ public class ArmoryUI : MonoBehaviour
         actorEquipment.UpdateActorEquipmentTexts(partyData.ReturnPartyMemberEquipFromIndex(allActors.GetSelected()));
         UpdateActorActives();
     }
-
     public virtual void PreviewEquippedPassives()
     {
         selectEquipment.ResetHighlights();
@@ -274,7 +263,6 @@ public class ArmoryUI : MonoBehaviour
         selectedActor.SetInitialStatsFromString(allActors.allActorData[allActors.GetSelected()]);
         actorPassives.UpdatePotentialPassives(selectedActor, partyData.ReturnPartyMemberEquipFromIndex(allActors.GetSelected()), selectEquipment.data[selectEquipment.GetSelected()]);
     }
-
     public virtual void ConfirmEquipSelection()
     {
         if (selectEquipment.GetSelected() < 0){return;}
@@ -287,7 +275,6 @@ public class ArmoryUI : MonoBehaviour
         // close the screen.
         EndSelectingEquipment();
     }
-
     public virtual void UnequipSelected()
     {
         if (allActors.GetSelected() < 0){return;}

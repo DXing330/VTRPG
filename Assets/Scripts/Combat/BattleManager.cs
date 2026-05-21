@@ -146,9 +146,10 @@ public class BattleManager : MonoBehaviour
         if (autoBattle) { NPCTurn(); }
         else if (turnActor.GetTeam() > 0 && !controlAI) { NPCTurn(); }
     }
+    // All Summoning Should Go Through Here?
     public void SpawnAndAddActor(int location, string actorName, int team = 0, TacticActor summoner = null)
     {
-        TacticActor newActor = actorMaker.SpawnActor(location, actorName, team);
+        TacticActor newActor = actorMaker.SummonActor(location, actorName, team);
         map.AddActorToBattle(newActor);
         ApplyBattleModifiersToActor(newActor);
         effectManager.SummonedStartBattle(newActor);

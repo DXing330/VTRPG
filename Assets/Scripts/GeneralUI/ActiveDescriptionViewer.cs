@@ -145,7 +145,7 @@ public class ActiveDescriptionViewer : MonoBehaviour
                 return "Randomly summon the following: " + ASD(s) + ".";
             case "Revive":
                 return "Revive defeated " + ASD(s) + "(s).";
-            case "Summon Enemy":
+            case "SummonEnemy":
                 return "Create a " + ASD(s) + ".";
             case "TerrainEffect":
                 return "Create " + ASD(s) + " on targeted tile(s).";
@@ -259,7 +259,6 @@ public class ActiveDescriptionViewer : MonoBehaviour
         }
         return "The target(s) gain " + ASD(s) + " " + e + ".";
     }
-
     protected string TriggerSkillDescription(string triggerData)
     {
         string delimiter = "::trig::";
@@ -285,7 +284,6 @@ public class ActiveDescriptionViewer : MonoBehaviour
         }
         return "Trigger " + selectorDescription + " targeting " + ASD(targetMode) + ".";
     }
-
     protected string TriggerSelectorDescription(string selectorData, string selectorDelimiter)
     {
         string selectorType = selectorData;
@@ -311,13 +309,11 @@ public class ActiveDescriptionViewer : MonoBehaviour
         }
         return ASD(selectorData);
     }
-
     // ActiveSpecificsDescription
     public string ASD(string specifics)
     {
         return specifics;
     }
-
     // ActivePowerDescription
     public string APD(string power, string effect = "")
     {
@@ -326,5 +322,14 @@ public class ActiveDescriptionViewer : MonoBehaviour
             return "ALL";
         }
         return power;
+    }
+    // Skill Mod Descriptions
+    public string GetSkillModDescription(string skillModName)
+    {
+        switch (skillModName)
+        {
+            default:
+            return "";
+        }
     }
 }

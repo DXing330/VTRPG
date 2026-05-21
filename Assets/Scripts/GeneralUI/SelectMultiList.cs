@@ -5,6 +5,10 @@ using UnityEngine;
 public class SelectMultiList : SelectList
 {
     public int maxSelections;
+    public void SetMaxSelections(int newInfo = 1)
+    {
+        maxSelections = Mathf.Max(1, newInfo);
+    }
     public List<int> selectedIndices;
     public override void ResetSelected()
     {
@@ -13,10 +17,19 @@ public class SelectMultiList : SelectList
     }
     public override void Select(int index)
     {
+        // Selecting and already selected unselects it.
+        int newIndex = (currentPage * textObjects.Count) + index;
+        if (selectedIndices.Contains(newIndex))
+        {
+            selectedIndices.Remove(newIndex);
+            HighlightSelected();
+            return;
+        }
         if (selectedIndices.Count >= maxSelections){ return; }
-        selectedIndices.Add((currentPage * textObjects.Count) + index);
+        selectedIndices.Add(newIndex);
         HighlightSelected();
     }
+    // TODO Update This To Work On Multiple Pages.
     public override void HighlightSelected(string color = "Highlight")
     {
         ResetHighlights();

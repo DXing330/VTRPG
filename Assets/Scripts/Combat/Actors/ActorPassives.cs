@@ -185,6 +185,14 @@ public class ActorPassives : MonoBehaviour
             }
         }
     }
+    // For removing injuries.
+    public void RemovePassive(string removedName)
+    {
+        int indexOf = passiveSkills.IndexOf(removedName);
+        if (indexOf < 0){return;}
+        passiveSkills.RemoveAt(indexOf);
+        passiveLevels.RemoveAt(indexOf);
+    }
     // Temporary Passives Are Always Level 1.
     public List<string> tempPassives;
     public List<int> tempPassiveDurations;

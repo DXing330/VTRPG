@@ -104,8 +104,8 @@ public class ActorInitialStats : ActorPassives
                 return GetLuck().ToString();
             case "CritChance":
                 return GetBaseCritChance().ToString();
-            case "CritDamage":
-                return GetBaseCritDamage().ToString();
+            case "CritPower":
+                return GetBaseCritPower().ToString();
             case "HitChance":
                 return GetBaseHitChance().ToString();
             case "Dodge":
@@ -202,8 +202,8 @@ public class ActorInitialStats : ActorPassives
             case "CritChance":
                 SetBaseCritChance(utility.SafeParseInt(newStat));
                 break;
-            case "CritDamage":
-                SetBaseCritDamage(utility.SafeParseInt(newStat));
+            case "CritPower":
+                SetBaseCritPower(utility.SafeParseInt(newStat));
                 break;
             case "HitChance":
                 SetBaseHitChance(utility.SafeParseInt(newStat));
@@ -399,9 +399,9 @@ public class ActorInitialStats : ActorPassives
     public int baseCrit;
     public int GetBaseCritChance(){return baseCrit;}
     public void SetBaseCritChance(int newInfo){baseCrit = newInfo;}
-    public int baseCritDamage;
-    public int GetBaseCritDamage(){return baseCritDamage;}
-    public void SetBaseCritDamage(int newInfo){baseCritDamage = newInfo;}
+    public int baseCritPower;
+    public int GetBaseCritPower(){return baseCritPower;}
+    public void SetBaseCritPower(int newInfo){baseCritPower = newInfo;}
     public int baseHitChance;
     public int GetBaseHitChance(){return baseHitChance;}
     public void SetBaseHitChance(int newInfo){baseHitChance = newInfo;}
@@ -548,7 +548,7 @@ public class ActorInitialStats : ActorPassives
     {
         if (GetMagicResist() >= 100){return 0;}
         // Magic Resist is a percentage reduction.
-        damage = damage * (100 - GetMagicPower()) / 100;
+        damage = damage * (100 - GetMagicResist()) / 100;
         return damage;
     }
     // How much bonus mana you get from consuming 1 mana.

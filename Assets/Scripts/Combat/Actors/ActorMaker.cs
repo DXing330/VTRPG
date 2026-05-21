@@ -87,6 +87,17 @@ public class ActorMaker : MonoBehaviour
         }
     }
 
+    public TacticActor SummonActor(int location, string actorName, int team = 0)
+    {
+        TacticActor newActor = SpawnActor(location, actorName, team);
+        AddElementPassives(newActor);
+        AddAttributePassives(newActor);
+        AddSpeciesPassives(newActor);
+        passiveOrganizer.OrganizeActorPassives(newActor);
+        newActor.ResetStats();
+        return newActor;
+    }
+
     public TacticActor SpawnActor(int location, string actorName, int team = 0)
     {
         TacticActor newActor = CreateActor();

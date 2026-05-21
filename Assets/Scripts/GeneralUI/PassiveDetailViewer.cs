@@ -99,7 +99,7 @@ public class PassiveDetailViewer : MonoBehaviour
         if (passiveSelect.GetSelected() < 0){return;}
         UpdatePassiveNames(passiveSelect.GetSelectedStat(), passiveSelect.GetSelectedData());
     }
-
+    // For a list of passive groups and levels, returns passive data strings.
     public List<string> ReturnAllPassiveInfo(List<string> groups, List<string> levels)
     {
         List<string> allInfo = new List<string>();
@@ -115,13 +115,24 @@ public class PassiveDetailViewer : MonoBehaviour
         allInfo = allInfo.Distinct().ToList();
         return allInfo;
     }
-
+    // For a list of passive groups and levels, returns passive description strings.
+    // Return passive description strings, for all passives of a passive group, up to a specific level.
+    public List<string> ReturnSpecificPassiveUpToLevelEffects(string group, int level)
+    {
+        List<string> specificsUpToLevel = new List<string>();
+        for (int i = 1; i < level + 1; i++)
+        {
+            specificsUpToLevel.Add(ReturnSpecificPassiveLevelEffect(group, i));
+        }
+        return specificsUpToLevel;
+    }
+    // For a specific level of a passive group.
     public string ReturnSpecificPassiveLevelEffect(string group, int level)
     {
         string passiveName = passiveNameLevels.GetMultiKeyValue(group, (level).ToString());
         return ReturnPassiveDetails(allPassives.ReturnValue(passiveName));
     }
-
+    // For a passive group name, returning all sub names and effects.
     public (List<string> names, List<string> details) ReturnAllPassiveLevelsFromName(string passiveName)
     {
         int maxLevel = GetMaxLevelFromPassiveName(passiveName);
@@ -134,7 +145,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return (allNames, allDetails);
     }
-
     // Used to make the display popup and the text equal to the passive details.
     public void UpdatePassiveNames(string group, string newLevel)
     {
@@ -155,7 +165,6 @@ public class PassiveDetailViewer : MonoBehaviour
         passiveGroupText.SetStatText(passiveGroupName);
         passiveGroupText.SetText(passiveLevel);
     }
-    
     public void ViewCustomPassives(TacticActor actor)
     {
         List<string> customPassives = actor.GetCustomPassives();
@@ -172,7 +181,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         passiveStatTextList.SetStatsAndData(passiveNames, passiveDescription);
     }
-
     public List<string> ReturnAllPassiveDetails(TacticActor actor)
     {
         List<string> allDetails = new List<string>();
@@ -196,7 +204,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return allDetails;
     }
-
     public string ReturnAuraDetails(AuraEffect aura)
     {
         string description = aura.GetAuraName() + " (" + aura.GetTeamTarget() + ") :\n";
@@ -206,12 +213,11 @@ public class PassiveDetailViewer : MonoBehaviour
         description += PassiveConditionText(aura.condition, aura.conditionSpecifics);
         return description;
     }
-
+    // For the actual name of the passive, ie a single level (name) of a passive group.
     public string ReturnPassiveDetailsFromName(string passiveName)
     {
         return ReturnPassiveDetails(allPassives.ReturnValue(passiveName));
     }
-
     public bool SpellGrantingPassive(string passiveName)
     {
         string newInfo = allPassives.ReturnValue(passiveName);
@@ -222,7 +228,6 @@ public class PassiveDetailViewer : MonoBehaviour
         string[] blocks = newInfo.Split("|");
         return blocks[4].Contains("Spell");
     }
-
     public bool SkillGrantingPassive(string passiveName)
     {
         string newInfo = allPassives.ReturnValue(passiveName);
@@ -233,7 +238,7 @@ public class PassiveDetailViewer : MonoBehaviour
         string[] blocks = newInfo.Split("|");
         return blocks[4].Contains("Skill");
     }
-
+    // For the actual data of the passive, ie a single level of a passive group.
     public string ReturnPassiveDetails(string newInfo)
     {
         if (!newInfo.Contains("|"))
@@ -269,7 +274,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return description;
     }
-
     protected string PassiveTiming(string data)
     {
         switch (data)
@@ -305,7 +309,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return "";
     }
-
     protected string PassiveConditionText(string condition, string specifics)
     {
         // Consolidate A/D conditions into one.
@@ -719,7 +722,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return "";
     }
-
     protected string AdjustSpecificsText(string specifics)
     {
         string adjustedSpecifics = specifics;
@@ -785,7 +787,6 @@ public class PassiveDetailViewer : MonoBehaviour
                 return multiplier + "how many times " + targetString + " attacked this round";
         }
     }
-
     protected string AffectMapText(string effect, string specifics)
     {
         switch (effect)
@@ -803,7 +804,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return "";
     }
-
     protected string AffectSkillText(string effect, string specifics)
     {
         switch (effect)
@@ -823,7 +823,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return "";
     }
-
     protected string AutoSkillText(string effect, string specifics)
     {
         switch (effect)
@@ -833,7 +832,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return "";
     }
-
     protected string PassiveEffect(string effect, string specifics, string target)
     {
         specifics = AdjustSpecificsText(specifics);
@@ -993,7 +991,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return " increase " + effect + " of " + target + " by " + specifics;
     }
-
     protected string IncreaseDecreaseTargetSpecifics(string effect, string specifics, string target)
     {
         if (effect == "Set")
@@ -1034,7 +1031,6 @@ public class PassiveDetailViewer : MonoBehaviour
         }
         return " " + effect + " " + target + " by " + specifics;
     }
-
     protected string RelativeDirectionDescriptions(string specifics)
     {
         switch (specifics)

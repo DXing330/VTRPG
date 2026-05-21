@@ -290,7 +290,7 @@ public class AttackManager : ScriptableObject
         attackValue = attacker.GetAttack();
         hitChance = attacker.GetHitChance();
         critChance = attacker.GetCritChance();
-        critDamage = attacker.GetCritDamage();
+        critDamage = attacker.GetCritPower();
         attackDamageMultiplier = 100;
         defenseMultiplier = 100;
         bonusDamage = 0;

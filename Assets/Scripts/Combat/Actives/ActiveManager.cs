@@ -251,7 +251,7 @@ public class ActiveManager : MonoBehaviour
             case "Revive":
                 battle.map.ReviveDefeatedActorsBySprite(specifics);
                 return;
-            case "Summon Enemy":
+            case "SummonEnemy":
                 // Check if selected tile is free.
                 if (battle.map.GetActorOnTile(selectedTile) == null)
                 {
