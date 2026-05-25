@@ -43,6 +43,10 @@ public class SkillEffect : ScriptableObject
             // TODO: pick skill, add mod for that skill.
             case "RandomSkillMod":
                 break;
+            // Normally permanent mods will be granted outside of battle.
+            case "SkillMod":
+                target.AddActiveMod(effectSpecifics);
+                break;
             case "Status":
                 int duration = level;
                 if (level <= baseStatusDuration && level >= 0) { duration = baseStatusDuration; }

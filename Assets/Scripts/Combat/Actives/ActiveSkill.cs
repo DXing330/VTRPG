@@ -64,6 +64,13 @@ public class ActiveSkill : SkillEffect
             ApplyActorMods(actor);
         }
     }
+    public virtual void LoadSkillFromStringWithMod(string skillData, TacticActor actor, string newMod)
+    {
+        LoadSkillFromString(skillData, actor);
+        string newModString = skillName + activeSkillDelimiter + newMod;
+        string[] modDetails = newModString.Split(activeSkillDelimiter);
+        ApplySingleActorMod(actor, modDetails);
+    }
     public virtual void ResetSkillInfo()
     {
         skillName = "";
@@ -194,13 +201,13 @@ public class ActiveSkill : SkillEffect
             if (span.Length <= 0){break;}
             span = (int.Parse(span) + 1).ToString();
             break;
-            // Requires a third string for specifics.
+            /* Requires a third string for specifics.
             case "SpanShape":
             if (modDetails.Length > 2){shape = modDetails[2];}
             break;
             case "RangeShape":
             if (modDetails.Length > 2){rangeShape = modDetails[2];}
-            break;
+            break;*/
             // ADD EFFECTS TO THE SKILL.
             case "Swift":
             break;

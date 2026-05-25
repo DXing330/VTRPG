@@ -42,6 +42,7 @@ public class PartyDataManager : MonoBehaviour
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].Load(); }
         SetFullParty();
     }
+    [ContextMenu("Debug New Game")]
     public void NewGame()
     {
         for (int i = 0; i < allParties.Count; i++) { allParties[i].NewGame(); }
@@ -333,6 +334,11 @@ public class PartyDataManager : MonoBehaviour
         TacticActor partyMember = ReturnActorAtIndex(index);
         partyEffects.AffectActor(partyMember, effect, specifics, utility.SafeParseInt(power, 1));
         UpdatePartyMember(partyMember, index);
+    }
+    public void ApplyEffectToPartyID(string effect, string specifics, string power, int partyID)
+    {
+        int index = ReturnIndexAtID(partyID);
+        ApplyEffectToPartyMember(effect, specifics, power, index);
     }
     public void ApplyEffectToParty(string effect, string specifics, string power = "1", bool fullParty = true, int memberIndex = -1)
     {

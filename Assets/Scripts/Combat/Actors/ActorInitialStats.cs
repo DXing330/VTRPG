@@ -500,6 +500,10 @@ public class ActorInitialStats : ActorPassives
             if (activeMods[i].Length <= 1) { activeMods.RemoveAt(i); }
         }
     }
+    public void AddActiveMod(string modDetails)
+    {
+        activeMods.Add(modDetails);
+    }
     public void AddActiveMod(string skillName, string modType, string delimiter = "_")
     {
         if (skillName.Length <= 0 || modType.Length <= 0){return;}

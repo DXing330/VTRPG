@@ -40,6 +40,11 @@ public class ActiveDescriptionViewer : MonoBehaviour
         dummyActive.LoadSkillFromString(activeData.ReturnValue(activeName), actor);
         return ReturnActiveDescription(dummyActive, actor);
     }
+    public string ReturnActiveDescriptionFromNameWithMod(string activeName, TacticActor actor, string modName)
+    {
+        dummyActive.LoadSkillFromStringWithMod(activeData.ReturnValue(activeName), actor, modName);
+        return ReturnActiveDescription(dummyActive, actor);
+    }
     public string ReturnActiveDescription(ActiveSkill activeSkill, TacticActor actor = null, BattleMap map = null)
     {
         string activeDescription = ReturnActiveEffectDescriptions(activeSkill);
@@ -323,13 +328,46 @@ public class ActiveDescriptionViewer : MonoBehaviour
         }
         return power;
     }
-    // Skill Mod Descriptions
+    // TODO Skill Mod Descriptions
     public string GetSkillModDescription(string skillModName)
     {
         switch (skillModName)
         {
             default:
             return "";
+            case "Free":
+            return "Free Use.";
+            case "FirstFree":
+            return "Single Free Use.";
+            case "Instinct":
+            case "DoublePower":
+            return "Double power.";
+            case "Power":
+            return "Increase power.";
+            case "Energy":
+            return "Decrease energy cost.";
+            case "EnergyUp":
+            return "Increase energy cost.";
+            case "Action":
+            case "Actions":
+            return "Decrease action cost.";
+            case "ActionsUp":
+            return "Increase action cost.";
+            case "Range":
+            return "Increase target range.";
+            case "RangeDown":
+            return "Decrease target range.";
+            case "Span":
+            return "Increase target span (if span > 0).";
+            // ADD EFFECTS TO THE SKILL.
+            case "Swift":
+            return "Targeted actor(s) gain 2 temporary movement";
+            case "Momentum":
+            return "Targeted actor(s) gain 1 base attack";
+            case "Sharp":
+            return "Targeted actor(s) gain 2 temporary attack";
+            case "Androit":
+            return "Targeted actor(s) gain 6 temporary health";
         }
     }
 }

@@ -988,6 +988,8 @@ public class PassiveDetailViewer : MonoBehaviour
                 return " grant the " + specifics + " modifier to the next skill used";
             case "RandomSkillMod":
                 return " grant the " + specifics + " modifier to a random skill";
+            case "SkillMod":
+                return " gain the " + specifics + " modifier";
         }
         return " increase " + effect + " of " + target + " by " + specifics;
     }
