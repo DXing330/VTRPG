@@ -262,6 +262,11 @@ public class BattleMap : MapManager
             passiveEffect.AffectActor(actor, buildingEffect[4], buildingEffect[5]);
         }
     }
+    public TerrainPassivesList borderEffectData;
+    protected void ApplyBorderMovingEffect(TacticActor actor, int tileNumber)
+    {
+        // Get The Border In The New Tile, Based On The Actor's Incoming Direction.
+    }
     public TerrainPassivesList terrainEffectData;
     public void ApplyTerrainStartEffect(TacticActor actor)
     {
@@ -489,8 +494,7 @@ public class BattleMap : MapManager
         int rTile = mapUtility.PointInDirection(actor.GetLocation(), direction, mapSize);
         if (GetActorOnTile(rTile) == null)
         {
-            actor.SetLocation(rTile);
-            ApplyMovingTileEffect(actor, rTile);
+            battleManager.moveManager.MoveActorToTile(actor, rTile, this);
             UpdateMap();
         }
     }
@@ -1905,17 +1909,17 @@ public class BattleMap : MapManager
             default:
             break;
             case "DirMove":
-            tile = mapUtility.PointInDirection(start, int.Parse(specifics), mapSize);
+            int direction = int.Parse(specifics);
+            tile = mapUtility.PointInDirection(start, direction, mapSize);
             if (tile == start || tile < 0){return;}
             if (GetActorOnTile(tile) != null){return;}
-            actor.SetLocation(tile);
-            ApplyMovingTileEffect(actor, tile);
+            battleManager.moveManager.MoveActorToTile(actor, tile, this);
             break;
         }
         UpdateMap();
     }
 
-    // All moving must pass through here, thus update the combat log here.
+    // All moving must pass through here, thus update the combat log here, the actor's direction should be updated before this is called, based on how the actor moved into the tile.
     public bool ApplyMovingTileEffect(TacticActor actor, int tileNumber, MoveCostManager moveManager = null)
     {
         combatLog.UpdateNewestLog(actor.GetPersonalName() + " moves to " + mapUtility.GetRowColumnCoordinateString(tileNumber, mapSize));
@@ -1926,6 +1930,7 @@ public class BattleMap : MapManager
         }
         ApplyTileMovingEffect(actor, tileNumber);
         ApplyTerrainMovingEffect(actor, tileNumber);
+        ApplyBorderMovingEffect(actor, tileNumber); // Direction Is Stored In The Actor?
         ApplyBuildingMovingEffect(actor, tileNumber);
         ApplyInteractableEffect(actor, tileNumber);
         // Check if the actor moved into any auras.

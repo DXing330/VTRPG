@@ -274,12 +274,13 @@ public class ActiveManager : MonoBehaviour
                     battle.map.UpdateActors();
                 }
                 return;
+            // This Acts Like A Teleport
             case "Move+Tile":
                 // Check if selected tile is free.
                 if (battle.map.GetActorOnTile(targetedTiles[0]) == null)
                 {
                     battle.map.ChangeTerrain(skillUser.GetLocation(), specifics);
-                    skillUser.SetLocation(targetedTiles[0]);
+                    battle.moveManager.MoveActorToTile(skillUser, targetedTiles[0], battle.map);
                     battle.map.ChangeTerrain(skillUser.GetLocation(), specifics);
                     battle.map.UpdateMap();
                 }
@@ -320,12 +321,12 @@ public class ActiveManager : MonoBehaviour
                     // If so then damage both thrown and thrown into.
                     battle.moveManager.DisplaceDamage(skillUser.GetGrappledActor(), Mathf.Max(skillUser.GetWeight(), 1), battle.map, targetTile, true, battle.map.GetActorOnTile(targetTile));
                     // Bounce the thrown onto the nearest empty tile.
-                    skillUser.GetGrappledActor().SetLocation(battle.map.GetClosestEmptyTile(battle.map.GetActorOnTile(targetTile)));
+                    battle.moveManager.MoveActorToTile(skillUser.GetGrappledActor(), battle.map.GetClosestEmptyTile(battle.map.GetActorOnTile(targetTile)), battle.map);
                 }
                 // Else move the thrown into the tile.
                 else
                 {
-                    skillUser.GetGrappledActor().SetLocation(targetTile);
+                    battle.moveManager.MoveActorToTile(skillUser.GetGrappledActor(), targetTile, battle.map);
                 }
                 battle.map.UpdateMap();
                 skillUser.ReleaseGrapple();
@@ -339,9 +340,10 @@ public class ActiveManager : MonoBehaviour
             case "SwapRelease":
                 if (skillUser.Grappling())
                 {
-                    int prevLocation = skillUser.GetLocation();
-                    skillUser.SetLocation(skillUser.GetGrappledActor().GetLocation());
-                    skillUser.GetGrappledActor().SetLocation(prevLocation);
+                    int grapplerLocation = skillUser.GetLocation();
+                    int grappledLocation = skillUser.GetGrappledActor().GetLocation();
+                    battle.moveManager.MoveActorToTile(skillUser, grappledLocation, battle.map);
+                    battle.moveManager.MoveActorToTile(skillUser.GetGrappledActor(), grapplerLocation, battle.map);
                     skillUser.ReleaseGrapple();
                     battle.map.UpdateActors();
                 }
@@ -401,8 +403,6 @@ public class ActiveManager : MonoBehaviour
                 battle.moveManager.MoveSkill(skillUser, specifics, power, battle.map);
                 return;
             case "Move":
-                // Change your direction to face the targeted tile.
-                skillUser.SetDirection(map.DirectionBetweenActorAndLocation(skillUser, targetedTiles[0]));
                 battle.moveManager.MoveSkill(skillUser, specifics, power, battle.map);
                 return;
             case "Move+Attack":
@@ -411,9 +411,7 @@ public class ActiveManager : MonoBehaviour
                 targetTile = targetedTiles[0];
                 if (battle.map.GetActorOnTile(targetTile) == null)
                 {
-                    skillUser.SetLocation(targetTile);
-                    // Update the direction to the moving direction.
-                    skillUser.SetDirection(battle.moveManager.DirectionBetweenLocations(prevTile, targetTile));
+                    battle.moveManager.MoveActorToTile(skillUser, targetTile, battle.map);
                     battle.map.UpdateActors();
                 }
                 else { return; }

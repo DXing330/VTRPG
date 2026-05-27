@@ -1294,7 +1294,6 @@ public class BattleManager : MonoBehaviour
         {
             if (targetAttackableTiles.Contains(path[i])){return;}
             int prevLoc = actor.GetLocation();
-            actor.SetDirection(moveManager.DirectionBetweenLocations(prevLoc, path[i]));
             moveManager.MoveActorToTile(actor, path[i], map);
             actor.PayMoveCost(moveManager.MoveCostOfTile(path[i]));
             // A Grappled Actor Can't Start The Drag Chain
@@ -1317,7 +1316,6 @@ public class BattleManager : MonoBehaviour
         for (int i = path.Count - 1; i >= 0; i--)
         {
             int prevLoc = actor.GetLocation();
-            actor.SetDirection(moveManager.DirectionBetweenLocations(prevLoc, path[i]));
             // This can decrease movement based on some tile passives.
             moveManager.MoveActorToTile(actor, path[i], map);
             // Only pay the move cost here if you're moving along a path.
