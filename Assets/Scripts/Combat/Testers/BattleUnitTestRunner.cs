@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using UnityEngine;
 
@@ -19,9 +20,7 @@ public class BattleUnitTestRunner : MonoBehaviour
     public BattleMapTester battleMapTester;
     public MapStateTester mapStateTester;
     public PassiveEffectTester passiveEffectTester;
-    public ActiveTester activeTester;
-    public MiscTester miscTester;
-    public string reportPath = "Assets/output/battle-tests/battle-unit-test-report.txt";
+    public string reportPath = "Assets/output/battle-tests/manual-run/battle-unit-test-report.txt";
     public bool logPassedTests = true;
     private readonly List<TestResult> results = new List<TestResult>();
     private BattleMap map;
@@ -40,9 +39,11 @@ public class BattleUnitTestRunner : MonoBehaviour
             AddCombatTests();
             AddGuardInterceptTests();
             AddMapMovementTests();
+            AddForcedMovementTests();
             AddMapStateInteractionTests();
-            AddSkillPassiveTests();
+            AddPassiveTests();
             AddMapPassiveTests();
+            AddActiveSkillEffectTests();
             AddAiTests();
         });
     }
@@ -75,16 +76,29 @@ public class BattleUnitTestRunner : MonoBehaviour
         RunTests("Map/Movement Unit Tests", delegate
         {
             AddMapMovementTests();
+            AddForcedMovementTests();
             AddMapStateInteractionTests();
         });
     }
 
-    [ContextMenu("Run Skill/Passive Unit Tests")]
-    public void RunSkillPassiveUnitTests()
+    [ContextMenu("Run Forced Movement Unit Tests")]
+    public void RunForcedMovementUnitTests()
     {
-        RunTests("Skill/Passive Unit Tests", delegate
+        RunTests("Forced Movement Unit Tests", AddForcedMovementTests);
+    }
+
+    [ContextMenu("Run Active Skill Effect Unit Tests")]
+    public void RunActiveSkillEffectUnitTests()
+    {
+        RunTests("Active Skill Effect Unit Tests", AddActiveSkillEffectTests);
+    }
+
+    [ContextMenu("Run Passive Unit Tests")]
+    public void RunPassiveUnitTests()
+    {
+        RunTests("Passive Unit Tests", delegate
         {
-            AddSkillPassiveTests();
+            AddPassiveTests();
             AddMapPassiveTests();
         });
     }
@@ -513,6 +527,458 @@ public class BattleUnitTestRunner : MonoBehaviour
         });
     }
 
+    private void AddForcedMovementTests()
+    {
+        // Movement primitive checks run before active-skill effect checks. These prove the lower-level move path and moving-passive hooks work before ActiveManager effects depend on them.
+        RunCase("movement primitive applies terrain moving passive", "Forced Movement", "Inspect MoveCostManager.MoveActorToTile and BattleMap.ApplyTileMovingEffect.", delegate
+        {
+            ConfigureBasicFixture();
+            List<int> line = PrepareLineFromAttacker(1);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            map.ChangeTerrain(line[0], "Water", true);
+            moveManager.GetAllMoveCosts(attackTester.dummyAttacker, map.battlingActors);
+
+            moveManager.MoveActorToTile(attackTester.dummyAttacker, line[0], map);
+            AssertEqual(1, CountStatus(attackTester.dummyAttacker, "Wet"), "Wet status count after moving into Water terrain");
+        });
+
+        RunCase("movement primitive applies terrain-effect moving passive", "Forced Movement", "Inspect MoveCostManager.MoveActorToTile and BattleMap.ApplyTerrainMovingEffect.", delegate
+        {
+            ConfigureBasicFixture(attackerHealth: 100);
+            List<int> line = PrepareLineFromAttacker(1);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            map.ChangeTEffect(line[0], "Fire", true);
+            moveManager.GetAllMoveCosts(attackTester.dummyAttacker, map.battlingActors);
+            int before = attackTester.dummyAttacker.GetHealth();
+
+            moveManager.MoveActorToTile(attackTester.dummyAttacker, line[0], map);
+            AssertLess(attackTester.dummyAttacker.GetHealth(), before, "attacker HP after moving into Fire terrain effect");
+        });
+
+        RunCase("movement primitive applies actor-owned moving map passive", "Forced Movement", "Inspect MoveCostManager.ApplyMovePassiveEffects actor moving-passive Map branch.", delegate
+        {
+            ConfigureBasicFixture();
+            List<int> line = PrepareLineFromAttacker(1);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            attackTester.dummyAttacker.AddPassiveSkill("Path of Fire", "1");
+            attackTester.passiveOrganizer.OrganizeActorPassives(attackTester.dummyAttacker);
+            moveManager.GetAllMoveCosts(attackTester.dummyAttacker, map.battlingActors);
+
+            moveManager.MoveActorToTile(attackTester.dummyAttacker, line[0], map);
+            AssertEqual("Fire", map.terrainEffectTiles[line[0]], "terrain effect after Path of Fire moving passive", ForcedMovementDebugContext(line));
+        });
+    }
+
+    private void AddActiveSkillEffectTests()
+    {
+        // Active-skill effect tests run through ActiveManager so each case hits the same effect dispatch used by real configured or inline active skills.
+        RunCase("configured active cannot fire without enough actions", "Active Skill Effects", "Inspect ActiveManager.CanPaySkillCost action-cost check.", delegate
+        {
+            ConfigureBasicFixture(attackerAttack: 35, attackerHitChance: 999, attackerCritChance: 0, defenderDefense: 0, defenderDodge: 0);
+            if (!PrepareConfiguredActiveOnDefender("configured active cannot fire without enough actions"))
+                return;
+
+            int beforeHealth = attackTester.dummyDefender.GetHealth();
+            int beforeEnergy = attackTester.dummyAttacker.GetEnergy();
+            attackTester.dummyAttacker.SetActions(0);
+            bool activated = activeManager.ActivateSkill(battleManager);
+            AssertTrue(!activated, "active activation without actions", "false", activated.ToString());
+            AssertEqual(beforeHealth, attackTester.dummyDefender.GetHealth(), "defender HP after failed action-cost activation");
+            AssertEqual(beforeEnergy, attackTester.dummyAttacker.GetEnergy(), "attacker energy after failed action-cost activation");
+            AssertEqual(0, attackTester.dummyAttacker.GetActions(), "attacker actions after failed action-cost activation");
+        });
+
+        RunCase("configured active cannot fire without enough energy", "Active Skill Effects", "Inspect ActiveManager.CanPaySkillCost energy-cost check.", delegate
+        {
+            ConfigureBasicFixture(attackerAttack: 35, attackerHitChance: 999, attackerCritChance: 0, defenderDefense: 0, defenderDodge: 0);
+            if (!PrepareConfiguredActiveOnDefender("configured active cannot fire without enough energy"))
+                return;
+
+            int beforeHealth = attackTester.dummyDefender.GetHealth();
+            int beforeActions = attackTester.dummyAttacker.GetActions();
+            attackTester.dummyAttacker.LoseEnergy(999);
+            bool activated = activeManager.ActivateSkill(battleManager);
+            AssertTrue(!activated, "active activation without energy", "false", activated.ToString());
+            AssertEqual(beforeHealth, attackTester.dummyDefender.GetHealth(), "defender HP after failed energy-cost activation");
+            AssertEqual(beforeActions, attackTester.dummyAttacker.GetActions(), "attacker actions after failed energy-cost activation");
+            AssertEqual(0, attackTester.dummyAttacker.GetEnergy(), "attacker energy after failed energy-cost activation");
+        });
+
+        RunCase("configured active targetable tiles exclude a computed invalid tile", "Active Skill Effects", "Inspect ActiveManager.GetTargetableTiles range filtering.", delegate
+        {
+            ConfigureBasicFixture(attackerAttack: 35, attackerRange: 1);
+            string skillName = attackTester.activeName;
+            if (!activeManager.SkillExists(skillName))
+            {
+                RecordSkip("configured active targetable tiles exclude a computed invalid tile", "Active Skill Effects", "Configured active not found: " + skillName, "ActiveManager");
+                return;
+            }
+
+            activeManager.SetSkillFromName(skillName, attackTester.dummyAttacker);
+            moveManager.UpdateInfoFromBattleMap(map);
+            List<int> targetable = activeManager.GetTargetableTiles(attackTester.dummyAttacker.GetLocation(), moveManager.actorPathfinder);
+            int invalidTile = FindTileOutsideList(targetable);
+            AssertTrue(!targetable.Contains(invalidTile), "targetable tiles for computed invalid tile " + invalidTile, "does not contain " + invalidTile, ListToString(targetable));
+        });
+
+        RunCase("configured active targets exactly one actor in controlled fixture", "Active Skill Effects", "Inspect ActiveManager.GetTargetedTiles and BattleMap.GetActorsOnTiles.", delegate
+        {
+            ConfigureBasicFixture();
+            if (!PrepareConfiguredActiveOnDefender("configured active targets exactly one actor in controlled fixture"))
+                return;
+
+            List<int> targetedTiles = activeManager.ReturnTargetedTiles();
+            List<TacticActor> targets = map.GetActorsOnTiles(targetedTiles);
+            AssertEqual(1, targets.Count, "target actor count for configured active");
+            AssertEqual(attackTester.dummyDefender, targets[0], "target actor for configured active");
+        });
+
+        RunCase("configured active exposes targetable tiles", "Active Skill Effects", "Inspect ActiveManager.SetSkillFromName and targetable tile generation.", delegate
+        {
+            ConfigureBasicFixture();
+            string skillName = attackTester.activeName;
+            if (!activeManager.SkillExists(skillName))
+            {
+                RecordSkip("configured active exposes targetable tiles", "Active Skill Effects", "Configured active not found: " + skillName, "ActiveManager");
+                return;
+            }
+
+            activeManager.SetSkillFromName(skillName, attackTester.dummyAttacker);
+            moveManager.UpdateInfoFromBattleMap(map);
+            List<int> targetable = activeManager.GetTargetableTiles(attackTester.dummyAttacker.GetLocation(), moveManager.actorPathfinder);
+            AssertTrue(targetable.Count > 0, "targetable tile count for " + skillName, "> 0", targetable.Count.ToString());
+        });
+
+        RunCase("configured active spends actions or applies damage once", "Active Skill Effects", "Inspect BattleManager.ActivateSkill and ActiveManager.ActivateSkill.", delegate
+        {
+            ConfigureBasicFixture(attackerAttack: 35, attackerHitChance: 999, attackerCritChance: 0, defenderDefense: 0, defenderDodge: 0);
+            string skillName = attackTester.activeName;
+            if (!activeManager.SkillExists(skillName))
+            {
+                RecordSkip("configured active spends actions or applies damage once", "Active Skill Effects", "Configured active not found: " + skillName, "ActiveManager");
+                return;
+            }
+
+            activeManager.SetSkillFromName(skillName, attackTester.dummyAttacker);
+            moveManager.UpdateInfoFromBattleMap(map);
+            activeManager.GetTargetedTiles(attackTester.dummyDefender.GetLocation(), moveManager.actorPathfinder);
+            int beforeHealth = attackTester.dummyDefender.GetHealth();
+            int beforeActions = attackTester.dummyAttacker.GetActions();
+            UnityEngine.Random.InitState(5100);
+            battleManager.ActivateSkill(skillName, attackTester.dummyAttacker);
+            bool changed = attackTester.dummyDefender.GetHealth() < beforeHealth || attackTester.dummyAttacker.GetActions() < beforeActions;
+            AssertTrue(changed, "active result for " + skillName, "damage or action spend", "HP " + beforeHealth + " -> " + attackTester.dummyDefender.GetHealth() + ", actions " + beforeActions + " -> " + attackTester.dummyAttacker.GetActions());
+        });
+
+        RunCase("push displace active moves target one tile away", "Active Skill Effects", "Inspect ActiveManager Displace effect and MoveCostManager.DisplaceSkill Push branch.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareLineFromAttacker(2);
+            PlaceFixtureActor(attackTester.dummyDefender, line[0]);
+            List<int> pushPath = DisplacementPath(attackTester.dummyAttacker, attackTester.dummyDefender, "Push", 1);
+            ResetMovementTiles(pushPath);
+            MoveGuardAwayFromTiles(line.Concat(pushPath).ToList());
+
+            bool activated = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Push", "Displace", "Push", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(activated, "push active activation", "true", activated.ToString());
+            AssertEqual(pushPath[0], attackTester.dummyDefender.GetLocation(), "defender location after push", ForcedMovementDebugContext(pushPath));
+        });
+
+        RunCase("pull displace active moves target closer", "Active Skill Effects", "Inspect ActiveManager Displace effect and MoveCostManager.DisplaceSkill Pull branch.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareLineFromAttacker(2);
+            PlaceFixtureActor(attackTester.dummyDefender, line[1]);
+            List<int> pullPath = DisplacementPath(attackTester.dummyAttacker, attackTester.dummyDefender, "Pull", 1);
+            ResetMovementTiles(pullPath);
+            MoveGuardAwayFromTiles(line.Concat(pullPath).ToList());
+
+            bool activated = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Pull", "Displace", "Pull", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(activated, "pull active activation", "true", activated.ToString());
+            AssertEqual(pullPath[0], attackTester.dummyDefender.GetLocation(), "defender location after pull", ForcedMovementDebugContext(pullPath));
+        });
+
+        RunCase("push collision with actor damages both and chain-displaces blocker", "Active Skill Effects", "Inspect MoveCostManager.DisplaceActor actor-collision branch.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> pushPath = PrepareDisplacementFixture("Push", 2);
+            int defenderStart = attackTester.dummyDefender.GetLocation();
+            PlaceFixtureActor(attackTester.dummyGuard, pushPath[0]);
+            int defenderBefore = attackTester.dummyDefender.GetHealth();
+            int guardBefore = attackTester.dummyGuard.GetHealth();
+
+            bool activated = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Collision Push", "Displace", "Push", 2, attackTester.dummyDefender.GetLocation());
+            AssertTrue(activated, "collision push active activation", "true", activated.ToString());
+            AssertEqual(defenderStart, attackTester.dummyDefender.GetLocation(), "defender remains at collision source", ForcedMovementDebugContext(pushPath));
+            AssertEqual(pushPath[1], attackTester.dummyGuard.GetLocation(), "blocking actor location after chain displacement", ForcedMovementDebugContext(pushPath));
+            AssertLess(attackTester.dummyDefender.GetHealth(), defenderBefore, "defender HP after actor collision", ForcedMovementDebugContext(pushPath));
+            AssertLess(attackTester.dummyGuard.GetHealth(), guardBefore, "blocking actor HP after actor collision", ForcedMovementDebugContext(pushPath));
+        });
+
+        RunCase("push into blocking building deals collision damage", "Active Skill Effects", "Inspect MoveCostManager.DisplaceActor building-collision branch.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            string blockingBuilding = FirstBlockingBuildingName();
+            if (blockingBuilding == "")
+            {
+                RecordSkip("push into blocking building deals collision damage", "Active Skill Effects", "No configured building name appears in MoveCostManager.stopDisplacement.", "MoveCostManager");
+                return;
+            }
+
+            List<int> line = PrepareLineFromAttacker(2);
+            PlaceFixtureActor(attackTester.dummyDefender, line[0]);
+            List<int> pushPath = DisplacementPath(attackTester.dummyAttacker, attackTester.dummyDefender, "Push", 1);
+            ResetMovementTiles(pushPath);
+            MoveGuardAwayFromTiles(line.Concat(pushPath).ToList());
+            map.AddBuilding(blockingBuilding, pushPath[0]);
+            int defenderBefore = attackTester.dummyDefender.GetHealth();
+
+            bool activated = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Building Push", "Displace", "Push", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(activated, "building push active activation", "true", activated.ToString());
+            AssertEqual(line[0], attackTester.dummyDefender.GetLocation(), "defender remains before blocking building", ForcedMovementDebugContext(pushPath));
+            AssertLess(attackTester.dummyDefender.GetHealth(), defenderBefore, "defender HP after building collision", ForcedMovementDebugContext(pushPath));
+        });
+
+        RunCase("push down elevation applies falling damage", "Active Skill Effects", "Inspect MoveCostManager.DisplaceActor falling-damage branch.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareLineFromAttacker(2);
+            PlaceFixtureActor(attackTester.dummyDefender, line[0]);
+            List<int> pushPath = DisplacementPath(attackTester.dummyAttacker, attackTester.dummyDefender, "Push", 1);
+            ResetMovementTiles(pushPath);
+            MoveGuardAwayFromTiles(line.Concat(pushPath).ToList());
+            map.ChangeTile(line[0], "Elevation", "2");
+            map.ChangeTile(pushPath[0], "Elevation", "0");
+            int defenderBefore = attackTester.dummyDefender.GetHealth();
+
+            bool activated = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Falling Push", "Displace", "Push", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(activated, "falling push active activation", "true", activated.ToString());
+            AssertEqual(pushPath[0], attackTester.dummyDefender.GetLocation(), "defender location after falling push", ForcedMovementDebugContext(pushPath));
+            AssertLess(attackTester.dummyDefender.GetHealth(), defenderBefore, "defender HP after falling push", ForcedMovementDebugContext(pushPath));
+        });
+
+        RunCase("push from higher elevation loses force", "Active Skill Effects", "Inspect MoveCostManager.DisplaceSkill Push relativeForce elevation modifier.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareLineFromAttacker(2);
+            PlaceFixtureActor(attackTester.dummyDefender, line[0]);
+            List<int> pushPath = DisplacementPath(attackTester.dummyAttacker, attackTester.dummyDefender, "Push", 1);
+            ResetMovementTiles(pushPath);
+            MoveGuardAwayFromTiles(line.Concat(pushPath).ToList());
+            map.ChangeTile(attackTester.dummyAttacker.GetLocation(), "Elevation", "1");
+            map.ChangeTile(line[0], "Elevation", "0");
+            map.ChangeTile(pushPath[0], "Elevation", "0");
+
+            bool activated = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test High Push", "Displace", "Push", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(activated, "higher-elevation push active activation", "true", activated.ToString());
+            AssertEqual(line[0], attackTester.dummyDefender.GetLocation(), "defender location after higher-elevation push", ForcedMovementDebugContext(pushPath));
+        });
+
+        RunCase("push from lower elevation gains force", "Active Skill Effects", "Inspect MoveCostManager.DisplaceSkill Push relativeForce elevation modifier.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> pushPath = PrepareDisplacementFixture("Push", 2);
+            int defenderStart = attackTester.dummyDefender.GetLocation();
+            MoveGuardAwayFromTiles(DisplacementFixtureTiles(pushPath));
+            map.ChangeTile(attackTester.dummyAttacker.GetLocation(), "Elevation", "0");
+            map.ChangeTile(defenderStart, "Elevation", "1");
+            map.ChangeTile(pushPath[0], "Elevation", "1");
+            map.ChangeTile(pushPath[1], "Elevation", "1");
+
+            bool activated = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Low Push", "Displace", "Push", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(activated, "lower-elevation push active activation", "true", activated.ToString());
+            AssertEqual(pushPath[1], attackTester.dummyDefender.GetLocation(), "defender location after lower-elevation push", ForcedMovementDebugContext(pushPath));
+        });
+
+        RunCase("pull from higher elevation gains force", "Active Skill Effects", "Inspect MoveCostManager.DisplaceSkill Pull relativeForce elevation modifier.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareStraightPathFromAttacker(3);
+            PlaceFixtureActor(attackTester.dummyDefender, line[2]);
+            List<int> pullPath = DisplacementPath(attackTester.dummyAttacker, attackTester.dummyDefender, "Pull", 2);
+            ResetMovementTiles(pullPath);
+            MoveGuardAwayFromTiles(line.Concat(pullPath).ToList());
+            map.ChangeTile(attackTester.dummyAttacker.GetLocation(), "Elevation", "1");
+            map.ChangeTile(line[2], "Elevation", "0");
+            map.ChangeTile(pullPath[0], "Elevation", "0");
+            map.ChangeTile(pullPath[1], "Elevation", "0");
+
+            bool activated = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test High Pull", "Displace", "Pull", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(activated, "higher-elevation pull active activation", "true", activated.ToString());
+            AssertEqual(pullPath[1], attackTester.dummyDefender.GetLocation(), "defender location after higher-elevation pull", ForcedMovementDebugContext(pullPath));
+        });
+
+        RunCase("pull from lower elevation loses force", "Active Skill Effects", "Inspect MoveCostManager.DisplaceSkill Pull relativeForce elevation modifier.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareLineFromAttacker(2);
+            PlaceFixtureActor(attackTester.dummyDefender, line[1]);
+            List<int> pullPath = DisplacementPath(attackTester.dummyAttacker, attackTester.dummyDefender, "Pull", 1);
+            ResetMovementTiles(pullPath);
+            MoveGuardAwayFromTiles(line.Concat(pullPath).ToList());
+            map.ChangeTile(attackTester.dummyAttacker.GetLocation(), "Elevation", "0");
+            map.ChangeTile(line[1], "Elevation", "1");
+            map.ChangeTile(pullPath[0], "Elevation", "1");
+
+            bool activated = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Low Pull", "Displace", "Pull", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(activated, "lower-elevation pull active activation", "true", activated.ToString());
+            AssertEqual(line[1], attackTester.dummyDefender.GetLocation(), "defender location after lower-elevation pull", ForcedMovementDebugContext(pullPath));
+        });
+
+        RunCase("grapple active links actors and throw grapple moves and releases target", "Active Skill Effects", "Inspect ActiveManager Grapple and ThrowGrappled branches.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareLineFromAttacker(2);
+            PlaceFixtureActor(attackTester.dummyDefender, line[0]);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+
+            bool grappled = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Grapple", "Grapple", "", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(grappled, "grapple active activation", "true", grappled.ToString());
+            AssertEqual(attackTester.dummyDefender, attackTester.dummyAttacker.GetGrappledActor(), "attacker grappled actor after Grapple active");
+            bool thrown = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Throw Grappled", "ThrowGrappled", "", 1, line[1]);
+            AssertTrue(thrown, "throw grapple active activation", "true", thrown.ToString());
+            AssertEqual(line[1], attackTester.dummyDefender.GetLocation(), "grappled actor location after throw", ForcedMovementDebugContext(line));
+            AssertTrue(!attackTester.dummyAttacker.Grappling(), "attacker grapple state after throw", "released", attackTester.dummyAttacker.Grappling().ToString());
+            AssertTrue(!attackTester.dummyDefender.Grappled(), "defender grappled state after throw", "released", attackTester.dummyDefender.Grappled().ToString());
+        });
+
+        RunCase("battle path movement drags grappled target into previous tile", "Active Skill Effects", "Inspect BattleManager.MoveAlongPath and DragGrappledActor.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareLineFromAttacker(1);
+            PlaceFixtureActor(attackTester.dummyDefender, line[0]);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            int attackerStart = attackTester.dummyAttacker.GetLocation();
+            int moveTile = FindAdjacentOpenTile(attackerStart, line);
+            ResetMovementTiles(new List<int> { moveTile });
+
+            bool grappled = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Drag Grapple", "Grapple", "", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(grappled, "drag grapple active activation", "true", grappled.ToString());
+            MoveActorAlongBattlePath(attackTester.dummyAttacker, new List<int> { moveTile });
+            AssertEqual(moveTile, attackTester.dummyAttacker.GetLocation(), "attacker location after grapple drag movement", ForcedMovementDebugContext(line));
+            AssertEqual(attackerStart, attackTester.dummyDefender.GetLocation(), "grappled defender location after drag", ForcedMovementDebugContext(line));
+        });
+
+        RunCase("swap release swaps grappled actors and releases link", "Active Skill Effects", "Inspect ActiveManager SwapRelease branch.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareLineFromAttacker(1);
+            PlaceFixtureActor(attackTester.dummyDefender, line[0]);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            int attackerStart = attackTester.dummyAttacker.GetLocation();
+            int defenderStart = attackTester.dummyDefender.GetLocation();
+
+            bool grappled = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Swap Release Grapple", "Grapple", "", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(grappled, "swap release grapple setup", "true", grappled.ToString());
+            bool swapped = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Swap Release", "SwapRelease", "", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(swapped, "swap release active activation", "true", swapped.ToString());
+            AssertEqual(defenderStart, attackTester.dummyAttacker.GetLocation(), "attacker location after SwapRelease", ForcedMovementDebugContext(line));
+            AssertEqual(attackerStart, attackTester.dummyDefender.GetLocation(), "defender location after SwapRelease", ForcedMovementDebugContext(line));
+            AssertEqual(attackTester.dummyAttacker, map.GetActorOnTile(defenderStart), "attacker occupancy after SwapRelease");
+            AssertEqual(attackTester.dummyDefender, map.GetActorOnTile(attackerStart), "defender occupancy after SwapRelease");
+            AssertTrue(!attackTester.dummyAttacker.Grappling(), "attacker grapple state after SwapRelease", "released", attackTester.dummyAttacker.Grappling().ToString());
+            AssertTrue(!attackTester.dummyDefender.Grappled(), "defender grappled state after SwapRelease", "released", attackTester.dummyDefender.Grappled().ToString());
+        });
+
+        RunCase("ingest damages grappled target through active effect", "Active Skill Effects", "Inspect ActiveManager Ingest branch.", delegate
+        {
+            ConfigureBasicFixture(attackerHealth: 60, defenderHealth: 100, defenderDefense: 0);
+            List<int> line = PrepareLineFromAttacker(1);
+            PlaceFixtureActor(attackTester.dummyDefender, line[0]);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            bool grappled = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Ingest Grapple", "Grapple", "", 1, attackTester.dummyDefender.GetLocation());
+            int defenderBefore = attackTester.dummyDefender.GetHealth();
+
+            bool ingested = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Ingest", "Ingest", "", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(grappled, "ingest grapple setup", "true", grappled.ToString());
+            AssertTrue(ingested, "ingest active activation", "true", ingested.ToString());
+            AssertLess(attackTester.dummyDefender.GetHealth(), defenderBefore, "defender HP after Ingest", ForcedMovementDebugContext(line));
+        });
+
+        RunCase("swap location exchanges actors without path movement", "Active Skill Effects", "Inspect ActiveManager Swap Location and BattleMap.SwitchActorLocations.", delegate
+        {
+            ConfigureBasicFixture(defenderHealth: 100);
+            List<int> line = PrepareLineFromAttacker(1);
+            PlaceFixtureActor(attackTester.dummyDefender, line[0]);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            int attackerStart = attackTester.dummyAttacker.GetLocation();
+            int defenderStart = attackTester.dummyDefender.GetLocation();
+            int attackerMovementBefore = attackTester.dummyAttacker.GetMovement();
+
+            bool swapped = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Swap Location", "Swap", "Location", 1, attackTester.dummyDefender.GetLocation());
+            AssertTrue(swapped, "swap location active activation", "true", swapped.ToString());
+            AssertEqual(defenderStart, attackTester.dummyAttacker.GetLocation(), "attacker location after Swap Location", ForcedMovementDebugContext(line));
+            AssertEqual(attackerStart, attackTester.dummyDefender.GetLocation(), "defender location after Swap Location", ForcedMovementDebugContext(line));
+            AssertEqual(attackTester.dummyAttacker, map.GetActorOnTile(defenderStart), "attacker occupancy after Swap Location");
+            AssertEqual(attackTester.dummyDefender, map.GetActorOnTile(attackerStart), "defender occupancy after Swap Location");
+            AssertEqual(attackerMovementBefore, attackTester.dummyAttacker.GetMovement(), "attacker movement after Swap Location");
+        });
+
+        RunCase("swap terrain effect exchanges selected and user tiles", "Active Skill Effects", "Inspect ActiveManager Swap TerrainEffect and BattleMap.SwitchTerrainEffect.", delegate
+        {
+            ConfigureBasicFixture();
+            List<int> line = PrepareLineFromAttacker(1);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            map.ChangeTEffect(attackTester.dummyAttacker.GetLocation(), "Fire", true);
+            map.ChangeTEffect(line[0], "Water", true);
+
+            bool swapped = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Swap TerrainEffect", "Swap", "TerrainEffect", 1, line[0]);
+            AssertTrue(swapped, "swap terrain effect active activation", "true", swapped.ToString());
+            AssertEqual("Water", map.terrainEffectTiles[attackTester.dummyAttacker.GetLocation()], "attacker tile terrain effect after swap");
+            AssertEqual("Fire", map.terrainEffectTiles[line[0]], "target tile terrain effect after swap");
+        });
+
+        RunCase("swap tile exchanges selected and user terrain", "Active Skill Effects", "Inspect ActiveManager Swap Tile and BattleMap.SwitchTile.", delegate
+        {
+            ConfigureBasicFixture();
+            List<int> line = PrepareLineFromAttacker(1);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            map.ChangeTerrain(attackTester.dummyAttacker.GetLocation(), "Plains", true);
+            map.ChangeTerrain(line[0], "Forest", true);
+
+            bool swapped = ActivateInlineSkill(attackTester.dummyAttacker, "Unit Test Swap Tile", "Swap", "Tile", 1, line[0]);
+            AssertTrue(swapped, "swap tile active activation", "true", swapped.ToString());
+            AssertEqual("Forest", map.mapInfo[attackTester.dummyAttacker.GetLocation()], "attacker tile terrain after swap");
+            AssertEqual("Plains", map.mapInfo[line[0]], "target tile terrain after swap");
+        });
+
+        RunCase("charge attack moves in line and hits actor ahead", "Active Skill Effects", "Inspect ActiveManager Charge+Attack branch.", delegate
+        {
+            ConfigureBasicFixture(attackerAttack: 20, attackerHitChance: 999, attackerCritChance: 0, defenderHealth: 100, defenderDefense: 0, defenderDodge: 0);
+            if (!activeManager.SkillExists("Charging Stab"))
+            {
+                RecordSkip("charge attack moves in line and hits actor ahead", "Active Skill Effects", "Configured active not found: Charging Stab", "ActiveManager");
+                return;
+            }
+            List<int> line = PrepareStraightPathFromAttacker(3);
+            PlaceFixtureActor(attackTester.dummyDefender, line[2]);
+            MoveGuardAwayFromTiles(line);
+            ResetMovementTiles(line);
+            int defenderBefore = attackTester.dummyDefender.GetHealth();
+
+            UnityEngine.Random.InitState(7200);
+            activeManager.SetSkillFromName("Charging Stab", attackTester.dummyAttacker);
+            moveManager.UpdateInfoFromBattleMap(map);
+            moveManager.GetAllMoveCosts(attackTester.dummyAttacker, map.battlingActors);
+            activeManager.GetTargetableTiles(attackTester.dummyAttacker.GetLocation(), moveManager.actorPathfinder);
+            activeManager.GetTargetedTiles(attackTester.dummyDefender.GetLocation(), moveManager.actorPathfinder);
+            bool charged = activeManager.ActivateSkill(battleManager);
+            AssertTrue(charged, "charge attack active activation", "true", charged.ToString());
+            AssertEqual(line[1], attackTester.dummyAttacker.GetLocation(), "charger stops before occupied tile", ForcedMovementDebugContext(line));
+            AssertLess(attackTester.dummyDefender.GetHealth(), defenderBefore, "defender HP after Charge+Attack", ForcedMovementDebugContext(line));
+        });
+    }
+
     private void AddMapStateInteractionTests()
     {
         // These protect map-state mutation rules. They do not run a battle;
@@ -594,108 +1060,10 @@ public class BattleUnitTestRunner : MonoBehaviour
         });
     }
 
-    private void AddSkillPassiveTests()
+    private void AddPassiveTests()
     {
-        // These cover the active-skill/passive timing surface at a smoke-test level. More specific passive behavior lives in AddMapPassiveTests().
-        RunCase("configured active cannot fire without enough actions", "Skills/Passives", "Inspect ActiveManager.CanPaySkillCost action-cost check.", delegate
-        {
-            ConfigureBasicFixture(attackerAttack: 35, attackerHitChance: 999, attackerCritChance: 0, defenderDefense: 0, defenderDodge: 0);
-            if (!PrepareConfiguredActiveOnDefender("configured active cannot fire without enough actions"))
-                return;
-
-            int beforeHealth = attackTester.dummyDefender.GetHealth();
-            int beforeEnergy = attackTester.dummyAttacker.GetEnergy();
-            attackTester.dummyAttacker.SetActions(0);
-            bool activated = activeManager.ActivateSkill(battleManager);
-            AssertTrue(!activated, "active activation without actions", "false", activated.ToString());
-            AssertEqual(beforeHealth, attackTester.dummyDefender.GetHealth(), "defender HP after failed action-cost activation");
-            AssertEqual(beforeEnergy, attackTester.dummyAttacker.GetEnergy(), "attacker energy after failed action-cost activation");
-            AssertEqual(0, attackTester.dummyAttacker.GetActions(), "attacker actions after failed action-cost activation");
-        });
-
-        RunCase("configured active cannot fire without enough energy", "Skills/Passives", "Inspect ActiveManager.CanPaySkillCost energy-cost check.", delegate
-        {
-            ConfigureBasicFixture(attackerAttack: 35, attackerHitChance: 999, attackerCritChance: 0, defenderDefense: 0, defenderDodge: 0);
-            if (!PrepareConfiguredActiveOnDefender("configured active cannot fire without enough energy"))
-                return;
-
-            int beforeHealth = attackTester.dummyDefender.GetHealth();
-            int beforeActions = attackTester.dummyAttacker.GetActions();
-            attackTester.dummyAttacker.LoseEnergy(999);
-            bool activated = activeManager.ActivateSkill(battleManager);
-            AssertTrue(!activated, "active activation without energy", "false", activated.ToString());
-            AssertEqual(beforeHealth, attackTester.dummyDefender.GetHealth(), "defender HP after failed energy-cost activation");
-            AssertEqual(beforeActions, attackTester.dummyAttacker.GetActions(), "attacker actions after failed energy-cost activation");
-            AssertEqual(0, attackTester.dummyAttacker.GetEnergy(), "attacker energy after failed energy-cost activation");
-        });
-
-        RunCase("configured active targetable tiles exclude a computed invalid tile", "Skills/Passives", "Inspect ActiveManager.GetTargetableTiles range filtering.", delegate
-        {
-            ConfigureBasicFixture(attackerAttack: 35, attackerRange: 1);
-            string skillName = attackTester.activeName;
-            if (!activeManager.SkillExists(skillName))
-            {
-                RecordSkip("configured active targetable tiles exclude a computed invalid tile", "Skills/Passives", "Configured active not found: " + skillName, "ActiveManager");
-                return;
-            }
-
-            activeManager.SetSkillFromName(skillName, attackTester.dummyAttacker);
-            moveManager.UpdateInfoFromBattleMap(map);
-            List<int> targetable = activeManager.GetTargetableTiles(attackTester.dummyAttacker.GetLocation(), moveManager.actorPathfinder);
-            int invalidTile = FindTileOutsideList(targetable);
-            AssertTrue(!targetable.Contains(invalidTile), "targetable tiles for computed invalid tile " + invalidTile, "does not contain " + invalidTile, ListToString(targetable));
-        });
-
-        RunCase("configured active targets exactly one actor in controlled fixture", "Skills/Passives", "Inspect ActiveManager.GetTargetedTiles and BattleMap.GetActorsOnTiles.", delegate
-        {
-            ConfigureBasicFixture();
-            if (!PrepareConfiguredActiveOnDefender("configured active targets exactly one actor in controlled fixture"))
-                return;
-
-            List<int> targetedTiles = activeManager.ReturnTargetedTiles();
-            List<TacticActor> targets = map.GetActorsOnTiles(targetedTiles);
-            AssertEqual(1, targets.Count, "target actor count for configured active");
-            AssertEqual(attackTester.dummyDefender, targets[0], "target actor for configured active");
-        });
-
-        RunCase("configured active exposes targetable tiles", "Skills/Passives", "Inspect ActiveManager.SetSkillFromName and targetable tile generation.", delegate
-        {
-            ConfigureBasicFixture();
-            string skillName = attackTester.activeName;
-            if (!activeManager.SkillExists(skillName))
-            {
-                RecordSkip("configured active exposes targetable tiles", "Skills/Passives", "Configured active not found: " + skillName, "ActiveManager");
-                return;
-            }
-
-            activeManager.SetSkillFromName(skillName, attackTester.dummyAttacker);
-            moveManager.UpdateInfoFromBattleMap(map);
-            List<int> targetable = activeManager.GetTargetableTiles(attackTester.dummyAttacker.GetLocation(), moveManager.actorPathfinder);
-            AssertTrue(targetable.Count > 0, "targetable tile count for " + skillName, "> 0", targetable.Count.ToString());
-        });
-
-        RunCase("configured active spends actions or applies damage once", "Skills/Passives", "Inspect BattleManager.ActivateSkill and ActiveManager.ActivateSkill.", delegate
-        {
-            ConfigureBasicFixture(attackerAttack: 35, attackerHitChance: 999, attackerCritChance: 0, defenderDefense: 0, defenderDodge: 0);
-            string skillName = attackTester.activeName;
-            if (!activeManager.SkillExists(skillName))
-            {
-                RecordSkip("configured active spends actions or applies damage once", "Skills/Passives", "Configured active not found: " + skillName, "ActiveManager");
-                return;
-            }
-
-            activeManager.SetSkillFromName(skillName, attackTester.dummyAttacker);
-            moveManager.UpdateInfoFromBattleMap(map);
-            activeManager.GetTargetedTiles(attackTester.dummyDefender.GetLocation(), moveManager.actorPathfinder);
-            int beforeHealth = attackTester.dummyDefender.GetHealth();
-            int beforeActions = attackTester.dummyAttacker.GetActions();
-            UnityEngine.Random.InitState(5100);
-            battleManager.ActivateSkill(skillName, attackTester.dummyAttacker);
-            bool changed = attackTester.dummyDefender.GetHealth() < beforeHealth || attackTester.dummyAttacker.GetActions() < beforeActions;
-            AssertTrue(changed, "active result for " + skillName, "damage or action spend", "HP " + beforeHealth + " -> " + attackTester.dummyDefender.GetHealth() + ", actions " + beforeActions + " -> " + attackTester.dummyAttacker.GetActions());
-        });
-
-        RunCase("end turn preserves temporary status duration until current Unity decrement timing", "Skills/Passives", "Inspect TacticActor.EndTurn and ActorStats.CheckStatusDuration.", delegate
+        // Actor-owned passive/status timing checks that are not tied to map state. Map passives are covered separately in AddMapPassiveTests().
+        RunCase("end turn preserves temporary status duration until current Unity decrement timing", "Passives", "Inspect TacticActor.EndTurn and ActorStats.CheckStatusDuration.", delegate
         {
             ConfigureBasicFixture();
             UnityEngine.Random.InitState(5200);
@@ -739,6 +1107,7 @@ public class BattleUnitTestRunner : MonoBehaviour
         {
             ConfigureBasicFixture();
             map.ChangeTEffect(attackTester.dummyAttacker.GetLocation(), "Fire", true);
+            moveManager.GetAllMoveCosts(attackTester.dummyAttacker, map.battlingActors);
             int before = attackTester.dummyAttacker.GetHealth();
             map.ApplyMovingTileEffect(attackTester.dummyAttacker, attackTester.dummyAttacker.GetLocation(), moveManager);
             AssertLess(attackTester.dummyAttacker.GetHealth(), before, "health after Fire terrain-effect moving passive");
@@ -1032,6 +1401,286 @@ public class BattleUnitTestRunner : MonoBehaviour
         return count;
     }
 
+    private List<int> PrepareLineFromAttacker(int length)
+    {
+        int startTile = FindLineStartTile(length);
+        PlaceFixtureActor(attackTester.dummyAttacker, startTile);
+        List<int> line = FindLineFromTile(startTile, length);
+        List<int> resetTiles = new List<int>(line);
+        resetTiles.Add(startTile);
+        ResetMovementTiles(resetTiles);
+        return line;
+    }
+
+    private int FindLineStartTile(int length)
+    {
+        List<int> candidates = new List<int>();
+        int center = map.mapUtility.DetermineCenterTile(map.mapSize);
+        for (int i = 0; i < map.mapInfo.Count; i++)
+            candidates.Add(i);
+        candidates = candidates.OrderBy(tile => map.mapUtility.DistanceBetweenTiles(center, tile, map.mapSize)).ToList();
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            int tile = candidates[i];
+            if (map.mapUtility.BorderTile(tile, map.mapSize))
+                continue;
+            if (tile == attackTester.dummyDefender.GetLocation() || tile == attackTester.dummyGuard.GetLocation())
+                continue;
+
+            try
+            {
+                if (FindLineFromTile(tile, length).Count == length)
+                    return tile;
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+        throw new InvalidOperationException("Could not find a start tile with a " + length + "-tile line on the loaded TestBattle map.");
+    }
+
+    private List<int> FindLineFromTile(int startTile, int length)
+    {
+        for (int direction = 0; direction < 6; direction++)
+        {
+            List<int> line = new List<int>();
+            int tile = startTile;
+            bool valid = true;
+            for (int i = 0; i < length; i++)
+            {
+                tile = map.mapUtility.PointInDirection(tile, direction, map.mapSize);
+                if (tile < 0 || line.Contains(tile))
+                {
+                    valid = false;
+                    break;
+                }
+                line.Add(tile);
+            }
+            if (valid)
+                return line;
+        }
+        throw new InvalidOperationException("Could not find a " + length + "-tile line from attacker tile " + startTile + " on the loaded TestBattle map.");
+    }
+
+    private List<int> PrepareStraightPathFromAttacker(int length)
+    {
+        int center = map.mapUtility.DetermineCenterTile(map.mapSize);
+        List<int> candidates = new List<int>();
+        for (int i = 0; i < map.mapInfo.Count; i++)
+            candidates.Add(i);
+        candidates = candidates.OrderBy(tile => map.mapUtility.DistanceBetweenTiles(center, tile, map.mapSize)).ToList();
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            int startTile = candidates[i];
+            if (map.mapUtility.BorderTile(startTile, map.mapSize))
+                continue;
+
+            for (int j = 0; j < candidates.Count; j++)
+            {
+                int endTile = candidates[j];
+                if (startTile == endTile)
+                    continue;
+                List<int> path = moveManager.actorPathfinder.StraightPathToTile(startTile, endTile);
+                if (path.Count != length)
+                    continue;
+
+                PlaceFixtureActor(attackTester.dummyAttacker, startTile);
+                ResetMovementTiles(path.Concat(new List<int> { startTile }).ToList());
+                return path;
+            }
+        }
+        throw new InvalidOperationException("Could not find a " + length + "-tile actorPathfinder straight path on the loaded TestBattle map.");
+    }
+
+    private void ResetMovementTiles(List<int> tiles)
+    {
+        for (int i = 0; i < tiles.Count; i++)
+        {
+            map.ChangeTerrain(tiles[i], "Plains", true);
+            map.ChangeTEffect(tiles[i], "", true);
+            map.ChangeTile(tiles[i], "Elevation", "0");
+            map.ChangeTile(tiles[i], "Borders", String.Join("|", EmptyBorders()), true);
+        }
+        moveManager.UpdateInfoFromBattleMap(map);
+        map.UpdateActors();
+    }
+
+    private void PlaceFixtureActor(TacticActor actor, int tile)
+    {
+        actor.SetLocation(tile);
+        map.UpdateActors();
+    }
+
+    private void MoveGuardAwayFromTiles(List<int> blockedTiles)
+    {
+        List<int> blocked = new List<int>(blockedTiles);
+        blocked.Add(attackTester.dummyAttacker.GetLocation());
+        blocked.Add(attackTester.dummyDefender.GetLocation());
+        int guardTile = FindOpenTileExcluding(blocked);
+        PlaceFixtureActor(attackTester.dummyGuard, guardTile);
+    }
+
+    private int FindOpenTileExcluding(List<int> blockedTiles)
+    {
+        for (int i = 0; i < map.mapInfo.Count; i++)
+        {
+            if (blockedTiles.Contains(i))
+                continue;
+            if (map.GetActorOnTile(i) == null)
+                return i;
+        }
+        throw new InvalidOperationException("Could not find an open fixture tile outside [" + string.Join(", ", blockedTiles.Select(value => value.ToString()).ToArray()) + "].");
+    }
+
+    private int FindAdjacentOpenTile(int startTile, List<int> blockedTiles)
+    {
+        List<int> adjacent = map.mapUtility.AdjacentTiles(startTile, map.mapSize);
+        for (int i = 0; i < adjacent.Count; i++)
+        {
+            int tile = adjacent[i];
+            if (blockedTiles.Contains(tile))
+                continue;
+            if (map.GetActorOnTile(tile) == null)
+                return tile;
+        }
+        throw new InvalidOperationException("Could not find an adjacent open tile from " + startTile + ".");
+    }
+
+    private List<int> PrepareDisplacementFixture(string displaceType, int force)
+    {
+        int center = map.mapUtility.DetermineCenterTile(map.mapSize);
+        List<int> candidates = new List<int>();
+        for (int i = 0; i < map.mapInfo.Count; i++)
+            candidates.Add(i);
+        candidates = candidates.OrderBy(tile => map.mapUtility.DistanceBetweenTiles(center, tile, map.mapSize)).ToList();
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            int attackerTile = candidates[i];
+            if (map.mapUtility.BorderTile(attackerTile, map.mapSize))
+                continue;
+
+            List<int> adjacent = map.mapUtility.AdjacentTiles(attackerTile, map.mapSize)
+                .OrderBy(tile => map.mapUtility.DistanceBetweenTiles(center, tile, map.mapSize))
+                .ToList();
+            for (int j = 0; j < adjacent.Count; j++)
+            {
+                int defenderTile = adjacent[j];
+                if (defenderTile < 0 || defenderTile == attackerTile)
+                    continue;
+
+                PlaceFixtureActor(attackTester.dummyAttacker, attackerTile);
+                PlaceFixtureActor(attackTester.dummyDefender, defenderTile);
+                try
+                {
+                    List<int> path = DisplacementPath(attackTester.dummyAttacker, attackTester.dummyDefender, displaceType, force);
+                    if (path.Contains(attackerTile) || path.Contains(defenderTile))
+                        continue;
+                    ResetMovementTiles(DisplacementFixtureTiles(path));
+                    return path;
+                }
+                catch (InvalidOperationException)
+                {
+                }
+            }
+        }
+        throw new InvalidOperationException("Could not find a " + displaceType + " displacement fixture with force " + force + " on the loaded TestBattle map.");
+    }
+
+    private List<int> DisplacementFixtureTiles(List<int> path)
+    {
+        List<int> tiles = new List<int>(path);
+        tiles.Add(attackTester.dummyAttacker.GetLocation());
+        tiles.Add(attackTester.dummyDefender.GetLocation());
+        return tiles.Distinct().ToList();
+    }
+
+    private List<int> DisplacementPath(TacticActor displacer, TacticActor displaced, string displaceType, int force)
+    {
+        int direction = displaceType == "Pull"
+            ? moveManager.DirectionBetweenActors(displaced, displacer)
+            : moveManager.DirectionBetweenActors(displacer, displaced);
+        List<int> path = new List<int>();
+        int tile = displaced.GetLocation();
+        for (int i = 0; i < force; i++)
+        {
+            tile = moveManager.PointInDirection(tile, direction);
+            if (tile < 0)
+                throw new InvalidOperationException("Could not build " + displaceType + " displacement path from tile " + displaced.GetLocation() + " with force " + force + ".");
+            path.Add(tile);
+        }
+        return path;
+    }
+
+    private bool ActivateInlineSkill(TacticActor user, string skillName, string effect, string specifics, int power, int selectedTile)
+    {
+        string delimiter = activeManager.active.activeSkillDelimiter;
+        string skillInfo = string.Join(delimiter, new string[]
+        {
+            skillName,
+            "Support",
+            "0",
+            "0",
+            "4",
+            "Circle",
+            "None",
+            "0",
+            effect,
+            specifics,
+            power.ToString(),
+            "0",
+            "Power"
+        });
+        activeManager.SetSkillUser(user);
+        activeManager.active.LoadSkillFromString(skillInfo, user);
+        moveManager.UpdateInfoFromBattleMap(map);
+        moveManager.GetAllMoveCosts(user, map.battlingActors);
+        activeManager.GetTargetedTiles(selectedTile, moveManager.actorPathfinder);
+        return activeManager.ActivateSkill(battleManager);
+    }
+
+    private void MoveActorAlongBattlePath(TacticActor actor, List<int> path)
+    {
+        moveManager.UpdateInfoFromBattleMap(map);
+        moveManager.GetAllMoveCosts(actor, map.battlingActors);
+        MethodInfo method = typeof(BattleManager).GetMethod("MoveAlongPath", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (method == null)
+            throw new InvalidOperationException("BattleManager.MoveAlongPath could not be found for grapple-drag testing.");
+        method.Invoke(battleManager, new object[] { actor, path });
+    }
+
+    private string FirstBlockingBuildingName()
+    {
+        string[] buildingNames = new string[] { "Road", "Castle", "Tower", "Bridge" };
+        for (int i = 0; i < buildingNames.Length; i++)
+        {
+            if (moveManager.stopDisplacement.Contains(buildingNames[i]))
+                return buildingNames[i];
+        }
+        return "";
+    }
+
+    private string ForcedMovementDebugContext(List<int> line)
+    {
+        return "Forced movement context:"
+            + "\n  line: " + ListToString(line)
+            + "\n  line elevations: " + LineElevations(line)
+            + "\n  attacker elevation: " + map.GetTileElevation(attackTester.dummyAttacker.GetLocation())
+            + "\n  attacker loc/HP: " + attackTester.dummyAttacker.GetLocation() + "/" + attackTester.dummyAttacker.GetHealth()
+            + "\n  defender loc/HP: " + attackTester.dummyDefender.GetLocation() + "/" + attackTester.dummyDefender.GetHealth()
+            + "\n  guard loc/HP: " + attackTester.dummyGuard.GetLocation() + "/" + attackTester.dummyGuard.GetHealth();
+    }
+
+    private string LineElevations(List<int> line)
+    {
+        List<string> elevations = new List<string>();
+        for (int i = 0; i < line.Count; i++)
+            elevations.Add(map.GetTileElevation(line[i]).ToString());
+        return "[" + string.Join(", ", elevations.ToArray()) + "]";
+    }
+
     private void ApplyEffectToActor(TacticActor actor, string effect, string specifics, int level = 1)
     {
         battleManager.effectManager.passive.AffectActor(actor, effect, specifics, level, map.combatLog);
@@ -1042,7 +1691,7 @@ public class BattleUnitTestRunner : MonoBehaviour
         string skillName = attackTester.activeName;
         if (!activeManager.SkillExists(skillName))
         {
-            RecordSkip(testName, "Skills/Passives", "Configured active not found: " + skillName, "ActiveManager");
+            RecordSkip(testName, "Active Skill Effects", "Configured active not found: " + skillName, "ActiveManager");
             return false;
         }
 
@@ -1203,11 +1852,6 @@ public class BattleUnitTestRunner : MonoBehaviour
             mapStateTester = FindLoadedObject<MapStateTester>();
         if (passiveEffectTester == null)
             passiveEffectTester = FindLoadedObject<PassiveEffectTester>();
-        if (activeTester == null)
-            activeTester = FindLoadedObject<ActiveTester>();
-        if (miscTester == null)
-            miscTester = FindLoadedObject<MiscTester>();
-
         EnsureReferences();
     }
 
@@ -1221,7 +1865,6 @@ public class BattleUnitTestRunner : MonoBehaviour
         activeManager = attackTester.activeManager;
         moveManager = battleManager == null ? null : battleManager.moveManager;
         attackManager = attackTester.attackManager;
-
         if (map == null)
             throw new InvalidOperationException("AttackManagerTester.map is not assigned.");
         if (battleManager == null)
@@ -1268,7 +1911,7 @@ public class BattleUnitTestRunner : MonoBehaviour
         }
         catch (Exception exception)
         {
-            TestResult result = new TestResult(testName, subsystem, TestStatus.Fail, "no exception", exception.GetType().Name, likelyNextFile, exception.Message);
+            TestResult result = new TestResult(testName, subsystem, TestStatus.Fail, "no exception", exception.GetType().Name, likelyNextFile, exception.ToString());
             results.Add(result);
             Debug.LogError(FormatFailureForConsole(result));
         }

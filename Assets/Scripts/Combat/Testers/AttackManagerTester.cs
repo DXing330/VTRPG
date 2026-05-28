@@ -204,7 +204,6 @@ public class AttackManagerTester : MonoBehaviour
         battleManager.ActivateSkill(activeName, dummyAttacker);
         map.combatLog.DebugLatestDetailsLog();
     }
-    // TODO
     [ContextMenu("Test Basic Attack Skill")]
     public void TestAA()
     {

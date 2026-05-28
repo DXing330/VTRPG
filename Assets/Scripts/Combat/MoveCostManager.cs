@@ -443,6 +443,7 @@ public class MoveCostManager : MonoBehaviour
     }
 
     // This Ignores Checks For Empty Tiles, Only Call It When You're Sure The Tile Is Empty Or It's Acceptable To Overlap.
+    // ALL Movement Should Go Through Here.
     public void MoveActorToTile(TacticActor actor, int tile, BattleMap map)
     {
         actor.SetDirection(DirectionBetweenLocations(actor.GetLocation(), tile));

@@ -198,7 +198,6 @@ public class Inventory : SavedData
     {
         return assignedActorIDs[index];
     }
-    // TODO Replace This Check To The End Of Battle To Allow Stealing and Recycling Of Items
     public void ActorUsesItem(string itemName, int actorID)
     {
         for (int i = 0; i < items.Count; i++)

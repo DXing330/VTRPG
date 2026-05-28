@@ -235,7 +235,7 @@ public class BattleMap : MapManager
         if (building.Length < 1) { return; }
         string[] buildingEffect = buildingEffectData.ReturnMovingPassive(building).Split("|");
         if (buildingEffect.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, buildingEffect[1], buildingEffect[2], this))
+        if (passiveEffect.CheckMovingCondition(actor, buildingEffect[1], buildingEffect[2], tileNumber, this))
         {
             passiveEffect.AffectActor(actor, buildingEffect[4], buildingEffect[5]);
         }
@@ -266,6 +266,16 @@ public class BattleMap : MapManager
     protected void ApplyBorderMovingEffect(TacticActor actor, int tileNumber)
     {
         // Get The Border In The New Tile, Based On The Actor's Incoming Direction.
+        int incomingDirection = (actor.GetDirection() + 3) % 6;
+        string border = mapTiles[tileNumber].GetBorderInDirection(incomingDirection);
+        if (border.Length < 1) { return; }
+        // Apply The Effect.
+        string[] effectDetails = borderEffectData.ReturnMovingPassive(border).Split("|");
+        if (effectDetails.Length < 6){return;}
+        if (passiveEffect.CheckMovingCondition(actor, effectDetails[1], effectDetails[2], tileNumber, this))
+        {
+            passiveEffect.AffectActor(actor, effectDetails[4], effectDetails[5]);
+        }
     }
     public TerrainPassivesList terrainEffectData;
     public void ApplyTerrainStartEffect(TacticActor actor)
@@ -1919,7 +1929,7 @@ public class BattleMap : MapManager
         UpdateMap();
     }
 
-    // All moving must pass through here, thus update the combat log here, the actor's direction should be updated before this is called, based on how the actor moved into the tile.
+    // ALL Movement Should Go Through Here. Thus update the combat log here, the actor's direction should be updated before this is called, based on how the actor moved into the tile.
     public bool ApplyMovingTileEffect(TacticActor actor, int tileNumber, MoveCostManager moveManager = null)
     {
         combatLog.UpdateNewestLog(actor.GetPersonalName() + " moves to " + mapUtility.GetRowColumnCoordinateString(tileNumber, mapSize));
@@ -1944,13 +1954,13 @@ public class BattleMap : MapManager
         }
         return false;
     }
-
     protected void ApplyTileMovingEffect(TacticActor actor, int tileNumber)
     {
         string tileEffect = ReturnTileMovingPassive(actor);
         if (tileEffect.Length < 1) { return; }
-        List<string> data = tileEffect.Split("|").ToList();
-        if (passiveEffect.CheckStartEndConditions(actor, data[1], data[2], this))
+        string[] data = tileEffect.Split("|");
+        if (data.Length < 6){return;}
+        if (passiveEffect.CheckMovingCondition(actor, data[1], data[2], tileNumber, this))
         {
             passiveEffect.AffectActor(actor, data[4], data[5]);
         }
@@ -1961,11 +1971,11 @@ public class BattleMap : MapManager
         string terrainEffect = terrainEffectTiles[tileNumber];
         if (terrainEffect.Length < 1) { return; }
         // Apply the terrain effect.
-        string[] tMovingEffect = terrainEffectData.ReturnMovingPassive(terrainEffect).Split("|");
-        if (tMovingEffect.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, tMovingEffect[1], tMovingEffect[2], this))
+        string[] data = terrainEffectData.ReturnMovingPassive(terrainEffect).Split("|");
+        if (data.Length < 6){return;}
+        if (passiveEffect.CheckMovingCondition(actor, data[1], data[2], tileNumber, this))
         {
-            passiveEffect.AffectActor(actor, tMovingEffect[4], tMovingEffect[5]);
+            passiveEffect.AffectActor(actor, data[4], data[5]);
         }
     }
 

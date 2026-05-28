@@ -21,6 +21,7 @@ public class StSStore : MonoBehaviour
 
     // --- Relic Data ---
     public StatDatabase relicData;
+    public SkillModSelectMenu skillModSelectMenu;
 
     // --- Skillbook Data ---
     public StatDatabase linkedSkillBookData;
@@ -400,22 +401,14 @@ public class StSStore : MonoBehaviour
             rewardDisplay.SetRewards(relicRewards);
             rewardDisplay.SetRewardSpecifics(relicRewardSpecifics);
             rewardDisplayObject.SetActive(true);
+            rewardDisplay.UpdateRewardDisplay();
         }
         else if (popUpRelic == "AllySkill")
         {
-            // Split by "Count" to determine how many skills are allowed to be selected;
-            // TODO Apply Mods To Ally Skills This Will Be Handled In A Standalone Script, Just Have A GameObject which will be activated and maybe attached the script and set the partydata as well as the count/mod to be applied.
-            // Get what type of mod is too be applied to the skill.
-            // Activate the select list of all the skills and set how many skill are allowed to be selected.
-            // Player can review and select skills up to the count before confirming.
-            // Skills should highlight in the multiselect menu when they are selected.
-            // Clicking a skill should show the actor who owns the skill and the current skill details, with all current actor mods, as well as the potential new skill details with the new mod added.
-            // After done, clicking confirm will close the menu and apply the changes to the actor.
+            (string mod, int modCount) = rewardData.ReturnAllySkillModRewards(relicName);
+            skillModSelectMenu.InitializeMenu(partyData, mod, modCount);
         }
-        //Debug.Log("Relic purchase is not fully implemented yet. Needs a run-owned relic list.");
     }
-    // TODO Add A Function For Apply The Reward Mods To The Selected Skill, Should Be Standalone Since Other Scenes Will Want It?
-    //public void ApplySkillModsToSelectedSkills()
     protected bool TrySpendGold(string priceString)
     {
         int price = 0;

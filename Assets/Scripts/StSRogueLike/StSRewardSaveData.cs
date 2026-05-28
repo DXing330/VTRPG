@@ -346,7 +346,7 @@ public class StSRewardSaveData : SavedData
         for (int i = 0; i < allRelicStats.Count; i++)
         {
             dummyRelic.LoadRelic(allRelicStats[i], relicName);
-            if (dummyRelic.PickUpRelic() && dummyRelic.GetTarget() == "RewardSelect")
+            if (dummyRelic.PickUpRelic() && dummyRelic.GetTarget().Contains("RewardSelect"))
             {
                 break;
             }
@@ -373,5 +373,30 @@ public class StSRewardSaveData : SavedData
             }
         }
         return (rewards, rewardSpecifics);
+    }
+    // ONLY Called If ApplyPickUpEffect Returns AllySkill.
+    public (string, int) ReturnAllySkillModRewards(string relicName)
+    {
+        // Name Of Skill Mod.
+        string mod = "";
+        // Quantity Of Skills That Can Be Modded.
+        int skillCount = 1;
+        List<string> allRelicStats = relicData.ReturnAllValues(relicName);
+        // Only look for pickup values.
+        for (int i = 0; i < allRelicStats.Count; i++)
+        {
+            dummyRelic.LoadRelic(allRelicStats[i], relicName);
+            if (dummyRelic.PickUpRelic() && dummyRelic.GetTarget().Contains("AllySkill"))
+            {
+                break;
+            }
+        }
+        mod = dummyRelic.GetEffectSpecifics();
+        string[] countDetails = dummyRelic.GetTarget().Split("Count");
+        if (countDetails.Length > 1)
+        {
+            skillCount = utility.SafeParseInt(countDetails[1], 1);
+        }
+        return (mod, skillCount);
     }
 }

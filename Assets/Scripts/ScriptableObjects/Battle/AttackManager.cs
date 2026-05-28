@@ -351,7 +351,7 @@ public class AttackManager : ScriptableObject
         // Bonus damage can be calculated here and triggers regardless of hit/miss.
         CheckPassives(attacker.GetAttackingPassives(buffStatusData), attackTarget, attacker, map);
         CheckPassives(attackTarget.GetDefendingPassives(buffStatusData), attackTarget, attacker, map);
-        // TODO Check any buffs/statuses that apply. 
+        // TODO Check any buffs/statuses that apply.
         // Determine if you miss or not.
         if (!RollToHit(attacker, attackTarget, map))
         {

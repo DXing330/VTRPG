@@ -156,7 +156,6 @@ public class SavedCaravan : SavedData
             if (quantity < 1){continue;}
             totalWeight += quantity * ReturnIndividualItemWeight(cargoItems[i]);
         }
-        // TODO Also add all the wagon weights.
         for (int i = 0; i < wagons.Count; i++)
         {
             dummyWagon.LoadAllStats(wagons[i]);

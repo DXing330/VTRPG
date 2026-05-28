@@ -38,6 +38,7 @@ public class SkillModSelectMenu : MonoBehaviour
     public List<string> partySkillNames;
     public List<int> partySkillIDs;
     // UI
+    public GameObject thisObject;
     public List<TMP_Text> allText;
     public TMP_Text actorNameText;
     public TMP_Text modNameText;
@@ -46,6 +47,7 @@ public class SkillModSelectMenu : MonoBehaviour
     public TMP_Text moddedSkillText;
     public void InitializeMenu(PartyDataManager newParty, string newMod, int newCount = 1)
     {
+        thisObject.SetActive(true);
         partyData = newParty;
         SetMod(newMod);
         // Set the amount of skills that can be selected.
@@ -87,7 +89,18 @@ public class SkillModSelectMenu : MonoBehaviour
     }
     public void ConfirmChoices()
     {
-        // TODO Apply The Selected Mods To The Selected Actor Skills.
+        // Copy Is Special.
+        if (mod == "Copy")
+        {
+            // TODO Add A Copy Of The Selected Skills To The Party Books.
+            return;
+        }
+        // RandomBasic Is Special.
+        if (mod == "RandomBasic")
+        {
+            // TODO For Each Selected Skill, Assign An Appropriate Random Mod If Possible.
+            return;
+        }
         List<int> selectedSkillIndices = multiList.GetAllSelected();
         for (int i = 0; i < selectedSkillIndices.Count; i++)
         {

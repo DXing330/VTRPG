@@ -335,6 +335,8 @@ public class ActiveDescriptionViewer : MonoBehaviour
         {
             default:
             return "";
+            case "RandomBasic":
+            return "Randomly Increase Power or Decrease Energy Cost or Decrease Action Cost";
             case "Free":
             return "Free Use.";
             case "FirstFree":
@@ -363,11 +365,14 @@ public class ActiveDescriptionViewer : MonoBehaviour
             case "Swift":
             return "Targeted actor(s) gain 2 temporary movement";
             case "Momentum":
-            return "Targeted actor(s) gain 1 base attack";
+            return "Skill user gains 1 base attack";
             case "Sharp":
-            return "Targeted actor(s) gain 2 temporary attack";
+            return "Targeted actor(s) take 3 earth damage";
             case "Androit":
             return "Targeted actor(s) gain 6 temporary health";
+            // SPECIAL EFFECTS.
+            case "Copy":
+            return "Gain a Skillbook Copy of the Skill";
         }
     }
 }
