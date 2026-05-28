@@ -31,6 +31,7 @@ public class SkillModSelectMenu : MonoBehaviour
     // GAME LOGIC
     public PartyDataManager partyData;
     public Equipment dummyEquip;
+    public ActiveSkill dummyActive;
     public SelectMultiList multiList;
     public ActiveDescriptionViewer activeDetailViewer;
     public PassiveDetailViewer passiveDetailViewer;
@@ -89,27 +90,47 @@ public class SkillModSelectMenu : MonoBehaviour
     }
     public void ConfirmChoices()
     {
+        List<int> selectedSkillIndices = multiList.GetAllSelected();
         // Copy Is Special.
         if (mod == "Copy")
         {
-            // TODO Add A Copy Of The Selected Skills To The Party Books.
+            for (int i = 0; i < selectedSkillIndices.Count; i++)
+            {
+                int selectedIndex = selectedSkillIndices[i];
+                string skillName = partySkillNames[selectedIndex];
+                partyData.spellBook.GainBook("Skill_" + skillName);
+            }
             return;
         }
         // RandomBasic Is Special.
         if (mod == "RandomBasic")
         {
-            // TODO For Each Selected Skill, Assign An Appropriate Random Mod If Possible.
+            // For Each Selected Skill, Assign An Appropriate Random Mod If Possible.
+            for (int i = 0; i < selectedSkillIndices.Count; i++)
+            {
+                int selectedIndex = selectedSkillIndices[i];
+                string skillName = partySkillNames[selectedIndex];
+                int partyID = partySkillIDs[selectedIndex];
+                TacticActor actor = partyData.ReturnActorFromID(partyID);
+                if (actor == null){continue;}
+                dummyActive.LoadSkillFromString(activeDetailViewer.activeData.ReturnValue(skillName), actor);
+                List<string> validMods = dummyActive.ReturnValidBasicMods(actor);
+                if (validMods.Count <= 0){continue;}
+                string randomMod = validMods[Random.Range(0, validMods.Count)];
+                string modDetails = skillName + "_" + randomMod;
+                partyData.ApplyEffectToPartyID("SkillMod", modDetails, "1", partyID);
+            }
             return;
         }
-        List<int> selectedSkillIndices = multiList.GetAllSelected();
         for (int i = 0; i < selectedSkillIndices.Count; i++)
         {
+            int selectedIndex = selectedSkillIndices[i];
             // Get The Skill Name.
-            string skillName = partySkillNames[selectedSkillIndices[i]];
+            string skillName = partySkillNames[selectedIndex];
             // Determine The Skill Mod String.
             string modDetails = skillName + "_" + mod;
             // Get The Party Member.
-            int partyID = partySkillIDs[selectedSkillIndices[i]];
+            int partyID = partySkillIDs[selectedIndex];
             // Apply The Skill Mod To The Party Member.
             partyData.ApplyEffectToPartyID("SkillMod", modDetails, "1", partyID);
         }

@@ -549,6 +549,39 @@ public class ActiveSkill : SkillEffect
         if (index < entries.Count){return entries[index];}
         return defaultValue;
     }
+    public List<string> ReturnValidBasicMods(TacticActor actor)
+    {
+        List<string> validMods = new List<string>();
+        validMods.Add("Energy");
+        validMods.Add("Power");
+        validMods.Add("Actions");
+        for (int i = validMods.Count - 1; i >= 0; i--)
+        {
+            if (!CanApplyMod(actor, validMods[i]))
+            {
+                validMods.RemoveAt(i);
+            }
+        }
+        return validMods;
+    }
+    public bool CanApplyMod(TacticActor actor, string mod)
+    {
+        if (actor == null || mod.Length <= 0){return false;}
+        if (actor.ActiveHasModType(GetSkillName(), mod, activeSkillDelimiter))
+        {
+            return false;
+        }
+        switch (mod)
+        {
+            case "Energy":
+                return CanTrainEnergy(actor);
+            case "Actions":
+                return CanTrainActions(actor);
+            case "Power":
+                return CanTrainPower();
+        }
+        return true;
+    }
     public bool CanTrainPower()
     {
         switch (scalingSpecifics)
@@ -560,6 +593,18 @@ public class ActiveSkill : SkillEffect
             default:
                 return false;
         }
+    }
+    public bool CanTrainEnergy(TacticActor actor = null)
+    {
+        if (GetEnergyCost(actor) <= 0){return false;}
+        int newEnergy = GetEnergyCost(actor) - 1;
+        return !(newEnergy == 0 && GetActionCost(actor) == 0);
+    }
+    public bool CanTrainActions(TacticActor actor = null)
+    {
+        if (GetActionCost(actor) <= 0){return false;}
+        int newActions = GetActionCost(actor) - 1;
+        return !(GetEnergyCost(actor) == 0 && newActions == 0);
     }
     public void AffectActors(List<TacticActor> actors, string effect, string specifics, int power)
     {

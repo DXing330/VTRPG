@@ -71,4 +71,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/RogueLikeScenes/StSRest.unity
     guid: da8ab38738f23c24d94f1639410950ec
+  - enabled: 1
+    path: Assets/Scenes/RogueLikeScenes/StSShop.unity
+    guid: c32773c6648040341b73795df25ad0e5
   m_configObjects: {}

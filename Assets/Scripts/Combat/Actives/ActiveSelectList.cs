@@ -18,15 +18,7 @@ public class ActiveSelectList : SelectList
     // This needs to be updated on a per actor basis.
     public void UpdateUseableItems()
     {
-        useableItems.Clear();
-        string ID = battle.GetTurnActor().GetID().ToString();
-        for (int i = 0; i < inventory.items.Count; i++)
-        {
-            if (inventory.GetAssignedActorIDFromIndex(i) == ID && activeManager.activeData.KeyExists(inventory.items[i]))
-            {
-                useableItems.Add(inventory.items[i]);
-            }
-        }
+        useableItems = battle.GetTurnActor().GetAssignedItems().Distinct().ToList();
     }
     public GameObject mainPanel;
     public List<GameObject> statePanels;
@@ -129,7 +121,7 @@ public class ActiveSelectList : SelectList
         activeManager.ResetTargetedTiles();
         StartingPage();
     }
-
+    // This Is Deprecated, All Items Are Stored As Skills In The TacticActor Directly, But This Is Maintained To Make It Clear Which Skill Are Items.
     public void StartSelectingItems()
     {
         UpdateUseableItems();

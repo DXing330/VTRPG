@@ -140,7 +140,8 @@ public class TacticActor : ActorStats
         RefreshTempActives();
         allActives.AddRange(tempActives);
         allActives.AddRange(equipmentSkills);
-        allActives.AddRange(assignedItems);
+        allActives.AddRange(GetAssignedItems());
+        allActives = allActives.Distinct().ToList();
         return allActives;
     }
     public override List<string> GetSpells()

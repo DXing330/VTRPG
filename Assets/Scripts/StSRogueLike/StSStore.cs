@@ -56,6 +56,7 @@ public class StSStore : MonoBehaviour
     // --- Standalone Testing ---
     public bool generateShopOnStart = false;
     // --- Runtime Sold State ---
+    // Debug mirrors of generated shop lists, for inspector visibility during standalone testing.
     public List<string> bookNames;
     public List<string> relicNames;
     public List<string> itemNames;
