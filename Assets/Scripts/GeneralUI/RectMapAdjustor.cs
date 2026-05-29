@@ -17,7 +17,7 @@ public class RectMapAdjustor : MonoBehaviour
     {
         int tileIndex = 0;
         float xPivot = 0f + (float)offsetWidth/(gridWidth + offsetWidth + offsetWidth - 1);
-        float yPivot = 1f - (float)offsetHeight/(gridHeight + offsetHeight + offsetHeight - 1);;
+        float yPivot = 1f - (float)offsetHeight/(gridHeight + offsetHeight + offsetHeight - 1);
         for (int i = 0; i < gridHeight; i++)
         {
             // Start from the left every iteration.

@@ -12,6 +12,7 @@ public static class BattleSimulationCli
     const string R1SuitePath = "Assets/Scripts/Combat/TestData/BattleTestSuites/RoguelikeFloor1Suite.asset";
     const string GuardianFocusScenarioPath = "Assets/Scripts/Combat/TestData/BattleTestSuites/Scenario_RL_F1_BossSSGuardian.asset";
     const string SimulatorScenePath = "Assets/Scenes/DebugScenes/BattleSimulator.unity";
+    const string TestPartyDataPrefabPath = "Assets/Prefabs/TestPrefabs/TestPartyData.prefab";
 
     [MenuItem("Window/Battle Tests/Run R1 Suite")]
     public static void RunR1SuiteFromWindowMenu()
@@ -29,6 +30,12 @@ public static class BattleSimulationCli
     public static void RunR1EnemyMatrixQuickFromWindowMenu()
     {
         RunEnemyMatchupSuiteAtPath(R1SuitePath, 1, true, false, 3);
+    }
+
+    [MenuItem("Window/Battle Tests/Run R1 Calibration Reference")]
+    public static void RunR1CalibrationReferenceFromWindowMenu()
+    {
+        RunR1CalibrationReferenceSuite();
     }
 
     [MenuItem("Window/Battle Tests/Run Fast Suite")]
@@ -156,6 +163,25 @@ public static class BattleSimulationCli
         RunEnemyMatchupSuiteAtPath(R1SuitePath, 1, true, false, 3);
     }
 
+    public static void RunR1CalibrationReferenceSuite()
+    {
+        RunEnemyMatchupSuiteAtPathForGeneratedIndexes(R1SuitePath, 1, true, false, new List<int>
+        {
+            313,
+            334,
+            49,
+            103,
+            434,
+            382,
+            398,
+            19,
+            231,
+            431,
+            438,
+            324
+        }, 1, "R1 Calibration Reference");
+    }
+
     public static void RunEnemyMatchupSuiteAtPath(string suitePath, int sourceTeam, bool orderedPairs, bool includeMirrorMatches)
     {
         RunEnemyMatchupSuiteAtPath(suitePath, sourceTeam, orderedPairs, includeMirrorMatches, 0);
@@ -189,6 +215,33 @@ public static class BattleSimulationCli
         try
         {
             generatedSuite = BattleMatchupSuiteBuilder.BuildEnemyMatchupSuite(sourceSuite, sourceTeam, orderedPairs, includeMirrorMatches, runCountOverride);
+            RunSuite(generatedSuite);
+        }
+        finally
+        {
+            BattleMatchupSuiteBuilder.DestroyGeneratedSuite(generatedSuite);
+        }
+    }
+
+    static void RunEnemyMatchupSuiteAtPathForGeneratedIndexes(string suitePath, int sourceTeam, bool orderedPairs, bool includeMirrorMatches, List<int> generatedIndexes, int runCountOverride, string suiteName)
+    {
+        AssetDatabase.Refresh();
+        BattleTestSuite suite = AssetDatabase.LoadAssetAtPath<BattleTestSuite>(suitePath);
+        if (suite == null)
+        {
+            Debug.LogError("Could not load battle test suite at " + suitePath + ".");
+            if (Application.isBatchMode)
+            {
+                EditorApplication.Exit(1);
+            }
+            return;
+        }
+
+        BattleTestSuite generatedSuite = null;
+        try
+        {
+            generatedSuite = BattleMatchupSuiteBuilder.BuildEnemyMatchupSuiteForGeneratedIndexes(suite, sourceTeam, orderedPairs, includeMirrorMatches, generatedIndexes, runCountOverride);
+            generatedSuite.suiteName = suiteName;
             RunSuite(generatedSuite);
         }
         finally
@@ -240,6 +293,7 @@ public static class BattleSimulationCli
             for (int runIndex = 0; runIndex < scenario.RunCount(); runIndex++)
             {
                 EditorSceneManager.OpenScene(SimulatorScenePath, OpenSceneMode.Single);
+                PrepareOpenedSimulatorSceneForTests();
                 Debug.Log(scenario);
                 BattleSimulationRunResult run = BattleSimulationRunner.RunScenarioInLoadedScene(scenario, runIndex);
                 suiteResult.AddRun(run);
@@ -249,6 +303,87 @@ public static class BattleSimulationCli
                 }
             }
         }
+    }
+
+    static void PrepareOpenedSimulatorSceneForTests()
+    {
+        BattleManager manager = FindLoadedBattleManager();
+        if (manager == null)
+        {
+            return;
+        }
+
+        if (manager.map != null && manager.map.battleManager == null)
+        {
+            manager.map.battleManager = manager;
+        }
+
+        if (manager.partyData == null)
+        {
+            manager.partyData = FindLoadedPartyData();
+        }
+        if (manager.partyData == null)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TestPartyDataPrefabPath);
+            if (prefab != null)
+            {
+                GameObject partyDataObject = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+                if (partyDataObject == null)
+                {
+                    partyDataObject = UnityEngine.Object.Instantiate(prefab);
+                }
+                partyDataObject.name = "BattleTestPartyData";
+                manager.partyData = partyDataObject.GetComponent<PartyDataManager>();
+            }
+        }
+
+        if (manager.battleEndManager != null && manager.battleEndManager.partyData == null)
+        {
+            manager.battleEndManager.partyData = manager.partyData;
+        }
+
+        EnsureTestInventory(manager.partyData);
+    }
+
+    static BattleManager FindLoadedBattleManager()
+    {
+        BattleManager[] managers = Resources.FindObjectsOfTypeAll<BattleManager>();
+        for (int i = 0; i < managers.Length; i++)
+        {
+            BattleManager manager = managers[i];
+            if (manager != null && manager.gameObject != null && manager.gameObject.scene.IsValid() && manager.gameObject.scene.isLoaded)
+            {
+                return manager;
+            }
+        }
+        return null;
+    }
+
+    static PartyDataManager FindLoadedPartyData()
+    {
+        PartyDataManager[] partyManagers = Resources.FindObjectsOfTypeAll<PartyDataManager>();
+        for (int i = 0; i < partyManagers.Length; i++)
+        {
+            PartyDataManager partyData = partyManagers[i];
+            if (partyData != null && partyData.gameObject != null && partyData.gameObject.scene.IsValid() && partyData.gameObject.scene.isLoaded)
+            {
+                return partyData;
+            }
+        }
+        return null;
+    }
+
+    static void EnsureTestInventory(PartyDataManager partyData)
+    {
+        if (partyData == null || partyData.inventory != null)
+        {
+            return;
+        }
+
+        Inventory inventory = ScriptableObject.CreateInstance<Inventory>();
+        inventory.ClearItems();
+        inventory.SetItemLimit(inventory.minimumItemLimit);
+        partyData.inventory = inventory;
     }
 
     static void AddSuiteReferenceFailures(BattleTestSuite suite, BattleSimulationSuiteResult suiteResult)

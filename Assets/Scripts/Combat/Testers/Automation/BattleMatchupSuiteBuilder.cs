@@ -11,6 +11,17 @@ public static class BattleMatchupSuiteBuilder
 
     public static BattleTestSuite BuildEnemyMatchupSuite(BattleTestSuite sourceSuite, int sourceTeam, bool orderedPairs, bool includeMirrorMatches, int runCountOverride)
     {
+        return BuildEnemyMatchupSuite(sourceSuite, sourceTeam, orderedPairs, includeMirrorMatches, runCountOverride, null);
+    }
+
+    public static BattleTestSuite BuildEnemyMatchupSuiteForGeneratedIndexes(BattleTestSuite sourceSuite, int sourceTeam, bool orderedPairs, bool includeMirrorMatches, List<int> generatedIndexes, int runCountOverride)
+    {
+        HashSet<int> filter = generatedIndexes == null ? null : new HashSet<int>(generatedIndexes);
+        return BuildEnemyMatchupSuite(sourceSuite, sourceTeam, orderedPairs, includeMirrorMatches, runCountOverride, filter);
+    }
+
+    static BattleTestSuite BuildEnemyMatchupSuite(BattleTestSuite sourceSuite, int sourceTeam, bool orderedPairs, bool includeMirrorMatches, int runCountOverride, HashSet<int> generatedIndexFilter)
+    {
         if (sourceSuite == null)
         {
             throw new ArgumentNullException("sourceSuite");
@@ -28,7 +39,7 @@ public static class BattleMatchupSuiteBuilder
         generatedSuite.suiteName = sourceSuite.SuiteName() + " Enemy Matrix";
         generatedSuite.reportRoot = sourceSuite.reportRoot;
         generatedSuite.stopOnFailure = false;
-        generatedSuite.scenarios = BuildMatchupScenarios(sources, orderedPairs, includeMirrorMatches, runCountOverride);
+        generatedSuite.scenarios = BuildMatchupScenarios(sources, orderedPairs, includeMirrorMatches, runCountOverride, generatedIndexFilter);
         return generatedSuite;
     }
 
@@ -85,6 +96,11 @@ public static class BattleMatchupSuiteBuilder
 
     static List<BattleTestScenario> BuildMatchupScenarios(List<MatchupSourceEntry> sources, bool orderedPairs, bool includeMirrorMatches, int runCountOverride)
     {
+        return BuildMatchupScenarios(sources, orderedPairs, includeMirrorMatches, runCountOverride, null);
+    }
+
+    static List<BattleTestScenario> BuildMatchupScenarios(List<MatchupSourceEntry> sources, bool orderedPairs, bool includeMirrorMatches, int runCountOverride, HashSet<int> generatedIndexFilter)
+    {
         List<BattleTestScenario> scenarios = new List<BattleTestScenario>();
         int generatedIndex = 0;
         for (int leftIndex = 0; leftIndex < sources.Count; leftIndex++)
@@ -101,8 +117,11 @@ public static class BattleMatchupSuiteBuilder
                     continue;
                 }
 
-                BattleTestScenario scenario = CreateScenario(sources[leftIndex], sources[rightIndex], generatedIndex, runCountOverride);
-                scenarios.Add(scenario);
+                if (generatedIndexFilter == null || generatedIndexFilter.Contains(generatedIndex))
+                {
+                    BattleTestScenario scenario = CreateScenario(sources[leftIndex], sources[rightIndex], generatedIndex, runCountOverride);
+                    scenarios.Add(scenario);
+                }
                 generatedIndex++;
             }
         }

@@ -6,20 +6,81 @@ using TMPro;
 
 public class PartyAndRelicFrame : MonoBehaviour
 {
-    public PartyDataManager partyData;
-    public SceneMover sceneMover;
-    public ArmoryUI armory;
-    public GameObject armoryObject;
-    public TMP_Text goldText;
     void Start()
     {
+        relicPage = 0;
         UpdateFrame();
     }
     public void UpdateFrame()
     {
-        goldText.text = partyData.inventory.GetGold().ToString();
+        UpdateGoldText();
+        UpdatePartyRelics();
         // TODO Update The Relics.
     }
+    public GeneralUtility utility;
+    public PartyDataManager partyData;
+    public SceneMover sceneMover;
+    public SpriteContainer relicSprites;
+    public List<string> partyRelics;
+    public void UpdatePartyRelics()
+    {
+        partyRelics = new List<string>(partyData.dungeonBag.GetRelics());
+        ResetRelicButtons();
+        List<string> pageRelics = utility.GetCurrentPageStrings(relicPage, relicButtons, partyRelics);
+        for (int i = 0; i < pageRelics.Count; i++)
+        {
+            relicButtons[i].EnableGO();
+            relicSprites.ApplyToImage(relicButtons[i].GetImage(), pageRelics[i]);
+        }
+        // TODO Enable Change Page Buttons As Needed.
+        int maxPage = utility.GetMaxPage(relicButtons.Count, partyRelics.Count);
+        utility.DisableGameObjects(changeRelicPageObjects);
+        if (relicPage > 0)
+        {
+            changeRelicPageObjects[0].SetActive(true);
+        }
+        if (relicPage < maxPage)
+        {
+            changeRelicPageObjects[1].SetActive(true);
+        }
+    }
+    public ToolTipPopUp relicToolTip;
+    public List<RelicButtonTooltip> relicButtons;
+    public void ResetRelicButtons()
+    {
+        for (int i = 0; i < relicButtons.Count; i++)
+        {
+            relicButtons[i].DisableGO();
+        }
+    }
+    [ContextMenu("Initialize Relic Buttons")]
+    protected virtual void InitializeRelicButtons()
+    {
+        int gridWidth = relicButtons.Count;
+        int offsetWidth = 1;
+        float xPivot = 0f + (float)offsetWidth/(gridWidth + offsetWidth + offsetWidth - 1);
+        float yPivot = 1f;
+        for (int i = 0; i < gridWidth; i++)
+        {
+            relicButtons[i].SetToolTipIndex(i);
+            relicButtons[i].anchor.pivot = new Vector2(xPivot, yPivot);
+            xPivot += 1f/(gridWidth + offsetWidth + offsetWidth - 1);
+        }
+    }
+    public int relicPage = 0;
+    public void ChangePage(bool right)
+    {
+        relicPage = utility.ChangePageV2(relicPage, right, relicButtons.Count, partyRelics.Count);
+        UpdatePartyRelics();
+    }
+    public List<GameObject> changeRelicPageObjects;
+    public TMP_Text goldText;
+    public void UpdateGoldText()
+    {
+        goldText.text = partyData.inventory.GetGold().ToString();
+    }
+    public ArmoryUI armory;
+    public GameObject armoryObject;
     public void ActivateArmory()
     {
         armory.SetPartyData(partyData);

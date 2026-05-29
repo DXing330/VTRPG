@@ -314,7 +314,18 @@ public class SpriteContainer : ScriptableObject
         if (duplicates.Count == 0){return;}
         reportLines.Add(leftName+" overlaps "+rightName+": "+string.Join(", ", duplicates));
     }
-
+    public void ApplyToImage(Image image, string nKey)
+    {
+        if (image == null){return;}
+        image.sprite = GetSprite(nKey);
+        image.color = GetColor(nKey, Color.white);
+        float scale = 1f;
+        if (!float.TryParse(GetSize(nKey), out scale))
+        {
+            scale = 1f;
+        }
+        image.rectTransform.localScale = Vector3.one * scale;
+    }
     public void ApplyToImage(Image image, string nKey, Color defaultColor, Vector3 defaultScale)
     {
         if (image == null){return;}

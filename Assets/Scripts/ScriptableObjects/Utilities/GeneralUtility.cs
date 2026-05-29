@@ -63,6 +63,13 @@ public class GeneralUtility : ScriptableObject
         return currentPage;
     }
 
+    public int GetMaxPage(int pageLength, int maxLength)
+    {
+        int maxPage = maxLength / pageLength;
+        if (maxLength % pageLength == 0){maxPage--;}
+        return maxPage;
+    }
+
     public int ChangePageV2(int currentPage, bool right, int pageLength, int maxLength)
     {
         int maxPage = maxLength / pageLength;
@@ -78,6 +85,21 @@ public class GeneralUtility : ScriptableObject
             else { currentPage = maxPage; }
         }
         return currentPage;
+    }
+
+    public List<string> GetCurrentPageStrings<T>(int currentPage, List<T> pageLength, List<string> dataList)
+    {
+        List<string> strings = new List<string>();
+        if (dataList.Count <= 0)
+        {
+            return strings;
+        }
+        int start = currentPage * pageLength.Count;
+        for (int i = start; i < Mathf.Min(start + pageLength.Count, dataList.Count); i++)
+        {
+            strings.Add(dataList[i]);
+        }
+        return strings;
     }
 
     public List<string> GetCurrentPageStrings(int currentPage, List<GameObject> pageLength, List<string> dataList)

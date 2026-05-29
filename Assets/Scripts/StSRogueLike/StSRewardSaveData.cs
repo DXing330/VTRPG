@@ -62,7 +62,9 @@ public class StSRewardSaveData : SavedData
         availableShopRelics = availableShopRelics.Distinct().ToList();
     }
     public List<string> rewards;
+    public List<string> GetRewards(){return rewards;}
     public List<string> rewardSpecifics;
+    public List<string> GetRewardSpecifics(){return rewardSpecifics;}
     public override void NewGame()
     {
         rewards.Clear();
@@ -236,6 +238,10 @@ public class StSRewardSaveData : SavedData
             return;
         }
     }
+    public void GenerateChestRewards()
+    {
+        GenerateRewards(0, 2, 0, 1);
+    }
     public void GenerateRewards(int skillBookCount = 1, int gold = 1, int itemChance = 30, int relicCount = 0, int rare = 0, int allyCount = 0, int skillBookChoices = 3)
     {
         rewards.Clear();
@@ -265,9 +271,9 @@ public class StSRewardSaveData : SavedData
         rewards.Add(type);
         rewardSpecifics.Add(specifics);
     }
-    // TODO ALL Relic Gains Should Go Through Here And Then Check For Pickup Effects.
     public Relic dummyRelic;
-    // String since some relic cause selecting card rewards or selecting skills to enchant, which requires different UI popups.
+    // ALL Relic Gains Should Go Through Here And Then Check For Pickup Effects.
+    // Return String since some relic cause selecting card rewards or selecting skills to enchant, which requires different UI popups.
     public string GainRelic(string relicName, PartyDataManager partyData, StSStateManager stsManager)
     {
         string rewardPopUp = "";
@@ -288,6 +294,7 @@ public class StSRewardSaveData : SavedData
             }
         }
         partyData.dungeonBag.GainRelic(relicName, counters.ToString());
+        stsManager.GainRelic(relicName);
         return rewardPopUp;
         // Don't Save Here, Save During The Normal Save Timing.
     }

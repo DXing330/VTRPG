@@ -395,7 +395,6 @@ public class StSStore : MonoBehaviour
         UpdateAllDisplays();
         string popUpRelic = rewardData.GainRelic(relicName, partyData, stsManager);
         Debug.Log(popUpRelic);
-        // TODO Select allies/skills/rewards based on the popup.
         if (popUpRelic == "RewardSelect")
         {
             (List<string> relicRewards, List<string> relicRewardSpecifics) = rewardData.ReturnRelicPickUpRewards(relicName);

@@ -7,12 +7,14 @@ using TMPro;
 // Shows event/battle/shop rewards.
 public class RewardDisplayMenu : MonoBehaviour
 {
+    public GameObject go;
     public GeneralUtility utility;
     public StSStateManager stsManager;
     public PartyDataManager partyData;
     public StSRewardSaveData rewardData;
     // Some are called inside other scenes, but mainly it is from the battle rewards.
     public bool battleRewards = true;
+    // Regular When Getting Rewards From A Battle.
     void Start()
     {
         if (battleRewards)
@@ -22,6 +24,17 @@ public class RewardDisplayMenu : MonoBehaviour
         }
         UpdateRewardDisplay();
         selectMenu.SetPartyData(partyData);
+    }
+    // For The Treasure Scenes Specifically.
+    public void OpenTreasureRewards(PartyDataManager newParty, StSStateManager newState, List<string> chestRewards, List<string> chestSpecifics)
+    {
+        partyData = newParty;
+        selectMenu.SetPartyData(partyData);
+        stsManager = newState;
+        SetRewards(chestRewards);
+        SetRewardSpecifics(chestSpecifics);
+        UpdateRewardDisplay();
+        go.SetActive(true);
     }
     protected void LoadFromData()
     {

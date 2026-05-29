@@ -27,6 +27,7 @@ public class StSStateManager : MonoBehaviour
     // SUBMANAGERS
     public SceneMover sceneMover;
     public PartyDataManager stsParty;
+    public PartyAndRelicFrame stsFrame;
     public RNGUtility masterRNG;
     public StSState gameState;
     public StSMap map;
@@ -135,7 +136,7 @@ public class StSStateManager : MonoBehaviour
             sceneMover.MoveToBattle();
             break;
             case "Event":
-            // Generate Event.
+            // TODO Generate Event.
             break;
             // Generate Enemies/Battle.
             case "Elite":
@@ -165,7 +166,7 @@ public class StSStateManager : MonoBehaviour
             newScene = restSceneName;
             break;
             case "Treasure":
-            // Generate Treasure.
+            // TODO Generate Treasure.
             break;
             case "Boss":
             gameState.UpdateState("Boss");
@@ -201,5 +202,9 @@ public class StSStateManager : MonoBehaviour
     {
         Save();
         sceneMover.LoadScene(newScene);
+    }
+    public void GainRelic(string relicName)
+    {
+        stsFrame.UpdateFrame();
     }
 }
