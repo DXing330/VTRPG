@@ -9,12 +9,21 @@ using UnityEngine;
 public class PartyData : SavedData
 {
     public StatDatabase actorDatabase;
+    public StatDatabase equipDatabase;
+    // Only called during new game.
     protected void InitializePartyStats()
     {
         partyStats.Clear();
         for (int i = 0; i < partyNames.Count; i++)
         {
             partyStats.Add(actorDatabase.ReturnValue(partyNames[i]));
+        }
+        // Replace Equipment Names With Equipment Data.
+        for (int i = 0; i < partyEquipment.Count; i++)
+        {
+            string equipData = equipDatabase.ReturnValue(partyEquipment[i]);
+            if (equipData == ""){continue;}
+            partyEquipment[i] = equipData;
         }
     }
     public int restHealth;

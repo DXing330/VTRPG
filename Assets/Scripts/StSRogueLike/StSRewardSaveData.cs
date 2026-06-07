@@ -294,7 +294,7 @@ public class StSRewardSaveData : SavedData
             }
         }
         partyData.dungeonBag.GainRelic(relicName, counters.ToString());
-        stsManager.GainRelic(relicName);
+        stsManager.GainRelic();
         return rewardPopUp;
         // Don't Save Here, Save During The Normal Save Timing.
     }

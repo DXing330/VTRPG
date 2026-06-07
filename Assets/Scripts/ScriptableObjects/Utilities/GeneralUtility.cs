@@ -16,6 +16,12 @@ public class GeneralUtility : ScriptableObject
             Debug.Log(dList[i]);
         }
     }
+
+    public int GetPageIndex(int index, int page, int pageLength)
+    {
+        return (index + (page * pageLength));
+    }
+
     public int ChangeIndex(int currentIndex, bool right, int maxIndex, int minIndex = 0)
     {
         if (right)

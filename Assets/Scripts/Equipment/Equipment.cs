@@ -23,6 +23,7 @@ public class Equipment : MonoBehaviour
         allStats += rarity + delimiter;
         allStats += runeSlots + delimiter;
         allStats += String.Join(",", runes) + delimiter;
+        allStats += equipSet + delimiter;
     }
     public void ResetStats()
     {
@@ -35,12 +36,13 @@ public class Equipment : MonoBehaviour
         rarity = "";
         runeSlots = 0;
         runes.Clear();
+        equipSet = "";
     }
     public void SetAllStats(string newStats)
     {
         allStats = newStats;
         string[] dataBlocks = allStats.Split("|");
-        if (allStats.Length < 6 || dataBlocks.Length < 7)
+        if (dataBlocks.Length < 9)
         {
             equipName = "None";
             slot = "-1";
@@ -82,6 +84,9 @@ public class Equipment : MonoBehaviour
             break;
             case 8:
             SetRunes(stat.Split(",").ToList());
+            break;
+            case 9:
+            SetEquipSet(stat);
             break;
         }
     }
@@ -263,6 +268,15 @@ public class Equipment : MonoBehaviour
     public int GetRarity()
     {
         return int.Parse(rarity);
+    }
+    public string equipSet;
+    public void SetEquipSet(string newInfo)
+    {
+        equipSet = newInfo;
+    }
+    public string GetEquipSet()
+    {
+        return equipSet;
     }
     public void EquipToActor(TacticActor actor)
     {

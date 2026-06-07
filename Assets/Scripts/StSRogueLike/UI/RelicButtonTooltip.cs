@@ -19,6 +19,6 @@ public class RelicButtonTooltip : ToolTipTarget
     public PartyAndRelicFrame partyFrame;
     public void ClickButton()
     {
-        
+        partyFrame.ClickRelicButton(tooltipIndex);
     }
 }

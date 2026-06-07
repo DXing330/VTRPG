@@ -18,7 +18,7 @@ public class StatDatabaseLevelTwo : StatDatabase
         SetValues(allKeysAndValues);
         GetValues();
         #if UNITY_EDITOR
-                EditorUtility.SetDirty(this);
+            EditorUtility.SetDirty(this);
         #endif
     }
 

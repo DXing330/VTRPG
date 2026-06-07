@@ -12,8 +12,12 @@ public class ToolTipTarget : MonoBehaviour
     }
     public string tooltipText;
     public RectTransform anchor;
-    public void ShowTooltip()
+    public void ShowTooltip(string newText = "")
     {
+        if (newText != "")
+        {
+            tooltipText = newText;
+        }
         tooltipPopup.ShowTooltip(tooltipText, anchor);
     }
 }

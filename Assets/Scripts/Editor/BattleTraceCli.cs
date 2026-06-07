@@ -558,8 +558,10 @@ public static class BattleTraceCli
             }
 
             BattleManager manager = PrepareBattleManagerForTrace(simulator);
-            int turnsAdvanced = AdvanceNpcTurnsUntil(manager, actorName, targetRound, targetTurnIndex, maxTurnsToAdvance);
+            List<UnityAdvanceSnapshot> advanceSnapshots = new List<UnityAdvanceSnapshot>();
+            int turnsAdvanced = AdvanceNpcTurnsUntil(manager, actorName, targetRound, targetTurnIndex, maxTurnsToAdvance, advanceSnapshots);
             UnityNpcTurnProbe probe = BuildNpcTurnProbe(manager, actorName, scenario, pairIndex, runIndex, seed, turnsAdvanced);
+            probe.advanceSnapshots = advanceSnapshots;
 
             string directory = Path.GetDirectoryName(outPath);
             if (!string.IsNullOrEmpty(directory))
@@ -730,9 +732,11 @@ public static class BattleTraceCli
                 simulator.simulatorState.controlAI = 1;
             }
             BattleManager manager = PrepareBattleManagerForTrace(simulator);
-            int turnsAdvanced = AdvanceNpcTurnsUntil(manager, actorName, targetRound, targetTurnIndex, maxTurnsToAdvance);
+            List<UnityAdvanceSnapshot> advanceSnapshots = new List<UnityAdvanceSnapshot>();
+            int turnsAdvanced = AdvanceNpcTurnsUntil(manager, actorName, targetRound, targetTurnIndex, maxTurnsToAdvance, advanceSnapshots);
 
             UnityActualTurnProbe probe = BuildActualTurnProbe(manager, actorName, scenario, pairIndex, runIndex, seed, turnsAdvanced);
+            probe.advanceSnapshots = advanceSnapshots;
             string directory = Path.GetDirectoryName(outPath);
             if (!string.IsNullOrEmpty(directory))
             {
@@ -1005,6 +1009,90 @@ public static class BattleTraceCli
 
             File.WriteAllText(outPath, JsonUtility.ToJson(probe, true));
             Debug.Log("Battle spell-attempt probe written to: " + outPath);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError(exception);
+            TryWriteProbeError(outPath, exception);
+            exitCode = 1;
+        }
+        finally
+        {
+            BattleMatchupSuiteBuilder.DestroyGeneratedSuite(generatedSuite);
+        }
+
+        if (Application.isBatchMode)
+        {
+            EditorApplication.Exit(exitCode);
+        }
+    }
+
+    public static void RunEnemyMatchupSkillAttemptProbe()
+    {
+        int exitCode = 0;
+        BattleTestSuite generatedSuite = null;
+        string outPath = "";
+        try
+        {
+            string suitePath = GetRequiredArg("-suitePath");
+            outPath = GetRequiredArg("-outPath");
+            string actorName = GetRequiredArg("-actorName");
+            string skillName = GetRequiredArg("-skillName");
+            int pairIndex = GetIntArg("-pairIndex", -1);
+            int runIndex = GetIntArg("-runIndex", 0);
+            int sourceTeam = GetIntArg("-sourceTeam", 1);
+            bool orderedPairs = GetBoolArg("-orderedPairs", true);
+            bool includeMirrorMatches = GetBoolArg("-includeMirrorMatches", false);
+            int runCountOverride = GetIntArg("-runCountOverride", 1);
+            int turnsToAdvance = GetIntArg("-turnsToAdvance", 0);
+
+            if (pairIndex < 0)
+            {
+                throw new InvalidOperationException("Missing required argument -pairIndex.");
+            }
+
+            AssetDatabase.Refresh();
+            BattleTestSuite sourceSuite = AssetDatabase.LoadAssetAtPath<BattleTestSuite>(suitePath);
+            if (sourceSuite == null)
+            {
+                throw new InvalidOperationException("Could not load battle test suite at " + suitePath + ".");
+            }
+
+            generatedSuite = BattleMatchupSuiteBuilder.BuildEnemyMatchupSuite(sourceSuite, sourceTeam, orderedPairs, includeMirrorMatches, runCountOverride);
+            if (generatedSuite == null || generatedSuite.scenarios == null || pairIndex >= generatedSuite.scenarios.Count)
+            {
+                throw new InvalidOperationException("Generated matchup suite does not contain pair index " + pairIndex + ".");
+            }
+
+            BattleTestScenario scenario = generatedSuite.scenarios[pairIndex];
+            if (scenario == null)
+            {
+                throw new InvalidOperationException("Generated matchup scenario at pair index " + pairIndex + " is null.");
+            }
+
+            EditorSceneManager.OpenScene(SimulatorScenePath, OpenSceneMode.Single);
+            BattleSimulator simulator = FindTraceSimulator();
+            EnsureTracePartyData(simulator);
+
+            int seed = scenario.SeedForRun(runIndex);
+            ApplyScenarioForTrace(simulator, scenario, runIndex, seed);
+            if (simulator.simulatorState != null)
+            {
+                simulator.simulatorState.autoBattle = 0;
+                simulator.simulatorState.controlAI = 1;
+            }
+            BattleManager manager = PrepareBattleManagerForTrace(simulator);
+            AdvanceNpcTurns(manager, turnsToAdvance);
+
+            UnitySkillAttemptProbe probe = BuildSkillAttemptProbe(manager, actorName, skillName, scenario, pairIndex, runIndex, seed, turnsToAdvance);
+            string directory = Path.GetDirectoryName(outPath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            File.WriteAllText(outPath, JsonUtility.ToJson(probe, true));
+            Debug.Log("Battle skill-attempt probe written to: " + outPath);
         }
         catch (Exception exception)
         {
@@ -1901,8 +1989,10 @@ public static class BattleTraceCli
         {
             string outPath = GetRequiredArg("-outPath");
             int seed = GetIntArg("-seed", 0);
-            List<int> maxes = ParseIntCsv(GetRequiredArg("-intMaxes"));
-            if (maxes.Count == 0)
+            string rangesArg = GetArg("-intRanges");
+            List<Vector2Int> ranges = string.IsNullOrEmpty(rangesArg) ? new List<Vector2Int>() : ParseIntRangesCsv(rangesArg);
+            List<int> maxes = ranges.Count > 0 ? new List<int>() : ParseIntCsv(GetRequiredArg("-intMaxes"));
+            if (maxes.Count == 0 && ranges.Count == 0)
             {
                 throw new InvalidOperationException("No integer max values were provided.");
             }
@@ -1950,8 +2040,10 @@ public static class BattleTraceCli
             int s1 = GetIntArg("-s1", 0);
             int s2 = GetIntArg("-s2", 0);
             int s3 = GetIntArg("-s3", 0);
-            List<int> maxes = ParseIntCsv(GetRequiredArg("-intMaxes"));
-            if (maxes.Count == 0)
+            string rangesArg = GetArg("-intRanges");
+            List<Vector2Int> ranges = string.IsNullOrEmpty(rangesArg) ? new List<Vector2Int>() : ParseIntRangesCsv(rangesArg);
+            List<int> maxes = ranges.Count > 0 ? new List<int>() : ParseIntCsv(GetRequiredArg("-intMaxes"));
+            if (maxes.Count == 0 && ranges.Count == 0)
             {
                 throw new InvalidOperationException("No integer max values were provided.");
             }
@@ -1964,14 +2056,27 @@ public static class BattleTraceCli
             UnityRandomSequenceProbe probe = new UnityRandomSequenceProbe();
             probe.seed = 0;
             probe.maxExclusive = new List<int>(maxes);
+            for (int i = 0; i < ranges.Count; i++)
+            {
+                probe.minInclusive.Add(ranges[i].x);
+                probe.maxExclusive.Add(ranges[i].y);
+            }
             probe.requestedStateJson = "{\"s0\":" + s0 + ",\"s1\":" + s1 + ",\"s2\":" + s2 + ",\"s3\":" + s3 + "}";
             probe.overwrittenStateJson = overwrittenStateJson;
             probe.reflectionFields = DescribeRandomStateFields();
             probe.initialStateJson = JsonUtility.ToJson(UnityEngine.Random.state);
-            for (int i = 0; i < maxes.Count; i++)
+            int drawCount = ranges.Count > 0 ? ranges.Count : maxes.Count;
+            for (int i = 0; i < drawCount; i++)
             {
                 probe.stateBeforeEachDraw.Add(JsonUtility.ToJson(UnityEngine.Random.state));
-                probe.values.Add(UnityEngine.Random.Range(0, maxes[i]));
+                if (ranges.Count > 0)
+                {
+                    probe.values.Add(UnityEngine.Random.Range(ranges[i].x, ranges[i].y));
+                }
+                else
+                {
+                    probe.values.Add(UnityEngine.Random.Range(0, maxes[i]));
+                }
                 probe.stateAfterEachDraw.Add(JsonUtility.ToJson(UnityEngine.Random.state));
             }
 
@@ -2056,6 +2161,28 @@ public static class BattleTraceCli
                 throw new InvalidOperationException("Could not parse integer value '" + split[i] + "' in CSV list.");
             }
             values.Add(value);
+        }
+        return values;
+    }
+
+    static List<Vector2Int> ParseIntRangesCsv(string csv)
+    {
+        List<Vector2Int> values = new List<Vector2Int>();
+        string[] split = csv.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < split.Length; i++)
+        {
+            string[] range = split[i].Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+            if (range.Length != 2)
+            {
+                throw new InvalidOperationException("Could not parse integer range '" + split[i] + "'. Use min:max.");
+            }
+            int min;
+            int max;
+            if (!int.TryParse(range[0].Trim(), out min) || !int.TryParse(range[1].Trim(), out max))
+            {
+                throw new InvalidOperationException("Could not parse integer range '" + split[i] + "'. Use min:max.");
+            }
+            values.Add(new Vector2Int(min, max));
         }
         return values;
     }
@@ -2269,9 +2396,11 @@ public static class BattleTraceCli
         trace.runIndex = runIndex;
         trace.seed = seed;
         trace.terrain = simulator.simulatorState == null ? "" : simulator.simulatorState.selectedTerrain;
+        UnityEngine.Random.State randomStateBeforeTraceMetadata = UnityEngine.Random.state;
         trace.weather = map.GetWeather();
         trace.time = map.GetTime();
         trace.startingFormation = simulator.simulatorState == null ? "" : simulator.simulatorState.selectedStartingFormation;
+        UnityEngine.Random.state = randomStateBeforeTraceMetadata;
         trace.battleStartRandomStateJson = JsonUtility.ToJson(UnityEngine.Random.state);
         UnityEngine.Random.State savedState = UnityEngine.Random.state;
         UnityEngine.Random.Range(0, 1);
@@ -2499,9 +2628,11 @@ public static class BattleTraceCli
         trace.runIndex = runIndex;
         trace.seed = seed;
         trace.terrain = manager.map.mapInfo != null && manager.map.mapInfo.Count > 0 ? manager.map.mapInfo[0] : "";
+        UnityEngine.Random.State randomStateBeforeTraceMetadata = UnityEngine.Random.state;
         trace.weather = manager.map.GetWeather();
         trace.time = manager.map.GetTime();
         trace.startingFormation = manager.battleState == null ? "" : manager.battleState.GetAllySpawnPattern();
+        UnityEngine.Random.state = randomStateBeforeTraceMetadata;
         trace.mapSize = manager.map.mapSize;
         trace.initialActors = BuildTurnActors(manager);
 
@@ -2580,7 +2711,7 @@ public static class BattleTraceCli
         }
     }
 
-    static int AdvanceNpcTurnsUntil(BattleManager manager, string actorName, int targetRound, int targetTurnIndex, int maxTurnsToAdvance)
+    static int AdvanceNpcTurnsUntil(BattleManager manager, string actorName, int targetRound, int targetTurnIndex, int maxTurnsToAdvance, List<UnityAdvanceSnapshot> snapshots = null)
     {
         if (manager == null)
         {
@@ -2606,13 +2737,58 @@ public static class BattleTraceCli
                 return advanced;
             }
 
+            UnityAdvanceSnapshot snapshot = null;
+            if (snapshots != null)
+            {
+                snapshot = new UnityAdvanceSnapshot();
+                snapshot.step = advanced;
+                snapshot.roundBefore = manager.GetRoundNumber();
+                snapshot.turnIndexBefore = manager.GetTurnIndex();
+                snapshot.actorBefore = currentActor.GetPersonalName();
+                snapshot.actorLocationBefore = currentActor.GetLocation();
+                snapshot.randomStateBefore = JsonUtility.ToJson(UnityEngine.Random.state);
+                snapshot.actorsBefore = BuildCompactActorStates(manager);
+            }
+
             npcTurn.Invoke(manager, null);
+
+            if (snapshot != null)
+            {
+                TacticActor nextActor = manager.GetTurnActor();
+                snapshot.roundAfter = manager.GetRoundNumber();
+                snapshot.turnIndexAfter = manager.GetTurnIndex();
+                snapshot.actorAfter = nextActor == null ? "" : nextActor.GetPersonalName();
+                snapshot.actorLocationAfter = nextActor == null ? -1 : nextActor.GetLocation();
+                snapshot.randomStateAfter = JsonUtility.ToJson(UnityEngine.Random.state);
+                snapshot.actorsAfter = BuildCompactActorStates(manager);
+                snapshots.Add(snapshot);
+            }
             advanced++;
         }
 
         TacticActor finalActor = manager.GetTurnActor();
         string finalActorName = finalActor == null ? "" : finalActor.GetPersonalName();
         throw new InvalidOperationException("Could not reach anchored turn for `" + actorName + "` at round " + targetRound + " turn " + targetTurnIndex + ". Stopped at round " + manager.GetRoundNumber() + " turn " + manager.GetTurnIndex() + " actor `" + finalActorName + "` after " + advanced + " turn advances.");
+    }
+
+    static List<string> BuildCompactActorStates(BattleManager manager)
+    {
+        List<string> states = new List<string>();
+        if (manager == null || manager.map == null || manager.map.battlingActors == null)
+        {
+            return states;
+        }
+
+        for (int i = 0; i < manager.map.battlingActors.Count; i++)
+        {
+            TacticActor actor = manager.map.battlingActors[i];
+            if (actor == null)
+            {
+                continue;
+            }
+            states.Add(actor.GetPersonalName() + "@T" + actor.GetTeam() + ":" + actor.GetLocation() + ":hp" + actor.GetHealth() + ":a" + actor.GetActions() + ":target=" + PeekTargetName(actor));
+        }
+        return states;
     }
 
     static UnitySkillTargetProbe BuildSkillTargetProbe(BattleManager manager, string actorName, string skillName, int pairIndex, BattleTestScenario scenario, int runIndex, int seed, int turnsAdvanced)
@@ -3033,6 +3209,60 @@ public static class BattleTraceCli
         return probe;
     }
 
+    static UnitySkillAttemptProbe BuildSkillAttemptProbe(BattleManager manager, string actorName, string skillName, BattleTestScenario scenario, int pairIndex, int runIndex, int seed, int turnsAdvanced)
+    {
+        if (manager == null || manager.map == null || manager.moveManager == null || manager.actorAI == null || manager.activeManager == null)
+        {
+            throw new InvalidOperationException("BattleManager skill-attempt probe dependencies are missing.");
+        }
+
+        TacticActor actor = manager.GetTurnActor();
+        if (actor == null)
+        {
+            throw new InvalidOperationException("BattleManager has no current turn actor.");
+        }
+        if (actor.GetPersonalName() != actorName)
+        {
+            throw new InvalidOperationException("Expected turn actor `" + actorName + "` but current turn actor is `" + actor.GetPersonalName() + "`.");
+        }
+
+        manager.activeManager.SetSkillFromName(skillName, actor);
+
+        UnitySkillAttemptProbe probe = new UnitySkillAttemptProbe();
+        probe.scenarioName = scenario == null ? "" : scenario.ScenarioName();
+        probe.pairIndex = pairIndex;
+        probe.runIndex = runIndex;
+        probe.seed = seed;
+        probe.turnsAdvanced = turnsAdvanced;
+        probe.round = manager.GetRoundNumber();
+        probe.turnIndex = manager.GetTurnIndex();
+        probe.actorName = actor.GetPersonalName();
+        probe.skillName = skillName;
+        probe.initialRandomState = JsonUtility.ToJson(UnityEngine.Random.state);
+        probe.beforeActors = BuildTurnActors(manager);
+        probe.skillType = manager.activeManager.active == null ? "" : manager.activeManager.active.GetSkillType();
+        probe.skillEffect = manager.activeManager.active == null ? "" : manager.activeManager.active.GetEffect();
+        probe.skillRange = manager.activeManager.active == null ? -1 : manager.activeManager.active.GetRange(actor, manager.map);
+        probe.skillActionCost = manager.activeManager.active == null ? -1 : manager.activeManager.active.GetActionCost(actor, manager.map);
+        probe.skillEnergyCost = manager.activeManager.active == null ? -1 : manager.activeManager.active.GetEnergyCost(actor, manager.map);
+
+        probe.chosenTile = manager.actorAI.ChooseSkillTargetLocation(actor, manager.map, manager.moveManager);
+        probe.randomStateAfterTargetChoice = JsonUtility.ToJson(UnityEngine.Random.state);
+        probe.costOk = manager.activeManager.CheckSkillCost(manager.map);
+        if (probe.chosenTile >= 0)
+        {
+            manager.activeManager.GetTargetedTiles(probe.chosenTile, manager.moveManager.actorPathfinder);
+            probe.targetedTiles = new List<int>(manager.activeManager.targetedTiles);
+            probe.validTargets = manager.actorAI.ValidSkillTargets(actor, manager.map, manager.activeManager);
+        }
+        else
+        {
+            probe.validTargets = false;
+        }
+        probe.afterActors = BuildTurnActors(manager);
+        return probe;
+    }
+
     static UnityTurnDecisionProbe BuildTurnDecisionProbe(BattleManager manager, string actorName, BattleTestScenario scenario, int pairIndex, int runIndex, int seed, int turnsAdvanced)
     {
         if (manager == null || manager.map == null || manager.moveManager == null || manager.actorAI == null)
@@ -3179,34 +3409,58 @@ public static class BattleTraceCli
         probe.initialRandomState = JsonUtility.ToJson(UnityEngine.Random.state);
         probe.initialActors = BuildTurnActors(manager);
         probe.initialTarget = actor.GetTarget() == null ? "" : actor.GetTarget().GetPersonalName();
+        probe.initialTargetLocation = actor.GetTarget() == null ? -1 : actor.GetTarget().GetLocation();
         probe.initialLocation = actor.GetLocation();
         probe.initialActions = actor.GetActions();
 
+        manager.moveManager.GetAllMoveCosts(actor, manager.map.battlingActors);
         TacticActor target = actor.GetTarget();
         if (target == null || target.GetHealth() <= 0 || target.invisible || target.GetTeam() == actor.GetTeam())
         {
-            manager.moveManager.GetAllMoveCosts(actor, manager.map.battlingActors);
             target = manager.actorAI.GetClosestEnemy(manager.map.battlingActors, actor, manager.moveManager);
             actor.SetTarget(target);
         }
 
+        probe.directAttackAvailable = manager.actorAI.EnemyInAttackRange(actor, actor.GetTarget(), manager.map) && actor.AttackActionsLeft();
+        probe.attackableAfterMoveAvailable = manager.actorAI.EnemyInAttackableRange(actor, actor.GetTarget(), manager.map, manager.moveManager);
         probe.beforePathRandomState = JsonUtility.ToJson(UnityEngine.Random.state);
         probe.targetBeforePath = actor.GetTarget() == null ? "" : actor.GetTarget().GetPersonalName();
+        probe.targetBeforePathLocation = actor.GetTarget() == null ? -1 : actor.GetTarget().GetLocation();
         probe.targetHpBeforePath = actor.GetTarget() == null ? -1 : actor.GetTarget().GetHealth();
 
-        bool pathFailed = (bool)typeof(BattleManager).GetMethod("AIPathToTarget", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(manager, null);
+        bool pathFailed = false;
+        if (probe.directAttackAvailable)
+        {
+            probe.branch = "DirectAttack";
+        }
+        else if (probe.attackableAfterMoveAvailable)
+        {
+            probe.branch = "MoveThenAttack";
+            pathFailed = (bool)typeof(BattleManager).GetMethod("AIPathToTarget", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(manager, null);
+        }
+        else
+        {
+            probe.branch = "MoveToward";
+            typeof(BattleManager).GetMethod("AIPathTowardTarget", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(manager, null);
+        }
         probe.afterPathRandomState = JsonUtility.ToJson(UnityEngine.Random.state);
         probe.pathFailed = pathFailed;
         probe.locationAfterPath = actor.GetLocation();
         probe.actionsAfterPath = actor.GetActions();
         probe.targetAfterPath = actor.GetTarget() == null ? "" : actor.GetTarget().GetPersonalName();
+        probe.targetAfterPathLocation = actor.GetTarget() == null ? -1 : actor.GetTarget().GetLocation();
         probe.targetHpAfterPath = actor.GetTarget() == null ? -1 : actor.GetTarget().GetHealth();
         probe.actorsAfterPath = BuildTurnActors(manager);
 
-        if (!pathFailed && actor.GetHealth() > 0 && actor.AttackActionsLeft() && actor.TargetValid())
+        if (probe.branch != "MoveToward" && !pathFailed && actor.GetHealth() > 0 && actor.AttackActionsLeft() && actor.TargetValid())
         {
             probe.beforeAttackRandomState = JsonUtility.ToJson(UnityEngine.Random.state);
             probe.targetHpBeforeAttack = actor.GetTarget() == null ? -1 : actor.GetTarget().GetHealth();
+            probe.targetBeforeAttackLocation = actor.GetTarget() == null ? -1 : actor.GetTarget().GetLocation();
+            probe.beforeAttackMapContext = BuildAttackMapContext(manager, actor, actor.GetTarget());
+            probe.beforeAttackAttackerPassives = BuildBattlePassiveRows(manager.attackManager, actor, "Attack");
+            probe.beforeAttackDefenderPassives = BuildBattlePassiveRows(manager.attackManager, actor.GetTarget(), "Defend");
+            probe.beforeAttackAuras = BuildBattleAuraRows(manager, actor.GetTarget(), actor);
             int previousLogCount = manager.combatLog.allLogs == null ? 0 : manager.combatLog.allLogs.Count;
             MethodInfo attackMethod = typeof(BattleManager).GetMethod("NPCAttackAction", BindingFlags.Instance | BindingFlags.NonPublic);
             if (attackMethod == null)
@@ -3216,6 +3470,7 @@ public static class BattleTraceCli
             attackMethod.Invoke(manager, new object[] { false });
             probe.afterAttackRandomState = JsonUtility.ToJson(UnityEngine.Random.state);
             probe.targetHpAfterAttack = actor.GetTarget() == null ? -1 : actor.GetTarget().GetHealth();
+            probe.targetAfterAttackLocation = actor.GetTarget() == null ? -1 : actor.GetTarget().GetLocation();
             int currentLogCount = manager.combatLog.allLogs == null ? 0 : manager.combatLog.allLogs.Count;
             probe.combatLogDelta = SliceCombatLogs(manager.combatLog, previousLogCount, currentLogCount);
             probe.actorsAfterAttack = BuildTurnActors(manager);
@@ -3223,6 +3478,74 @@ public static class BattleTraceCli
         }
 
         return probe;
+    }
+
+    static List<string> BuildAttackMapContext(BattleManager manager, TacticActor attacker, TacticActor target)
+    {
+        List<string> context = new List<string>();
+        if (manager == null || manager.map == null || attacker == null || target == null)
+        {
+            return context;
+        }
+
+        context.Add("weather=" + manager.map.GetWeather());
+        context.Add("time=" + manager.map.GetTime());
+        context.Add("attackerTile=" + attacker.GetLocation());
+        context.Add("targetTile=" + target.GetLocation());
+        context.Add("attackerTerrain=" + SafeMapInfo(manager.map, attacker.GetLocation()));
+        context.Add("targetTerrain=" + SafeMapInfo(manager.map, target.GetLocation()));
+        context.Add("attackerTerrainEffect=" + manager.map.GetTerrainEffectOnTile(attacker.GetLocation()));
+        context.Add("targetTerrainEffect=" + manager.map.GetTerrainEffectOnTile(target.GetLocation()));
+        context.Add("attackerBuilding=" + manager.map.GetBuildingOnTile(attacker.GetLocation()));
+        context.Add("targetBuilding=" + manager.map.GetBuildingOnTile(target.GetLocation()));
+        return context;
+    }
+
+    static string SafeMapInfo(BattleMap map, int tile)
+    {
+        if (map == null || map.mapInfo == null || tile < 0 || tile >= map.mapInfo.Count)
+        {
+            return "";
+        }
+        return map.mapInfo[tile];
+    }
+
+    static List<string> BuildBattlePassiveRows(AttackManager attackManager, TacticActor actor, string timing)
+    {
+        if (attackManager == null || actor == null || attackManager.buffStatusData == null)
+        {
+            return new List<string>();
+        }
+
+        if (timing == "Attack")
+        {
+            return new List<string>(actor.GetAttackingPassives(attackManager.buffStatusData));
+        }
+        if (timing == "Defend")
+        {
+            return new List<string>(actor.GetDefendingPassives(attackManager.buffStatusData));
+        }
+        return new List<string>();
+    }
+
+    static List<string> BuildBattleAuraRows(BattleManager manager, TacticActor target, TacticActor attacker)
+    {
+        List<string> rows = new List<string>();
+        if (manager == null || manager.map == null || manager.map.auras == null || target == null || attacker == null)
+        {
+            return rows;
+        }
+
+        for (int i = 0; i < manager.map.auras.Count; i++)
+        {
+            AuraEffect aura = manager.map.auras[i];
+            if (aura == null)
+            {
+                continue;
+            }
+            rows.Add(aura.GetAuraName() + "|teamTarget=" + aura.teamTarget + "|trigger=" + aura.trigger + "|triggerType=" + aura.triggerType + "|battleTeamCheck=" + aura.BattleTeamCheck(target, attacker, manager.map) + "|passive=" + string.Join("|", aura.ReturnPassiveStats()));
+        }
+        return rows;
     }
 
     static void ApplyAttackManagerSnapshot(AttackManager attackManager, UnityAttackStepProbe probe)
@@ -3337,6 +3660,8 @@ public static class BattleTraceCli
             state.location = actor.GetLocation();
             state.direction = actor.GetDirection();
             state.health = actor.GetHealth();
+            state.baseEnergy = actor.GetBaseEnergy();
+            state.energy = actor.GetEnergy();
             state.actions = actor.GetActions();
             state.moveType = actor.GetMoveType();
             state.target = PeekTargetName(actor);
@@ -3748,6 +4073,8 @@ public class UnityTurnActorState
     public int location;
     public int direction;
     public int health;
+    public int baseEnergy;
+    public int energy;
     public int actions;
     public string moveType;
     public string target;
@@ -3803,7 +4130,26 @@ public class UnityNpcTurnProbe
     public List<int> path = new List<int>();
     public List<UnityTurnActorState> initialActors = new List<UnityTurnActorState>();
     public List<UnityTurnActorState> finalActors = new List<UnityTurnActorState>();
+    public List<UnityAdvanceSnapshot> advanceSnapshots = new List<UnityAdvanceSnapshot>();
     public List<UnityNpcTurnProbeState> states = new List<UnityNpcTurnProbeState>();
+}
+
+[Serializable]
+public class UnityAdvanceSnapshot
+{
+    public int step;
+    public int roundBefore;
+    public int turnIndexBefore;
+    public string actorBefore;
+    public int actorLocationBefore;
+    public string randomStateBefore;
+    public List<string> actorsBefore = new List<string>();
+    public int roundAfter;
+    public int turnIndexAfter;
+    public string actorAfter;
+    public int actorLocationAfter;
+    public string randomStateAfter;
+    public List<string> actorsAfter = new List<string>();
 }
 
 [Serializable]
@@ -3875,6 +4221,7 @@ public class UnityActualTurnProbe
     public List<UnityTurnActorState> beforeActors = new List<UnityTurnActorState>();
     public List<string> combatLogDelta = new List<string>();
     public List<UnityTurnActorState> afterActors = new List<UnityTurnActorState>();
+    public List<UnityAdvanceSnapshot> advanceSnapshots = new List<UnityAdvanceSnapshot>();
     public int nextRound;
     public int nextTurnIndex;
     public string nextTurnActor;
@@ -3943,6 +4290,33 @@ public class UnitySpellAttemptProbe
 }
 
 [Serializable]
+public class UnitySkillAttemptProbe
+{
+    public string scenarioName;
+    public int pairIndex;
+    public int runIndex;
+    public int seed;
+    public int turnsAdvanced;
+    public int round;
+    public int turnIndex;
+    public string actorName;
+    public string skillName;
+    public string initialRandomState;
+    public string randomStateAfterTargetChoice;
+    public string skillType;
+    public string skillEffect;
+    public int skillRange;
+    public int skillActionCost;
+    public int skillEnergyCost;
+    public int chosenTile = -1;
+    public bool costOk;
+    public bool validTargets;
+    public List<int> targetedTiles = new List<int>();
+    public List<UnityTurnActorState> beforeActors = new List<UnityTurnActorState>();
+    public List<UnityTurnActorState> afterActors = new List<UnityTurnActorState>();
+}
+
+[Serializable]
 public class UnityTurnDecisionProbe
 {
     public string scenarioName;
@@ -3986,21 +4360,33 @@ public class UnityAttackStepProbe
     public string actorName;
     public string initialRandomState;
     public string initialTarget;
+    public int initialTargetLocation = -1;
     public int initialLocation;
     public int initialActions;
+    public bool directAttackAvailable;
+    public bool attackableAfterMoveAvailable;
+    public string branch;
     public int targetHpBeforePath = -1;
     public string targetBeforePath;
+    public int targetBeforePathLocation = -1;
     public string beforePathRandomState;
     public bool pathFailed;
     public string afterPathRandomState;
     public int locationAfterPath;
     public int actionsAfterPath;
     public string targetAfterPath;
+    public int targetAfterPathLocation = -1;
     public int targetHpAfterPath = -1;
     public string beforeAttackRandomState;
     public int targetHpBeforeAttack = -1;
+    public int targetBeforeAttackLocation = -1;
+    public List<string> beforeAttackMapContext = new List<string>();
+    public List<string> beforeAttackAttackerPassives = new List<string>();
+    public List<string> beforeAttackDefenderPassives = new List<string>();
+    public List<string> beforeAttackAuras = new List<string>();
     public string afterAttackRandomState;
     public int targetHpAfterAttack = -1;
+    public int targetAfterAttackLocation = -1;
     public List<string> combatLogDelta = new List<string>();
     public List<UnityTurnActorState> initialActors = new List<UnityTurnActorState>();
     public List<UnityTurnActorState> actorsAfterPath = new List<UnityTurnActorState>();
@@ -4028,6 +4414,7 @@ public class UnityAttackStepProbe
 public class UnityRandomSequenceProbe
 {
     public int seed;
+    public List<int> minInclusive = new List<int>();
     public List<int> maxExclusive = new List<int>();
     public List<int> values = new List<int>();
     public string requestedStateJson;

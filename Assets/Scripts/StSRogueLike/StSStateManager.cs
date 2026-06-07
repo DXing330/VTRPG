@@ -24,6 +24,7 @@ public class StSStateManager : MonoBehaviour
     public string mapSceneName;
     public string restSceneName = "StSRest";
     public string shopSceneName = "StSShop";
+    public string treasureSceneName = "StSTreasureRoom";
     // SUBMANAGERS
     public SceneMover sceneMover;
     public PartyDataManager stsParty;
@@ -35,6 +36,7 @@ public class StSStateManager : MonoBehaviour
     public StSEnemyTracker enemyTracker;
     public StSRewardSaveData rewardTracker;
     public StSShopSaveData shopTracker;
+    public StSEventSaveDataManager eventTracker;
     public StSRunModifiersSaveData runModifiers;
     public BattleState battleState; // Needed To Save Enemies To A Battle.
     public CharacterList enemyList;
@@ -166,7 +168,8 @@ public class StSStateManager : MonoBehaviour
             newScene = restSceneName;
             break;
             case "Treasure":
-            // TODO Generate Treasure.
+            gameState.UpdateState("Treasure");
+            newScene = treasureSceneName;
             break;
             case "Boss":
             gameState.UpdateState("Boss");
@@ -203,7 +206,11 @@ public class StSStateManager : MonoBehaviour
         Save();
         sceneMover.LoadScene(newScene);
     }
-    public void GainRelic(string relicName)
+    public void GainRelic()
+    {
+        stsFrame.UpdateFrame();
+    }
+    public void GainGold()
     {
         stsFrame.UpdateFrame();
     }

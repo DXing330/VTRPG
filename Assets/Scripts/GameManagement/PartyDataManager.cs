@@ -231,6 +231,11 @@ public class PartyDataManager : MonoBehaviour
         if (section == null){return "";}
         return section.GetEquipmentAtIndex(localIndex);
     }
+    public string ReturnPartyMemberEquipFromID(int ID)
+    {
+        int index = ReturnIndexAtID(ID);
+        return ReturnPartyMemberEquipFromIndex(index);
+    }
     public (List<string> passiveNames, List<string> passiveData) GetActorPassivesWithEquipmentPassives(TacticActor actor, Equipment dummyEquip, string currentlyEquipped = "")
     {
         if (currentlyEquipped.Length > 0)

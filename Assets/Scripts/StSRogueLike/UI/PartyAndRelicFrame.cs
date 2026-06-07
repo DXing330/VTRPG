@@ -20,6 +20,7 @@ public class PartyAndRelicFrame : MonoBehaviour
     public GeneralUtility utility;
     public PartyDataManager partyData;
     public SceneMover sceneMover;
+    public StatDatabase relicDB;
     public SpriteContainer relicSprites;
     public List<string> partyRelics;
     public void UpdatePartyRelics()
@@ -67,9 +68,20 @@ public class PartyAndRelicFrame : MonoBehaviour
             xPivot += 1f/(gridWidth + offsetWidth + offsetWidth - 1);
         }
     }
+    public void ClickRelicButton(int index)
+    {
+        int relicIndex = utility.GetPageIndex(index, relicPage, relicButtons.Count);
+        // Get The Relic Clicked.
+        string relicName = partyRelics[relicIndex];
+        // Display The Name, Effect and Flavor.
+        string[] relicDetails = relicDB.ReturnValue(relicName).Split("|");
+        string relicDisplayText = relicName + "\n" + relicDetails[relicDetails.Length - 2] + "\n" + relicDetails[relicDetails.Length - 1];
+        relicButtons[index].ShowTooltip(relicDisplayText);
+    }
     public int relicPage = 0;
     public void ChangePage(bool right)
     {
+        relicToolTip.HideTooltip();
         relicPage = utility.ChangePageV2(relicPage, right, relicButtons.Count, partyRelics.Count);
         UpdatePartyRelics();
     }
