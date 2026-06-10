@@ -7,7 +7,7 @@ public class EquipmentPassiveViewer : MonoBehaviour
     public PassiveDetailViewer detailViewer;
     public SelectStatTextList equipmentSelect;
     public SelectStatTextList passiveSelect;
-    public Equipment dummyEquip;
+    public Equipment dummyEquip = new Equipment();
     public List<string> allEquipment;
     public void SetAllEquipment(List<string> newInfo)
     {

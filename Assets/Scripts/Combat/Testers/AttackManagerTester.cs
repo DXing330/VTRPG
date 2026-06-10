@@ -10,7 +10,7 @@ public class AttackManagerTester : MonoBehaviour
     public AttackManager attackManager;
     public BattleManager battleManager;
     public PassiveOrganizer passiveOrganizer;
-    // Map Stuff 
+    [Header("Map Settings")]
     public BattleMap map;
     public string dummyTime;
     public string dummyWeather;
@@ -44,18 +44,33 @@ public class AttackManagerTester : MonoBehaviour
     public List<string> guardBorders;
     public List<string> testGuardPassives;
     public List<string> testGuardPassiveLevels;
-    // Actors.
+    [Header("Actor Settings")]
+    public StatDatabase actorDB;
     public TacticActor dummyAttacker;
+    public string attackerSpriteName;
     public string attackerStats;
+    public List<string> attackerExtraPassives;
     public TacticActor dummyDefender;
+    public string defenderSpriteName;
     public string defenderStats;
+    public List<string> defenderExtraPassives;
+    // Guard Testing.
     public bool guard;
     public int guardDuration;
     public int guardRange;
     public TacticActor dummyGuard;
+    public string guardSpriteName;
     public string guardStats;
+    public List<string> guardExtraPassives;
     public bool resetActorLayerScaleBeforeTest = true;
     public Vector3 actorLayerBaseScale = new Vector3(0.6f, 0.6f, 1f);
+    [Header("Equipment Settings")]
+    public List<string> attackerEquipNames;
+    public List<Equipment> attackerEquip;
+    public List<string> defenderEquipNames;
+    public List<Equipment> defenderEquip;
+    public List<string> guardEquipNames;
+    public List<Equipment> guardEquip;
 
     public void InitializeMap()
     {
@@ -64,6 +79,7 @@ public class AttackManagerTester : MonoBehaviour
         map.combatLog.ForceStart();
         map.combatLog.AddNewLog();
         // Set up the actors.
+        attackerStats = actorDB.ReturnValue(attackerSpriteName);
         dummyAttacker.SetInitialStatsFromString(attackerStats);
         dummyAttacker.InitializeStats();
         // Need attribute/elemental/racial passives.
@@ -87,6 +103,7 @@ public class AttackManagerTester : MonoBehaviour
         dummyAttacker.SetCurrentHealth(dummyAttacker.GetBaseHealth());
         dummyAttacker.SetLocation(attackerLocation);
         dummyAttacker.SetDirection(attackerDirection);
+        defenderStats = actorDB.ReturnValue(defenderSpriteName);
         dummyDefender.SetInitialStatsFromString(defenderStats);
         dummyDefender.InitializeStats();
         for (int i = 0; i < testDefenderPassiveLevels.Count; i++)
@@ -123,6 +140,7 @@ public class AttackManagerTester : MonoBehaviour
         map.ChangeTile(defenderLocation, "Elevation", defenderElevation.ToString());
         map.ChangeTile(defenderLocation, "TerrainEffect", defenderTEffect, true);
         map.ChangeTile(defenderLocation, "Borders", String.Join("|", defenderBorders), true);
+        guardStats = actorDB.ReturnValue(guardSpriteName);
         dummyGuard.SetInitialStatsFromString(guardStats);
         dummyGuard.InitializeStats();
         for (int i = 0; i < testGuardPassiveLevels.Count; i++)

@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class EquipmentGenerator : MonoBehaviour
 {
-    public Equipment dummyEquip;
+    public Equipment dummyEquip = new Equipment();
     public List<string> equipmentRarities;
     public List<int> equipmentBasePassiveLevels;
     public List<int> equipmentMaxUpgrades;

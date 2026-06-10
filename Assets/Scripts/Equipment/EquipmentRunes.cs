@@ -10,14 +10,14 @@ public class EquipmentRunes : MonoBehaviour
 {
     public GeneralUtility utility;
     public EquipmentRunesUI runeGrid;
-    public Equipment equipment;
+    public Equipment dummyEquip = new Equipment();
     public string equipSlot;
     public int runeSlots;
     public void SetEquipmentStats(string newStats)
     {
-        equipment.SetAllStats(newStats);
+        dummyEquip.SetAllStats(newStats);
         ResetSelected();
-        if (equipment.GetSlot() == equipSlot)
+        if (dummyEquip.GetSlot() == equipSlot)
         {
             LoadRunes();
         }
@@ -57,8 +57,8 @@ public class EquipmentRunes : MonoBehaviour
     }
     protected void LoadRunes()
     {
-        runeNames = new List<string>(equipment.GetRunes());
-        runeSlots = equipment.GetRuneSlots();
+        runeNames = new List<string>(dummyEquip.GetRunes());
+        runeSlots = dummyEquip.GetRuneSlots();
         UpdateRuneImages();
     }
     // Select List Stuff.

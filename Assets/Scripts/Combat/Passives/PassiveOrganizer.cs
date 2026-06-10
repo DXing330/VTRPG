@@ -49,14 +49,20 @@ public class PassiveOrganizer : ScriptableObject
         string passiveName = "";
         for (int i = 0; i < passives.Count; i++)
         {
+            List<string> sortedPassives = new List<string>();
             for (int j = 1; j <= int.Parse(passiveLevels[i]); j++)
             {
                 passiveName = passiveNameLevels.GetMultiKeyValue(passives[i], j.ToString());
-                // Don't add any extra passive if they're still the same name at higher levels.
-                if (passiveName == passives[i] && j > 1)
+                if (passiveName.Length <= 1)
                 {
                     continue;
                 }
+                // Don't add the same resolved passive more than once.
+                if (sortedPassives.Contains(passiveName))
+                {
+                    continue;
+                }
+                sortedPassives.Add(passiveName);
                 SortPassive(passiveName);
             }
         }

@@ -30,7 +30,7 @@ public class SkillModSelectMenu : MonoBehaviour
     }
     // GAME LOGIC
     public PartyDataManager partyData;
-    public Equipment dummyEquip;
+    public Equipment dummyEquip = new Equipment();
     public ActiveSkill dummyActive;
     public SelectMultiList multiList;
     public ActiveDescriptionViewer activeDetailViewer;

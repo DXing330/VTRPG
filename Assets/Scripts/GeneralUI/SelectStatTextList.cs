@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class SelectStatTextList : StatTextList
 {
-    public Equipment equipment;
+    public Equipment dummyEquip = new Equipment();
     public ColorDictionary colors;
     public bool highlights = true;
     public void PublicResetPage()
@@ -164,8 +164,8 @@ public class SelectStatTextList : StatTextList
             string[] allEquipped = currentlyEquipped.Split("@");
             for (int i = 0; i < allEquipped.Length; i++)
             {
-                equipment.SetAllStats(allEquipped[i]);
-                equipment.EquipToActor(actor);
+                dummyEquip.SetAllStats(allEquipped[i]);
+                dummyEquip.EquipToActor(actor);
             }
         }
         stats = new List<string>(actor.GetPassiveSkills());
@@ -188,7 +188,7 @@ public class SelectStatTextList : StatTextList
     {
         page = 0;
         data.Clear();
-        // 3 types of equipment, weapon, armor, charm
+        // 3 types of dummyEquip, weapon, armor, charm
         for (int i = 0; i < 6; i++)
         {
             statTexts[i].SetText("None");
@@ -196,26 +196,26 @@ public class SelectStatTextList : StatTextList
         string[] dataBlocks = selectedActorEquipment.Split("@");
         for (int i = 0; i < dataBlocks.Length; i++)
         {
-            equipment.SetAllStats(dataBlocks[i]);
-            switch (equipment.GetSlot())
+            dummyEquip.SetAllStats(dataBlocks[i]);
+            switch (dummyEquip.GetSlot())
             {
                 case "Weapon":
-                statTexts[0].SetText(equipment.GetName());
+                statTexts[0].SetText(dummyEquip.GetName());
                 break;
                 case "Armor":
-                statTexts[1].SetText(equipment.GetName());
+                statTexts[1].SetText(dummyEquip.GetName());
                 break;
                 case "Charm":
-                statTexts[2].SetText(equipment.GetName());
+                statTexts[2].SetText(dummyEquip.GetName());
                 break;
                 case "Helmet":
-                statTexts[3].SetText(equipment.GetName());
+                statTexts[3].SetText(dummyEquip.GetName());
                 break;
                 case "Boots":
-                statTexts[4].SetText(equipment.GetName());
+                statTexts[4].SetText(dummyEquip.GetName());
                 break;
                 case "Gloves":
-                statTexts[5].SetText(equipment.GetName());
+                statTexts[5].SetText(dummyEquip.GetName());
                 break;
             }
         }
@@ -238,12 +238,12 @@ public class SelectStatTextList : StatTextList
         // Keep track of the base actor passive stats.
         List<string> basePassives = new List<string>(actor.GetPassiveSkills());
         List<string> baseLevels = new List<string>(actor.GetPassiveLevels());
-        // Equipped the current equipment.
+        // Equipped the current dummyEquip.
         string[] allEquipped = currentEquipment.Split("@");
         for (int i = 0; i < allEquipped.Length; i++)
         {
-            equipment.SetAllStats(allEquipped[i]);
-            equipment.EquipToActor(actor);
+            dummyEquip.SetAllStats(allEquipped[i]);
+            dummyEquip.EquipToActor(actor);
         }
         // Keep track of current stats.
         List<string> currentPassives = new List<string>(actor.GetPassiveSkills());
@@ -251,18 +251,18 @@ public class SelectStatTextList : StatTextList
         // Reset to base stats.
         actor.SetPassiveSkills(basePassives);
         actor.SetPassiveLevels(baseLevels);
-        equipment.SetAllStats(newEquipment);
-        equipment.EquipToActor(actor);
-        string slot = equipment.GetSlot();
-        // Replace the equipment in the specified slot with the new equipment.
+        dummyEquip.SetAllStats(newEquipment);
+        dummyEquip.EquipToActor(actor);
+        string slot = dummyEquip.GetSlot();
+        // Replace the dummyEquip in the specified slot with the new dummyEquip.
         for (int i = 0; i < allEquipped.Length; i++)
         {
-            equipment.SetAllStats(allEquipped[i]);
-            if (slot == equipment.GetSlot())
+            dummyEquip.SetAllStats(allEquipped[i]);
+            if (slot == dummyEquip.GetSlot())
             {
                 continue;
             }
-            equipment.EquipToActor(actor);
+            dummyEquip.EquipToActor(actor);
         }
         List<string> potentialPassives = new List<string>(actor.GetPassiveSkills());
         List<string> potentialLevels = new List<string>(actor.GetPassiveLevels());

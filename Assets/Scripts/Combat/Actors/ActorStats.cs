@@ -197,6 +197,10 @@ public class ActorStats : ActorInitialStats
         currentHealth += amount;
         if (currentHealth > GetBaseHealth()) { currentHealth = GetBaseHealth(); }
     }
+    public void HealToMaxHealth()
+    {
+        currentHealth = GetBaseHealth();
+    }
     public void Hurt(int amount)
     {
         if (amount < 0)

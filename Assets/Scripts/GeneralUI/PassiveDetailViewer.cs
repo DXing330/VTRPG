@@ -759,6 +759,12 @@ public class PassiveDetailViewer : MonoBehaviour
                 return multiplier + "your " + "[" + adjustedSpecifics + "] level";
             case "DamageTaken":
                 return multiplier + "the amount of damage taken";
+            case "DamageDealt":
+                return multiplier + "the amount of damage dealt";
+            case "DamageTaken/2":
+                return multiplier + "half the amount of damage taken";
+            case "DamageDealt/2":
+                return multiplier + "half the amount of damage dealt";
             case "Defense":
                 return multiplier + "your defense value";
             case "Attack":

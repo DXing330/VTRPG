@@ -425,6 +425,9 @@ public class PartyDataManager : MonoBehaviour
         permanentPartyData.ReviveDefeatedMembers();
         mainPartyData.RemoveDefeatedMembers();
         tempPartyData.RemoveDefeatedMembers();
+        permanentPartyData.NaturalRegenerationAfterBattle();
+        mainPartyData.NaturalRegenerationAfterBattle();
+        tempPartyData.NaturalRegenerationAfterBattle();
         SetFullParty();
     }
     public void RemoveDeadPartyMembers()

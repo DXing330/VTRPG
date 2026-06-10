@@ -535,6 +535,23 @@ public class PartyData : SavedData
         }
         return count;
     }
+    // Regenerators automatically heal to full at the end of each battle.
+    public void NaturalRegenerationAfterBattle()
+    {
+        List<string> regenPassives = new List<string>();
+        regenPassives.Add("Regenerator");
+        regenPassives.Add("Air Elemental");
+        for (int i = 0; i < partyStats.Count; i++)
+        {
+            dummyActor.SetInitialStatsFromString(partyStats[i]);
+            if (dummyActor.AnyPassiveExists(regenPassives))
+            {
+                dummyActor.HealToMaxHealth();
+                partyStats[i] = dummyActor.GetInitialStats();
+            }
+        }
+    }
+    // Regenerators automatically heal a little when moving in dungeons.
     public void NaturalRegeneration(List<string> regenPassives)
     {
         for (int i = 0; i < partyStats.Count; i++)

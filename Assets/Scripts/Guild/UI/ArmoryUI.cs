@@ -10,7 +10,7 @@ using TMPro;
 public class ArmoryUI : MonoBehaviour
 {
     public GeneralUtility utility;
-    public Equipment dummyEquip;
+    public Equipment dummyEquip = new Equipment();
     public EquipmentInventory equipmentInventory;
     public PartyDataManager partyData;
     public void SetPartyData(PartyDataManager newPartyData)

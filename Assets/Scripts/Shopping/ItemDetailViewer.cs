@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
-// Views all kinds of items (equipment/passives/skillbooks/relics/consumables)
+// Views all kinds of items (dummyEquip/passives/skillbooks/relics/consumables)
 public class ItemDetailViewer : MonoBehaviour
 {
     public TMP_Text itemName;
     public TMP_Text itemInfo;
-    // Either view an equipment or an item.
+    // Either view an dummyEquip or an item.
     public bool viewingEquipment = true;
     public void ViewEquip(){viewingEquipment = true;}
     public void ViewItem(){viewingEquipment = false;}
     public StatDatabase equipData;
-    public Equipment equipment;
+    public Equipment dummyEquip = new Equipment();
     public StatDatabase itemData;
     public ActiveSkill active;
     public ActiveDescriptionViewer itemDescriptions;
@@ -34,16 +34,16 @@ public class ItemDetailViewer : MonoBehaviour
     }
     public void ShowEquipmentInfo(string newInfo)
     {
-        equipment.SetAllStats(newInfo);
-        itemName.text = equipment.GetName();
+        dummyEquip.SetAllStats(newInfo);
+        itemName.text = dummyEquip.GetName();
         itemInfo.text = "Grants the user: ";
-        passiveSelect.SetStatsAndData(equipment.GetPassives(), equipment.GetPassiveLevels());
+        passiveSelect.SetStatsAndData(dummyEquip.GetPassives(), dummyEquip.GetPassiveLevels());
     }
     public void ViewPassiveDetails()
     {
         int index = passiveSelect.GetSelected();
         if (index < 0) { return; }
-        passiveDetails.UpdatePassiveNames(equipment.GetPassives()[index], equipment.GetPassiveLevels()[index]);
+        passiveDetails.UpdatePassiveNames(dummyEquip.GetPassives()[index], dummyEquip.GetPassiveLevels()[index]);
     }
     public void ResetInfo()
     {
@@ -66,12 +66,12 @@ public class ItemDetailViewer : MonoBehaviour
         if (viewingEquipment)
         {
             data = equipData.ReturnValue(newItem);
-            equipment.SetAllStats(data);
+            dummyEquip.SetAllStats(data);
             itemInfo.text = "Grants the user: ";
-            for (int i = 0; i < equipment.passives.Count; i++)
+            for (int i = 0; i < dummyEquip.passives.Count; i++)
             {
-                itemInfo.text += equipment.passives[i];
-                if (i < equipment.passives.Count - 1)
+                itemInfo.text += dummyEquip.passives[i];
+                if (i < dummyEquip.passives.Count - 1)
                 {
                     itemInfo.text += ", ";
                 }

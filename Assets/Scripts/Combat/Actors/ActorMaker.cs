@@ -1,10 +1,14 @@
+using System;
+using System.IO;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class ActorMaker : MonoBehaviour
 {
-    public Equipment equipmentPrefab;
+    public GeneralUtility utility;
+    public Equipment dummyEquip = new Equipment();
     public TacticActor actorPrefab;
     public BattleModifier battleModifier;
     public StatDatabase actorStats;
@@ -20,19 +24,21 @@ public class ActorMaker : MonoBehaviour
     {
         TacticActor newActor = Instantiate(actorPrefab, transform.position, new Quaternion(0, 0, 0, 0));
         // Need to reset somethings so that they don't carryover.
-        newActor.ResetEquipment();
-        newActor.ResetPassives();
-        newActor.InitializeStats();
-        newActor.ResetCounter();
-        newActor.SetCurrentHealth(0);
+        ResetActor(newActor);
         return newActor;
     }
-
+    protected void ResetActor(TacticActor actor)
+    {
+        actor.ResetEquipment();
+        actor.ResetPassives();
+        actor.InitializeStats();
+        actor.ResetCounter();
+        actor.SetCurrentHealth(0);
+    }
     protected void SetActorName(TacticActor actor, string actorName)
     {
         actor.SetInitialStatsFromString(actorStats.ReturnValue(actorName));
     }
-
     protected void AddElementPassive(TacticActor actor, string element)
     {
         if (element == "")
@@ -86,7 +92,6 @@ public class ActorMaker : MonoBehaviour
             actor.AddPassiveSkill(passives[i], levels[i]);
         }
     }
-
     public TacticActor SummonActor(int location, string actorName, int team = 0)
     {
         TacticActor newActor = SpawnActor(location, actorName, team);
@@ -97,7 +102,6 @@ public class ActorMaker : MonoBehaviour
         newActor.ResetStats();
         return newActor;
     }
-
     public TacticActor SpawnActor(int location, string actorName, int team = 0)
     {
         TacticActor newActor = CreateActor();
@@ -109,7 +113,56 @@ public class ActorMaker : MonoBehaviour
         newActor.ResetStats();
         return newActor;
     }
-
+    // Actor Maker is in charge of equipment in relation to actor starting stats for now.
+    public StatDatabase weaponReach;
+    public RuneGridManager runeGridManager;
+    protected void ApplyWeaponReach(TacticActor actor, Equipment equip)
+    {
+        if (equip.GetSlot() != "Weapon"){return;}
+        string reach = weaponReach.ReturnValue(equip.GetEquipType());
+        if (reach.Length <= 0){return;}
+        actor.SetWeaponReach(utility.SafeParseInt(reach));
+    }
+    // ALL Base Equipment Changes Should Go Through Here.
+    public void ApplyEquipmentToActor(TacticActor actor, string allEquipmentString)
+    {
+        List<string> equipmentSets = new List<string>();
+        string[] equipData = allEquipmentString.Split("@");
+        for (int i = 0; i < equipData.Length; i++)
+        {
+            if (equipData[i].Length < 6){continue;}
+            dummyEquip.SetAllStats(equipData[i]);
+            dummyEquip.EquipToActor(actor);
+            actor.EquipToActor(dummyEquip);
+            ApplyWeaponReach(actor, dummyEquip);
+            if (dummyEquip.GetEquipSet() != "")
+            {
+                equipmentSets.Add(dummyEquip.GetEquipSet());
+            }
+        }
+        List<string> uniqueSets = equipmentSets.Distinct().ToList();
+        List<int> uniqueSetLevels = new List<int>();
+        // TODO Test That This Works As Intended With Sets.
+        for (int i = 0; i < uniqueSets.Count; i++)
+        {
+            uniqueSetLevels.Add(utility.CountStringsInList(equipmentSets, uniqueSets[i]));
+            actor.AddPassiveSkill(uniqueSets[i], uniqueSetLevels[i].ToString());
+        }
+        runeGridManager.ApplyRuneGridToActor(actor);
+    }
+    // For testing equipment.
+    public TacticActor SpawnActorWithEquipment(TacticActor actor, int location, string actorName, int team, string equipment)
+    {
+        SetActorName(actor, actorName);
+        ResetActor(actor);
+        ApplyEquipmentToActor(actor, equipment);
+        AddElementPassives(actor);
+        AddAttributePassives(actor);
+        AddSpeciesPassives(actor);
+        passiveOrganizer.OrganizeActorPassives(actor);
+        actor.ResetStats();
+        return actor;
+    }
     public List<TacticActor> SpawnTeamInPattern(string pattern, int team, List<string> teamNames, List<string> teamStats = null, List<string> teamPersonalNames = null, List<string> teamEquipment = null, List<string> teamIDs = null)
     {
         if (teamStats == null) { teamStats = new List<string>(); }
@@ -133,12 +186,7 @@ public class ActorMaker : MonoBehaviour
             else { actors[i].SetPersonalName(actors[i].GetSpriteName()); }
             if (i < teamEquipment.Count)
             {
-                string[] equipData = teamEquipment[i].Split("@");
-                for (int j = 0; j < equipData.Length; j++)
-                {
-                    equipmentPrefab.SetAllStats(equipData[j]);
-                    equipmentPrefab.EquipToActor(actors[i]);
-                }
+                ApplyEquipmentToActor(actors[i], teamEquipment[i]);
             }
             if (i < teamIDs.Count)
             {
@@ -157,7 +205,6 @@ public class ActorMaker : MonoBehaviour
         }
         return actors;
     }
-
     public void ChangeActorForm(TacticActor actor, string newForm)
     {
         // Change the sprite name.
@@ -172,7 +219,6 @@ public class ActorMaker : MonoBehaviour
         actor.SetBaseHealth(actor.GetHealth());
         passiveOrganizer.OrganizeActorPassives(actor);
     }
-
     public TacticActor CloneActor(TacticActor actor, int location)
     {
         TacticActor newActor = CreateActor();
@@ -184,7 +230,6 @@ public class ActorMaker : MonoBehaviour
         passiveOrganizer.OrganizeActorPassives(actor);
         return newActor;
     }
-
     public void ApplyBattleModifiers(List<TacticActor> actors, List<string> battleMods)
     {
         for (int i = 0; i < battleMods.Count; i++)

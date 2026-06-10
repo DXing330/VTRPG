@@ -4,10 +4,53 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Equipment : MonoBehaviour
+public enum EquipSlots
 {
-    public GeneralUtility utility;
-    public StatDatabase weaponReach;
+    None,
+    Weapon,
+    Armor,
+    Charm,
+    Helmet,
+    Boots,
+    Gloves
+}
+public enum EquipmentRune
+{
+    None,
+    FoolRune,
+    BrahmaRune,
+    ChariotRune,
+    DevilRune,
+    EmperorRune,
+    FireRune,
+    GoldRune,
+    HangedManRune,
+    IntelligenceRune,
+    JudgementRune,
+    KuberaRune,
+    LoveRune,
+    MoonRune,
+    NullRune,
+    ObliterationRune,
+    PriestessRune,
+    QueenRune,
+    RetreatRune,
+    ShivaRune,
+    TemperanceRune,
+    UnicornRune,
+    VishnuRune,
+    WheelofFortuneRune,
+    KaliRune,
+    YamaRune,
+    WorldRune
+}
+[System.Serializable]
+public class Equipment
+{
+    public Equipment()
+    {
+        ResetStats();
+    }
     public string delimiter = "|";
     public string allStats;
     public string GetStats(){ return allStats; }
@@ -22,31 +65,42 @@ public class Equipment : MonoBehaviour
         allStats += maxUpgrades + delimiter;
         allStats += rarity + delimiter;
         allStats += runeSlots + delimiter;
-        allStats += String.Join(",", runes) + delimiter;
+        allStats += String.Join(",", GetRunes()) + delimiter;
         allStats += equipSet + delimiter;
     }
-    public void ResetStats()
+    // Used to preserved ordering of slots in prefabs.
+    public void ResetStatsExceptSlot()
     {
-        equipName = "";
-        slot = "-1";
+        equipName = "None";
         type = "-1";
-        passives.Clear();
-        passiveLevels.Clear();
+        passives = new List<string>();
+        passiveLevels = new List<string>();
         maxUpgrades = 0;
         rarity = "";
         runeSlots = 0;
-        runes.Clear();
+        runes = new List<EquipmentRune>();
+        equipSet = "";
+    }
+    public void ResetStats()
+    {
+        equipName = "None";
+        slot = EquipSlots.None;
+        type = "-1";
+        passives = new List<string>();
+        passiveLevels = new List<string>();
+        maxUpgrades = 0;
+        rarity = "";
+        runeSlots = 0;
+        runes = new List<EquipmentRune>();
         equipSet = "";
     }
     public void SetAllStats(string newStats)
     {
+        ResetStats();
         allStats = newStats;
         string[] dataBlocks = allStats.Split("|");
         if (dataBlocks.Length < 9)
         {
-            equipName = "None";
-            slot = "-1";
-            type = "-1";
             return;
         }
         for (int i = 0; i < dataBlocks.Length; i++)
@@ -74,13 +128,13 @@ public class Equipment : MonoBehaviour
             SetPassiveLevels(stat.Split(",").ToList());
             break;
             case 5:
-            SetMaxUpgrades(utility.SafeParseInt(stat, 0));
+            SetMaxUpgrades(SafeParseInt(stat));
             break;
             case 6:
             SetRarity(stat);
             break;
             case 7:
-            SetRuneSlots(utility.SafeParseInt(stat, 0));
+            SetRuneSlots(SafeParseInt(stat));
             break;
             case 8:
             SetRunes(stat.Split(",").ToList());
@@ -96,12 +150,17 @@ public class Equipment : MonoBehaviour
         equipName = newInfo;
     }
     public string GetName(){return equipName;}
-    public string slot;
+    public EquipSlots slot;
     public void SetSlot(string newInfo)
     {
-        slot = newInfo;
+        if (newInfo == "-1" || newInfo.Length <= 0)
+        {
+            slot = EquipSlots.None;
+            return;
+        }
+        slot = Enum.Parse<EquipSlots>(newInfo);
     }
-    public string GetSlot(){return slot;}
+    public string GetSlot(){return slot.ToString();}
     public string type;
     public void SetType(string newInfo)
     {
@@ -222,12 +281,18 @@ public class Equipment : MonoBehaviour
     {
         runeSlots--;
     }
-    public List<string> runes;
+    public List<EquipmentRune> runes;
     public void ResetRunes(){runes.Clear();}
+    // For testing.
+    public void DebugAddRune(string newInfo)
+    {
+        if (newInfo.Length <= 1){return;}
+        runes.Add(Enum.Parse<EquipmentRune>(newInfo));
+    }
     public void AddRune(string newInfo)
     {
         if (newInfo.Length <= 1){return;}
-        runes.Add(newInfo);
+        runes.Add(Enum.Parse<EquipmentRune>(newInfo));
         ConsumeRuneSlot();
     }
     public void SetRunes(List<string> newInfo)
@@ -235,31 +300,22 @@ public class Equipment : MonoBehaviour
         runes.Clear();
         for (int i = 0; i < newInfo.Count; i++)
         {
-            AddRune(newInfo[i]);
+            if (newInfo[i].Length <= 0){continue;}
+            runes.Add(Enum.Parse<EquipmentRune>(newInfo[i]));
         }
     }
-    public StatDatabase runeLetters;
-    public StatDatabase runeWords;
-    public List<string> ReturnRunePassives()
+    public List<string> GetRunes()
     {
-        List<string> rPassives = new List<string>();
-        // Get the letter mapping.
-        string word = "";
+        List<string> runeNames = new List<string>();
         for (int i = 0; i < runes.Count; i++)
         {
-            word += runeLetters.ReturnValue(runes[i]);
+            string runeName = runes[i].ToString();
+            // Better have at least "Rune" in the name + something else.
+            if (runeName.Length <= 4){continue;}
+            runeNames.Add(runeName);
         }
-        string runeWord = runeWords.ReturnValue(word);
-        // Check if you have a real word.
-        if (runeWord.Length > 1)
-        {
-            rPassives.Add(runeWord);
-            return rPassives;
-        }
-        // Else just return the runes.
-        return GetRunes();
+        return runeNames;
     }
-    public List<string> GetRunes(){return runes;}
     public string rarity;
     public void SetRarity(string newInfo)
     {
@@ -281,29 +337,36 @@ public class Equipment : MonoBehaviour
     public void EquipToActor(TacticActor actor)
     {
         if (allStats.Length < 6) { return; }
-        if (slot == "Weapon")
+        if (slot == EquipSlots.Weapon)
         {
             actor.SetWeaponType(type);
             actor.SetWeaponName(equipName);
             actor.SetWeaponStats(allStats);
-            actor.SetWeaponReach(int.Parse(weaponReach.ReturnValue(type)));
+            // TODO assign weapon reach through the actor maker.
+            //actor.SetWeaponReach(int.Parse(weaponReach.ReturnValue(type)));
         }
         for (int i = 0; i < passives.Count; i++)
         {
             actor.AddPassiveSkill(passives[i], passiveLevels[i]);
         }
-        List<string> rPassives = ReturnRunePassives();
-        for (int i = 0; i < rPassives.Count; i++)
-        {
-            actor.AddRunePassive(rPassives[i]);
-        }
     }
     public void EquipWeapon(TacticActor actor)
     {
         if (allStats.Length < 6){return;}
-        if (slot == "Weapon")
+        if (slot == EquipSlots.Weapon)
         {
             actor.SetWeaponType(type);
+        }
+    }
+    public int SafeParseInt(string intString, int defaultValue = 0)
+    {
+        try
+        {
+            return int.Parse(intString);
+        }
+        catch
+        {
+            return defaultValue;
         }
     }
 }

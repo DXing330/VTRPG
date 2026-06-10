@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class EquipmentTester : MonoBehaviour
 {
-    public Equipment dummyEquip;
+    public Equipment dummyEquip = new Equipment();
     public EquipmentInventory dummyInventory;
     public StatDatabase equipData;
 

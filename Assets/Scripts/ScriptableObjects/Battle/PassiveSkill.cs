@@ -24,8 +24,13 @@ public class PassiveSkill : SkillEffect
                 default:
                 amount = actor.GetLevelFromPassive(scaling[1]);
                 break;
+                case "DamageDealt":
                 case "DamageTaken":
                 amount = input;
+                break;
+                case "DamageDealt/2":
+                case "DamageTaken/2":
+                amount = input / 2;
                 break;
                 case "Defense":
                 amount = actor.GetDefense();
@@ -197,9 +202,9 @@ public class PassiveSkill : SkillEffect
         }
     }
 
-    public void ApplyAfterAttackPassives(TacticActor actor, TacticActor attackTarget, int damage, BattleMap map, bool hit = true, bool crit = false, bool counterAttack = false)
+    public void ApplyAfterAttackPassives(TacticActor attacker, TacticActor attackTarget, int damage, BattleMap map, bool hit = true, bool crit = false, bool counterAttack = false)
     {
-        List<string> passives = actor.GetAfterAttackPassives();
+        List<string> passives = attacker.GetAfterAttackPassives();
         if (passives.Count <= 0) { return; }
         for (int i = 0; i < passives.Count; i++)
         {
@@ -211,7 +216,7 @@ public class PassiveSkill : SkillEffect
             bool conditionsMet = true;
             for (int j = 0; j < conditions.Length; j++)
             {
-                conditionsMet = CheckAfterAttackCondition(conditions[j], specifics[j], actor, attackTarget, map, hit, crit, counterAttack);
+                conditionsMet = CheckAfterAttackCondition(conditions[j], specifics[j], attacker, attackTarget, map, hit, crit, counterAttack);
                 if (!conditionsMet)
                 {
                     break;
@@ -224,14 +229,14 @@ public class PassiveSkill : SkillEffect
             string[] effects = passiveData[4].Split(",");
             string[] effectSpecifics = passiveData[5].Split(",");
             if (effects.Length != effectSpecifics.Length) { continue; }
-            TacticActor target = actor;
+            TacticActor target = attacker;
             if (passiveData[3] == "Target")
             {
                 target = attackTarget;
             }
             for (int h = 0; h < effects.Length; h++)
             {
-                string specificDetails = GetEffectSpecifics(actor, effectSpecifics[h], 0, map);
+                string specificDetails = GetEffectSpecifics(attacker, effectSpecifics[h], damage, map);
                 ApplyPassiveEffectToTarget(target, map, passiveData[3], effects[h], specificDetails);
             }
         }

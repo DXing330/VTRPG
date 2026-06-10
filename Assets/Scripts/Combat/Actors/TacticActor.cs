@@ -49,10 +49,37 @@ public class TacticActor : ActorStats
     // Equipment.
     public void ResetEquipment()
     {
+        for (int i = 0; i < baseEquipment.Count; i++)
+        {
+            baseEquipment[i].ResetStatsExceptSlot();
+        }
+        currentEquipment = new List<Equipment>();
+        for (int i = 0; i < baseEquipment.Count; i++)
+        {
+            Equipment copy = new Equipment();
+            baseEquipment[i].RefreshStats();
+            copy.SetAllStats(baseEquipment[i].GetStats());
+            currentEquipment.Add(copy);
+        }
         ResetWeapon();
         ResetArmor();
         ResetEquipmentSkillsAndSpells();
     }
+    public List<Equipment> baseEquipment;
+    public void EquipToActor(Equipment newBaseEquip)
+    {
+        for (int i = 0; i < baseEquipment.Count; i++)
+        {
+            if (baseEquipment[i].GetSlot() == newBaseEquip.GetSlot())
+            {
+                newBaseEquip.RefreshStats();
+                baseEquipment[i].SetAllStats(newBaseEquip.GetStats());
+                break;
+            }
+        }
+    }
+    public List<Equipment> GetBaseEquipment(){return baseEquipment;}
+    public List<Equipment> currentEquipment;
     public string weaponType;
     public void ResetWeapon()
     {
@@ -290,7 +317,6 @@ public class TacticActor : ActorStats
     {
         counterAttacks--;
     }
-
     // Turn lifecycle.
     public override void InitializeStats()
     {

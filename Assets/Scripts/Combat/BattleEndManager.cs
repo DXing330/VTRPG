@@ -9,7 +9,7 @@ public class BattleEndManager : MonoBehaviour
     public BattleStatsTracker battleStatsTracker;
     public PartyDataManager partyData;
     public TacticActor dummyActor;
-    public Equipment dummyEquip;
+    public Equipment dummyEquip = new Equipment();
     public SceneMover sceneMover;
     public GameObject battleEndScreen;
     public TMP_Text battleResult;
