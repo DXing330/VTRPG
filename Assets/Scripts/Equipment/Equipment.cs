@@ -72,7 +72,7 @@ public class Equipment
     public void ResetStatsExceptSlot()
     {
         equipName = "None";
-        type = "-1";
+        type = "";
         passives = new List<string>();
         passiveLevels = new List<string>();
         maxUpgrades = 0;
@@ -85,7 +85,7 @@ public class Equipment
     {
         equipName = "None";
         slot = EquipSlots.None;
-        type = "-1";
+        type = "";
         passives = new List<string>();
         passiveLevels = new List<string>();
         maxUpgrades = 0;
@@ -337,25 +337,9 @@ public class Equipment
     public void EquipToActor(TacticActor actor)
     {
         if (allStats.Length < 6) { return; }
-        if (slot == EquipSlots.Weapon)
-        {
-            actor.SetWeaponType(type);
-            actor.SetWeaponName(equipName);
-            actor.SetWeaponStats(allStats);
-            // TODO assign weapon reach through the actor maker.
-            //actor.SetWeaponReach(int.Parse(weaponReach.ReturnValue(type)));
-        }
         for (int i = 0; i < passives.Count; i++)
         {
             actor.AddPassiveSkill(passives[i], passiveLevels[i]);
-        }
-    }
-    public void EquipWeapon(TacticActor actor)
-    {
-        if (allStats.Length < 6){return;}
-        if (slot == EquipSlots.Weapon)
-        {
-            actor.SetWeaponType(type);
         }
     }
     public int SafeParseInt(string intString, int defaultValue = 0)

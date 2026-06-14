@@ -45,6 +45,11 @@ public class StSDataConverterUtility : MonoBehaviour
                     //Debug.LogWarning("Choice text mismatch at event " + i + ", choice " + c + ": " + original.eventName);
                     allErrors += "Choice text mismatch at event " + i + ", choice " + c + ": " + original.eventName + "\n";
                 }
+                if (original.choices[c].choiceEffectDescription != loaded.choices[c].choiceEffectDescription)
+                {
+                    //Debug.LogWarning("Choice text mismatch at event " + i + ", choice " + c + ": " + original.eventName);
+                    allErrors += "Choice Effect text mismatch at event " + i + ", choice " + c + ": " + original.eventName + "\n";
+                }
                 if (original.choices[c].choiceEffects.Count != loaded.choices[c].choiceEffects.Count)
                 {
                     //Debug.LogWarning("Effect count mismatch at event " + i + ", choice " + c + ": " + original.eventName);
@@ -180,6 +185,7 @@ public class StSDataConverterUtility : MonoBehaviour
         string oldEffectsData = choiceBlocks[2];
         string oldSpecificsData = choiceBlocks[3];
         newChoice.choiceText = choiceBlocks[4];
+        newChoice.choiceEffectDescription = choiceBlocks[5];
         string[] oldTargets = oldTargetsData.Split(",");
         string[] oldEffects = oldEffectsData.Split(",");
         string[] oldSpecifics = oldSpecificsData.Split(",");

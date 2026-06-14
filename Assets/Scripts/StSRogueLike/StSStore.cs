@@ -393,7 +393,7 @@ public class StSStore : MonoBehaviour
         string relicName = shopData.relics[selectedIndex];
         relicSold[selectedIndex] = true;
         UpdateAllDisplays();
-        string popUpRelic = rewardData.GainRelic(relicName, partyData, stsManager);
+        string popUpRelic = stsManager.GainRelic(relicName);
         Debug.Log(popUpRelic);
         if (popUpRelic == "RewardSelect")
         {

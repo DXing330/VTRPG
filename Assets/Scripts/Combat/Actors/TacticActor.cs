@@ -53,16 +53,8 @@ public class TacticActor : ActorStats
         {
             baseEquipment[i].ResetStatsExceptSlot();
         }
-        currentEquipment = new List<Equipment>();
-        for (int i = 0; i < baseEquipment.Count; i++)
-        {
-            Equipment copy = new Equipment();
-            baseEquipment[i].RefreshStats();
-            copy.SetAllStats(baseEquipment[i].GetStats());
-            currentEquipment.Add(copy);
-        }
+        UpdateCurrentEquipment();
         ResetWeapon();
-        ResetArmor();
         ResetEquipmentSkillsAndSpells();
     }
     public List<Equipment> baseEquipment;
@@ -80,52 +72,44 @@ public class TacticActor : ActorStats
     }
     public List<Equipment> GetBaseEquipment(){return baseEquipment;}
     public List<Equipment> currentEquipment;
-    public string weaponType;
+    public void UpdateCurrentEquipment()
+    {
+        currentEquipment = new List<Equipment>();
+        for (int i = 0; i < baseEquipment.Count; i++)
+        {
+            Equipment copy = new Equipment();
+            baseEquipment[i].RefreshStats();
+            copy.SetAllStats(baseEquipment[i].GetStats());
+            currentEquipment.Add(copy);
+        }
+    }
     public void ResetWeapon()
     {
-        weaponType = "";
-        weaponName = "";
-        weaponStats = "";
+        // Weapon is always first slot.
+        currentEquipment[0].ResetStatsExceptSlot();
         weaponReach = 1;
     }
-    public string Disarm()
+    public void Disarm()
     {
-        // Remove weapon passives, that can be handled separately.
-        string stats = weaponStats;
         ResetWeapon();
-        return stats;
     }
-    public void SetWeaponType(string newWeapon){weaponType = newWeapon;}
-    public string GetWeaponType(){return weaponType;}
+    public string GetWeaponType()
+    {
+        return currentEquipment[0].GetEquipType();
+    }
     public bool NoWeapon()
     {
-        return weaponType == "";
+        return GetWeaponType() == "";
     }
-    public string weaponName;
-    public void SetWeaponName(string newInfo){weaponName = newInfo;}
-    public string GetWeaponName(){return weaponName;}
-    public string weaponStats;
-    public void SetWeaponStats(string newInfo){weaponStats = newInfo;}
-    public string GetWeaponStats(){return weaponStats;}
     public int weaponReach = 1;
     public int GetWeaponReach()
     {
         if (GetAttackRange() > 1){return 999;}
         // Bigger things have bigger reach.
-        return Mathf.Max(weaponReach, GetBaseWeight());
+        // You always have at least 1 reach.
+        return Mathf.Max(weaponReach, GetBaseWeight(), 1);
     }
     public void SetWeaponReach(int newInfo){weaponReach = newInfo;}
-    public void ResetArmor()
-    {
-        armorName = "";
-        armorStats = "";
-    }
-    public string armorName;
-    public void SetArmorName(string newInfo){armorName = newInfo;}
-    public string GetArmorName(){return armorName;}
-    public string armorStats;
-    public void SetArmorStats(string newInfo){armorStats = newInfo;}
-    public string GetArmorStats(){return armorStats;}
     public List<string> equipmentSkills;
     public void AddEquipmentSkill(string newSkill)
     {
@@ -205,7 +189,6 @@ public class TacticActor : ActorStats
     public void IncrementCounter(){counter++;}
     public void SetCounter(int newInfo){counter = newInfo;}
     public int GetCounter(){return counter;}
-
     // Actions.
     public int baseActions = 4;
     public void UpdateBaseActions(int amount){baseActions += amount;}

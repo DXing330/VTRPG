@@ -85,7 +85,7 @@ public class StSShopSaveData : SavedData
 
         for (int i = 0; i < rareBookCount && possibleBooks.Count > 0; i++)
         {
-            int index = rewardTracker.rewardSeed.Range(0, possibleBooks.Count);
+            int index = rewardTracker.rewardSeed.SeedRange(0, possibleBooks.Count);
             string bookName = possibleBooks[index];
             AddShopBook(bookName, ReturnSkillBookPrice(bookName, rewardTracker.skillBookRarity));
             possibleBooks.RemoveAt(index);
@@ -99,7 +99,7 @@ public class StSShopSaveData : SavedData
         List<string> possibleBooks = rewardTracker.colorlessSkillBookDB.GetAllKeys();
         for (int i = 0; i < colorlessBookCount && possibleBooks.Count > 0; i++)
         {
-            int index = rewardTracker.rewardSeed.Range(0, possibleBooks.Count);
+            int index = rewardTracker.rewardSeed.SeedRange(0, possibleBooks.Count);
             string bookName = possibleBooks[index];
             AddShopBook(bookName, ReturnColorlessBookPrice(bookName, rewardTracker));
             possibleBooks.RemoveAt(index);
@@ -113,7 +113,7 @@ public class StSShopSaveData : SavedData
         List<string> possibleItems = rewardTracker.itemDB.GetAllKeys();
         for (int i = 0; i < consumableCount && possibleItems.Count > 0; i++)
         {
-            int index = rewardTracker.rewardSeed.Range(0, possibleItems.Count);
+            int index = rewardTracker.rewardSeed.SeedRange(0, possibleItems.Count);
             consumables.Add(possibleItems[index]);
             consumablePrices.Add(consumablePrice.ToString());
             possibleItems.RemoveAt(index);

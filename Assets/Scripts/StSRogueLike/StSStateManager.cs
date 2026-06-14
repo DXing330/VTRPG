@@ -206,12 +206,17 @@ public class StSStateManager : MonoBehaviour
         Save();
         sceneMover.LoadScene(newScene);
     }
-    public void GainRelic()
+    // All Relic Gains Now Go Through Here.
+    public string GainRelic(string relicName)
     {
+        string relicPopUp = rewardTracker.GainRelic(relicName, stsParty, this);
         stsFrame.UpdateFrame();
+        return relicPopUp;
     }
-    public void GainGold()
+    public void GainGold(int amount)
     {
+        // TODO Apply All The Gain Gold Relic Effects Here.
+        stsParty.inventory.GainGold(amount);
         stsFrame.UpdateFrame();
     }
 }

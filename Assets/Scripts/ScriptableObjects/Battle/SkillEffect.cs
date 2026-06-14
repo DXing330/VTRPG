@@ -571,8 +571,7 @@ public class SkillEffect : ScriptableObject
                 target.SetGuardRange(int.Parse(effectSpecifics));
                 break;
             case "Disarm":
-                string disarmedWeapon = target.Disarm();
-                // TODO Try to remove any passives that the weapon granted and refresh the target's passives.
+                target.Disarm();
                 break;
             // Power word kill.
             case "Kill":

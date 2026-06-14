@@ -29,7 +29,7 @@ public class StSEnemyTracker : SavedData
         int floor = stsState.GetFloor();
         enemyPool = floorEnemies[floor - 1].GetAllKeys();
         elitePool = floorElites[floor - 1].GetAllKeys();
-        floorBoss = floorBosses[floor - 1].ReturnKeyAtIndex(enemyRNGSeed.Range(0, floorBosses[floor - 1].keys.Count));
+        floorBoss = floorBosses[floor - 1].ReturnKeyAtIndex(enemyRNGSeed.SeedRange(0, floorBosses[floor - 1].keys.Count));
         Save();
     }
 
@@ -39,7 +39,7 @@ public class StSEnemyTracker : SavedData
         previousElite = "";
         enemyPool = floorEnemies[floor - 1].GetAllKeys();
         elitePool = floorElites[floor - 1].GetAllKeys();
-        floorBoss = floorBosses[floor - 1].ReturnKeyAtIndex(enemyRNGSeed.Range(0, floorBosses[floor - 1].keys.Count));
+        floorBoss = floorBosses[floor - 1].ReturnKeyAtIndex(enemyRNGSeed.SeedRange(0, floorBosses[floor - 1].keys.Count));
         Save();
     }
 
@@ -53,7 +53,7 @@ public class StSEnemyTracker : SavedData
             Debug.LogWarning("No alternate StS boss available for floor " + floor + ".");
             return floorBoss;
         }
-        return bossCandidates[enemyRNGSeed.Range(0, bossCandidates.Count)];
+        return bossCandidates[enemyRNGSeed.SeedRange(0, bossCandidates.Count)];
     }
 
     public List<string> GetBossData(bool additional = false)
@@ -76,7 +76,7 @@ public class StSEnemyTracker : SavedData
 
     public string GetEliteName()
     {
-        string eliteName = elitePool[enemyRNGSeed.Range(0, elitePool.Count)];
+        string eliteName = elitePool[enemyRNGSeed.SeedRange(0, elitePool.Count)];
         if (eliteName == previousElite)
         {
             return GetEliteName();
@@ -128,7 +128,7 @@ public class StSEnemyTracker : SavedData
         {
             return defaultEasyEnemyName;
         }
-        string enemyName = possibleEnemies[enemyRNGSeed.Range(0, possibleEnemies.Count)];
+        string enemyName = possibleEnemies[enemyRNGSeed.SeedRange(0, possibleEnemies.Count)];
         if (enemyPool.Contains(enemyName))
         {
             enemyPool.Remove(enemyName);

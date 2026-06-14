@@ -120,7 +120,7 @@ public class StSRewardSaveData : SavedData
     }
     public int DetermineRewardRarity(List<int> rarityWeights)
     {
-        int index = utility.ReturnIndexBasedOnWeight(rarityWeights, rewardSeed.Range(0, rarityWeights.Sum()));
+        int index = utility.ReturnIndexBasedOnWeight(rarityWeights, rewardSeed.SeedRange(0, rarityWeights.Sum()));
         return (index + 1);
     }
     public string GetRewardOfRarity(int rarity, List<string> rewards, List<int> rewardRarities)
@@ -128,7 +128,7 @@ public class StSRewardSaveData : SavedData
         // Probably works.
         for (int i = 0; i < rewards.Count * 6; i++)
         {
-            int index = rewardSeed.Range(0, rewards.Count);
+            int index = rewardSeed.SeedRange(0, rewards.Count);
             if (rewardRarities[index] == rarity)
             {
                 return rewards[index];
@@ -195,7 +195,7 @@ public class StSRewardSaveData : SavedData
     }
     public int GenerateGold(int goldLevel)
     {
-        return (utility.Exponent(10, goldLevel) + rewardSeed.Range(0, 10));
+        return (utility.Exponent(10, goldLevel) + rewardSeed.SeedRange(0, 10));
     }
     public string GenerateRelic(bool shop = false)
     {
@@ -253,7 +253,7 @@ public class StSRewardSaveData : SavedData
         {
             GenerateSkillBookChoices(skillBookChoices, rare == 1);
         }
-        if (rewardSeed.Range(0, 100) < itemChance)
+        if (rewardSeed.SeedRange(0, 100) < itemChance)
         {
             rewards.Add("Item");
             rewardSpecifics.Add(itemDB.ReturnRandomKey());
@@ -294,9 +294,7 @@ public class StSRewardSaveData : SavedData
             }
         }
         partyData.dungeonBag.GainRelic(relicName, counters.ToString());
-        stsManager.GainRelic();
         return rewardPopUp;
-        // Don't Save Here, Save During The Normal Save Timing.
     }
     // Lots of relics activate run modifiers.
     public StSRunModifiersSaveData runModifiers;
@@ -317,7 +315,7 @@ public class StSRewardSaveData : SavedData
             return "";
             // TODO Move This Somewhere More Central, A Few Relics Need This Timing?
             case "Gold":
-            partyData.inventory.GainGold(utility.SafeParseInt(relic.GetEffect()));
+            stsManager.GainGold(utility.SafeParseInt(relic.GetEffectSpecifics()));
             return "";
             case "Relics":
             int relicCount = utility.SafeParseInt(relic.GetEffectSpecifics());

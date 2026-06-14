@@ -27,11 +27,11 @@ public class StSMap : SimpleMapManager
     {
         if (exceptAll)
         {
-            int exceptRng = mapRNGSeed.Range(0, 2);
+            int exceptRng = mapRNGSeed.SeedRange(0, 2);
             if (exceptRng == 0){return tileTypes[0];}
             return tileTypes[1];
         }
-        int rng = mapRNGSeed.Range(0, tileWeights.Sum());
+        int rng = mapRNGSeed.SeedRange(0, tileWeights.Sum());
         string tileType = "";
         for (int i = 0; i < tileTypes.Count; i++)
         {
@@ -243,7 +243,7 @@ public class StSMap : SimpleMapManager
         // Random start.
         if (startRow < 0)
         {
-            startRow = mapRNGSeed.Range(0, rows);
+            startRow = mapRNGSeed.SeedRange(0, rows);
         }
         else
         {

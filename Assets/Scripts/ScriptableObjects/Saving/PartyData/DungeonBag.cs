@@ -155,6 +155,7 @@ public class DungeonBag : SavedData
     public List<string> relics;
     public void SetRelics(List<string> newList)
     {
+        utility.RemoveEmptyListItems(newList);
         relics = new List<string>(newList);
     }
     public List<string> GetRelics()
@@ -164,6 +165,7 @@ public class DungeonBag : SavedData
     public List<string> relicCounters;
     public void SetRelicCounters(List<string> newList)
     {
+        utility.RemoveEmptyListItems(newList);
         relicCounters = new List<string>(newList);
     }
     public List<string> GetRelicCounters()
@@ -177,10 +179,16 @@ public class DungeonBag : SavedData
         relics.Add(relicName);
         relicCounters.Add(counter);
     }
-    public void RemoveRelic(string relicName)
+    public bool RelicExists(string relicName)
     {
         int index = relics.IndexOf(relicName);
-        if (index < 0){return;}
+        if (index < 0){return false;}
+        return true;
+    }
+    public void RemoveRelic(string relicName)
+    {
+        if (!RelicExists(relicName)){return;}
+        int index = relics.IndexOf(relicName);
         relics.RemoveAt(index);
         relicCounters.RemoveAt(index);
     }

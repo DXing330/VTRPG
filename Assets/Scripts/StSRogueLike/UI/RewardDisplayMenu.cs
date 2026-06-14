@@ -80,8 +80,7 @@ public class RewardDisplayMenu : MonoBehaviour
         switch (rewards[selectedIndex])
         {
             case "Gold":
-            // Gain The Gold.
-            partyData.inventory.GainGold(int.Parse(rewardSpecifics[index]));
+            stsManager.GainGold(int.Parse(rewardSpecifics[index]));
             ClaimRewardAtIndex();
             break;
             case "Item":
@@ -100,7 +99,7 @@ public class RewardDisplayMenu : MonoBehaviour
             // Only relics from shops/bosses should have a popup for another reward menu.
             case "Relic":
             string relicName = rewardSpecifics[index];
-            rewardData.GainRelic(relicName, partyData, stsManager);
+            stsManager.GainRelic(relicName);
             ClaimRewardAtIndex();
             break;
         }

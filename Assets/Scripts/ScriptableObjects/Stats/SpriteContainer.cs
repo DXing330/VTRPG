@@ -28,6 +28,7 @@ public class SpriteContainer : ScriptableObject
     }
     public string delimiter;
     public string delimiterTwo;
+    [ContextMenu("Initialize Key-Values And Colors")]
     public virtual void Initialize()
     {
         string[] blocks = allKeysAndValues.Split(delimiter);

@@ -166,8 +166,9 @@ public class BattleEndManager : MonoBehaviour
             for (int j = 0; j < equipData.Length; j++)
             {
                 dummyEquip.SetAllStats(equipData[j]);
-                dummyEquip.EquipWeapon(dummyActor);
+                dummyActor.EquipToActor(dummyEquip);
             }
+            dummyActor.UpdateCurrentEquipment();
             int passiveLevel = dummyActor.GetLevelFromPassive(spriteNames[i]);
             if (passiveLevel > 0 && passiveLevel < maxClassLevel)
             {

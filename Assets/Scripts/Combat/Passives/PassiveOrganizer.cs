@@ -83,6 +83,13 @@ public class PassiveOrganizer : ScriptableObject
         actor.AddSortedPassive(passiveData, timing);
     }
 
+    public void RemoveSortedPassiveNewLevel(TacticActor actor, string passive, int passiveLevel)
+    {
+        string passiveName = passiveNameLevels.GetMultiKeyValue(passive, passiveLevel.ToString());
+        if (passiveName == ""){return;}
+        RemoveSortedPassive(actor, passiveName);
+    }
+
     public void RemoveSortedPassive(TacticActor actor, string passiveName)
     {
         string passiveData = allPassives.ReturnValue(passiveName);

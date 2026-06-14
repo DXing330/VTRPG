@@ -55,6 +55,7 @@ public class StSEventChoice
     private const string eventChoiceDelimiter = "|eCDelim|";
     private const string eventEffectListDelimiter = "|eELDelim|";
     public string choiceText;
+    public string choiceEffectDescription;
     public string condition;
     public string conditionSpecifics;
     public string cost;
@@ -64,6 +65,7 @@ public class StSEventChoice
     {
         string allData = "";
         allData += "ChoiceText=" + choiceText + eventChoiceDelimiter;
+        allData += "ChoiceEffectDescription=" + choiceEffectDescription + eventChoiceDelimiter;
         allData += "Condition=" + condition + eventChoiceDelimiter;
         allData += "ConditionSpecifics=" + conditionSpecifics + eventChoiceDelimiter;
         allData += "Cost=" + cost + eventChoiceDelimiter;
@@ -98,6 +100,9 @@ public class StSEventChoice
             {
                 case "ChoiceText":
                     choiceText = value;
+                    break;
+                case "ChoiceEffectDescription":
+                    choiceEffectDescription = value;
                     break;
                 case "Condition":
                     condition = value;
@@ -138,6 +143,11 @@ public class StSEventData
     public string condition;
     public string conditionSpecifics;
     public List<StSEventChoice> choices;
+    public StSEventChoice ReturnChoiceAtIndex(int index)
+    {
+        if (index < 0 || index >= choices.Count){return null;}
+        return choices[index];
+    }
     public string ReturnDataString()
     {
         if (choices == null)
@@ -159,6 +169,7 @@ public class StSEventData
                 choice.choiceEffects = new List<StSEventEffect>();
             }
             allData += "Choice" + c + "Text=" + choice.choiceText + eventDataDelimiter;
+            allData += "Choice" + c + "EffectDescription=" + choice.choiceEffectDescription + eventDataDelimiter;
             allData += "Choice" + c + "Condition=" + choice.condition + eventDataDelimiter;
             allData += "Choice" + c + "ConditionSpecifics=" + choice.conditionSpecifics + eventDataDelimiter;
             allData += "Choice" + c + "Cost=" + choice.cost + eventDataDelimiter;
@@ -222,6 +233,10 @@ public class StSEventData
                 {
                     newChoice.choiceText = value;
                 }
+                else if (key == "Choice" + c + "EffectDescription")
+                {
+                    newChoice.choiceEffectDescription = value;
+                }
                 else if (key == "Choice" + c + "Condition")
                 {
                     newChoice.condition = value;
@@ -271,12 +286,23 @@ public class StSEventData
         }
     }
 }
-// Helps Store Basic Event Data And Manage More Complex Events.
+// Helps Store Basic Event Data.
 [CreateAssetMenu(fileName = "StSEventSaveData", menuName = "ScriptableObjects/StS/StSEventSaveData", order = 1)]
 public class StSEventSaveDataManager : SavedData
 {
     public string delimiter2;
     public RNGUtility eventRNGSeed;
+    public StSEventData GetRandomEvent()
+    {
+        int index = eventRNGSeed.SeedRange(0, availableEvents.Count + 1);
+        if (index >= availableEvents.Count)
+        {
+            return null;
+        }
+        string eventName = availableEvents[index];
+        availableEvents.RemoveAt(index);
+        return allEvents[allEventNames.IndexOf(eventName)];
+    }
     public List<string> allEventNames;
     public List<string> availableEvents;
     // Only Called In Editor.

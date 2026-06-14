@@ -149,6 +149,7 @@ public class ActorMaker : MonoBehaviour
             actor.AddPassiveSkill(uniqueSets[i], uniqueSetLevels[i].ToString());
         }
         runeGridManager.ApplyRuneGridToActor(actor);
+        actor.UpdateCurrentEquipment();
     }
     // For testing equipment.
     public TacticActor SpawnActorWithEquipment(TacticActor actor, int location, string actorName, int team, string equipment)

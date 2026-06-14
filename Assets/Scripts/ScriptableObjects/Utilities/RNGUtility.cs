@@ -75,7 +75,7 @@ public class RNGUtility : SavedData
         return seed;
     }
 
-    public int Range(int min, int max)
+    public int SeedRange(int min, int max)
     {
         if (max <= min) return min;
         ulong r = NextUInt64();

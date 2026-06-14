@@ -11,6 +11,7 @@ public class ActorMakerTester : MonoBehaviour
     public TacticActor dummyActor;
     public string actorSpriteName;
     [Header("Equipment Settings")]
+    public StatDatabase equipDB;
     public List<string> actorEquipNames;
     public List<Equipment> actorEquip;
     protected void ResetTestEquipment()
@@ -26,6 +27,7 @@ public class ActorMakerTester : MonoBehaviour
         string equipmentString = "";
         for (int i = 0; i < actorEquip.Count; i++)
         {
+            actorEquip[i].SetAllStats(equipDB.ReturnValue(actorEquipNames[i]));
             actorEquip[i].RefreshStats();
             equipmentString += actorEquip[i].GetStats();
             if (i < actorEquip.Count - 1)
