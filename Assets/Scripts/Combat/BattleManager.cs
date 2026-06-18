@@ -183,45 +183,48 @@ public class BattleManager : MonoBehaviour
     public List<TacticActor> GetRoundTurnOrder(){return roundTurnOrder;}
     public TacticActor turnActor;
     public TacticActor GetTurnActor(){return turnActor;}
-    public bool ValidTurnActor(TacticActor actor)
+    public bool ValidNextTurnActor(TacticActor actor)
     {
-        return actor != null
-            && actor.GetHealth() > 0
-            && map.battlingActors.Contains(actor);
+        return actor != null && actor.GetHealth() > 0 && map.battlingActors.Contains(actor);
     }
     protected bool TryFindNextValidTurn()
     {
-        for (int i = turnNumber; i < roundTurnOrder.Count; i++)
+        // Find The Next Actor Which Is Alive And Next In Turn Order.
+        for (int i = turnNumber + 1; i < roundTurnOrder.Count; i++)
         {
-            if (!ValidTurnActor(roundTurnOrder[i])){continue;}
+            if (!ValidNextTurnActor(roundTurnOrder[i])){continue;}
             turnNumber = i;
             return true;
         }
         return false;
     }
-    protected void NextRound()
+    protected bool NextRound()
     {
         combatLog.AddNewLog();
         // Update terrain effects/weather interactions/delayed/etc.
         map.NextRound();
-        map.RemoveActorsFromBattle();
+        ActivateDeathPassives(map.RemoveActorsFromBattle());
         int winningTeam = FindWinningTeam();
         if (winningTeam >= 0)
         {
             combatLog.UpdateNewestLog("Ending Battle By Map Effects");
             EndBattle(winningTeam);
-            return;
+            return false;
         }
-        turnNumber = 0;
+        turnNumber = -1;
+        turnActor = null;
         selectedActor = null;
         roundNumber++;
         map.SetRound(roundNumber);
         // Copy at round start so summons/revivals wait until the next round.
         roundTurnOrder = initiativeTracker.SortActors(new List<TacticActor>(map.battlingActors));
+        return true;
     }
     // Updates stats UI inbetween turns.
+    // Should Only Be Called Through A Start Type Function Or NextTurn()
+    // Actually Changes The Turn Number.
     // Also applies new turn effects to the next actor.
-    protected void ChangeTurn()
+    protected bool ChangeTurn()
     {
         endingTurn = false;
         combatLog.AddNewLog();
@@ -231,35 +234,32 @@ public class BattleManager : MonoBehaviour
             // End the battle immediately.
             int winningTeam = FindWinningTeam();
             EndBattle(winningTeam);
-            return;
+            return false;
         }
         if (!TryFindNextValidTurn())
         {
-            NextRound();
-            if (FindWinningTeam() >= 0)
-            {
-                return;
-            }
+            if (!NextRound()){return false;}
             if (!TryFindNextValidTurn())
             {
                 combatLog.UpdateNewestLog("Everyone is Dead");
                 int winningTeam = FindWinningTeam();
                 EndBattle(winningTeam);
-                return;
+                return false;
             }
         }
         turnActor = roundTurnOrder[turnNumber];
         turnActor.NewTurn();
         combatLog.UpdateNewestLog(turnActor.GetPersonalName() + "'s Turn");
-        // Apply Conditions/Passives.
+        // Apply Status/Passives.
         effectManager.StartTurn(turnActor, map);
         RefreshUI();
+        // Auto End Turn If Dead From Status/Passives
         if (turnActor.GetHealth() <= 0)
         {
-            ActiveDeathPassives(turnActor);
             NextTurn();
-            return;
+            return false;
         }
+        return true;
     }
     protected float clickNextTurnTime;
     protected float enemyTurnMaxDurations = 3f;
@@ -300,7 +300,7 @@ public class BattleManager : MonoBehaviour
         // This allows for a one turn grace period for immunities to have a chance.
         map.ApplyEndTerrainEffect(turnActor);
         // Remove dead actors.
-        map.RemoveActorsFromBattle();
+        ActivateDeathPassives(map.RemoveActorsFromBattle());
         winningTeam = FindWinningTeam();
         if (winningTeam >= 0)
         {
@@ -308,16 +308,8 @@ public class BattleManager : MonoBehaviour
             EndBattle(winningTeam);
             return;
         }
-        turnNumber++;
-        if (!TryFindNextValidTurn())
-        {
-            NextRound();
-            if (FindWinningTeam() >= 0)
-            {
-                return;
-            }
-        }
-        ChangeTurn();
+        // Actually Changes The Turn Number & Turn Actor.
+        if (!ChangeTurn()){return;}
         ResetState();
         UI.PlayerTurn();
         // Check for mental conditions.
@@ -580,14 +572,14 @@ public class BattleManager : MonoBehaviour
 
     public void ViewActorFromTurnOrder(int index)
     {
-        selectedActor = map.GetActorByIndex(index + turnNumber);
+        selectedActor = roundTurnOrder[index + turnNumber];
         if (selectedActor == null){return;}
         ViewActorOnTile(selectedActor.GetLocation());
     }
 
     public void ViewTargetedActorFromTurnOrder(int index)
     {
-        selectedActor = map.GetActorByIndex(index + turnNumber).GetTarget();
+        selectedActor = roundTurnOrder[index + turnNumber].GetTarget();
         if (selectedActor == null){return;}
         ViewActorOnTile(selectedActor.GetLocation());
     }
@@ -865,8 +857,6 @@ public class BattleManager : MonoBehaviour
                 // This will always take all your actions.
                 turnActor.ResetActions();
                 break;
-
-
             case "Chain Skill":
                 string[] chainSkills = chosenSpecifics.Split(",");
                 NPCChainSkillActions(chainSkills);
@@ -1337,7 +1327,7 @@ public class BattleManager : MonoBehaviour
 
     public bool AdjustTurnNumber()
     {
-        map.RemoveActorsFromBattle();
+        ActivateDeathPassives(map.RemoveActorsFromBattle());
         int winningTeam = FindWinningTeam();
         if (winningTeam >= 0)
         {
@@ -1378,16 +1368,15 @@ public class BattleManager : MonoBehaviour
         // Use The Skill For Free.
         activeManager.ActivateSkill(this, false);
     }
-
     public void ActivateSkill(string skillName, TacticActor actor = null)
     {
         ResetState();
         if (actor == null){actor = turnActor;}
         combatLog.UpdateNewestLog(actor.GetPersonalName() + " uses " + skillName + ".");
         activeManager.ActivateSkill(this);
+        ActivateDeathPassives(map.RemoveActorsFromBattle(GetTurnIndex()));
         map.UpdateMap();
     }
-
     public void ActivateSpell(TacticActor actor = null)
     {
         ResetState();
@@ -1396,8 +1385,7 @@ public class BattleManager : MonoBehaviour
         map.UpdateMap();
         combatLog.UpdateNewestLog(actor.GetPersonalName()+" casts  " + activeManager.magicSpell.GetSkillName());
     }
-
-    public void ActiveDeathPassives(TacticActor actor)
+    public void ActivateDeathPassive(TacticActor actor)
     {
         List<string> deathActives = new List<string>(actor.GetDeathActives());
         for (int i = 0; i < deathActives.Count; i++)
@@ -1408,12 +1396,17 @@ public class BattleManager : MonoBehaviour
             ActivateSkill(deathActives[i], actor);
         }
     }
-
+    public void ActivateDeathPassives(List<TacticActor> deadActors)
+    {
+        for (int i = 0; i < deadActors.Count; i++)
+        {
+            ActivateDeathPassive(deadActors[i]);
+        }
+    }
     public void DEBUGAUTOWIN()
     {
         EndBattle(0, true);
     }
-
     public void Forfeit()
     {
         EndBattle(1, true);

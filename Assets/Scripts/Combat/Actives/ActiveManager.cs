@@ -248,8 +248,38 @@ public class ActiveManager : MonoBehaviour
                     }
                 }
                 return;
+            // Use Half Base Health To Summon A Clone On The Facing Tile.
+            case "Substitute":
+                // If Less Than Half Health Then Do Nothing.
+                if (skillUser.GetHealth() <= skillUser.GetBaseHealth() / 2){return;}
+                // Get The Tile In Direction.
+                selectedTile = battle.map.mapUtility.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection(), battle.map.mapSize);
+                if (battle.map.GetActorOnTile(selectedTile) != null){return;}
+                skillUser.UpdateHealth(skillUser.GetBaseHealth() / 2);
+                battle.SpawnAndAddActor(selectedTile, "Dummy Substitute", skillUser.GetTeam(), skillUser);
+                return;
             case "Revive":
+                if (specifics == "Random")
+                {
+                    battle.map.ReviveRandomAlly(skillUser);
+                    return;
+                }
                 battle.map.ReviveDefeatedActorsBySprite(specifics);
+                return;
+            case "AbsorbDeadEnemy":
+                TacticActor deadToAbsorb = battle.map.ReturnFirstDeadEnemy(skillUser);
+                if (deadToAbsorb == null){return;}
+                int amountToAbsorb = 0;
+                // Determine the relevant base stat, usually attack.
+                // Gain half of the stat.
+                switch (specifics)
+                {
+                    case "BaseAttack":
+                    amountToAbsorb = deadToAbsorb.GetBaseAttack();
+                    active.AffectActor(skillUser, "BaseAttack", (amountToAbsorb / 2).ToString(), 1);
+                    break;
+                }
+                battle.map.RemoveDefeatedActor(deadToAbsorb);
                 return;
             case "SummonEnemy":
                 // Check if selected tile is free.
@@ -358,12 +388,26 @@ public class ActiveManager : MonoBehaviour
                     }
                 }
                 return;
+            case "AttackAllEnemies":
+                targets = battle.map.AllEnemies(skillUser);
+                if (targets.Count <= 0) { return; }
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    for (int j = 0; j < int.Parse(specifics); j++)
+                    {
+                        battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
+                    }
+                }
+                return;
             case "Attack+Drain":
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
-                    skillUser.UpdateHealth(Mathf.Max(1, skillUser.GetAttack() - targets[i].GetDefense()), false);
+                    for (int j = 0; j < int.Parse(specifics); j++)
+                    {
+                        battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
+                        skillUser.UpdateHealth(Mathf.Max(1, skillUser.GetAttack() - targets[i].GetDefense()), false);
+                    }
                 }
                 return;
             case "Attack+Status":
@@ -597,6 +641,14 @@ public class ActiveManager : MonoBehaviour
                     }
                 }
                 return;
+            case "ChainLightningAttack":
+                // Keep track of the targets.
+                targets = battle.map.ChainLightningTargets(targetedTiles[0], int.Parse(specifics), power);
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
+                }
+                return;
             case "ChainLightning":
                 // Keep track of the targets.
                 targets = battle.map.ChainLightningTargets(targetedTiles[0]);
@@ -623,7 +675,7 @@ public class ActiveManager : MonoBehaviour
                     skillUser.TeachRandomActive(targets[i]);
                 }
                 return;
-            case "Pain Split":
+            case "PainSplit":
                 int hpPool = skillUser.GetHealth();
                 int poolSize = 1;
                 for (int i = 0; i < targets.Count; i++)
@@ -677,6 +729,21 @@ public class ActiveManager : MonoBehaviour
                     active.AffectActor(targets[i], "TempWeight", skillUser.GetWeight().ToString(), power);
                     active.AffectActor(targets[i], "TempDefense", skillUser.GetDefense().ToString(), power);
                 }
+                return;
+            // Generally for stealing base stats.
+            case "Steal":
+                int stealPower = power;
+                string stealTarget = specifics;
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    active.AffectActor(targets[i], stealTarget, (-stealPower).ToString(), 1);
+                    active.AffectActor(skillUser, stealTarget, (stealPower).ToString(), 1);
+                }
+                return;
+            // HP Cost For Actions.
+            case "Bloodletting":
+                active.AffectActor(skillUser, "Health%", specifics, 1);
+                active.AffectActor(skillUser, "Actions", power.ToString(), 1);
                 return;
         }
         // Covers status/mental state/amnesia/stat changes/etc.
@@ -809,7 +876,6 @@ public class ActiveManager : MonoBehaviour
         state.skillInfo.Add(active.GetEffect());
         state.skillInfo.Add(active.GetSpecifics());
         state.skillInfo.Add(active.GetPowerString());
-        state.skillInfo.Add(active.healthCost);
         state.skillInfo.Add(active.GetScalingSpecifics());
         state.selectedTile = active.GetSelectedTile();
         state.targetableTiles = targetableTiles == null ? new List<int>() : new List<int>(targetableTiles);

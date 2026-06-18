@@ -87,7 +87,7 @@ public class BattleState : SavedState
     public void UpdateTerrainType(){battleMapFeatures.SetTerrainType(terrainType);}
     public string time;
     public List<string> timeOfDayTypes;
-    public void SetTime(string newInfo)
+    public void SetTime(string newInfo = "")
     {
         time = newInfo;
     }

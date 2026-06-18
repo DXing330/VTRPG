@@ -95,6 +95,8 @@ public class ActiveDescriptionViewer : MonoBehaviour
                 return "The target(s) lose " + ASD(s) + "% of their current health.";
             case "Attack":
                 return "Attack the target(s) " + ASD(s) + " time(s) with " + APD(p) + "% damage.";
+            case "AttackAllEnemies":
+                return "Attack all enemies " + ASD(s) + " time(s) with " + APD(p) + "% damage.";
             case "ElementalAttack":
                 return "Attack the target(s) with " + ASD(s) + " energy for " + APD(p) + "% damage.";
             // The specifics will determine the direction anyway.
@@ -148,8 +150,10 @@ public class ActiveDescriptionViewer : MonoBehaviour
                 return "Randomly summon one of the following: " + ASD(s) + ".";
             case "MassRandomSummon":
                 return "Randomly summon the following: " + ASD(s) + ".";
+            case "Substitute":
+                return "Pay 50% max health to summon an adjacent dummy.";
             case "Revive":
-                return "Revive defeated " + ASD(s) + "(s).";
+                return "Revive defeated " + ASD(s) + "(s) allies.";
             case "SummonEnemy":
                 return "Create a " + ASD(s) + ".";
             case "TerrainEffect":
@@ -243,7 +247,7 @@ public class ActiveDescriptionViewer : MonoBehaviour
                 return "Learn a random skill from the target(s).";
             case "Teach":
                 return "Teach a random skill to the target(s).";
-            case "Pain Split":
+            case "PainSplit":
                 return "Share health equally between all targets.";
             case "Aura":
                 return "Gain the " + s + " aura for " + p + " turns.";
@@ -261,6 +265,12 @@ public class ActiveDescriptionViewer : MonoBehaviour
                 return "The target(s) next skill gains " + ASD(s) + ".";
             case "TriggerSkill":
                 return TriggerSkillDescription(s);
+            case "Steal":
+                return "Steal " + ASD(s) + " " + e + " from the target(s).";
+            case "Bloodletting":
+                return "Gain " + APD(p) + " action(s) at the cost of " + ASD(s) + "% health.";
+            case "AbsorbDeadEnemy":
+                return "Absorb " + ASD(s) + " from a dead enemy.";
         }
         return "The target(s) gain " + ASD(s) + " " + e + ".";
     }

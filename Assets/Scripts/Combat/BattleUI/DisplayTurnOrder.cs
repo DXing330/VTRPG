@@ -41,7 +41,7 @@ public class DisplayTurnOrder : MonoBehaviour
         int index = 0;
         for (int i = turnIndex; i < actors.Count; i++)
         {
-            if (battleManager != null && !battleManager.ValidTurnActor(actors[i])){continue;}
+            if (battleManager != null && !battleManager.ValidNextTurnActor(actors[i])){continue;}
             if (index >= actorImages.Count){break;}
             displayObjects[index].SetActive(true);
             actorImages[index].SetSprite(actorSprites.GetSprite(actors[i].GetSpriteName()), displayLayer);

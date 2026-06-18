@@ -20,6 +20,10 @@ public class PartyAndRelicFrame : MonoBehaviour
     public GeneralUtility utility;
     public PartyDataManager partyData;
     public SceneMover sceneMover;
+    public void ReturnToMainMenu()
+    {
+        sceneMover.ReturnToMainMenu();
+    }
     public StatDatabase relicDB;
     public SpriteContainer relicSprites;
     public List<string> partyRelics;

@@ -25,6 +25,7 @@ public class StSStateManager : MonoBehaviour
     public string restSceneName = "StSRest";
     public string shopSceneName = "StSShop";
     public string treasureSceneName = "StSTreasureRoom";
+    public string eventSceneName = "StSEvent";
     // SUBMANAGERS
     public SceneMover sceneMover;
     public PartyDataManager stsParty;
@@ -138,7 +139,8 @@ public class StSStateManager : MonoBehaviour
             sceneMover.MoveToBattle();
             break;
             case "Event":
-            // TODO Generate Event.
+            gameState.UpdateState("Event");
+            newScene = eventSceneName;
             break;
             // Generate Enemies/Battle.
             case "Elite":
@@ -205,6 +207,38 @@ public class StSStateManager : MonoBehaviour
     {
         Save();
         sceneMover.LoadScene(newScene);
+    }
+    public void GenerateEventBattle(string mapType, string enemyDetails)
+    {
+        // Basically A Normal Battle
+        gameState.UpdateState("Battle");
+        PrepareEventBattle(mapType, enemyDetails);
+        Save();
+        sceneMover.MoveToBattle();
+    }
+    public void PrepareEventBattle(string mapType, string enemyDetails)
+    {
+        battleState.ClearCustomBattleName();
+        enemyList.ResetLists();
+        battleState.ForceTerrainType(mapType);
+        battleState.SetWeather();
+        battleState.SetTime();
+        List<string> enemies = GenerateEventEnemies(enemyDetails);
+        enemyList.AddCharacters(enemies);
+    }
+    public List<string> GenerateEventEnemies(string enemyDetails)
+    {
+        List<string> enemies = new List<string>();
+        string[] enemyTypesAndCounts = enemyDetails.Split(',');
+        for (int i = 0; i < enemyTypesAndCounts.Length; i++)
+        {
+            string[] enemyCount = enemyTypesAndCounts[i].Split('*');
+            for (int j = 0; j < int.Parse(enemyCount[1]); j++)
+            {
+                enemies.Add(enemyCount[0]);
+            }
+        }
+        return enemies;
     }
     // All Relic Gains Now Go Through Here.
     public string GainRelic(string relicName)

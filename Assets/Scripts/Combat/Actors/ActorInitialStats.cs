@@ -53,7 +53,7 @@ public class ActorInitialStats : ActorPassives
         }
         return allStats;
     }
-    public void SetInitialStatsFromString(string newStats)
+    public virtual void SetInitialStatsFromString(string newStats)
     {
         SetInitialStats(newStats.Split(delimiter).ToList());
     }
@@ -344,12 +344,21 @@ public class ActorInitialStats : ActorPassives
         else { baseHealth += changeAmount; }
     }
     public int currentHealth;
-    public void SetCurrentHealth(int newHealth) { currentHealth = newHealth; }
+    public virtual void SetCurrentHealth(int newHealth) { currentHealth = newHealth; }
     public int GetHealth() { return currentHealth; }
+    public int GetMissingHealthPercent()
+    {
+        int healthDifference = GetBaseHealth() - GetHealth();
+        return (healthDifference * 100) / GetBaseHealth();
+    }
     public int baseAttack;
     public void SetBaseAttack(int newAttack) { baseAttack = newAttack; }
     public int GetBaseAttack() { return baseAttack; }
-    public void UpdateBaseAttack(int changeAmount) { baseAttack += changeAmount; }
+    public void UpdateBaseAttack(int changeAmount)
+    {
+        baseAttack += changeAmount;
+        if (baseAttack < 0){baseAttack = 0;}
+    }
     public int attackRange;
     public void SetAttackRange(int newRange) { attackRange = newRange; }
     public void SetAttackRangeMax(int newRange)

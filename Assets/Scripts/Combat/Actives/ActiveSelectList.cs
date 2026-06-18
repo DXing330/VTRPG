@@ -176,7 +176,6 @@ public class ActiveSelectList : SelectList
             return;
         }
         battle.ActivateSkill(selected);
-        battle.turnNumber = battle.map.RemoveActorsFromBattle(battle.GetTurnIndex());
         battle.UI.battleStats.UpdateStats();
         // Deal with stealing items later.
         // Check if the skill you just used was an item.

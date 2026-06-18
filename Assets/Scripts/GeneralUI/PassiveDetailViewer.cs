@@ -791,6 +791,8 @@ public class PassiveDetailViewer : MonoBehaviour
                 return multiplier + "how much movement " + targetString + " had remaining last round";
             case "RoundAttacks":
                 return multiplier + "how many times " + targetString + " attacked this round";
+            case "MissingHealthPercent":
+                return multiplier + "the % missing health of " + targetString;
         }
     }
     protected string AffectMapText(string effect, string specifics)

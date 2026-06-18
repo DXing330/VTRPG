@@ -23,13 +23,22 @@ public class StSEventScene : MonoBehaviour
     {
         utility.DisableGameObjects(choiceObjects);
     }
+    public bool testMode = false;
+    public void ReturnToMap()
+    {
+        if (testMode){return;}
+        stsManager.ReturnToMap();
+    }
     // Load The Event.
     void Start()
     {
-        GenerateEvent();
+        if (!testMode)
+        {
+            GenerateEvent();
+        }
     }
     [ContextMenu("Test Generate Event")]
-    protected void GenerateEvent()
+    public void GenerateEvent()
     {
         currentEvent = eventData.GetRandomEvent();
         ApplyEvent();
@@ -47,6 +56,11 @@ public class StSEventScene : MonoBehaviour
     }
     protected void ResolveNullEvent()
     {
+        if (testMode)
+        {
+            Debug.Log("Null Event");
+            return;
+        }
         int roll = eventData.eventRNGSeed.SeedRange(0, 6);
         if (roll == 0)
         {
@@ -61,7 +75,7 @@ public class StSEventScene : MonoBehaviour
             stsManager.MoveToTile("Enemy");
         }
     }
-    protected void DisplayEvent()
+    public void DisplayEvent()
     {
         ResetChoices();
         eventName.text = currentEvent.eventName;
@@ -80,12 +94,12 @@ public class StSEventScene : MonoBehaviour
         randomActorIndex = -1;
         ApplyEffectChoice(index);
     }
-    protected void ApplyEffectChoice(int choiceIndex)
+    public void ApplyEffectChoice(int choiceIndex)
     {
         StSEventChoice choice = currentEvent.ReturnChoiceAtIndex(choiceIndex);
         if (choice == null)
         {
-            stsManager.ReturnToMap();
+            ReturnToMap();
             return;
         }
         // TODO Handle Some Special Looping Events Later.
@@ -108,14 +122,19 @@ public class StSEventScene : MonoBehaviour
         }
         if (battle)
         {
-            // TODO Set Up The Battle Then Move To It.
+            if (testMode)
+            {
+                stsManager.PrepareEventBattle(battleMapType, battleSpecifics);
+                return;
+            }
+            stsManager.GenerateEventBattle(battleMapType, battleSpecifics);
         }
         else
         {
-            stsManager.ReturnToMap();
+            ReturnToMap();
         }
     }
-    protected void ApplyStandardEffect(StSEventEffect eventEffect)
+    public void ApplyStandardEffect(StSEventEffect eventEffect)
     {
         switch (eventEffect.target)
         {
@@ -132,7 +151,7 @@ public class StSEventScene : MonoBehaviour
                 break;
         }
     }
-    protected void ApplyRandomActorEffect(StSEventEffect eventEffect)
+    public void ApplyRandomActorEffect(StSEventEffect eventEffect)
     {
         // Only select a random actor once.
         if (randomActorIndex < 0)
@@ -142,7 +161,7 @@ public class StSEventScene : MonoBehaviour
         partyData.ApplyEffectToPartyMember(eventEffect.effect, eventEffect.effectSpecifics, "1", randomActorIndex);
     }
     // TODO: Add Consumables/Gold/Relics/Etc.
-    protected void ApplyInventoryEffect(StSEventEffect eventEffect)
+    public void ApplyInventoryEffect(StSEventEffect eventEffect)
     {
         switch (eventEffect.effect)
         {

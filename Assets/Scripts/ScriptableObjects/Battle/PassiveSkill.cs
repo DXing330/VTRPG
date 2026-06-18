@@ -71,6 +71,9 @@ public class PassiveSkill : SkillEffect
                 case "RoundAttacks":
                 amount = actor.ReturnCurrentRoundAttacks();
                 break;
+                case "MissingHealthPercent":
+                amount = actor.GetMissingHealthPercent();
+                break;
             }
             // Some scaling includes a multiplier.
             int multiplier = 1;

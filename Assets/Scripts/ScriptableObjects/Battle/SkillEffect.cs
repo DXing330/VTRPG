@@ -595,6 +595,9 @@ public class SkillEffect : ScriptableObject
             case "Intangible":
                 target.GainIntangible(int.Parse(effectSpecifics));
                 break;
+            case "Immortal":
+                target.GainImmortal(int.Parse(effectSpecifics));
+                break;
             case "ItemSlots":
                 target.UpdateItemSlots(int.Parse(effectSpecifics));
                 break;

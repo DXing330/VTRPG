@@ -303,6 +303,12 @@ public class StSEventSaveDataManager : SavedData
         availableEvents.RemoveAt(index);
         return allEvents[allEventNames.IndexOf(eventName)];
     }
+    public StSEventData GetEventByName(string name)
+    {
+        int index = allEventNames.IndexOf(name);
+        if (index < 0){return null;}
+        return allEvents[index];
+    }
     public List<string> allEventNames;
     public List<string> availableEvents;
     // Only Called In Editor.

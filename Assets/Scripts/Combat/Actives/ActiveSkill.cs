@@ -32,13 +32,7 @@ public class ActiveSkill : SkillEffect
             skillInfo = String.Join(activeSkillDelimiter, skillInfoList);
             return;
         }
-        skillInfoList[11] = healthCost;
-        if (skillInfoList.Count < 13)
-        {
-            skillInfo = String.Join(activeSkillDelimiter, skillInfoList);
-            return;
-        }
-        skillInfoList[12] = scalingSpecifics; // Power Or Specifics
+        skillInfoList[11] = scalingSpecifics; // Power Or Specifics
         skillInfo = String.Join(activeSkillDelimiter, skillInfoList);
     }
     public string skillName;
@@ -84,7 +78,6 @@ public class ActiveSkill : SkillEffect
         effect = "Passive";
         specifics = "";
         power = "1";
-        healthCost = "0";
         scalingSpecifics = "Power";
     }
     public virtual void LoadSkill(List<string> skillData, string newName = "")
@@ -107,9 +100,7 @@ public class ActiveSkill : SkillEffect
         specifics = skillData[9];
         power = skillData[10];
         if (skillData.Count <= 11){return;}
-        healthCost = skillData[11];
-        if (skillData.Count <= 12){return;}
-        scalingSpecifics = skillData[12];
+        scalingSpecifics = skillData[11];
     }
     public virtual void ApplyActorMods(TacticActor actor)
     {
@@ -312,12 +303,6 @@ public class ActiveSkill : SkillEffect
             (int aCost, int eCost) = GetAdjustedCost(actor, map);
             cost = aCost;
         }
-        return cost;
-    }
-    public string healthCost;
-    public int GetHealthCost()
-    {
-        int cost = utility.SafeParseInt(healthCost);
         return cost;
     }
     public string scalingSpecifics;

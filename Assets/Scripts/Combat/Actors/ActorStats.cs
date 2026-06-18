@@ -145,6 +145,14 @@ public class ActorStats : ActorInitialStats
         return initiative + tempInitiative;
     }
     public void ChangeInitiative(int change) { initiative += change; }
+    public override void SetCurrentHealth(int newHealth)
+    {
+        base.SetCurrentHealth(newHealth);
+        if (GetImmortal() && currentHealth <= 0)
+        {
+            currentHealth = 1;
+        }
+    }
     public int tempHealth;
     protected int minTempHealth = 0;
     public void SetMinTempHealth(int amount)
@@ -225,6 +233,10 @@ public class ActorStats : ActorInitialStats
         }
         else { currentHealth += changeAmount; }
         if (currentHealth > GetBaseHealth()) { currentHealth = GetBaseHealth(); }
+        if (GetImmortal() && currentHealth <= 0)
+        {
+            currentHealth = 1;
+        }
     }
     public int TakeEffectDamage(int damage, string type = "Physical")
     {
@@ -357,6 +369,10 @@ public class ActorStats : ActorInitialStats
         return damage;
     }
     public int currentEnergy;
+    public void SetCurrentEnergy(int amount)
+    {
+        currentEnergy = amount;
+    }
     public void UpdateEnergy(int changeAmount, bool decrease = false)
     {
         if (decrease) { LoseEnergy(changeAmount); }
@@ -424,8 +440,6 @@ public class ActorStats : ActorInitialStats
         ResetStats();
         EndTurnResetStats();
         ResetUniqueEffects();
-        ResetBufferStacks();
-        ResetArtifactStacks();
         doubleTempHealthStacks = 0;
         doubleStatusStacks = 0;
     }
@@ -448,7 +462,10 @@ public class ActorStats : ActorInitialStats
     public int currentAttackSpeed;
     public int GetAttackSpeed(){return currentAttackSpeed;}
     public void UpdateAttackSpeed(int amount){currentAttackSpeed += amount;}
-    public void UpdateBaseAttackSpeed(int amount){baseAttackSpeed += amount;}
+    public void UpdateBaseAttackSpeed(int amount)
+    {
+        baseAttackSpeed += amount;
+    }
     
     public string ReturnRandomActiveSkill()
     {
@@ -869,6 +886,10 @@ public class ActorStats : ActorInitialStats
         RemoveInvisibility();
         RemoveBarricade();
         RemoveGuard();
+        RemoveIntangible();
+        RemoveImmortal();
+        ResetBufferStacks();
+        ResetArtifactStacks();
     }
     public void CheckStartUniqueEffects()
     {
@@ -1015,6 +1036,26 @@ public class ActorStats : ActorInitialStats
     {
         intangible = false;
         intangibleDuration = 0;
+    }
+    public bool immortal = false;
+    public bool GetImmortal(){return immortal;}
+    public int immortalDuration;
+    public void GainImmortal(int duration)
+    {
+        immortal = true;
+        if (immortalDuration < duration)
+        {
+            immortalDuration = duration;
+        }
+    }
+    public void CheckImmortal()
+    {
+        (immortal, immortalDuration) = utility.DecrementBoolDuration(immortal, immortalDuration);
+    }
+    public void RemoveImmortal()
+    {
+        immortal = false;
+        immortalDuration = 0;
     }
     public int bufferStacks;
     public void GainBufferStack(int amount = 1)
