@@ -10,6 +10,7 @@ public class HexMapAdjustor : MonoBehaviour
     public MapUtility mapUtility;
     public Sprite defaultSprite;
     public int gridSize = 9;
+    public float offSet = 0.5f;
     public bool adjustElevation = false;
     public int minElevation;
     public int maxElevation;
@@ -48,18 +49,17 @@ public class HexMapAdjustor : MonoBehaviour
     {
         int tileIndex = 0;
         float xPivot = 0f;
-        float xCenter = 1f - (1f/(2*gridSize));
         float yPivot = 1f;
         for (int i = 0; i < gridSize; i++)
         {
             // Start from the left every iteration.
             if (i % 2 == 0)
             {
-                xPivot = 0f;
+                xPivot = 0f + (offSet / gridSize);
             }
             else
             {
-                xPivot = 1f/(2*gridSize);
+                xPivot = 1f / (2*gridSize) + (offSet / gridSize);
             }
             for (int j = 0; j < gridSize; j++)
             {

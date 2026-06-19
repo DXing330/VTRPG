@@ -18,6 +18,7 @@ public class RNGUtility : SavedData
     {
         Debug.Log(String.Join(",", seedHistory));
     }
+    [ContextMenu("RandomSeed")]
     public void RandomSeed()
     {
         byte[] bytes = new byte[8];

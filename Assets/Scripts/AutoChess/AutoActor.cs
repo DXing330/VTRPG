@@ -101,6 +101,8 @@ public class AutoActorRollUpData
     string equals = "aCAEquals";
     // Name + Level Contains All Base Stat Data
     public string autoChessName;
+    public string GetName(){return autoChessName;}
+    public void SetName(string newData){autoChessName = newData;}
     public int autoChessLevel;
     public List<string> equipmentNames;
     // Need The Trait Since Some Traits Activate During Prep Phase.
