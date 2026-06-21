@@ -22,24 +22,17 @@ public class PassiveSkill : SkillEffect
             {
                 // Scaled based on the passive level. 
                 default:
-                amount = actor.GetLevelFromPassive(scaling[1]);
+                amount = actor.GetLevelFromPassive(scalingSpecifics);
                 break;
                 case "DamageDealt":
                 case "DamageTaken":
                 amount = input;
-                break;
-                case "DamageDealt/2":
-                case "DamageTaken/2":
-                amount = input / 2;
                 break;
                 case "Defense":
                 amount = actor.GetDefense();
                 break;
                 case "Attack":
                 amount = actor.GetAttack();
-                break;
-                case "Attack/2":
-                amount = actor.GetAttack() / 2;
                 break;
                 case "Actions":
                 amount = actor.GetActions();
@@ -74,12 +67,32 @@ public class PassiveSkill : SkillEffect
                 case "MissingHealthPercent":
                 amount = actor.GetMissingHealthPercent();
                 break;
+                case "AdjacentEnemies":
+                if (map == null){return "0";}
+                amount = map.GetAdjacentEnemies(actor).Count;
+                break;
+                case "AdjacentAllies":
+                if (map == null){return "0";}
+                amount = map.GetAdjacentAllies(actor).Count;
+                break;
             }
             // Some scaling includes a multiplier.
             int multiplier = 1;
             if (scaling.Length > 2)
             {
-                multiplier = int.Parse(scaling[2]);
+                if (scaling[2].Contains("MultiBy"))
+                {
+                    string multiBy = scaling[2].Replace("MultiBy", "");
+                    multiplier = int.Parse(multiBy);
+                    return (amount * multiplier).ToString();
+                }
+                else if (scaling[2].Contains("DivideBy"))
+                {
+                    string divideBy = scaling[2].Replace("DivideBy", "");
+                    multiplier = int.Parse(divideBy);
+                    if (multiplier == 0){multiplier = 1;}
+                    return Mathf.Max(1, amount / multiplier).ToString();
+                }
             }
             return (amount * multiplier).ToString();
         }
@@ -382,6 +395,9 @@ public class PassiveSkill : SkillEffect
             case "Map":
                 AffectMap(actor, effect, specifics, map);
                 break;
+            case "Aura":
+                map.AddAura(actor, actor.GetLocation(), effect, utility.SafeParseInt(specifics, 1));
+                break;
             // TODO Determine Skill Based On Effect/Specifics, Determine Targets Based On AI Manager.
             case "AutoSkill":
                 map.battleManager.AutoSkill(actor, effect, specifics);
@@ -390,7 +406,6 @@ public class PassiveSkill : SkillEffect
                 break;
         }
     }
-
     public void ApplyPassive(TacticActor actor, BattleMap map, string passive)
     {
         List<string> passiveData = passive.Split("|").ToList();
@@ -405,7 +420,6 @@ public class PassiveSkill : SkillEffect
             ApplyPassiveEffectToTarget(actor, map, passiveData[3], effects[i], specifics);
         }
     }
-
     public void ApplyPassives(TacticActor actor, string timing, BattleMap map)
     {
         List<string> passives = new List<string>();
@@ -423,7 +437,6 @@ public class PassiveSkill : SkillEffect
             ApplyPassive(actor, map, passives[h]);
         }
     }
-
     public bool CheckAfterSkillCondition(string condition, string specifics, TacticActor skillUser, List<TacticActor> targets, BattleMap map, ActiveSkill skillData, bool tempSKill = false)
     {
         switch (condition)
@@ -441,7 +454,6 @@ public class PassiveSkill : SkillEffect
         }
         return CheckStartEndCondition(condition, specifics, skillUser, map);
     }
-
     public bool CheckAfterAttackCondition(string condition, string specifics, TacticActor attacker, TacticActor target, BattleMap map, bool attackHit, bool attackCrit, bool counterAttack)
     {
         switch (condition)
@@ -466,7 +478,6 @@ public class PassiveSkill : SkillEffect
         // Large overlap with battle conditions.
         return CheckBattleCondition(condition, specifics, target, attacker, map);
     }
-
     // Moving passives usually depend on the tile moved over.
     public bool CheckMovingCondition(TacticActor actor, string condition, string specifics, int currentTile, BattleMap map)
     {
@@ -485,7 +496,6 @@ public class PassiveSkill : SkillEffect
         }
         return CheckStartEndCondition(condition, specifics, actor, map);
     }
-
     public bool CheckStartBattleCondition(string condition, string specifics, TacticActor actor, BattleState battleState)
     {
         switch (condition)
@@ -505,7 +515,6 @@ public class PassiveSkill : SkillEffect
         }
         return true;
     }
-
     public bool CheckStartEndConditions(TacticActor actor, string condition, string conditionSpecifics, BattleMap map)
     {
         string[] conditions = condition.Split(",");
@@ -520,7 +529,6 @@ public class PassiveSkill : SkillEffect
         }
         return true;
     }
-    
     public bool CheckStartEndCondition(string condition, string conditionSpecifics, TacticActor actor, BattleMap map)
     {
         switch (condition)
@@ -884,6 +892,14 @@ public class PassiveSkill : SkillEffect
                 return checkedActor.GetHurtBy() == comparedActor;
             case "HurtLeast":
                 return checkedActor.GetHurtBy(false) == comparedActor;
+            case "LessHealth":
+                return checkedActor.GetHealth() < comparedActor.GetHealth();
+            case "LessMaxHealth":
+                return checkedActor.GetBaseHealth() < comparedActor.GetBaseHealth();
+            case "LessHealth%":
+                return (checkedActor.GetHealth() * 100) / checkedActor.GetBaseHealth() < (comparedActor.GetHealth() * 100) / comparedActor.GetBaseHealth();
+            case "LessAttack":
+                return checkedActor.GetAttack() < comparedActor.GetAttack();
         }
         return CheckStartEndCondition(condition, conditionSpecifics, checkedActor, map);
     }

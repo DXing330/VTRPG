@@ -47,7 +47,7 @@ public class ActiveSkill : SkillEffect
     }
     public string skillType;
     public string GetSkillType(){return skillType;}
-    public virtual void LoadSkillFromString(string skillData, TacticActor actor)
+    public virtual void LoadSkillFromString(string skillData, TacticActor actor = null)
     {
         skillInfo = skillData;
         skillInfoList = new List<string>(skillData.Split(activeSkillDelimiter));

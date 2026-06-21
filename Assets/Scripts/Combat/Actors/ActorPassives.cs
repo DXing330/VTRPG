@@ -193,6 +193,13 @@ public class ActorPassives : MonoBehaviour
         passiveSkills.RemoveAt(indexOf);
         passiveLevels.RemoveAt(indexOf);
     }
+    // For removing single use passives from equipment, generally HP based conditions.
+    public void SetPassivesLevel(string removedName, string newLevel)
+    {
+        int indexOf = passiveSkills.IndexOf(removedName);
+        if (indexOf < 0){return;}
+        passiveLevels[indexOf] = newLevel;
+    }
     // Temporary Passives Are Always Level 1.
     public List<string> tempPassives;
     public List<int> tempPassiveDurations;

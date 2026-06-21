@@ -1234,6 +1234,16 @@ public class BattleMap : MapManager
     // Later we can deal with adding custom auras.
     public void AddAura(TacticActor auraUser, int targetTile, string auraName, int duration)
     {
+        // Check if the auraUser has this aura already, if so then increase the duration but don't remake it.
+        List<AuraEffect> actorAuras = ReturnActorAuras(auraUser);
+        for (int i = 0; i < actorAuras.Count; i++)
+        {
+            if (actorAuras[i].GetAuraName() == auraName)
+            {
+                actorAuras[i].GainDuration(duration);
+                return;
+            }
+        }
         AuraEffect newAura = new AuraEffect();
         newAura.InitializeAura(auraUser, targetTile, duration, auraData.ReturnValue(auraName));
         auras.Add(newAura);

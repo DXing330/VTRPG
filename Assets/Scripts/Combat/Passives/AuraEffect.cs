@@ -96,6 +96,10 @@ public class AuraEffect
     }
     // Auras last for some amount of rounds/turns.
     public int duration;
+    public void GainDuration(int amount)
+    {
+        duration += amount;
+    }
     public void ActorEndsTurn(BattleMap map, TacticActor eActor)
     {
         if (actor == null || actor.GetHealth() <= 0)

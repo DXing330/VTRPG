@@ -28,6 +28,18 @@ public class SkillEffect : ScriptableObject
                 int newPassiveAtLevel = target.GetLevelFromPassive(passiveAtLevel[0]);
                 passiveOrganizer.AddSortedPassiveNewLevel(target, passiveAtLevel[0], newPassiveAtLevel);
                 break;
+            // Mainly for downgrading passive levels.
+            case "SetPassiveLevel":
+                string[] passiveSetLevel = effectSpecifics.Split("Equals");
+                int currentLevel = target.GetLevelFromPassive(passiveSetLevel[0]);
+                int setLevel = int.Parse(passiveSetLevel[1]);
+                target.SetPassivesLevel(passiveSetLevel[0], passiveSetLevel[1]);
+                if (setLevel >= currentLevel) { return; }
+                for (int i = currentLevel; i > setLevel; i--)
+                {
+                    passiveOrganizer.RemoveSortedPassiveNewLevel(target, passiveSetLevel[0], i);
+                }
+                break;
             case "TemporaryPassive":
                 if (target.AddTempPassive(effectSpecifics, level))
                 {
