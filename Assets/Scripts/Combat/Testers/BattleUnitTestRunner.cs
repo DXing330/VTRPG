@@ -132,9 +132,9 @@ public class BattleUnitTestRunner : MonoBehaviour
     {
         RunCase("stat string initialization gives expected actor stats", "Actor state", "Inspect TacticActor.SetInitialStatsFromString and ActorStats.InitializeStats.", delegate
         {
-            ConfigureBasicFixture(attackerHealth: 50, attackerAttack: 12, attackerRange: 2, attackerDefense: 3, attackerMoveSpeed: 4, attackerMoveType: "Walking");
-            AssertEqual(50, attackTester.dummyAttacker.GetBaseHealth(), "base HP");
-            AssertEqual(50, attackTester.dummyAttacker.GetHealth(), "current HP");
+            ConfigureBasicFixture(attackerHealth: 60, attackerAttack: 12, attackerRange: 2, attackerDefense: 3, attackerMoveSpeed: 4, attackerMoveType: "Walking");
+            AssertEqual(60, attackTester.dummyAttacker.GetBaseHealth(), "base HP");
+            AssertEqual(60, attackTester.dummyAttacker.GetHealth(), "current HP");
             AssertEqual(12, attackTester.dummyAttacker.GetAttack(), "attack");
             AssertEqual(2, attackTester.dummyAttacker.GetAttackRange(), "range");
             AssertEqual(3, attackTester.dummyAttacker.GetDefense(), "defense");

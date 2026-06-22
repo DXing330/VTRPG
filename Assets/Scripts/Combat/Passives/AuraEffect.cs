@@ -87,6 +87,7 @@ public class AuraEffect
     }
     public int team;
     public int location;
+    public int GetLocation(){return location;}
     public void UpdateAuraLocation()
     {
         if (ActorAura() && actor != null && actor.GetHealth() > 0)

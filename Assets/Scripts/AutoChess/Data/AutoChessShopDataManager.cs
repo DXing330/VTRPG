@@ -19,19 +19,19 @@ public class AutoChessShopDataManager : SavedData
         shopLevel = utility.SafeParseInt(newData, 1);
     }
     // Weights Determined By Formula.
-    // 100-0-0-0-0-0
-    // 50-50-0-0-0-0
-    // 30-40-30-0-0-0
-    // 20-30-30-20-0-0
-    // 15-20-30-20-15-0
+    // 80-20-0-0-0-0
+    // 60-30-10-0-0-0
+    // 40-30-20-10-0-0
+    // 30-25-25-15-5-0
+    // 20-20-25-20-10-5
     // 10-15-25-25-15-10
     readonly int[,] rarityWeights =
     {
-        {100,  0,  0,  0,  0,  0}, // Level 1
-        { 50, 50,  0,  0,  0,  0}, // Level 2
-        { 30, 40, 30,  0,  0,  0}, // Level 3
-        { 20, 30, 30, 20,  0,  0}, // Level 4
-        { 15, 20, 30, 20, 15,  0}, // Level 5
+        { 80, 20,  0,  0,  0,  0}, // Level 1
+        { 60, 30, 10,  0,  0,  0}, // Level 2
+        { 40, 30, 20, 10,  0,  0}, // Level 3
+        { 30, 25, 25, 15,  5,  0}, // Level 4
+        { 20, 20, 25, 20, 10,  5}, // Level 5
         { 10, 15, 25, 25, 15, 10}  // Level 6
     };
     [ContextMenu("Test Rarity Distribution")]
@@ -81,6 +81,17 @@ public class AutoChessShopDataManager : SavedData
         currentPool.RemoveAt(indexOf);
         currentPoolRarity.RemoveAt(indexOf);
     }
+    // When Selling.
+    public void AddToPool(string newData, string newRarity, int level = 1)
+    {
+        int count = 1;
+        if (level > 1){count = 3;}
+        for (int i = 0; i < count; i++)
+        {
+            currentPool.Add(newData);
+            currentPoolRarity.Add(newRarity);
+        }
+    }
     public void SetCurrentPool(string newData)
     {
         currentPool = newData.Split(delimiter2).ToList();
@@ -124,6 +135,10 @@ public class AutoChessShopDataManager : SavedData
     public void SetCurrentListing(string newData)
     {
         currentListing = newData.Split(delimiter2).ToList();
+    }
+    public void RemoveFromListing(int index)
+    {
+        currentListing.RemoveAt(index);
     }
     [ContextMenu("New Game")]
     public override void NewGame()

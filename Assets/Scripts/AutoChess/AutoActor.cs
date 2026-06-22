@@ -29,7 +29,6 @@ public enum AutoChessFaction
     Assist,
     Harmony
 }
-
 [System.Serializable]
 public class AutoChessTrait
 {
@@ -90,7 +89,6 @@ public class AutoChessTrait
         }
     }
 }
-
 // For Saving/Loading And Easy Management During The Prep Phase.
 // The Prep Phase Will Only Store A List Of These.
 [System.Serializable]
@@ -104,11 +102,25 @@ public class AutoActorRollUpData
     public string GetName(){return autoChessName;}
     public void SetName(string newData){autoChessName = newData;}
     public int autoChessLevel;
-    public List<string> equipmentNames;
+    public int GetLevel(){return autoChessLevel;}
+    public void SetLevel(int newData){autoChessLevel = newData;}
+    public List<string> equipmentNames = new List<string>();
     // Need The Trait Since Some Traits Activate During Prep Phase.
     public AutoChessTrait trait;
+    public void LoadBaseTrait(StatDatabase autoActorData)
+    {
+        string data = autoActorData.ReturnValue(autoChessName);
+        string[] blocks = data.Split("|");
+        trait = new AutoChessTrait();
+        trait.LoadBaseTrait(blocks[1], blocks[2], blocks[3]);
+    }
     // Seat/Tile
     public int location;
+    public int GetLocation(){return location;}
+    public void SetLocation(int newInfo){location = newInfo;}
+    public int direction;
+    public int GetDirection(){return direction;}
+    public void SetDirection(int newInfo){direction = newInfo;}
     public string ReturnRollUpData()
     {
         string data = "";
@@ -116,6 +128,7 @@ public class AutoActorRollUpData
         data += "Level" + equals + autoChessLevel + delimiter;
         data += "Equipment" + equals + String.Join(equipDelimiter, equipmentNames) + delimiter;
         data += "Location" + equals + location + delimiter;
+        data += "Direction" + equals + direction + delimiter;
         return data;
     }
     public void LoadRollUpData(string newData)
@@ -140,13 +153,16 @@ public class AutoActorRollUpData
             autoChessName = value;
             return;
             case "Level":
-            autoChessLevel = int.Parse(value);
+            SetLevel(int.Parse(value));
             return;
             case "Equipment":
             equipmentNames = new List<string>(value.Split(equipDelimiter).ToList());
             return;
             case "Location":
             location = int.Parse(value);
+            return;
+            case "Direction":
+            direction = int.Parse(value);
             return;
         }
     }

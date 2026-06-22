@@ -1238,7 +1238,8 @@ public class BattleMap : MapManager
         List<AuraEffect> actorAuras = ReturnActorAuras(auraUser);
         for (int i = 0; i < actorAuras.Count; i++)
         {
-            if (actorAuras[i].GetAuraName() == auraName)
+            actorAuras[i].UpdateAuraLocation();
+            if (actorAuras[i].GetAuraName() == auraName && actorAuras[i].GetLocation() == targetTile)
             {
                 actorAuras[i].GainDuration(duration);
                 return;

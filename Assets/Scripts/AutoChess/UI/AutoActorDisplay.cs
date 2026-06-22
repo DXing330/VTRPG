@@ -29,6 +29,11 @@ public class AutoActorDisplay : MonoBehaviour
     public TMP_Text attackRangeText;
     // TODO Add A Display For Respawn Timing.
     public TMP_Text respawnText;
+    public GameObject sellObject;
+    public void ActivateSellObject()
+    {
+        sellObject.SetActive(true);
+    }
     public void ResetDisplay()
     {
         utility.DisableGameObjects(factionIconObjects);
@@ -42,6 +47,7 @@ public class AutoActorDisplay : MonoBehaviour
         energyText.text = "";
         attackRangeText.text = "";
         respawnText.text = "";
+        sellObject.SetActive(false);
     }
     public void DisplayActor(string newName)
     {

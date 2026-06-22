@@ -4,9 +4,8 @@ using UnityEngine;
 
 public class AutoChessShopManager : MonoBehaviour
 {
-    public AutoChessShopDataManager data;
+    public AutoChessShopDataManager shopData;
     public AutoChessShopDisplay UI;
-    public AutoActorDisplay actorDisplay;
     public StatDatabase actorData;
     public string ReturnActorFactions(AutoActorRollUpData actor)
     {
@@ -27,15 +26,19 @@ public class AutoChessShopManager : MonoBehaviour
     void Start()
     {
         // Load The Data.
-        data.Load();
+        shopData.Load();
         RefreshData();
         // Update The UI.
         UpdateAutoChessShopUI();
     }
+    public void Save()
+    {
+        shopData.Save();
+    }
     public void RefreshData()
     {
         shopActors = new List<AutoActorRollUpData>();
-        List<string> currentListing = data.GetCurrentListing();
+        List<string> currentListing = shopData.GetCurrentListing();
         for (int i = 0; i < currentListing.Count; i++)
         {
             AutoActorRollUpData newActor = new AutoActorRollUpData();
@@ -50,23 +53,41 @@ public class AutoChessShopManager : MonoBehaviour
     }
     public void Reroll()
     {
-        data.GenerateCurrentListing();
+        shopData.GenerateCurrentListing();
         RefreshData();
         UpdateAutoChessShopUI();
     }
     public void Freeze()
     {
-
     }
     public int selectedIndex = -1;
+    public void ResetSelected(){selectedIndex = -1;}
     public void Select(int index)
     {
-        // Single Click To View.
-        if (selectedIndex != index)
-        {
-            selectedIndex = index;
-            actorDisplay.DisplayActor(shopActors[selectedIndex]);
-        }
-        // Double Click To Buy.
+        selectedIndex = index;
+    }
+    public int SelectedCost()
+    {
+        if (selectedIndex < 0){return -1;}
+        AutoActorRollUpData selectedActor = shopActors[selectedIndex];
+        return ReturnActorCost(selectedActor);
+    }
+    public AutoActorRollUpData GetSelectedActor()
+    {
+        return shopActors[selectedIndex];
+    }
+    public void BuySelectedActor()
+    {
+        shopActors.RemoveAt(selectedIndex);
+        shopData.RemoveFromListing(selectedIndex);
+        ResetSelected();
+        UpdateAutoChessShopUI();
+    }
+    public void SellActor(AutoActorRollUpData soldActor)
+    {
+        string name = soldActor.GetName();
+        string rarity = ReturnActorRarity(soldActor).ToString();
+        int level = soldActor.GetLevel();
+        shopData.AddToPool(name, rarity, level);
     }
 }
