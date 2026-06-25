@@ -8,6 +8,14 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AutoChessDataManager", menuName = "ScriptableObjects/AutoChess/AutoChessDataManager", order = 1)]
 public class AutoChessDataManager : SavedData
 {
+    public List<SavedData> subDataManagers;
+    public AutoChessFactionDataManager factionData;
+    public void GainFactionStacks(string faction, int stackAmount)
+    {
+        factionData.GainFactionStacks(faction, stackAmount);
+    }
+    public List<string> GetAllFactions(){return factionData.GetAllFactions();}
+    public List<string> GetAllFactionStacks(){return factionData.GetAllFactionStacks();}
     public string delimiter2;
     protected int maxLevel = 6;
     public bool MaxLevel(){return level >= maxLevel;}
@@ -95,6 +103,10 @@ public class AutoChessDataManager : SavedData
             mapTerrain.Add("");
         }
         Save();
+        for (int i = 0; i < subDataManagers.Count; i++)
+        {
+            subDataManagers[i].NewGame();
+        }
     }
     public void SaveFromPrepManager(AutoChessPrepManager prepManager)
     {
@@ -125,6 +137,10 @@ public class AutoChessDataManager : SavedData
         allData += "MapTiles=" + String.Join(delimiter2, mapTiles) + delimiter;
         allData += "MapTerrain=" + String.Join(delimiter2, mapTerrain) + delimiter;
         File.WriteAllText(dataPath, allData);
+        for (int i = 0; i < subDataManagers.Count; i++)
+        {
+            subDataManagers[i].Save();
+        }
     }
     public override void Load()
     {
@@ -142,6 +158,10 @@ public class AutoChessDataManager : SavedData
         for (int i = 0; i < blocks.Length; i++)
         {
             LoadStat(blocks[i]);
+        }
+        for (int i = 0; i < subDataManagers.Count; i++)
+        {
+            subDataManagers[i].Load();
         }
     }
     public void LoadStat(string data)

@@ -41,8 +41,10 @@ public class AutoChessShopManager : MonoBehaviour
         List<string> currentListing = shopData.GetCurrentListing();
         for (int i = 0; i < currentListing.Count; i++)
         {
+            if (currentListing[i].Length <= 0){continue;}
             AutoActorRollUpData newActor = new AutoActorRollUpData();
             newActor.SetName(currentListing[i]);
+            newActor.LoadBaseStats(actorData);
             shopActors.Add(newActor);
         }
         selectedIndex = -1;

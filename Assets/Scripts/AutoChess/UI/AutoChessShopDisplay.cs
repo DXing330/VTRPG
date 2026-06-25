@@ -19,11 +19,10 @@ public class AutoChessShopDisplay : MonoBehaviour
         {
             shopObjects[i].SetActive(true);
             AutoActorRollUpData actor = manager.shopActors[i];
-            string actorName = actor.GetName();
             string factions = manager.ReturnActorFactions(actor);
             int rarity = manager.ReturnActorRarity(actor);
             int cost = manager.ReturnActorCost(actor);
-            shopSlots[i].UpdateAutoChessShopSlot(actorName, factions, iconSprites, rarity, cost);
+            shopSlots[i].UpdateAutoChessShopSlot(actor.GetBaseStatString(), factions, iconSprites, rarity, cost);
         }
     }
 }

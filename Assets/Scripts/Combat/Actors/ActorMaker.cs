@@ -99,7 +99,7 @@ public class ActorMaker : MonoBehaviour
         AddAttributePassives(newActor);
         AddSpeciesPassives(newActor);
         passiveOrganizer.OrganizeActorPassives(newActor);
-        newActor.ResetStats();
+        newActor.StartTurnResetStats();
         return newActor;
     }
     public TacticActor SpawnActor(int location, string actorName, int team = 0)
@@ -110,7 +110,7 @@ public class ActorMaker : MonoBehaviour
         newActor.SetPersonalName(actorName);
         newActor.SetTeam(team);
         passiveOrganizer.OrganizeActorPassives(newActor);
-        newActor.ResetStats();
+        newActor.StartTurnResetStats();
         return newActor;
     }
     // Actor Maker is in charge of equipment in relation to actor starting stats for now.
@@ -161,7 +161,7 @@ public class ActorMaker : MonoBehaviour
         AddAttributePassives(actor);
         AddSpeciesPassives(actor);
         passiveOrganizer.OrganizeActorPassives(actor);
-        actor.ResetStats();
+        actor.StartTurnResetStats();
         return actor;
     }
     public List<TacticActor> SpawnTeamInPattern(string pattern, int team, List<string> teamNames, List<string> teamStats = null, List<string> teamPersonalNames = null, List<string> teamEquipment = null, List<string> teamIDs = null)
@@ -202,7 +202,7 @@ public class ActorMaker : MonoBehaviour
             AddAttributePassives(actors[i]);
             AddSpeciesPassives(actors[i]);
             passiveOrganizer.OrganizeActorPassives(actors[i]);
-            actors[i].ResetStats();
+            actors[i].StartTurnResetStats();
         }
         return actors;
     }

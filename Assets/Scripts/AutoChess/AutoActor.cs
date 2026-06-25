@@ -104,15 +104,37 @@ public class AutoActorRollUpData
     public int autoChessLevel;
     public int GetLevel(){return autoChessLevel;}
     public void SetLevel(int newData){autoChessLevel = newData;}
+    public int health;
+    public int GetHealth(){return health;}
+    public void SetHealth(int newData){health = newData;}
+    public int attack;
+    public int GetAttack(){return attack;}
+    public void SetAttack(int newData){attack = newData;}
+    public int defense;
+    public int GetDefense(){return defense;}
+    public void SetDefense(int newData){defense = newData;}
+    public string GetBaseStatString()
+    {
+        string baseStatString = GetName();
+        if (GetLevel() > 1)
+        {
+            baseStatString += "+";
+        }
+        baseStatString += "\n" + "HP:" + GetHealth() + " ATK:" + GetAttack() + " DEF:" + GetDefense();
+        return baseStatString;
+    }
     public List<string> equipmentNames = new List<string>();
     // Need The Trait Since Some Traits Activate During Prep Phase.
     public AutoChessTrait trait;
-    public void LoadBaseTrait(StatDatabase autoActorData)
+    public void LoadBaseStats(StatDatabase autoActorData)
     {
         string data = autoActorData.ReturnValue(autoChessName);
         string[] blocks = data.Split("|");
         trait = new AutoChessTrait();
         trait.LoadBaseTrait(blocks[1], blocks[2], blocks[3]);
+        SetHealth(int.Parse(blocks[7]));
+        SetAttack(int.Parse(blocks[8]));
+        SetDefense(int.Parse(blocks[9]));
     }
     // Seat/Tile
     public int location;
@@ -126,6 +148,9 @@ public class AutoActorRollUpData
         string data = "";
         data += "Name" + equals + autoChessName + delimiter;
         data += "Level" + equals + autoChessLevel + delimiter;
+        data += "Health" + equals + health + delimiter;
+        data += "Attack" + equals + attack + delimiter;
+        data += "Defense" + equals + defense + delimiter;
         data += "Equipment" + equals + String.Join(equipDelimiter, equipmentNames) + delimiter;
         data += "Location" + equals + location + delimiter;
         data += "Direction" + equals + direction + delimiter;
@@ -154,6 +179,15 @@ public class AutoActorRollUpData
             return;
             case "Level":
             SetLevel(int.Parse(value));
+            return;
+            case "Health":
+            SetHealth(int.Parse(value));
+            return;
+            case "Attack":
+            SetAttack(int.Parse(value));
+            return;
+            case "Defense":
+            SetDefense(int.Parse(value));
             return;
             case "Equipment":
             equipmentNames = new List<string>(value.Split(equipDelimiter).ToList());

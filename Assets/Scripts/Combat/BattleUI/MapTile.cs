@@ -10,7 +10,7 @@ public class MapTile : MonoBehaviour
 {
     public int tileNumber;
     public void SetTileNumber(int newNumber){tileNumber = newNumber;}
-    public SimpleMapManager cMap;
+    public ClickTileManager cMap;
     public GameObject mainObject;
     public int elevation = 0;
     public Image elevationImage;
@@ -150,7 +150,6 @@ public class MapTile : MonoBehaviour
     }
     public TMP_Text tileText;
     public GameObject textObject;
-
     public void UpdateText(string newText = "")
     {
         if (newText == "")
@@ -160,7 +159,6 @@ public class MapTile : MonoBehaviour
         textObject.SetActive(true);
         tileText.text = newText;
     }
-
     public void DisableLayers()
     {
         for (int i = 0; i < layers.Count; i++)
@@ -168,12 +166,10 @@ public class MapTile : MonoBehaviour
             layerObjects[i].SetActive(false);
         }
     }
-
     public void EnableLayer(int layer = 0)
     {
         layerObjects[layer].SetActive(true);
     }
-
     public void EnableLayers()
     {
         for (int i = 0; i < layers.Count; i++)
@@ -181,7 +177,6 @@ public class MapTile : MonoBehaviour
             layerObjects[i].SetActive(true);
         }
     }
-
     public void UpdateDirectionArrow(string direction)
     {
         ResetDirectionArrows();
@@ -192,7 +187,6 @@ public class MapTile : MonoBehaviour
             directionObjects[dirInt].SetActive(true);
         }
     }
-
     public void ResetDirectionArrows()
     {
         for (int i = 0; i < directionObjects.Count; i++)
@@ -200,13 +194,18 @@ public class MapTile : MonoBehaviour
             directionObjects[i].SetActive(false);
         }
     }
-
+    public void ActivateAllDirectionArrows()
+    {
+        for (int i = 0; i < directionObjects.Count; i++)
+        {
+            directionObjects[i].SetActive(true);
+        }
+    }
     public void ActivateDirectionArrow(int direction)
     {
         if (direction < 0) { return; }
         directionObjects[direction].SetActive(true);
     }
-
     public void UpdateLayerSprite(Sprite newSprite, int layer = 0)
     {
         if (layer < 0 || layer > layers.Count) { return; }
@@ -218,7 +217,6 @@ public class MapTile : MonoBehaviour
         layerObjects[layer].SetActive(true);
         layers[layer].sprite = newSprite;
     }
-
     protected void InitializeLayerAppearance()
     {
         if (layerAppearanceInitialized){return;}
@@ -231,14 +229,12 @@ public class MapTile : MonoBehaviour
         }
         layerAppearanceInitialized = true;
     }
-
     public Color GetDefaultLayerColor(int layer)
     {
         if (layer < 0 || layer >= layers.Count) { return Color.white; }
         InitializeLayerAppearance();
         return defaultLayerColors[layer];
     }
-
     public void UpdateStyledLayerSprite(Sprite newSprite, Color newColor, float newScale = 1f, int layer = 0)
     {
         if (layer < 0 || layer >= layers.Count) { return; }
@@ -253,7 +249,6 @@ public class MapTile : MonoBehaviour
         layers[layer].color = newColor;
         layers[layer].rectTransform.localScale = defaultLayerScales[layer] * newScale;
     }
-
     public void ResetAllLayers()
     {
         for (int i = 0; i < layerObjects.Count; i++)
@@ -261,7 +256,6 @@ public class MapTile : MonoBehaviour
             ResetLayerSprite(i);
         }
     }
-
     public void ResetLayerSprite(int layer)
     {
         InitializeLayerAppearance();
@@ -269,25 +263,21 @@ public class MapTile : MonoBehaviour
         layers[layer].color = defaultLayerColors[layer];
         layers[layer].rectTransform.localScale = defaultLayerScales[layer];
     }
-
     public void ResetHighlight()
     {
         highlightObject.SetActive(false);
         highlightImage.color = defaultColor;
     }
-
     public void HighlightTile(Color newColor)
     {
         highlightObject.SetActive(true);
         highlightImage.color = newColor;
     }
-
     public void HighlightLayer(int layer, Color newColor)
     {
         layerObjects[layer].SetActive(true);
         layers[layer].color = newColor;
     }
-
     public void ClickTile()
     {
         if (cMap == null)
@@ -295,5 +285,13 @@ public class MapTile : MonoBehaviour
             return;
         }
         cMap.ClickOnTile(tileNumber);
+    }
+    public void ClickDirection(int direction)
+    {
+        if (cMap == null)
+        {
+            return;
+        }
+        cMap.ClickDirection(tileNumber, direction);
     }
 }

@@ -248,6 +248,7 @@ public class BattleManager : MonoBehaviour
             }
         }
         turnActor = roundTurnOrder[turnNumber];
+        // Reset Stats/TickDown Effects.
         turnActor.NewTurn();
         combatLog.UpdateNewestLog(turnActor.GetPersonalName() + "'s Turn");
         // Apply Status/Passives.
@@ -693,7 +694,6 @@ public class BattleManager : MonoBehaviour
             MoveAlongPath(turnActor, path);
         }
     }
-
     protected void BossTurn(int actionsLeft, string turnAction = "", string turnSpecifics = "")
     {
         List<string> turnDetails = actorAI.ReturnBossActions(turnActor, map);
@@ -880,7 +880,6 @@ public class BattleManager : MonoBehaviour
         }
         EndTurn();
     }
-
     protected void NPCChainSkillActions(string[] skills)
     {
         for (int i = 0; i < skills.Length; i++)
@@ -907,7 +906,6 @@ public class BattleManager : MonoBehaviour
         }
         EndTurn();
     }
-
     protected bool TryNPCSpellOnce(string spell)
     {
         activeManager.SetSkillUser(turnActor);

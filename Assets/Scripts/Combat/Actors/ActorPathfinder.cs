@@ -22,7 +22,16 @@ public class ActorPathfinder : MapPathfinder
         }
         return new List<int>(distances);
     }
-
+    public List<int> FindReversePaths(int endIndex, List<int> moveCosts, bool extraCosts = true, TacticActor actor = null)
+    {
+        SetCurrentActor(actor);
+        ResetDistances(endIndex);
+        for (int i = 0; i < moveCosts.Count - 1; i++)
+        {
+            ReverseDeepCheckClosestTile(moveCosts, extraCosts);
+        }
+        return new List<int>(distances);
+    }
     public List<int> GetPrecomputedPath(int startIndex, int endIndex)
     {
         path = new List<int>();
@@ -43,7 +52,45 @@ public class ActorPathfinder : MapPathfinder
         }
         return path;
     }
-
+    // Swap direction (arguments: closestTile <-> adjacentTiles[i]) compared to normal.
+    protected int ReverseDeepCheckClosestTile(List<int> moveCosts, bool extraCosts = false)
+    {
+        int closestTile = heap.Pull();
+        if (closestTile < 0){return -1;}
+        List<int> adjacentTiles = mapUtility.AdjacentTiles(closestTile, mapSize);
+        int moveCost = 1;
+        for (int i = 0; i < adjacentTiles.Count; i++)
+        {
+            // Deal with elevation/border costs here.
+            moveCost = moveCosts[closestTile];
+            if (extraCosts)
+            {
+                // Fliers half elevation differences, because they aren't op enough already.
+                if (currentActor != null && currentActor.GetMoveType() == "Flying")
+                {
+                    moveCost += GetElevationDifference(adjacentTiles[i], closestTile) / 2;
+                }
+                else
+                {
+                    moveCost += GetElevationDifference(adjacentTiles[i], closestTile);
+                }
+                int borderCost = GetBorderCost(adjacentTiles[i], closestTile);
+                moveCost += borderCost;
+                // This could be moved to the movecost manager like tiles and teffects. Although I do enjoy roads being able to decrease move cost to alleviate elevation/border costs.
+                int buildingCost = GetBuildingMoveCost(closestTile);
+                moveCost += buildingCost;
+            }
+            if (moveCost < 1){moveCost = 1;}
+            if (distances[closestTile] + moveCost < distances[adjacentTiles[i]])
+            {
+                distances[adjacentTiles[i]] = distances[closestTile] + moveCost;
+                currentMoveCosts[adjacentTiles[i]] = moveCost;
+                previousTiles[adjacentTiles[i]] = closestTile;
+                heap.AddNodeWeight(adjacentTiles[i], distances[adjacentTiles[i]]);
+            }
+        }
+        return closestTile;
+    }
     protected int DeepCheckClosestTile(List<int> moveCosts, bool extraCosts = false)
     {
         int closestTile = heap.Pull();
@@ -82,7 +129,6 @@ public class ActorPathfinder : MapPathfinder
         }
         return closestTile;
     }
-
     public List<int> FindTilesInMoveRange(int start, int moveRange, List<int> moveCosts)
     {
         List<int> tiles = new List<int>();
@@ -98,7 +144,6 @@ public class ActorPathfinder : MapPathfinder
         tiles.Sort();
         return tiles;
     }
-
     public List<int> GetTilesInAttackRange(TacticActor actor, BattleMap map, List<int> moveCosts, bool current = true)
     {
         int start = actor.GetLocation();

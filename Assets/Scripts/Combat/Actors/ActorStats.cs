@@ -52,13 +52,14 @@ public class ActorStats : ActorInitialStats
             SetInitialStat("", statNames[i]);
         }
         // TempAtk/Crit/Dodge/Etc.
-        ResetStats();
+        StartTurnResetStats();
         EndTurnResetStats();
         // Silence/Invis/Guard/Etc.
         ResetUniqueEffects();
     }
     // Start of Turn
-    public virtual void ResetStats()
+    // BEFORE ALL START TURN EFFECTS/PASSIVES
+    public virtual void StartTurnResetStats()
     {
         currentAttack = baseAttack;
         currentDefense = baseDefense;
@@ -86,6 +87,32 @@ public class ActorStats : ActorInitialStats
         currentCrit = baseCrit;
         currentHitChance = baseHitChance;
         currentAttackSpeed = baseAttackSpeed;
+    }
+    // For Testing Passive Effects.
+    public string ReturnTestStatsString()
+    {
+        List<string> basicStats = ReturnStatsWithNames();
+        string basicString = String.Join("|", basicStats) + "|";
+        basicString += "Status=" + String.Join(",", statuses) + "|";
+        basicString += "StatusDurations=" + String.Join(",", statusDurations) + "|";
+        return basicString;
+    }
+    public List<string> ReturnStatsWithNames()
+    {
+        List<string> stats = new List<string>();
+        stats.Add("BaseHealth=" + GetBaseHealth());
+        if (GetTempHealth() > 0)
+        {
+            stats.Add("Health=" + GetHealth()+"+("+GetTempHealth()+")");
+        }
+        else
+        {
+            stats.Add("Health=" + GetHealth().ToString());
+        }
+        stats.Add("Attack=" + GetAttack().ToString());
+        stats.Add("Defense=" + GetDefense().ToString());
+        stats.Add("Range=" + GetAttackRange().ToString());
+        return stats;
     }
     public List<string> ReturnStats()
     {
@@ -437,7 +464,7 @@ public class ActorStats : ActorInitialStats
         bonusDmgTypes.Clear();
         baseDmgBonuses.Clear();
         currentDmgBonuses.Clear();
-        ResetStats();
+        StartTurnResetStats();
         EndTurnResetStats();
         ResetUniqueEffects();
         doubleTempHealthStacks = 0;
@@ -943,6 +970,7 @@ public class ActorStats : ActorInitialStats
         sleepDuration = 0;
     }
     public bool invisible = false;
+    public bool GetInvisible(){return invisible;}
     public int invisibleDuration;
     public void TurnInvisible(int duration)
     {

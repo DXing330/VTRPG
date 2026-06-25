@@ -28,7 +28,6 @@ public class ActorAI : ScriptableObject
     public StatDatabase actorSkillRotation;
     public StatDatabase spriteToBossRotation;
     public StatDatabase bossSkillRotation;
-
     public List<string> ReturnBossActions(TacticActor actor, BattleMap map)
     {
         List<string> actionsSpecifics = new List<string>();
@@ -50,12 +49,10 @@ public class ActorAI : ScriptableObject
         actionsSpecifics.Add("None");
         return actionsSpecifics;
     }
-
     public bool BossTurn(TacticActor actor)
     {
         return actorSkillRotation.ReturnValue(actor.GetSpriteName()) == "Boss";
     }
-
     public bool NormalTurn(TacticActor actor, int roundIndex, BattleMap map = null, MoveCostManager moveManager = null)
     {
         string fullSkillRotation = actorSkillRotation.ReturnValue(actor.GetSpriteName());
@@ -77,19 +74,16 @@ public class ActorAI : ScriptableObject
         active.LoadSkillFromString(activeData.ReturnValue(activeSkillName), actor);
         return false;
     }
-
     public string ReturnAIAttackSkill(TacticActor actor)
     {
         string attackSkill = actorAttackSkills.ReturnValue(actor.GetSpriteName());
         if (SkillWouldHealTarget(actor, actor.GetTarget(), attackSkill)) { return ""; }
         return attackSkill;
     }
-
     public string ReturnSkillWithEffect(TacticActor actor, BattleMap map, string skillEffect)
     {
         return conditionChecker.GetAvailableSkillWithEffect(actor, map, skillEffect);
     }
-
     public bool SkillWouldHealTarget(TacticActor actor, TacticActor target, string skillName)
     {
         string skillData = activeData.ReturnValue(skillName);
@@ -104,12 +98,10 @@ public class ActorAI : ScriptableObject
         }
         return false;
     }
-
     public string ReturnSpellWithEffect(TacticActor actor, BattleMap map, string spellEffect)
     {
         return conditionChecker.GetAvailableSpellWithEffect(actor, map, spellEffect);
     }
-
     public List<int> FindPathAwayFromTarget(TacticActor currentActor, BattleMap map, MoveCostManager moveManager)
     {
         int originalLocation = currentActor.GetLocation();
@@ -135,12 +127,15 @@ public class ActorAI : ScriptableObject
         }
         return path;
     }
-
     // This doesn't path to a actor, it paths to a tile.
     public List<int> FindPathToTile(TacticActor actor, BattleMap map, MoveCostManager moveManager, int tile)
     {
         int originalLocation = actor.GetLocation();
         moveManager.GetAllMoveCosts(actor, map.battlingActors);
+        if (actor.PassThroughMoving())
+        {
+            tile = moveManager.GetBestReachableTileTowardTargetByMoveCost(actor, map, tile);
+        }
         List<int> fullPath = moveManager.GetPrecomputedPath(originalLocation, tile);
         List<int> path = new List<int>();
         int pathCost = 0;
@@ -157,7 +152,6 @@ public class ActorAI : ScriptableObject
         }
         return path;
     }
-
     public List<int> FindPathToTarget(TacticActor currentActor, BattleMap map, MoveCostManager moveManager)
     {
         int originalLocation = currentActor.GetLocation();
@@ -170,6 +164,7 @@ public class ActorAI : ScriptableObject
         {
             return new List<int>();
         }
+        if (EnemyInAttackRange(currentActor, currentActor.GetTarget(), map)){return new List<int>();}
         // Should not path to the target, instead path to the closest tile adjacent to the target.
         int target = currentActor.GetTarget().GetLocation();
         if (currentActor.GetAttackRange() <= 1)
@@ -181,9 +176,12 @@ public class ActorAI : ScriptableObject
             // Path costs already calculated from [moveManager.GetAllMoveCosts(currentActor, map.battlingActors);] above
             target = map.ReturnClosestTileWithLineOfSight(currentActor.GetLocation(), target, currentActor.GetAttackRange(), moveManager.pathCosts);      
         }
+        if (currentActor.PassThroughMoving())
+        {
+            target = moveManager.GetBestReachableTileTowardTargetByMoveCost(currentActor, map, target);
+        }
         List<int> path = new List<int>();
         int pathCost = 0;
-        if (EnemyInAttackRange(currentActor, currentActor.GetTarget(), map)) { return path; }
         List<int> fullPath = moveManager.GetPrecomputedPath(originalLocation, target, true);
         for (int i = fullPath.Count - 1; i >= 0; i--)
         {
@@ -203,7 +201,6 @@ public class ActorAI : ScriptableObject
         }
         return path;
     }
-
     public TacticActor GetClosestEnemy(List<TacticActor> battlingActors, TacticActor currentActor, MoveCostManager moveManager, bool rage = false)
     {
         List<TacticActor> enemies = new List<TacticActor>();

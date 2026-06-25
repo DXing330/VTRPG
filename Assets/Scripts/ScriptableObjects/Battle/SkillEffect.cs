@@ -456,6 +456,9 @@ public class SkillEffect : ScriptableObject
             case "MoveType":
                 target.SetMoveType(effectSpecifics);
                 break;
+            case "PassThroughMoving":
+                target.EnablePassThroughMoving();
+                break;
             case "Initiative":
                 target.ChangeInitiative(int.Parse(effectSpecifics));
                 break;
@@ -471,6 +474,9 @@ public class SkillEffect : ScriptableObject
             case "Death":
                 target.SetCurrentHealth(0);
                 target.ResetActions();
+                break;
+            case "DeathActive":
+                target.GainDeathActive(effectSpecifics);
                 break;
             case "MentalState":
                 target.SetMentalState(effectSpecifics, level);
@@ -566,6 +572,9 @@ public class SkillEffect : ScriptableObject
                 break;
             case "Invisible":
                 target.TurnInvisible(int.Parse(effectSpecifics));
+                break;
+            case "RemoveInvisibility":
+                target.RemoveInvisibility();
                 break;
             case "Barricade":
                 target.GainBarricade(int.Parse(effectSpecifics));

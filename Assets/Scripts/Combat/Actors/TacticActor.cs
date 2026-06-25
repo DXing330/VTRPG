@@ -313,9 +313,9 @@ public class TacticActor : ActorStats
         ResetSummonTrackers();
         ResetSacrificed();
     }
-    public override void ResetStats()
+    public override void StartTurnResetStats()
     {
-        base.ResetStats();
+        base.StartTurnResetStats();
         movement = 0;
     }
     // Start of Turn
@@ -327,7 +327,7 @@ public class TacticActor : ActorStats
         // This is before passives obviously.
         // Some passives use previous round, some use recent round.
         AddToRoundTrackers();
-        ResetStats();
+        StartTurnResetStats();
         if (sleeping)
         {
             actions = 0;
@@ -375,7 +375,7 @@ public class TacticActor : ActorStats
     public int GetMaxMoveRange()
     {
         // Max of current / base speed and base / current actions.
-        return Mathf.Max(GetSpeed(), GetMoveSpeed()) * Mathf.Max(2, actions) + Mathf.Max(0, GetMovement());
+        return Mathf.Max(GetSpeed(), GetMoveSpeed()) * Mathf.Max(baseActions, actions) + Mathf.Max(0, GetMovement());
     }
     public int GetMoveRange(bool current = true)
     {

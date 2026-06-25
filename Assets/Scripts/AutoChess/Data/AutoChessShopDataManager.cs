@@ -135,6 +135,10 @@ public class AutoChessShopDataManager : SavedData
     public void SetCurrentListing(string newData)
     {
         currentListing = newData.Split(delimiter2).ToList();
+        for (int i = currentListing.Count - 1; i >= 0; i--)
+        {
+            if (currentListing[i].Length <= 0){currentListing.RemoveAt(i);}
+        }
     }
     public void RemoveFromListing(int index)
     {

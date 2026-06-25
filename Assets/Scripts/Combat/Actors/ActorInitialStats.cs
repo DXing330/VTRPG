@@ -394,6 +394,20 @@ public class ActorInitialStats : ActorPassives
     public string moveType;
     public void SetMoveType(string newMoveType) { moveType = newMoveType; }
     public string GetMoveType() { return moveType; }
+    public bool passThroughMoving = false;
+    public bool PassThroughMoving()
+    {
+        if (moveType == "Flying"){return true;}
+        return passThroughMoving;
+    }
+    public void EnablePassThroughMoving()
+    {
+        passThroughMoving = true;
+    }
+    public void DisablePassThroughMoving()
+    {
+        passThroughMoving = false;
+    }
     public int weight;
     public int GetBaseWeight() { return weight; }
     public void SetWeight(int newWeight) { weight = newWeight; }

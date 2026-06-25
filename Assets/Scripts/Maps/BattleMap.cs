@@ -1437,7 +1437,7 @@ public class BattleMap : MapManager
         mapDisplayers[highlightLayer].HighlightCurrentTiles(mapTiles, highlightedTiles, currentTiles);
         mapDisplayers[highlightLayer + 1].HighlightCurrentTiles(mapTiles, highlightedTiles, currentTiles);
     }
-
+    //public <AnyScript> clickManager;
     public override void ClickOnTile(int tileNumber)
     {
         battleManager.ClickOnTile(tileNumber);

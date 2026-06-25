@@ -462,8 +462,12 @@ public class MapUtility : ScriptableObject
 
     public List<int> GetTilesInBeamShape(int startTile, int direction, int span, int size)
     {
+        return GetTilesInBeamRange(startTile, direction, span, size, size);
+    }
+    public List<int> GetTilesInBeamRange(int startTile, int direction, int span, int size, int range)
+    {
         List<int> tiles = new List<int>();
-        tiles.AddRange(GetTilesInLineDirection(startTile, direction, size, size));
+        tiles.AddRange(GetTilesInLineDirection(startTile, direction, range, size));
         List<int> startingTiles = new List<int>();
         if (span > 0)
         {
@@ -472,12 +476,11 @@ public class MapUtility : ScriptableObject
         }
         for (int i = 0; i < startingTiles.Count; i++)
         {
-            tiles.AddRange(GetTilesInLineDirection(startingTiles[i], direction, size - 1, size));
+            tiles.AddRange(GetTilesInLineDirection(startingTiles[i], direction, range - 1, size));
         }
         tiles.AddRange(startingTiles);
         return tiles;
     }
-
     // No such thing as perpendicular but we can do the next best thing.
     public List<int> GetTilesInWallShape(int startTile, int direction, int span, int size)
     {
@@ -773,7 +776,16 @@ public class MapUtility : ScriptableObject
         tiles.Add(selected);
         return tiles;
     }
-
+    public List<int> GetAutoActorAttackTilesByShapeSpan(int selected, string shape, int span, int size, int start)
+    {
+        int direction = DirectionBetweenLocations(start, selected, size);
+        switch (shape)
+        {
+            case "Beam":
+                return GetTilesInBeamRange(start, direction, 1, size, span);
+        }
+        return GetTilesByShapeSpan(selected, shape, span, size, start);
+    }
     public int SpiralInward(int index, int mapSize)
     {
         if (index == 0){return index;}
@@ -802,12 +814,10 @@ public class MapUtility : ScriptableObject
         index -= sideLength;
         return ReturnTileNumberFromRowCol(row + sideLength - index, col, mapSize);
     }
-
     public int SpiralOutward(int index, int mapSize)
     {
         return SpiralInward(mapSize * mapSize - 1 - index, mapSize);
     }
-
     public int CountTilesByShapeSpan(string shape, int span)
     {
         if (span <= 0)
@@ -841,29 +851,24 @@ public class MapUtility : ScriptableObject
         }
         return 1;
     }
-
     protected int CountTilesInCircleSpan(int span)
     {
         if (span < 1){return 1;}
         return 1 + (3 * span * (span + 1));
     }
-
     protected int CountTilesInRingSpan(int span)
     {
         if (span <= 1){return 1;}
         return (CountTilesInCircleSpan(span) - CountTilesInCircleSpan(span - 1));
     }
-
     protected int CountTilesInLineSpan(int span)
     {
         return 6 * span;
     }
-
     protected int CountTilesInConeSpan(int span)
     {
         return ((span + 1)*(span + 1))-1;
     }
-
     protected int CountTilesInWallSpan(int span)
     {
         return (span * 4) + 1;

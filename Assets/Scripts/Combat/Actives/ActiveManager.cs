@@ -248,6 +248,23 @@ public class ActiveManager : MonoBehaviour
                     }
                 }
                 return;
+            // Summon A Quantity Of Units Based On The Attack Divided By Power.
+            case "AKSinkingSandSummon":
+                // Guarantee Summon 1 On Tile.
+                battle.SpawnAndAddActor(targetedTiles[0], specifics, skillUser.GetTeam(), skillUser);
+                int additionalSummons = skillUser.GetBaseAttack() / power;
+                List<int> adjacentTiles = battle.map.mapUtility.AdjacentTiles(targetedTiles[0], battle.map.mapSize);
+                int summonCount = 0;
+                for (int i = 0; i < adjacentTiles.Count; i++)
+                {
+                    if (battle.map.GetActorOnTile(adjacentTiles[i]) == null)
+                    {
+                        summonCount++;
+                        battle.SpawnAndAddActor(adjacentTiles[i], specifics, skillUser.GetTeam(), skillUser);
+                    }
+                    if (summonCount >= additionalSummons){return;}
+                }
+                return;
             // Use Half Base Health To Summon A Clone On The Facing Tile.
             case "Substitute":
                 // If Less Than Half Health Then Do Nothing.

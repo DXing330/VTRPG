@@ -120,6 +120,8 @@ public class ActiveDetailViewerSwitch : ScriptableObject
                 return "Randomly summon one of the following: " + ASD(s) + ".";
             case "MassRandomSummon":
                 return "Randomly summon the following: " + ASD(s) + ".";
+            case "AKSinkingSandSummon":
+                return "Summon one " + ASD(s) + ", and summon additional up to base attack divided by " + APD(p) + ".";
             case "Substitute":
                 return "Pay 50% max health to summon an adjacent dummy.";
             case "Revive":

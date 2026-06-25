@@ -446,6 +446,10 @@ public class ActorPassives : MonoBehaviour
             }
         }
     }
+    public void GainDeathActive(string newDeathActive)
+    {
+        deathActives.Add(newDeathActive);
+    }
     public List<string> afterAttackPassives;
     public List<string> GetAfterAttackPassives()
     {

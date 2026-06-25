@@ -139,17 +139,18 @@ public class MoveCostManager : MonoBehaviour
             {
                 if (passiveSkill.CheckConditionSpecifics(passiveInfo[2], mapInfo[j]))
                 {
-                    //currentMoveCosts[j] = Mathf.Max(1, passiveSkill.AffectInt(currentMoveCosts[j], passiveInfo[4], passiveInfo[5]));
-                    // The pathfinder will enforce movecosts being >= 1.
                     currentMoveCosts[j] = passiveSkill.AffectInt(currentMoveCosts[j], passiveInfo[4], passiveInfo[5]);
                 }
             }
         }
-        for (int i = 0; i < actors.Count; i++)
+        if (!actor.PassThroughMoving())
         {
-            currentMoveCosts[actors[i].GetLocation()] = bigInt;
+            for (int i = 0; i < actors.Count; i++)
+            {
+                currentMoveCosts[actors[i].GetLocation()] = bigInt;
+            }
         }
-        // If every a single tile costs more than your max possible movement, then treat it as a big int instead of a regular high cost tile.
+        // If ever a single tile costs more than your max possible movement, then treat it as a big int instead of a regular high cost tile.
         int maxMovement = actor.GetMaxMoveRange();
         for (int i = 0; i < currentMoveCosts.Count; i++)
         {
@@ -163,7 +164,15 @@ public class MoveCostManager : MonoBehaviour
     public List<int> moveTypeCosts;
     public int moveCost;
     public int GetMoveCost(){ return moveCost; }
+    // Full Distance To A Tile Based On Paths From A Tile.
     public List<int> pathCosts;
+    // Cost Of A Single Tile On The Path.
+    public int MoveCostOfTile(int tileNumber)
+    {
+        return actorPathfinder.GetCurrentMoveCosts()[tileNumber];
+    }
+    // Full Distance To A Tile, Based On Paths To A Tile.
+    public List<int> pathCostsToTarget;
     public List<int> reachableTiles;
     public ActorPathfinder actorPathfinder;
     public void ClickOnStartTile(int tileNumber)
@@ -176,7 +185,11 @@ public class MoveCostManager : MonoBehaviour
         UpdateCurrentMoveCosts(actor, actors);
         pathCosts = actorPathfinder.FindPaths(actor.GetLocation(), currentMoveCosts, true, actor);
     }
-
+    public void GetMoveCostsToTarget(TacticActor actor, List<TacticActor> actors, int targetTile)
+    {
+        UpdateCurrentMoveCosts(actor, actors);
+        pathCostsToTarget = actorPathfinder.FindReversePaths(targetTile, currentMoveCosts, true, actor);
+    }
     protected int ClosestAdjacentTile(int tile)
     {
         return actorPathfinder.ClosestAdjacentTile(tile);
@@ -198,7 +211,6 @@ public class MoveCostManager : MonoBehaviour
         }
         return path;
     }
-
     public int GetLowestMoveCostTile(int startTile, List<int> tiles)
     {
         if (tiles == null || tiles.Count <= 0) { return -1; }
@@ -218,7 +230,6 @@ public class MoveCostManager : MonoBehaviour
         }
         return bestTile;
     }
-
     public int MoveCostOfPath(List<int> path)
     {
         moveCost = 0;
@@ -229,26 +240,56 @@ public class MoveCostManager : MonoBehaviour
         }
         return moveCost;
     }
-
-    public int MoveCostOfTile(int tileNumber)
+    public int GetBestReachableTileTowardTargetByMoveCost(TacticActor actor, BattleMap map, int targetTile)
     {
-        return actorPathfinder.GetCurrentMoveCosts()[tileNumber];
+        List<int> allReachable = new List<int>(GetAllReachableTiles(actor, map.battlingActors));
+        if (allReachable.Contains(targetTile))
+        {
+            return targetTile;
+        }
+        // Check Closest Points To Target.
+        GetMoveCostsToTarget(actor, map.battlingActors, targetTile);
+        List<int> possibleClosestTiles = new List<int>();
+        int closestDistance = bigInt;
+        for (int i = 0; i < allReachable.Count; i++)
+        {
+            if (pathCostsToTarget[allReachable[i]] <= closestDistance)
+            {
+                possibleClosestTiles.Clear();
+                possibleClosestTiles.Add(allReachable[i]);
+                closestDistance = pathCostsToTarget[allReachable[i]];
+            }
+        }
+        if (possibleClosestTiles.Count == 0){return -1;}
+        if (possibleClosestTiles.Count == 1){return possibleClosestTiles[0];}
+        // Check From The Actor Again.
+        return GetLowestMoveCostTile(actor.GetLocation(), possibleClosestTiles);
     }
-
     public List<int> GetAllReachableTiles(TacticActor actor, List<TacticActor> actors, bool current = true)
     {
         GetAllMoveCosts(actor, actors);
         reachableTiles = actorPathfinder.FindTilesInMoveRange(actor.GetLocation(), actor.GetMoveRange(current), currentMoveCosts); // Needs To Use Current Move Cost Not Path Costs
+        // Make Sure You Don't End On A Tile With An Actor.
+        List<int> actorLocations = new List<int>();
+        for (int i = 0; i < actors.Count; i++)
+        {
+            actorLocations.Add(actors[i].GetLocation());
+        }
+        for (int i = reachableTiles.Count - 1; i >= 0; i--)
+        {
+            if (actorLocations.Contains(reachableTiles[i]))
+            {
+                reachableTiles.RemoveAt(i);
+            }
+        }
         return reachableTiles;
     }
-
     public List<int> GetReachableTilesBasedOnActions(TacticActor actor, List<TacticActor> actors, int actionCount)
     {
         GetAllMoveCosts(actor, actors);
         reachableTiles = actorPathfinder.FindTilesInMoveRange(actor.GetLocation(), actor.GetMoveRangeBasedOnActions(actionCount), currentMoveCosts); // Needs To Use Current Move Cost Not Path Costs
         return reachableTiles;
     }
-
     public List<int> GetTilesInAttackRange(TacticActor actor, BattleMap map, bool current = true)
     {
         GetAllMoveCosts(actor, map.battlingActors);

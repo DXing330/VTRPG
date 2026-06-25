@@ -93,6 +93,7 @@ public class CombatLog : MonoBehaviour
     public List<string> detailedLogs;
     public void DebugLatestDetailsLog()
     {
+        if (detailedLogs.Count <= 0){return;}
         Debug.Log(detailedLogs[detailedLogs.Count - 1]);
     }
     public void AddDetailedLogs(string newDetail)

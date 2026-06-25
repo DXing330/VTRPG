@@ -159,6 +159,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " increase defense of " + target + " by " + specifics + "%";
             case "MoveType":
                 return " change movement type of " + target + " to " + specifics;
+            case "PassThroughMoving":
+                return " allow moving through other actors";
             case "AttackRange":
                 return " increase Attack Range of " + target + " by up to " + specifics;
             case "TempRange":
@@ -191,6 +193,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " use " + specifics;
             case "Death":
                 return " die";
+            case "DeathActive":
+                return " gain the " + specifics + " skill which will activate upon death";
             case "CounterAttack":
                 return " gain " + specifics + " counter attacks";
             case "DisableDeathActives":
@@ -223,6 +227,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " disable actives of " + target + " for " + specifics + " turns";
             case "Invisible":
                 return " turn invisible for " + specifics + " turns";
+            case "RemoveInvisibility":
+                return " remove invisibility";
             case "Barricade":
                 return " prevent temporary health from decaying for " + specifics + " turns";
             case "Guard":
@@ -504,6 +510,18 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " if " + conTarget + " has more than " + specifics + " status effects";
             case "Status<>":
                 return " if " + conTarget + " does not have " + specifics + " status";
+            case "Silence":
+                return " if " + conTarget + " is silenced";
+            case "Silence<>":
+                return " if " + conTarget + " is not silenced";
+            case "Sleep":
+                return " if " + conTarget + " is sleeping";
+            case "Sleep<>":
+                return " if " + conTarget + " is not sleeping";
+            case "Invisible":
+                return " if " + conTarget + " is invisible";
+            case "Invisible<>":
+                return " if " + conTarget + " is not invisible";
             case "Range>":
                 return " if attack range is greater than " + specifics + " for " + conTarget;
             case "Range<":
@@ -772,9 +790,9 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "FirstDefend":
                 return " if attacked for the first time";
             case "Damage>":
-                return " if the damage is more than";
+                return " if the damage is more than " + specifics;
             case "Damage<":
-                return " if the damage is less than";
+                return " if the damage is less than " + specifics;
             // AFTERSKILL CONDITIONS
             case "ActionCost>":
                 return " if the skill costs more than " + specifics + " actions";
