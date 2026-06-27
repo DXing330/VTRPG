@@ -783,6 +783,9 @@ public class MapUtility : ScriptableObject
         {
             case "Beam":
                 return GetTilesInBeamRange(start, direction, 1, size, span);
+            case "Line":
+                return GetTilesInLineDirection(start, direction, span, size);
+
         }
         return GetTilesByShapeSpan(selected, shape, span, size, start);
     }

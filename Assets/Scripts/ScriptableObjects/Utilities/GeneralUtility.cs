@@ -216,6 +216,7 @@ public class GeneralUtility : ScriptableObject
 
     public List<string> QuickSortIntStringList(List<string> intStrings, int left, int right)
     {
+        if (right < left){return intStrings;}
         int i = left;
         int j = right;
         int pivot = int.Parse(intStrings[left]);
@@ -251,6 +252,7 @@ public class GeneralUtility : ScriptableObject
 
     public List<string> QuickSortByIntStringList(List<string> toSort, List<string> intStrings, int left, int right)
     {
+        if (right < left){return toSort;}
         int i = left;
         int j = right;
         int pivot = int.Parse(intStrings[left]);

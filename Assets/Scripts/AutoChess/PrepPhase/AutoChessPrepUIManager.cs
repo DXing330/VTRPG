@@ -7,7 +7,6 @@ using TMPro;
 public class AutoChessPrepUIManager : MonoBehaviour
 {
     public AutoChessDataManager dataManager;
-    public AutoChessFactionDisplay factionDisplay;
     public List<AutoChessBenchSlot> benchSlots;
     public List<MapTile> mapSlots;
     public Sprite castleSprite;
@@ -104,7 +103,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
         // Determine Attack Range + Type.
         string[] blocks = prepManager.actorData.ReturnValue(actor.GetName()).Split("|");
         string range = blocks[10];
-        string rangeType = blocks[11];
+        string rangeType = blocks[13];
         int location = actor.GetLocation();
         int direction = actor.GetDirection();
         int selectedTile = prepManager.mapUtility.PointInDirection(location, direction, prepManager.mapSize);

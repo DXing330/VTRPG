@@ -10,13 +10,13 @@ public class RectTransformAdjustor : MonoBehaviour
         rectTiles = newRectTiles;
         gridWidth = rectTiles.Count;
         // Want it to always be centered.
-        if (rectTiles.Count < gridWidth)
+        if (rectTiles.Count < maxGridWidth)
         {
             gridHeight = 1;
         }
         else
         {
-            gridHeight = 1 + rectTiles.Count / gridWidth;
+            gridHeight = 1 + rectTiles.Count / maxGridWidth;
         }
         Initialize();
     }
@@ -26,7 +26,7 @@ public class RectTransformAdjustor : MonoBehaviour
     public int gridHeight = 6;
     public int offsetHeight;
     [ContextMenu("Initialize")]
-    protected virtual void Initialize()
+    public virtual void Initialize()
     {
         // Should Always Try To Center Them If Possible.
         gridWidth = rectTiles.Count;

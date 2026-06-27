@@ -265,29 +265,35 @@ public class MoveCostManager : MonoBehaviour
         // Check From The Actor Again.
         return GetLowestMoveCostTile(actor.GetLocation(), possibleClosestTiles);
     }
-    public List<int> GetAllReachableTiles(TacticActor actor, List<TacticActor> actors, bool current = true)
+    public List<int> RemoveReachableTilesWithActors(List<int> tiles, List<TacticActor> actors)
     {
-        GetAllMoveCosts(actor, actors);
-        reachableTiles = actorPathfinder.FindTilesInMoveRange(actor.GetLocation(), actor.GetMoveRange(current), currentMoveCosts); // Needs To Use Current Move Cost Not Path Costs
-        // Make Sure You Don't End On A Tile With An Actor.
         List<int> actorLocations = new List<int>();
         for (int i = 0; i < actors.Count; i++)
         {
             actorLocations.Add(actors[i].GetLocation());
         }
-        for (int i = reachableTiles.Count - 1; i >= 0; i--)
+        for (int i = tiles.Count - 1; i >= 0; i--)
         {
-            if (actorLocations.Contains(reachableTiles[i]))
+            if (actorLocations.Contains(tiles[i]))
             {
-                reachableTiles.RemoveAt(i);
+                tiles.RemoveAt(i);
             }
         }
+        return tiles;
+    }
+    public List<int> GetAllReachableTiles(TacticActor actor, List<TacticActor> actors, bool current = true)
+    {
+        GetAllMoveCosts(actor, actors);
+        reachableTiles = actorPathfinder.FindTilesInMoveRange(actor.GetLocation(), actor.GetMoveRange(current), currentMoveCosts); // Needs To Use Current Move Cost Not Path Costs
+        // Make Sure You Don't End On A Tile With An Actor.
+        reachableTiles = RemoveReachableTilesWithActors(reachableTiles, actors);
         return reachableTiles;
     }
     public List<int> GetReachableTilesBasedOnActions(TacticActor actor, List<TacticActor> actors, int actionCount)
     {
         GetAllMoveCosts(actor, actors);
         reachableTiles = actorPathfinder.FindTilesInMoveRange(actor.GetLocation(), actor.GetMoveRangeBasedOnActions(actionCount), currentMoveCosts); // Needs To Use Current Move Cost Not Path Costs
+        reachableTiles = RemoveReachableTilesWithActors(reachableTiles, actors);
         return reachableTiles;
     }
     public List<int> GetTilesInAttackRange(TacticActor actor, BattleMap map, bool current = true)

@@ -9,7 +9,6 @@ public class AutoChessPrepManager : ClickTileManager
     public void Save()
     {
         dataManager.SaveFromPrepManager(this);
-        shopManager.Save();
     }
     [ContextMenu("New Game")]
     public void NewGame()
@@ -18,13 +17,18 @@ public class AutoChessPrepManager : ClickTileManager
         shopManager.shopData.NewGame();
     }
     public AutoChessPrepUIManager UIManager;
+    public void UpdateAllUI()
+    {
+        UIManager.UpdateUI(this);
+        factionManager.UpdateActiveFactions();
+    }
     void Start()
     {
         ResetSelected();
         // Load From Data Manager.
         dataManager.Load();
         LoadSlots();
-        UIManager.UpdateUI(this);
+        UpdateAllUI();
     }
     // MAP
     public MapUtility mapUtility;
@@ -51,6 +55,34 @@ public class AutoChessPrepManager : ClickTileManager
         if (GetSpawnTiles().Contains(tileNumber)){return false;}
         return true;
     }
+    // Factions/Traits
+    public AutoChessFactionManager factionManager;
+    public void GainFactionStacks(string faction, int stackAmount)
+    {
+        factionManager.GainFactionStacks(faction, stackAmount);
+    }
+    public AutoChessTraitManager traitManager;
+    public void ApplyGainActorTrait(AutoActorRollUpData newActor)
+    {
+        AutoChessTrait trait = newActor.trait;
+        int intSpecifics = traitManager.ReturnTraitSpecificsInt(newActor, this);
+        switch (trait.effect)
+        {
+            default:
+            factionManager.GainStacksSwitch(newActor, intSpecifics);
+            break;
+            case "Gold":
+            dataManager.GainGold(intSpecifics);
+            break;
+            case "Equipment":
+            dataManager.GainEquipment(trait.specifics);
+            break;
+            // TODO
+            case "HighestActiveUnit":
+            break;
+        }
+        UpdateAllUI();
+    }
     // SHOP
     public StatDatabase actorData;
     public AutoChessShopManager shopManager;
@@ -66,7 +98,7 @@ public class AutoChessPrepManager : ClickTileManager
             return;
         }
         shopManager.Reroll();
-        UIManager.UpdateUI(this);
+        UpdateAllUI();
     }
     protected int expCost = 4;
     public void BuyExp()
@@ -77,7 +109,26 @@ public class AutoChessPrepManager : ClickTileManager
             return;
         }
         dataManager.GainExp(expCost);
-        UIManager.UpdateUI(this);
+        UpdateAllUI();
+    }
+    // New Actors Go To The Bench.
+    public void GainActor(AutoActorRollUpData newActor)
+    {
+        int newSlot = AvailableBenchSlot();
+        if (newSlot < 0)
+        {
+            // TODO Place Them In The Enemy Spawn Field Zone For Now, Until There Is Space On The Bench.
+            return;
+        }
+        newActor.SetLocation(newSlot);
+        newActor.LoadBaseStats(actorData);
+        benchSlots.Add(newActor);
+        // Determine If A Trait Is Triggered.
+        AutoChessTrait trait = newActor.trait;
+        if (trait.timing == "OnPurchase")
+        {
+            ApplyGainActorTrait(newActor);
+        }
     }
     public void BuySelectedActor()
     {
@@ -91,14 +142,10 @@ public class AutoChessPrepManager : ClickTileManager
         }
         // Remove The Actor From The Shop.
         AutoActorRollUpData boughtActor = shopManager.GetSelectedActor();
-        boughtActor.SetLocation(newSlot);
-        boughtActor.LoadBaseStats(actorData);
-        // Add The Actor To The Bench In The Earliest Open Slot.
-        benchSlots.Add(boughtActor);
+        GainActor(boughtActor);
         shopManager.BuySelectedActor();
-        // TODO Apply OnPurchase Traits.
         Save();
-        UIManager.UpdateUI(this);
+        UpdateAllUI();
     }
     public void SellSelectedActor()
     {
@@ -120,7 +167,7 @@ public class AutoChessPrepManager : ClickTileManager
         ResetSelected();
         dataManager.GainGold(1);
         Save();
-        UIManager.UpdateUI(this);
+        UpdateAllUI();
     }
     // Spending Gold, Unit Placement (Location/Direction/TurnOrder), Etc.
     protected int maxBenchSlots = 12;
@@ -237,7 +284,7 @@ public class AutoChessPrepManager : ClickTileManager
                     selectedActorLocation = 0;
                     UIManager.UpdateActorDisplay(benchSlots[i]);
                     UIManager.ActivateSellObject();
-                    break;
+                    return;
                 }
             }
         }
@@ -260,7 +307,6 @@ public class AutoChessPrepManager : ClickTileManager
             // Move The Previous Actor To The New Slot.
             benchSlots[selectedActorIndex].SetLocation(newLocation);
             ResetSelected();
-            UIManager.UpdateUI(this);
         }
         // Move From Map To Bench (Potentially Swap).
         else if (selectedActorLocation == 1)
@@ -280,8 +326,8 @@ public class AutoChessPrepManager : ClickTileManager
             fieldSlots.RemoveAt(selectedActorIndex);
             benchSlots.Add(newAutoActor);
             ResetSelected();
-            UIManager.UpdateUI(this);
         }
+        UpdateAllUI();
         Save();
     }
     // Move From Bench To Map, Select Actor On Map, Move From Map To Map
@@ -301,7 +347,7 @@ public class AutoChessPrepManager : ClickTileManager
                     UIManager.ActivateRotateObject();
                     UIManager.HighlightSelectedAttackRange(this, fieldSlots[i]);
                     selectedActorLocation = 1;
-                    break;
+                    return;
                 }
             }
         }
@@ -331,7 +377,6 @@ public class AutoChessPrepManager : ClickTileManager
             benchSlots.RemoveAt(selectedActorIndex);
             fieldSlots.Add(newAutoActor);
             ResetSelected();
-            UIManager.UpdateUI(this);
         }
         // Move From Map To Map.
         else
@@ -352,8 +397,8 @@ public class AutoChessPrepManager : ClickTileManager
             // Move The Previous Actor To The New Slot.
             fieldSlots[selectedActorIndex].SetLocation(newLocation);
             ResetSelected();
-            UIManager.UpdateUI(this);
         }
+        UpdateAllUI();
         Save();
     }
     // For Changing The Direction After Selecting An Actor
@@ -362,7 +407,7 @@ public class AutoChessPrepManager : ClickTileManager
         if (selectedActorIndex < 0 || selectedActorLocation != 1){return;}
         selectedActorLocation = -1;
         fieldSlots[selectedActorIndex].SetDirection(direction);
-        UIManager.UpdateUI(this);
+        UpdateAllUI();
         Save();
     }
 }

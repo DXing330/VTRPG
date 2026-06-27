@@ -227,6 +227,7 @@ public class BattleManager : MonoBehaviour
     protected bool ChangeTurn()
     {
         endingTurn = false;
+        AIControlledTurn = false;
         combatLog.AddNewLog();
         if (map.battlingActors.Count <= 0 && roundNumber > 1)
         {
@@ -254,6 +255,7 @@ public class BattleManager : MonoBehaviour
         // Apply Status/Passives.
         effectManager.StartTurn(turnActor, map);
         RefreshUI();
+        UI.PlayerTurn();
         // Auto End Turn If Dead From Status/Passives
         if (turnActor.GetHealth() <= 0)
         {
@@ -312,7 +314,6 @@ public class BattleManager : MonoBehaviour
         // Actually Changes The Turn Number & Turn Actor.
         if (!ChangeTurn()){return;}
         ResetState();
-        UI.PlayerTurn();
         // Check for mental conditions.
         string mentalState = turnActor.GetMentalState();
         switch (mentalState)
@@ -347,6 +348,7 @@ public class BattleManager : MonoBehaviour
     }
     protected void NPCTurn()
     {
+        AIControlledTurn = true;
         UI.NPCTurn();
         int actionsLeft = turnActor.GetActions();
         if (actionsLeft <= 0 || turnActor.GetHealth() <= 0)
@@ -369,6 +371,10 @@ public class BattleManager : MonoBehaviour
             BasicNPCAction();
         }
     }
+    // Called By AI When Ending Their Turn.
+    protected bool AIControlledTurn = false;
+    public bool delayEndTurns = false;
+    public float endTurnDelay = 0.2f;
     bool endingTurn = false;
     protected void EndTurn()
     {
@@ -378,6 +384,18 @@ public class BattleManager : MonoBehaviour
         }
         endingTurn = true;
         ResetState();
+        if (AIControlledTurn && delayEndTurns)
+        {
+            StartCoroutine(EndTurnRoutine());
+        }
+        else
+        {
+            NextTurn();
+        }
+    }
+    IEnumerator EndTurnRoutine()
+    {
+        yield return new WaitForSeconds(endTurnDelay);
         NextTurn();
     }
     // None, Move, Attack, SkillSelect, SkillTargeting, Viewing
@@ -742,8 +760,7 @@ public class BattleManager : MonoBehaviour
                     BossTurn(turnActor.GetActions());
                     return;
                 }
-                EndTurn();
-                return;
+                break;
             case "Skill":
                 if (!TryNPCSkillOnce(chosenSpecifics))
                 {
@@ -755,8 +772,7 @@ public class BattleManager : MonoBehaviour
                     BossTurn(turnActor.GetActions());
                     return;
                 }
-                EndTurn();
-                return;
+                break;
             case "Summon Skill":
                 string summonSkill = actorAI.ReturnSkillWithEffect(turnActor, map, "Summon");
                 if (summonSkill == "")
@@ -936,8 +952,7 @@ public class BattleManager : MonoBehaviour
             }
             if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
             {
-                EndTurn();
-                return;
+                break;
             }
         }
         EndTurn();
@@ -984,8 +999,7 @@ public class BattleManager : MonoBehaviour
             }
             if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
             {
-                EndTurn();
-                return;
+                break;
             }
         }
         EndTurn();
@@ -1001,8 +1015,7 @@ public class BattleManager : MonoBehaviour
             if (closestEnemy == null)
             {
                 // No more enemies, just end turn.
-                EndTurn();
-                return;
+                break;
             }
             turnActor.SetTarget(closestEnemy);
             // Move away from them the target.
@@ -1011,8 +1024,7 @@ public class BattleManager : MonoBehaviour
             MoveAlongPath(turnActor, path);
             if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
             {
-                EndTurn();
-                return;
+                break;
             }
         }
         EndTurn();
@@ -1028,8 +1040,7 @@ public class BattleManager : MonoBehaviour
             if (newTarget == null)
             {
                 // No more enemies, just end turn.
-                EndTurn();
-                return;
+                break;
             }
             turnActor.SetTarget(newTarget);
             // Attack them if you can.
@@ -1040,14 +1051,12 @@ public class BattleManager : MonoBehaviour
             {
                 if (AIPathToTarget())
                 {
-                    EndTurn();
-                    return;
+                    break;
                 }
             }
             if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
             {
-                EndTurn();
-                return;
+                break;
             }
         }
         // Reset targets after you stop raging.
@@ -1066,8 +1075,7 @@ public class BattleManager : MonoBehaviour
                 if (closestEnemy == null)
                 {
                     // No more enemies, just end turn.
-                    EndTurn();
-                    return;
+                    break;
                 }
                 turnActor.SetTarget(closestEnemy);
             }
@@ -1080,8 +1088,7 @@ public class BattleManager : MonoBehaviour
             }
             if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
             {
-                EndTurn();
-                return;
+                break;
             }
         }
         EndTurn();
@@ -1099,8 +1106,7 @@ public class BattleManager : MonoBehaviour
                 if (closestEnemy == null)
                 {
                     // No more enemies, just end turn.
-                    EndTurn();
-                    return;
+                    break;
                 }
                 turnActor.SetTarget(closestEnemy);
             }
@@ -1121,8 +1127,7 @@ public class BattleManager : MonoBehaviour
             }
             if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
             {
-                EndTurn();
-                return;
+                break;
             }
         }
         EndTurn();
@@ -1335,6 +1340,7 @@ public class BattleManager : MonoBehaviour
         // End the turn and stop anything if the turn actor died or was removed in any way.
         if (turnActor == null || turnActor.GetHealth() <= 0|| !map.battlingActors.Contains(turnActor))
         {
+            // This is a different end turn than a natural end turn.
             EndTurn();
             return true;
         }

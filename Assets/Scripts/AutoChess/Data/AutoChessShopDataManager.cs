@@ -162,8 +162,8 @@ public class AutoChessShopDataManager : SavedData
             }
         }
         GenerateCurrentListing();
+        autoChessShopRNG.NewGame();
         Save();
-        autoChessShopRNG.Save();
     }
     public override void Save()
     {
@@ -174,6 +174,7 @@ public class AutoChessShopDataManager : SavedData
         allData += "CurrentPoolRarity=" + String.Join(delimiter2, currentPoolRarity) + delimiter;
         allData += "CurrentListing=" + String.Join(delimiter2, currentListing) + delimiter;
         File.WriteAllText(dataPath, allData);
+        autoChessShopRNG.Save();
     }
     public override void Load()
     {
@@ -192,6 +193,7 @@ public class AutoChessShopDataManager : SavedData
         {
             LoadStat(blocks[i]);
         }
+        autoChessShopRNG.Load();
     }
     public void LoadStat(string data)
     {

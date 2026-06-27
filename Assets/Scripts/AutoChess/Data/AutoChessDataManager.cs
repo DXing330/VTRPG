@@ -84,6 +84,20 @@ public class AutoChessDataManager : SavedData
     public int mapSize = 7;
     public List<string> mapTiles;
     public List<string> mapTerrain;
+    public List<string> equipment;
+    public List<string> GetEquipment()
+    {
+        for (int i = equipment.Count - 1; i >= 0; i--)
+        {
+            if (equipment[i].Length <= 0){equipment.RemoveAt(i);}
+        }
+        return equipment;
+    }
+    public void GainEquipment(string equipName)
+    {
+        if (equipName.Length <= 0){return;}
+        equipment.Add(equipName);
+    }
     // public string mode; // Normal/Hard/Hell/Endless?
     [ContextMenu("New Game")]
     public override void NewGame()
@@ -97,6 +111,7 @@ public class AutoChessDataManager : SavedData
         fieldActorData.Clear();
         mapTiles.Clear(); // All Plains.
         mapTerrain.Clear(); // All Blank.
+        equipment.Clear();
         for (int i = 0; i < mapSize * mapSize; i++)
         {
             mapTiles.Add("Plains");
@@ -136,6 +151,7 @@ public class AutoChessDataManager : SavedData
         allData += "FieldActors=" + String.Join(delimiter2, fieldActorData) + delimiter;
         allData += "MapTiles=" + String.Join(delimiter2, mapTiles) + delimiter;
         allData += "MapTerrain=" + String.Join(delimiter2, mapTerrain) + delimiter;
+        allData += "Equipment=" + String.Join(delimiter2, equipment) + delimiter;
         File.WriteAllText(dataPath, allData);
         for (int i = 0; i < subDataManagers.Count; i++)
         {
@@ -200,6 +216,9 @@ public class AutoChessDataManager : SavedData
             return;
             case "MapTerrain":
             mapTerrain = value.Split(delimiter2).ToList();
+            return;
+            case "Equipment":
+            equipment = value.Split(delimiter2).ToList();
             return;
         }
     }

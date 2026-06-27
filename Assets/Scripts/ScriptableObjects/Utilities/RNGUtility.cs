@@ -44,6 +44,7 @@ public class RNGUtility : SavedData
     // SAVING/LOADING
     public override void NewGame()
     {
+        seedHistory.Clear();
         RandomSeed();
     }
     public override void Save()
@@ -75,7 +76,6 @@ public class RNGUtility : SavedData
         seed ^= seed << 17;
         return seed;
     }
-
     public int SeedRange(int min, int max)
     {
         if (max <= min) return min;

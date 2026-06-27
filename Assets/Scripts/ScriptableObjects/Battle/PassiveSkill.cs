@@ -241,7 +241,7 @@ public class PassiveSkill : SkillEffect
             string[] effectSpecifics = passiveData[5].Split(",");
             if (effects.Length != effectSpecifics.Length) { continue; }
             TacticActor target = attacker;
-            if (passiveData[3] == "Target")
+            if (passiveData[3].StartsWith("Target"))
             {
                 target = attackTarget;
             }
@@ -370,6 +370,14 @@ public class PassiveSkill : SkillEffect
                 break;
             case "AdjacentActors":
                 targets = map.GetAdjacentActors(actor.GetLocation());
+                for (int j = 0; j < targets.Count; j++)
+                {
+                    AffectActor(targets[j], effect, specifics);
+                }
+                break;
+            // Get the allies of the target, since they are the enemy of the attacker.
+            case "TargetAdjacentEnemies":
+                targets = map.GetAdjacentAllies(actor);
                 for (int j = 0; j < targets.Count; j++)
                 {
                     AffectActor(targets[j], effect, specifics);

@@ -61,7 +61,7 @@ public class AutoActorDisplay : MonoBehaviour
             case "StartBattle":
             return "At the start of each battle,";
             case "OnPurchase":
-            return "When bought,";
+            return "When obtained,";
             case "OnAttack":
             return "When attacking,";
             case "FirstSkill":

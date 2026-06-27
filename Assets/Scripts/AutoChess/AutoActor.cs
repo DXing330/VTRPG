@@ -95,6 +95,7 @@ public class AutoChessTrait
 public class AutoActorRollUpData
 {
     string delimiter = "aCADelim";
+    string factionDelimiter = "aCAFDelim";
     string equipDelimiter = "aCAEDelim";
     string equals = "aCAEquals";
     // Name + Level Contains All Base Stat Data
@@ -104,6 +105,9 @@ public class AutoActorRollUpData
     public int autoChessLevel;
     public int GetLevel(){return autoChessLevel;}
     public void SetLevel(int newData){autoChessLevel = newData;}
+    public List<string> factions;
+    public List<string> GetFactions(){return factions;}
+    public void SetFactions(List<string> newFactions){factions = newFactions;}
     public int health;
     public int GetHealth(){return health;}
     public void SetHealth(int newData){health = newData;}
@@ -126,12 +130,14 @@ public class AutoActorRollUpData
     public List<string> equipmentNames = new List<string>();
     // Need The Trait Since Some Traits Activate During Prep Phase.
     public AutoChessTrait trait;
-    public void LoadBaseStats(StatDatabase autoActorData)
+    public void LoadBaseStats(StatDatabase autoActorData, int newLevel = 1)
     {
+        SetLevel(newLevel);
         string data = autoActorData.ReturnValue(autoChessName);
         string[] blocks = data.Split("|");
         trait = new AutoChessTrait();
         trait.LoadBaseTrait(blocks[1], blocks[2], blocks[3]);
+        SetFactions(blocks[0].Split(",").ToList());
         SetHealth(int.Parse(blocks[7]));
         SetAttack(int.Parse(blocks[8]));
         SetDefense(int.Parse(blocks[9]));
@@ -148,6 +154,7 @@ public class AutoActorRollUpData
         string data = "";
         data += "Name" + equals + autoChessName + delimiter;
         data += "Level" + equals + autoChessLevel + delimiter;
+        data += "Factions" + equals + String.Join(factionDelimiter, factions) + delimiter;
         data += "Health" + equals + health + delimiter;
         data += "Attack" + equals + attack + delimiter;
         data += "Defense" + equals + defense + delimiter;
@@ -179,6 +186,9 @@ public class AutoActorRollUpData
             return;
             case "Level":
             SetLevel(int.Parse(value));
+            return;
+            case "Factions":
+            SetFactions(value.Split(factionDelimiter).ToList());
             return;
             case "Health":
             SetHealth(int.Parse(value));
@@ -249,9 +259,10 @@ public class AutoActor : TacticActor
         SetCurrentHealth(int.Parse(statBlocks[7]));
         SetBaseAttack(int.Parse(statBlocks[8]));
         SetBaseDefense(int.Parse(statBlocks[9]));
-        attackRangeShape =  statBlocks[10];
-        baseRespawnTimer = int.Parse(statBlocks[11]);
-        SetPassiveSkills(statBlocks[12].Split(passiveDelimiter).ToList());
-        SetPassiveLevels(statBlocks[13].Split(passiveDelimiter).ToList());
+        SetAttackRange(int.Parse(statBlocks[10]));
+        attackRangeShape =  statBlocks[13];
+        SetPassiveSkills(statBlocks[11].Split(passiveDelimiter).ToList());
+        SetPassiveLevels(statBlocks[12].Split(passiveDelimiter).ToList());
+        baseRespawnTimer = int.Parse(statBlocks[15]);
     }
 }

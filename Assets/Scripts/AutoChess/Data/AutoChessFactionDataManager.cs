@@ -10,13 +10,38 @@ public class AutoChessFactionDataManager : SavedData
 {
     public string delimiter2;
     public List<string> mainFactions; // Require 3 field units to activate.
+    public bool MainFaction(string factionName)
+    {
+        return mainFactions.Contains(factionName);
+    }
     public List<string> econFactions; // Includes bench units.
+    public bool EconFaction(string factionName)
+    {
+        return econFactions.Contains(factionName);
+    }
     public List<string> allFactions;
+    public void SetAllFactions(List<string> newFactions)
+    {
+        utility.RemoveEmptyListItems(newFactions);
+        allFactions = newFactions;
+    }
     public List<string> GetAllFactions(){return allFactions;}
     public List<string> allFactionStacks;
+    public void SetAllFactionStacks(List<string> newFactions)
+    {
+        utility.RemoveEmptyListItems(newFactions);
+        allFactionStacks = newFactions;
+    }
+    public string GetStacksOfFaction(string factionName)
+    {
+        int indexOf = allFactions.IndexOf(factionName);
+        if (indexOf < 0){return "0";}
+        return allFactionStacks[indexOf];
+    }
     public List<string> GetAllFactionStacks(){return allFactionStacks;}
     public void GainFactionStacks(string faction, int stackAmount)
     {
+        if (faction.Length <= 0){return;}
         int indexOf = allFactions.IndexOf(faction);
         if (indexOf < 0)
         {
@@ -25,7 +50,6 @@ public class AutoChessFactionDataManager : SavedData
             return;
         }
         allFactionStacks[indexOf] = (int.Parse(allFactionStacks[indexOf]) + stackAmount).ToString();
-        utility.QuickSortByIntStringList(allFactions, allFactionStacks, 0, allFactions.Count - 1);
     }
     public override void NewGame()
     {
@@ -70,10 +94,10 @@ public class AutoChessFactionDataManager : SavedData
             default:
             return;
             case "Factions":
-            allFactions = value.Split(delimiter2).ToList();
+            SetAllFactions(value.Split(delimiter2).ToList());
             return;
             case "Stacks":
-            allFactionStacks = value.Split(delimiter2).ToList();
+            SetAllFactionStacks(value.Split(delimiter2).ToList());
             return;
         }
     }
