@@ -188,7 +188,7 @@ public class FactionCity : MonoBehaviour
         }
     }
 
-    protected void LoadStat(string stat)
+    public void LoadStat(string stat)
     {
         string[] statsBlocks = stat.Split("=");
         if (statsBlocks.Length < 2){return;}

@@ -30,6 +30,27 @@ public class AutoChessPrepManager : ClickTileManager
         LoadSlots();
         UpdateAllUI();
     }
+    public void LoadSlots()
+    {
+        benchSlots.Clear();
+        fieldSlots.Clear();
+        for (int i = 0; i < dataManager.benchActorData.Count; i++)
+        {
+            if (dataManager.benchActorData[i].Length <= 0){continue;}
+            AutoActorRollUpData newBenchActor = new AutoActorRollUpData();
+            newBenchActor.LoadRollUpData(dataManager.benchActorData[i]);
+            newBenchActor.LoadBaseStats(actorData);
+            benchSlots.Add(newBenchActor);
+        }
+        for (int i = 0; i < dataManager.fieldActorData.Count; i++)
+        {
+            if (dataManager.fieldActorData[i].Length <= 0){continue;}
+            AutoActorRollUpData newFieldActor = new AutoActorRollUpData();
+            newFieldActor.LoadRollUpData(dataManager.fieldActorData[i]);
+            newFieldActor.LoadBaseStats(actorData);
+            fieldSlots.Add(newFieldActor);
+        }
+    }
     // MAP
     public MapUtility mapUtility;
     public int mapSize = 7;
@@ -74,11 +95,24 @@ public class AutoChessPrepManager : ClickTileManager
             case "Gold":
             dataManager.GainGold(intSpecifics);
             break;
+            case "NextRoundGold":
+            dataManager.GainNextRoundGold(intSpecifics);
+            break;
             case "Equipment":
             dataManager.GainEquipment(trait.specifics);
             break;
-            // TODO
             case "HighestActiveUnit":
+            string faction = factionManager.HighestUnitCountFaction();
+            if (faction == ""){break;}
+            for (int i = 0; i < Mathf.Max(1, intSpecifics); i++)
+            {
+                // Generate A Random Actor Of That Type.
+                string newActorName = shopManager.shopData.ReturnRandomActorFromFaction(faction);
+                AutoActorRollUpData gainedActor = new AutoActorRollUpData();
+                gainedActor.SetName(newActorName);
+                gainedActor.LoadBaseStats(actorData);
+                GainActor(gainedActor);
+            }
             break;
         }
         UpdateAllUI();
@@ -120,6 +154,7 @@ public class AutoChessPrepManager : ClickTileManager
             // TODO Place Them In The Enemy Spawn Field Zone For Now, Until There Is Space On The Bench.
             return;
         }
+        dataManager.GainActor(newActor);
         newActor.SetLocation(newSlot);
         newActor.LoadBaseStats(actorData);
         benchSlots.Add(newActor);
@@ -241,27 +276,6 @@ public class AutoChessPrepManager : ClickTileManager
             }
         }
         return -1;
-    }
-    public void LoadSlots()
-    {
-        benchSlots.Clear();
-        fieldSlots.Clear();
-        for (int i = 0; i < dataManager.benchActorData.Count; i++)
-        {
-            if (dataManager.benchActorData[i].Length <= 0){continue;}
-            AutoActorRollUpData newBenchActor = new AutoActorRollUpData();
-            newBenchActor.LoadRollUpData(dataManager.benchActorData[i]);
-            newBenchActor.LoadBaseStats(actorData);
-            benchSlots.Add(newBenchActor);
-        }
-        for (int i = 0; i < dataManager.fieldActorData.Count; i++)
-        {
-            if (dataManager.fieldActorData[i].Length <= 0){continue;}
-            AutoActorRollUpData newFieldActor = new AutoActorRollUpData();
-            newFieldActor.LoadRollUpData(dataManager.fieldActorData[i]);
-            newFieldActor.LoadBaseStats(actorData);
-            fieldSlots.Add(newFieldActor);
-        }
     }
     public int selectedActorLocation;
     public int selectedActorIndex;

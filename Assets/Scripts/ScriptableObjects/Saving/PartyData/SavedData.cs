@@ -53,14 +53,24 @@ public class SavedData : ScriptableObject
 
     public virtual void Load()
     {
-        dataPath = Application.persistentDataPath+"/"+filename;
-        if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
-        else{allData = newGameData;}
-        if (allData.Contains(delimiter)){dataList = allData.Split(delimiter).ToList();}
+        dataPath = Application.persistentDataPath + "/" + filename;
+        if (File.Exists(dataPath))
+        {
+            allData = File.ReadAllText(dataPath);
+        }
         else
         {
-            dataList.Clear();
-            dataList.Add(allData);
+            NewGame();
+            return;
         }
+        string[] blocks = allData.Split(delimiter);
+        for (int i = 0; i < blocks.Length; i++)
+        {
+            LoadStat(blocks[i]);
+        }
+    }
+    public virtual void LoadStat(string data)
+    {
+
     }
 }

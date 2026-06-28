@@ -61,9 +61,26 @@ public class AutoChessDataManager : SavedData
     {
         gold += amount;
     }
+    public int nextRoundGold;
+    public void GainNextRoundGold(int amount)
+    {
+        nextRoundGold += amount;
+    }
+    public void SetNextRoundGold(int amount)
+    {
+        nextRoundGold = amount;
+    }
+    public int GetNextRoundGold(){return nextRoundGold;}
+    public int roundSpentGold;
+    public void SetRoundGold(int amount)
+    {
+        roundSpentGold = amount;
+    }
+    public int GetRoundGold(){return roundSpentGold;}
     public bool SpendGold(int amount)
     {
         if (amount > gold){return false;}
+        roundSpentGold += amount;
         gold -= amount;
         return true;
     }
@@ -79,8 +96,26 @@ public class AutoChessDataManager : SavedData
     {
         round = newInfo;
     }
+    public void NewRound()
+    {
+        round++;
+        roundGainedActors = 0;
+        roundSpentGold = 0;
+        GainGold(GetNextRoundGold());
+        SetNextRoundGold(0);
+    }
     public List<string> benchActorData;
     public List<string> fieldActorData;
+    public int roundGainedActors;
+    public void SetRoundActors(int amount)
+    {
+        roundGainedActors = amount;
+    }
+    public int GetRoundActors(){return roundGainedActors;}
+    public void GainActor(AutoActorRollUpData newActor)
+    {
+        roundGainedActors++;
+    }
     public int mapSize = 7;
     public List<string> mapTiles;
     public List<string> mapTerrain;
@@ -107,6 +142,9 @@ public class AutoChessDataManager : SavedData
         gold = 10;
         health = 100;
         round = 1;
+        nextRoundGold = 0;
+        roundSpentGold = 0;
+        roundGainedActors = 0;
         benchActorData.Clear();
         fieldActorData.Clear();
         mapTiles.Clear(); // All Plains.
@@ -147,6 +185,9 @@ public class AutoChessDataManager : SavedData
         allData += "Gold=" + gold + delimiter;
         allData += "Health=" + health + delimiter;
         allData += "Round=" + round + delimiter;
+        allData += "NextRoundGold=" + nextRoundGold + delimiter;
+        allData += "RoundGold=" + roundSpentGold + delimiter;
+        allData += "RoundActors=" + roundGainedActors + delimiter;
         allData += "BenchActors=" + String.Join(delimiter2, benchActorData) + delimiter;
         allData += "FieldActors=" + String.Join(delimiter2, fieldActorData) + delimiter;
         allData += "MapTiles=" + String.Join(delimiter2, mapTiles) + delimiter;
@@ -180,7 +221,7 @@ public class AutoChessDataManager : SavedData
             subDataManagers[i].Load();
         }
     }
-    public void LoadStat(string data)
+    public override void LoadStat(string data)
     {
         string[] blocks = data.Split("=");
         if (blocks.Length < 2){return;}
@@ -204,6 +245,15 @@ public class AutoChessDataManager : SavedData
             return;
             case "Round":
             SetRound(int.Parse(value));
+            return;
+            case "NextRoundGold":
+            SetNextRoundGold(int.Parse(value));
+            return;
+            case "RoundGold":
+            SetRoundGold(int.Parse(value));
+            return;
+            case "RoundActors":
+            SetRoundActors(int.Parse(value));
             return;
             case "BenchActors":
             benchActorData = value.Split(delimiter2).ToList();

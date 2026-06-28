@@ -131,7 +131,7 @@ public class GuildStorage : SavedData
         utility.RemoveEmptyListItems(storedItems);
     }
 
-    protected void LoadStat(string data)
+    public override void LoadStat(string data)
     {
         string[] blocks = data.Split('=');
         if (blocks.Length < 2) { return; }

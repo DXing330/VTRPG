@@ -205,7 +205,7 @@ public class StSRunModifiersSaveData : SavedData
             LoadStat(dataList[i]);
         }
     }
-    protected void LoadStat(string stat)
+    public override void LoadStat(string stat)
     {
         string[] statData = stat.Split(new char[] { '=' }, 2);
         if (statData.Length < 2){return;}

@@ -276,7 +276,7 @@ public class BattleState : SavedState
         battleMapFeatures.SetTerrainType(terrainType);
     }
 
-    protected virtual void LoadStat(string data)
+    public override void LoadStat(string data)
     {
         string[] blocks = data.Split("=");
         if (blocks.Length < 2){return;}

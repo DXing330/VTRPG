@@ -222,7 +222,7 @@ public class DungeonBag : SavedData
             LoadStat(dataList[i]);
         }
     }
-    protected void LoadStat(string stat)
+    public override void LoadStat(string stat)
     {
         string[] statsBlocks = stat.Split("=");
         if (statsBlocks.Length < 2){return;}

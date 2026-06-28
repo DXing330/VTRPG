@@ -80,6 +80,7 @@ public class AutoChessShopDataManager : SavedData
         if (indexOf < 0){return;}
         currentPool.RemoveAt(indexOf);
         currentPoolRarity.RemoveAt(indexOf);
+        currentPoolFactions.RemoveAt(indexOf);
     }
     // When Selling.
     public void AddToPool(string newData, string newRarity, int level = 1)
@@ -112,11 +113,36 @@ public class AutoChessShopDataManager : SavedData
         }
         return pool;
     }
+    public List<string> currentPoolFactions;
+    public void SetCurrentPoolFactions(string newData)
+    {
+        currentPoolRarity = newData.Split(delimiter2).ToList();
+    }
+    public List<string> ReturnCurrentPoolOfFaction(string faction)
+    {
+        List<string> pool = new List<string>();
+        for (int i = 0; i < currentPoolFactions.Count; i++)
+        {
+            // Can't Get Higher Rarity Than Shop Level.
+            if (int.Parse(currentPoolRarity[i]) > shopLevel){continue;}
+            string[] factionBlocks = currentPoolFactions[i].Split(",");
+            if (!factionBlocks.Contains(faction)){continue;}
+            pool.Add(currentPool[i]);
+        }
+        return pool;
+    }
+    public string ReturnRandomActorFromFaction(string faction)
+    {
+        return ReturnRandomActorFromPool(ReturnCurrentPoolOfFaction(faction));
+    }
+    // Consumes The Actor From The Listing Automatically.
     public string ReturnRandomActorFromPool(List<string> pool)
     {
         if (pool.Count <= 0){return currentPool[0];}
         int roll = autoChessShopRNG.SeedRange(0, pool.Count);
-        return pool[roll];
+        string actorName = pool[roll];
+        RemoveFromPool(actorName);
+        return actorName;
     }
     public List<string> currentListing;
     public void GenerateCurrentListing()
@@ -128,7 +154,6 @@ public class AutoChessShopDataManager : SavedData
         {
             string newRoll = ReturnRandomActorFromPool(ReturnCurrentPoolOfRarity(DetermineRarity()));
             currentListing.Add(newRoll);
-            RemoveFromPool(newRoll);
         }
     }
     public List<string> GetCurrentListing(){return currentListing;}
@@ -150,19 +175,21 @@ public class AutoChessShopDataManager : SavedData
         shopLevel = 1;
         currentPool.Clear();
         currentPoolRarity.Clear();
+        currentPoolFactions.Clear();
         List<string> allNames = unitData.GetAllKeys();
         for (int i = 0; i < allNames.Count; i++)
         {
             // 4, 6, 8, 10, 12, 14 of each unit.
             int rarity = int.Parse(unitRarity.ReturnValue(allNames[i]));
+            string[] dataBlocks = unitData.ReturnValue(allNames[i]).Split("|");
             for (int j = 0; j < 16 - 2 * rarity; j++)
             {
                 currentPool.Add(allNames[i]);
                 currentPoolRarity.Add(rarity.ToString());
+                currentPoolFactions.Add(dataBlocks[0]);
             }
         }
         GenerateCurrentListing();
-        autoChessShopRNG.NewGame();
         Save();
     }
     public override void Save()
@@ -172,6 +199,7 @@ public class AutoChessShopDataManager : SavedData
         allData += "ShopLevel=" + shopLevel + delimiter;
         allData += "CurrentPool=" + String.Join(delimiter2, currentPool) + delimiter;
         allData += "CurrentPoolRarity=" + String.Join(delimiter2, currentPoolRarity) + delimiter;
+        allData += "CurrentPoolFactions=" + String.Join(delimiter2, currentPoolFactions) + delimiter;
         allData += "CurrentListing=" + String.Join(delimiter2, currentListing) + delimiter;
         File.WriteAllText(dataPath, allData);
         autoChessShopRNG.Save();
@@ -195,7 +223,7 @@ public class AutoChessShopDataManager : SavedData
         }
         autoChessShopRNG.Load();
     }
-    public void LoadStat(string data)
+    public override void LoadStat(string data)
     {
         string[] blocks = data.Split("=");
         if (blocks.Length < 2){return;}
@@ -213,6 +241,9 @@ public class AutoChessShopDataManager : SavedData
             return;
             case "CurrentPoolRarity":
             SetCurrentPoolRarity(value);
+            return;
+            case "CurrentPoolFactions":
+            SetCurrentPoolFactions(value);
             return;
             case "CurrentListing":
             SetCurrentListing(value);

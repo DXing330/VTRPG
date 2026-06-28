@@ -91,7 +91,7 @@ public class StSState : SavedState
             LoadStat(dataBlocks[i]);
         }
     }
-    public void LoadStat(string stat)
+    public override void LoadStat(string stat)
     {
         string[] statData = stat.Split("=");
         if (statData.Length < 2){return;}

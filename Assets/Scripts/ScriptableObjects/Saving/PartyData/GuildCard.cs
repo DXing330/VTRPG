@@ -209,7 +209,7 @@ public class GuildCard : SavedData
         }
     }
 
-    protected void LoadStat(string stat)
+    public override void LoadStat(string stat)
     {
         string[] blocks = stat.Split("=");
         if (blocks.Length < 2){return;}

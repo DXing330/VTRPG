@@ -357,7 +357,7 @@ public class PartyData : SavedData
         partyIDs = utility.RemoveEmptyListItems(partyIDs);
         partyStats = utility.RemoveEmptyListItems(partyStats);
     }
-    protected void LoadStat(string stat)
+    public override void LoadStat(string stat)
     {
         string[] blocks = stat.Split("=");
         if (blocks.Length < 2){return;}

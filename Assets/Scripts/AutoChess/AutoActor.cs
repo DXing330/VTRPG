@@ -67,7 +67,7 @@ public class AutoChessTrait
             LoadStat(traitBlocks[i]);
         }
     }
-    protected void LoadStat(string data)
+    public void LoadStat(string data)
     {
         string[] blocks = data.Split(equals);
         if (blocks.Length < 2){return;}

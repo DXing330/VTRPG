@@ -30,6 +30,7 @@ public class AutoChessFactionManager : MonoBehaviour
     }
     public string HighestStackActiveFaction()
     {
+        UpdateActiveFactions();
         if (activeFactions.Count <= 0){return "";}
         int stackCount = -1;
         int index = -1;
@@ -44,10 +45,28 @@ public class AutoChessFactionManager : MonoBehaviour
         }
         return activeFactions[index];
     }
+    public string HighestUnitCountFaction()
+    {
+        UpdateActiveFactions();
+        if (allFactionsWithUnits.Count <= 0){return "";}
+        int highestCount = -1;
+        int index = -1;
+        for (int i = 0; i < allFactionCounts.Count; i++)
+        {
+            if (allFactionCounts[i] > highestCount)
+            {
+                highestCount = allFactionCounts[i];
+                index = i;
+            }
+        }
+        return allFactionsWithUnits[index];
+    }
     // TODO We Can Hard Check For Emblems First.
     public List<string> uniqueEmblems;
     public List<string> uniqueUnitNames;
+    // Factions Based On Field.
     public List<string> allFactionsWithUnits;
+    // Unique Unit Count In Each Faction.
     public List<int> allFactionCounts;
     public void UpdateFactionCount(string factionName)
     {

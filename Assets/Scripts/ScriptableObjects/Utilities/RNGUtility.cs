@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 [CreateAssetMenu(fileName = "SavedData", menuName = "ScriptableObjects/Utility/SavedSeed", order = 1)]
 public class RNGUtility : SavedData
 {
+    public bool saveHistory;
     public List<RNGUtility> subRNG;
     public RNGUtility masterRNG;
     // SAVED SEED
@@ -44,7 +45,6 @@ public class RNGUtility : SavedData
     // SAVING/LOADING
     public override void NewGame()
     {
-        seedHistory.Clear();
         RandomSeed();
     }
     public override void Save()
@@ -70,7 +70,10 @@ public class RNGUtility : SavedData
     // RNG FUNCTIONS
     public ulong NextUInt64()
     {
-        seedHistory.Add(seed);
+        if (saveHistory)
+        {
+            seedHistory.Add(seed);
+        }
         seed ^= seed << 13;
         seed ^= seed >> 7;
         seed ^= seed << 17;

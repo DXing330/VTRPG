@@ -33,7 +33,9 @@ public class SceneTracker : SavedData
     public override void Save()
     {
         dataPath = Application.persistentDataPath+"/"+filename;
-        allData = previousScene+delimiter+currentScene;
+        allData = "";
+        allData += "PreviousScene=" + previousScene + delimiter;
+        allData += "CurrentScene=" + currentScene + delimiter;
         File.WriteAllText(dataPath, allData);
     }
 
@@ -50,21 +52,25 @@ public class SceneTracker : SavedData
         }
         for (int i = 0; i < dataList.Count; i++)
         {
-            LoadStat(dataList[i], i);
+            LoadStat(dataList[i]);
         }
     }
 
-    protected void LoadStat(string stat, int index)
+    public override void LoadStat(string data)
     {
-        switch (index)
+        string[] blocks = data.Split("=");
+        if (blocks.Length < 2){return;}
+        string key = blocks[0];
+        string value = blocks[1];
+        switch (key)
         {
             default:
             break;
-            case 0:
-            SetPreviousScene(stat);
+            case "PreviousScene":
+            SetPreviousScene(value);
             break;
-            case 1:
-            SetCurrentScene(stat);
+            case "CurrentScene":
+            SetCurrentScene(value);
             break;
         }
     }

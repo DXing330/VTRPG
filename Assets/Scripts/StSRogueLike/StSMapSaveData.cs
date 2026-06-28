@@ -57,7 +57,7 @@ public class StSMapSaveData : SavedData
             LoadStat(dataList[i]);
         }
     }
-    public void LoadStat(string stat)
+    public override void LoadStat(string stat)
     {
         string[] statData = stat.Split("=");
         if (statData.Length < 2){return;}
