@@ -64,7 +64,7 @@ public class AutoChessEnemyDataManager : SavedData
     public void GenerateNextRoundEnemies()
     {
         nextRoundEnemies.Clear();
-        int normalCount = autoChessEnemyRNG.SeedRange(round, round * round);
+        int normalCount = autoChessEnemyRNG.SeedRange(round * 2, Math.Max(round * round, round * 2 + 1));
         int eliteCount = 0;
         // First few round have no elites.
         if (round > 4)

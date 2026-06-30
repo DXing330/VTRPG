@@ -91,6 +91,28 @@ public class BattleMapUtility : ScriptableObject
         }
         return allies[UnityEngine.Random.Range(0, allies.Count)].GetLocation();
     }
+    public TacticActor GetActorOnFacingTile(TacticActor facingActor, BattleMap map)
+    {
+        int facingTile = mapUtility.PointInDirection(facingActor.GetLocation(), facingActor.GetDirection(), map.mapSize);
+        return GetActorOnTile(map, facingTile);
+    }
+    public int AKRaidMove(TacticActor actor, BattleMap map)
+    {
+        // Get All Enemies.
+        List<TacticActor> enemies = map.AllEnemies(actor);
+        // Determine The Direction Of The Tile To Be Redeployed To, Relative To The Enemy.
+        int oppDirection = (actor.GetDirection() + 3) % 6;
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            // Check For Each Enemy If The Tile In That Direction Is Available.
+            int redeployTile = mapUtility.PointInDirection(enemies[i].GetLocation(), oppDirection, map.mapSize);
+            if (GetActorOnTile(map, redeployTile) == null)
+            {
+                return redeployTile;
+            }
+        }
+        return -1;
+    }
     // Calculation Utilities.
     public int AverageActorHealth(BattleMap map)
     {

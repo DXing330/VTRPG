@@ -95,6 +95,11 @@ public class PassiveDetailViewerSwitch : ScriptableObject
         {
             return AutoSkillText(effect, specifics);
         }
+        // AK Autochess Special
+        if (target == "AKRaidMove")
+        {
+            return " redeploy next to a random enemy";
+        }
         if (effect.EndsWith("Damage"))
         {
             return " deal " + specifics + " " + effect + " to " + target;
@@ -118,9 +123,9 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "BaseHealth":
                 return " increase maximum health of " + target + " by " + specifics;
             case "BaseHealth%":
-                return " increase maximum health of " + target + " by " + specifics + "%";
+                return " increase maximum health% of " + target + " by " + specifics + "%";
             case "MaxHealth%":
-                return " change maximum health of " + target + " by " + specifics + "%";
+                return " change maximum health% of " + target + " by " + specifics + "%";
             case "CurrentHealth%":
                 return " decrease current health by " + specifics + "%";
             case "BaseEnergy%":
@@ -151,12 +156,6 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " " + target + " regain health up to " + specifics;
             case "Health%":
                 return " " + target + " regain up to " + specifics + "% health";
-            case "Attack%":
-                return " increase attack of " + target + " by " + specifics + "%";
-            case "BaseAttack%":
-                return " increase base attack of " + target + " by " + specifics + "%";
-            case "Defense%":
-                return " increase defense of " + target + " by " + specifics + "%";
             case "MoveType":
                 return " change movement type of " + target + " to " + specifics;
             case "PassThroughMoving":
@@ -250,6 +249,54 @@ public class PassiveDetailViewerSwitch : ScriptableObject
         }
         return " increase " + effect + " of " + target + " by " + specifics;
     }
+    protected string ReturnAdjustedSpecifics(string adjustedSpecifics, string targetString)
+    {
+        switch (adjustedSpecifics)
+        {
+            default:
+                return "your " + "[" + adjustedSpecifics + "] level";
+            case "DamageTaken":
+                return "the amount of damage taken";
+            case "DamageDealt":
+                return "the amount of damage dealt";
+            case "DamageTaken/2":
+                return "half the amount of damage taken";
+            case "DamageDealt/2":
+                return "half the amount of damage dealt";
+            case "Defense":
+                return "your defense value";
+            case "Attack":
+                return "your attack value";
+            case "Attack/2":
+                return "half your attack value";
+            case "Actions":
+                return "how many actions " + targetString + " has";
+            case "RemainingActions":
+                return "how many actions " + targetString + " had remaining last round";
+            case "SkillsUsed":
+                return "how many skills " + targetString + " used";
+            case "TempSkillCount":
+                return "how many temporary skills " + targetString + " has";
+            case "PassiveSkillCount":
+                return "how many passives " + targetString + " has";
+            case "Attacks":
+                return "how many times " + targetString + " attacked";
+            case "Defends":
+                return "how many times " + targetString + " was attacked";
+            case "Moves":
+                return "how many times " + targetString + " moved";
+            case "RemainingMovement":
+                return "how much movement " + targetString + " had remaining last round";
+            case "RoundAttacks":
+                return "how many times " + targetString + " attacked this round";
+            case "MissingHealthPercent":
+                return "the % missing health of " + targetString;
+            case "AdjacentEnemies":
+                return "the amount of enemies adjacent to " + targetString;
+            case "AdjacentAllies":
+                return "the amount of allies adjacent to " + targetString;
+        }
+    }
     protected string AdjustSpecificsText(string specifics)
     {
         string adjustedSpecifics = specifics;
@@ -284,57 +331,32 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 {
                     multiplier = "1/" + scalingBasedOn[2][^1].ToString() + " times ";
                 }
+                else if (scalingBasedOn[2].Contains("AddTo"))
+                {
+                    multiplier = scalingBasedOn[2].Replace("AddTo", "") + " plus ";
+                }
+                // Used exclusively by RNG conditions.
+                else if (scalingBasedOn[2].Contains("RationalFunc"))
+                {
+                    return "{x/(x+" + scalingBasedOn[2].Replace("RationalFunc", "") + "); x = " + ReturnAdjustedSpecifics(adjustedSpecifics, targetString) + "}";
+                }
+                else if (scalingBasedOn[2].Contains("AddMulti"))
+                {
+                    string[] AMdetails = scalingBasedOn[3].Split("And");
+                    multiplier = AMdetails[0] + " plus " + AMdetails[1] + " times ";
+                }
+                else if (scalingBasedOn[2].Contains("AddDivide"))
+                {
+                    string[] AMdetails = scalingBasedOn[3].Split("And");
+                    multiplier = AMdetails[0] + " plus 1/" + AMdetails[1] + " times ";
+                }
             }
         }
         else
         {
             return specifics;
         }
-        switch (adjustedSpecifics)
-        {
-            default:
-                return multiplier + "your " + "[" + adjustedSpecifics + "] level";
-            case "DamageTaken":
-                return multiplier + "the amount of damage taken";
-            case "DamageDealt":
-                return multiplier + "the amount of damage dealt";
-            case "DamageTaken/2":
-                return multiplier + "half the amount of damage taken";
-            case "DamageDealt/2":
-                return multiplier + "half the amount of damage dealt";
-            case "Defense":
-                return multiplier + "your defense value";
-            case "Attack":
-                return multiplier + "your attack value";
-            case "Attack/2":
-                return multiplier + "half your attack value";
-            case "Actions":
-                return multiplier + "how many actions " + targetString + " has";
-            case "RemainingActions":
-                return multiplier + "how many actions " + targetString + " had remaining last round";
-            case "SkillsUsed":
-                return multiplier + "how many skills " + targetString + " used";
-            case "TempSkillCount":
-                return multiplier + "how many temporary skills " + targetString + " has";
-            case "PassiveSkillCount":
-                return multiplier + "how many passives " + targetString + " has";
-            case "Attacks":
-                return multiplier + "how many times " + targetString + " attacked";
-            case "Defends":
-                return multiplier + "how many times " + targetString + " was attacked";
-            case "Moves":
-                return multiplier + "how many times " + targetString + " moved";
-            case "RemainingMovement":
-                return multiplier + "how much movement " + targetString + " had remaining last round";
-            case "RoundAttacks":
-                return multiplier + "how many times " + targetString + " attacked this round";
-            case "MissingHealthPercent":
-                return multiplier + "the % missing health of " + targetString;
-            case "AdjacentEnemies":
-                return multiplier + "the amount of enemies adjacent to " + targetString;
-            case "AdjacentAllies":
-                return multiplier + "the amount of allies adjacent to " + targetString;
-        }
+        return multiplier + ReturnAdjustedSpecifics(adjustedSpecifics, targetString);
     }
     protected string AffectMapText(string effect, string specifics)
     {
@@ -504,8 +526,25 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " if movement type of " + conTarget + " is not " + specifics;
             case "MentalState":
                 return " if " + conTarget + " is " + specifics;
+            case "Buff":
+                return " if " + conTarget + " has " + specifics + " buff";
+            case "BuffCount>":
+                return " if " + conTarget + " has more than " + specifics + " buffs";
             case "Status":
                 return " if " + conTarget + " has " + specifics + " status";
+            case "ORStatus":
+                string[] orStatus = specifics.Split("OR");
+                string orStatusString = " if " + conTarget + " has ";
+                for (int i = 0; i < orStatus.Length; i++)
+                {
+                    orStatusString += orStatus[i];
+                    if (i < orStatus.Length - 1)
+                    {
+                        orStatusString += " or ";
+                    }
+                }
+                orStatusString += " status";
+                return orStatusString;
             case "StatusCount>":
                 return " if " + conTarget + " has more than " + specifics + " status effects";
             case "Status<>":
@@ -584,9 +623,9 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "Grappled":
                 return " if " + conTarget + " is grappled";
             case "BadRNG":
-                return " with ~" + specifics + "% chance";
+                return " with ~" + AdjustSpecificsText(specifics) + "% chance";
             case "GoodRNG":
-                return " with ~" + specifics + "% chance";
+                return " with ~" + AdjustSpecificsText(specifics) + "% chance";
             case "HurtBy":
                 return " if " + conTarget + " was hurt by " + comparedTarget;
             case "HurtBy<>":
@@ -811,6 +850,9 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " if " + conTarget + " has less than " + specifics + " skills";
             case "SkillOwnedCount>":
                 return " if " + conTarget + " has more than " + specifics + " skills";
+            // AK Autochess Conditions
+            case "AKRaidCheck":
+                return " if skill is available for use and there is no enemy in range";
         }
         return "";
     }
@@ -835,13 +877,13 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             switch (effect)
             {
                 case "Increase":
-                return " increase attack damage by " + specifics + "%";
+                return " increase attack value % by " + specifics;
                 case "Decrease":
-                return " decrease attack damage by " + specifics + "%";
+                return " decrease attack value % by " + specifics;
             }
-            return " " + effect + " attack damage by " + specifics;
+            return " " + effect + " attack value % by " + specifics;
             case "Damage%":
-            return " " + effect + " damage multipler by " + specifics + "%";
+            return " " + effect + " damage multipler % by " + specifics;
             case "DefenseValue%":
             switch (effect)
             {

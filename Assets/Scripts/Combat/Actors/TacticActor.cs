@@ -5,8 +5,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TacticActor : ActorStats
+public class TacticActor : ActorSubGameStats
 {
+    [Header("TACTIC ACTOR STATS")]
     // Skill modifiers.
     public List<string> turnSkillMods = new List<string>();
     public void AddTurnSkillMod(string mod)
@@ -217,6 +218,15 @@ public class TacticActor : ActorStats
     public void ResetBonusActions(){bonusActions = 0;}
     public void GainBonusActions(int amount){bonusActions += amount;}
     public int GetActions(){return actions + bonusActions;}
+    public int baseAttackMultiplier = 100;
+    public void SetBaseAttackMultiplier(int newAmount)
+    {
+        baseAttackMultiplier = newAmount;
+    }
+    public void ChangeBaseAttackMultiplier(int newAmount)
+    {
+        baseAttackMultiplier += newAmount;
+    }
     public int basicAttackMultiplier = 100;
     public void SetBasicAttackMultiplier(int newAmount)
     {
@@ -346,6 +356,7 @@ public class TacticActor : ActorStats
         ResetBonusActions();
         ResetEquipmentSkillsAndSpells();
         ClearTurnSkillMods();
+        basicAttackMultiplier = baseAttackMultiplier;
     }
     protected void TrackEndTurnRemainingStats()
     {

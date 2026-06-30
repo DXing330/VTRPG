@@ -6,6 +6,8 @@ using UnityEngine;
 
 public class PassiveEffectTester : MonoBehaviour
 {
+    // For Better Map Initialization.
+    public AttackManagerTester attackTester;
     public StatDatabase allPassives;
     public PassiveSkill passive;
     public BattleMap map;

@@ -354,6 +354,9 @@ public class SkillEffect : ScriptableObject
             case "SetAttackActionCost":
                 target.SetAttackActionCost(int.Parse(effectSpecifics));
                 break;
+            case "BaseAttackPower":
+                target.ChangeBaseAttackMultiplier(int.Parse(effectSpecifics));
+                break;
             case "BasicAttackPower":
                 target.ChangeBasicAttackMultiplier(int.Parse(effectSpecifics));
                 break;
@@ -618,6 +621,9 @@ public class SkillEffect : ScriptableObject
                 break;
             case "Immortal":
                 target.GainImmortal(int.Parse(effectSpecifics));
+                break;
+            case "Resurrect":
+                target.GainResurrect(int.Parse(effectSpecifics));
                 break;
             case "ItemSlots":
                 target.UpdateItemSlots(int.Parse(effectSpecifics));

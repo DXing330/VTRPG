@@ -82,15 +82,17 @@ public class AutoChessShopDataManager : SavedData
         currentPoolRarity.RemoveAt(indexOf);
         currentPoolFactions.RemoveAt(indexOf);
     }
-    // When Selling.
-    public void AddToPool(string newData, string newRarity, int level = 1)
+    // When Selling/Rerolling.
+    public void AddToPool(string newData, int level = 1)
     {
         int count = 1;
         if (level > 1){count = 3;}
         for (int i = 0; i < count; i++)
         {
             currentPool.Add(newData);
-            currentPoolRarity.Add(newRarity);
+            currentPoolRarity.Add(unitRarity.ReturnValue(newData));
+            string[] blocks = unitData.ReturnValue(newData).Split("|");
+            currentPoolFactions.Add(blocks[0]);
         }
     }
     public void SetCurrentPool(string newData)
@@ -147,6 +149,10 @@ public class AutoChessShopDataManager : SavedData
     public List<string> currentListing;
     public void GenerateCurrentListing()
     {
+        for (int i = 0; i < currentListing.Count; i++)
+        {
+            AddToPool(currentListing[i]);
+        }
         currentListing.Clear();
         // Determine How Many Slots Are Available.
         int availableSlots = 3 + shopLevel / 2;

@@ -214,28 +214,6 @@ public class AutoActorRollUpData
 
 public class AutoActor : TacticActor
 {
-    // Unique Stats For The Gamemode.
-    public List<AutoChessEquipment> autoChessEquipment;
-    // Automatically Uses A Skill When You Have Resources.
-    public string autoSkill;
-    public List<AutoChessFaction> factions;
-    public void SetFactionsFromString(string data)
-    {
-        factions.Clear();
-        string[] blocks = data.Split(",");
-        for (int i = 0; i < blocks.Length; i++)
-        {
-            factions.Add(Enum.Parse<AutoChessFaction>(blocks[i]));
-        }
-    }
-    public AutoChessTrait trait;
-    public string attackRangeShape;
-    public int healer = 0;
-    // Defeated Allies Respawn After Some Rounds In This Mode.
-    public int baseRespawnTimer;
-    public int currentRespawnTimer = 0;
-    // Granted By Other Actors At The Start Of Battle.
-    public List<AutoChessTrait> temporaryTraits;
     public override void SetInitialStatsFromString(string newStats)
     {
         // Initialize Regular Stats.
@@ -246,12 +224,12 @@ public class AutoActor : TacticActor
         ResetEquipment();
         ResetPassives();
         // Deal With AutoChess Stats
-        trait = new AutoChessTrait();
+        autoChessTrait = new AutoChessTrait();
         autoChessEquipment.Clear();
         string[] statBlocks = newStats.Split("|");
         // From A Database So Hardcoded.
         SetFactionsFromString(statBlocks[0]);
-        trait.LoadBaseTrait(statBlocks[1], statBlocks[2], statBlocks[3]);
+        autoChessTrait.LoadBaseTrait(statBlocks[1], statBlocks[2], statBlocks[3]);
         autoSkill = statBlocks[4];
         SetBaseEnergy(int.Parse(statBlocks[5]));
         SetCurrentEnergy(int.Parse(statBlocks[6]));

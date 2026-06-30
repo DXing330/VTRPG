@@ -88,8 +88,7 @@ public class AutoChessShopManager : MonoBehaviour
     public void SellActor(AutoActorRollUpData soldActor)
     {
         string name = soldActor.GetName();
-        string rarity = ReturnActorRarity(soldActor).ToString();
         int level = soldActor.GetLevel();
-        shopData.AddToPool(name, rarity, level);
+        shopData.AddToPool(name, level);
     }
 }

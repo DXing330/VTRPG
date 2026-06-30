@@ -915,6 +915,7 @@ public class ActorStats : ActorInitialStats
         RemoveGuard();
         RemoveIntangible();
         RemoveImmortal();
+        RemoveResurrect();
         ResetBufferStacks();
         ResetArtifactStacks();
     }
@@ -1084,6 +1085,27 @@ public class ActorStats : ActorInitialStats
     {
         immortal = false;
         immortalDuration = 0;
+    }
+    public int resurrectStacks;
+    public int resurrectUses;
+    public void GainResurrect(int amount)
+    {
+        resurrectStacks += amount;
+    }
+    public bool Resurrect()
+    {
+        if (resurrectStacks > 0)
+        {
+            resurrectStacks--;
+            resurrectUses++;
+            return true;
+        }
+        return false;
+    }
+    public void RemoveResurrect()
+    {
+        resurrectStacks = 0;
+        resurrectUses = 0;
     }
     public int bufferStacks;
     public void GainBufferStack(int amount = 1)

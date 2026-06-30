@@ -93,6 +93,36 @@ public class PassiveSkill : SkillEffect
                     if (multiplier == 0){multiplier = 1;}
                     return Mathf.Max(1, amount / multiplier).ToString();
                 }
+                else if (scaling[2].Contains("AddTo"))
+                {
+                    string addTo = scaling[2].Replace("AddTo", "");
+                    int addAmount = int.Parse(addTo);
+                    return (amount + addAmount).ToString();
+                }
+                // Used Exclusively By RNG Functions For Now, Thus Returning A Percentage < 100.
+                else if (scaling[2].Contains("RationalFunc"))
+                {
+                    string rationalBase = scaling[2].Replace("RationalFunc", "");
+                    multiplier = int.Parse(rationalBase);
+                    // Something went wrong, RNG chance = -1;
+                    if (amount + multiplier <= 0){return "-1";}
+                    return ((100 * amount) / (amount + multiplier)).ToString();
+                }
+                else if (scaling[2].Contains("AddMulti"))
+                {
+                    string[] addMultiDetails = scaling[3].Split("And");
+                    int addDetails = int.Parse(addMultiDetails[0]);
+                    multiplier = int.Parse(addMultiDetails[1]);
+                    return (addDetails + (amount * multiplier)).ToString();
+                }
+                else if (scaling[2].Contains("AddDivide"))
+                {
+                    string[] addMultiDetails = scaling[3].Split("And");
+                    int addDetails = int.Parse(addMultiDetails[0]);
+                    multiplier = int.Parse(addMultiDetails[1]);
+                    if (multiplier == 0){multiplier = 1;}
+                    return Mathf.Max(1, addDetails + (amount / multiplier)).ToString();
+                }
             }
             return (amount * multiplier).ToString();
         }
@@ -329,6 +359,19 @@ public class PassiveSkill : SkillEffect
     {
         List<TacticActor> targets = new List<TacticActor>();
         List<int> tiles = new List<int>();
+        // AK AutoChess Targeting
+        if (target.StartsWith("AKFaction"))
+        {
+            string targetFaction = target.Replace("AKFaction", "");
+            targets = map.AllAllies(actor);
+            for (int i = 0; i < targets.Count; i++)
+            {
+                if (targets[i].Faction(targetFaction))
+                {
+                    AffectActor(targets[i], effect, specifics);
+                }
+            }
+        }
         switch (target)
         {
             default:
@@ -348,6 +391,7 @@ public class PassiveSkill : SkillEffect
                 AffectActor(actor.GetGrappledByActor(), effect, specifics);
                 break;
             // Move based on wording (effect) and distance (specifics).
+            case "AKRaidMove":
             case "MoveSelf":
                 map.MoveActorPassive(actor, effect, specifics);
                 break;
@@ -590,6 +634,13 @@ public class PassiveSkill : SkillEffect
                 return conditionSpecifics == actor.GetMentalState();
             case "Status":
                 return actor.StatusExists(conditionSpecifics);
+            case "ORStatus":
+                string[] orStatus = conditionSpecifics.Split("OR");
+                for (int i = 0; i < orStatus.Length; i++)
+                {
+                    if (actor.StatusExists(orStatus[i])){return true;}
+                }
+                return false;
             case "Status<>":
                 return !actor.StatusExists(conditionSpecifics); 
             case "Silence":
@@ -606,6 +657,8 @@ public class PassiveSkill : SkillEffect
                 return !actor.GetInvisible();
             case "Buff":
                 return actor.BuffExists(conditionSpecifics);
+            case "BuffCount>":
+                return actor.GetBuffs().Count > int.Parse(conditionSpecifics);
             case "StatusCount>":
                 return actor.GetStatuses().Count > int.Parse(conditionSpecifics);
             case "AdjacentAllySprite":
@@ -679,10 +732,10 @@ public class PassiveSkill : SkillEffect
             case "Grappled":
             return actor.Grappled();
             case "BadRNG":
-            return utility.Roll(actor.GetLuck()) < int.Parse(conditionSpecifics);
-            // Good RNG means you want to roll lower to get the chance.
+            return utility.Roll(actor.GetLuck()) < int.Parse(GetEffectSpecifics(actor, conditionSpecifics));
+            // Good means you want to roll lower to get the chance.
             case "GoodRNG":
-            return utility.Roll(-actor.GetLuck()) < int.Parse(conditionSpecifics);
+            return utility.Roll(-actor.GetLuck()) < int.Parse(GetEffectSpecifics(actor, conditionSpecifics));
             case "FirstStrike":
                 return actor.ReturnTotalRoundAttacks() <= 0;
             case "ItemUsed<>":
@@ -842,6 +895,10 @@ public class PassiveSkill : SkillEffect
                 return (actor.GetActiveSkills().Count < int.Parse(conditionSpecifics));
             case "SkillOwnedCount>":
                 return (actor.GetActiveSkills().Count > int.Parse(conditionSpecifics));
+            // AK Autochess Conditions
+            case "AKRaidCheck":
+                // Enough Energy For Skill && No Target In Range
+                return (actor.GetAutoSkillCoolDown() <= actor.GetEnergy() && map.battleMapUtility.GetActorOnFacingTile(actor, map) == null);
         }
         return true;
     }

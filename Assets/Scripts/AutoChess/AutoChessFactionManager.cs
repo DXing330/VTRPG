@@ -61,6 +61,20 @@ public class AutoChessFactionManager : MonoBehaviour
         }
         return allFactionsWithUnits[index];
     }
+    public List<string> ReturnAllUnitsOfFaction(string factionName)
+    {
+        List<string> unitNames = new List<string>();
+        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        {
+            if (unitNames.Contains(prepManager.fieldSlots[i].GetName())){continue;}
+            List<string> factions = prepManager.fieldSlots[i].GetFactions();
+            if (factions.Contains(factionName))
+            {
+                unitNames.Add(prepManager.fieldSlots[i].GetName());
+            }
+        }
+        return unitNames;
+    }
     // TODO We Can Hard Check For Emblems First.
     public List<string> uniqueEmblems;
     public List<string> uniqueUnitNames;

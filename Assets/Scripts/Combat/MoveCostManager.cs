@@ -169,6 +169,7 @@ public class MoveCostManager : MonoBehaviour
     // Cost Of A Single Tile On The Path.
     public int MoveCostOfTile(int tileNumber)
     {
+        if (tileNumber < 0 || tileNumber >= actorPathfinder.GetCurrentMoveCosts().Count){return 0;}
         return actorPathfinder.GetCurrentMoveCosts()[tileNumber];
     }
     // Full Distance To A Tile, Based On Paths To A Tile.

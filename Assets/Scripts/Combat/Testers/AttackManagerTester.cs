@@ -173,7 +173,6 @@ public class AttackManagerTester : MonoBehaviour
         battleManager.effectManager.StartBattle(dummyDefender);
         battleManager.effectManager.StartBattle(dummyGuard);
     }
-
     void ResetTestMapActorLayerScale()
     {
         if (!resetActorLayerScaleBeforeTest || map == null || map.mapTiles == null) { return; }
@@ -190,7 +189,6 @@ public class AttackManagerTester : MonoBehaviour
             }
         }
     }
-
     [ContextMenu("Test Attack")]
     public void TestAttack()
     {
@@ -200,14 +198,12 @@ public class AttackManagerTester : MonoBehaviour
         attackManager.ActorAttacksActorWithAttackSpeed(dummyAttacker, dummyDefender, map);
         map.combatLog.DebugLatestDetailsLog();
     }
-
     [ContextMenu("Test Attack WO Reseting")]
     public void TestAttackWOReset()
     {
         attackManager.ActorAttacksActorWithAttackSpeed(dummyAttacker, dummyDefender, map);
         map.combatLog.DebugLatestDetailsLog();
     }
-
     // Active Testing.
     public ActiveManager activeManager;
     public string activeName;
@@ -265,5 +261,16 @@ public class AttackManagerTester : MonoBehaviour
         dummyAttacker.NewTurn();
         battleManager.effectManager.StartTurn(dummyAttacker, map);
         map.UpdateMap();
+    }
+    public PassiveSkill passive;
+    public string testPassive;
+    [ContextMenu("Test Passive Effect")]
+    public void TestPassive()
+    {
+        InitializeMap();
+        string original = dummyAttacker.ReturnTestStatsString();
+        passive.ForceApplyPassiveEffect(dummyAttacker, map, testPassive);
+        string final = dummyAttacker.ReturnTestStatsString();
+        Debug.Log(original + "\n" + final);
     }
 }

@@ -399,6 +399,11 @@ public class BattleMap : MapManager
     {
         defeatedActors.Remove(actor);
     }
+    public void ReviveActor(TacticActor actor)
+    {
+        RemoveDefeatedActor(actor);
+        AddActorToBattle(actor);
+    }
     public int ReviveDefeatedActorsBySprite(string spriteName)
     {
         int revivedCount = 0;
@@ -447,7 +452,6 @@ public class BattleMap : MapManager
         UpdateCombatLog(actor.GetPersonalName() + " is revived.");
         return true;
     }
-
     protected int GetReviveTile(int defeatedTile)
     {
         if (defeatedTile >= 0 && defeatedTile < mapSize * mapSize && GetActorOnTile(defeatedTile) == null)
@@ -458,7 +462,6 @@ public class BattleMap : MapManager
         if (emptyAdjacentTiles.Count <= 0){return -1;}
         return emptyAdjacentTiles[UnityEngine.Random.Range(0, emptyAdjacentTiles.Count)];
     }
-
     protected List<int> ReturnEmptyAdjacentTiles(int tileNumber)
     {
         List<int> emptyAdjacentTiles = new List<int>();
@@ -549,6 +552,15 @@ public class BattleMap : MapManager
             // Get the direction, either + (2, 3, 4) from your current direction;
             direction = (direction + UnityEngine.Random.Range(2, 5)) % 6;
             break;
+            case "AKRaidMove":
+            int akRaidTile = battleMapUtility.AKRaidMove(actor, this);
+            if (akRaidTile >= 0)
+            {
+                battleManager.moveManager.MoveActorToTile(actor, akRaidTile, this);
+                UpdateMap();
+            }
+            // Else return, don't try to move if there's no valid target.
+            return;
         }
         int rTile = mapUtility.PointInDirection(actor.GetLocation(), direction, mapSize);
         if (GetActorOnTile(rTile) == null)
@@ -663,6 +675,10 @@ public class BattleMap : MapManager
             actor2.SetLocation(startingTile);
         }
         UpdateMap();
+    }
+    public void ResurrectActor(TacticActor actor)
+    {
+        ReviveActor(actor);
     }
     public List<TacticActor> RemoveActorsFromBattle(int turnNumber = -1)
     {
@@ -2001,7 +2017,6 @@ public class BattleMap : MapManager
         }
         UpdateMap();
     }
-
     // ALL Movement Should Go Through Here. Thus update the combat log here, the actor's direction should be updated before this is called, based on how the actor moved into the tile.
     public bool ApplyMovingTileEffect(TacticActor actor, int tileNumber, MoveCostManager moveManager = null)
     {

@@ -1389,8 +1389,18 @@ public class BattleManager : MonoBehaviour
         map.UpdateMap();
         combatLog.UpdateNewestLog(actor.GetPersonalName()+" casts  " + activeManager.magicSpell.GetSkillName());
     }
+    // ALL Dead Actors Should Pass Through Here.
     public void ActivateDeathPassive(TacticActor actor)
     {
+        if (actor.Resurrect())
+        {
+            actor.FullRestore();
+            // Apply Start Battle Effects Again.
+            effectManager.StartBattle(actor);
+            // Add The Actor Back To The Battle.
+            map.ResurrectActor(actor);
+            return;
+        }
         List<string> deathActives = new List<string>(actor.GetDeathActives());
         for (int i = 0; i < deathActives.Count; i++)
         {
