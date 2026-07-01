@@ -5,8 +5,17 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
 public class TacticActor : ActorSubGameStats
 {
+    public TacticActor()
+    {
+        LoadStatNames();
+        InitializeStats();
+        ResetEquipment();
+        ResetPassives();
+        ResetCounter();
+    }
     [Header("TACTIC ACTOR STATS")]
     // Skill modifiers.
     public List<string> turnSkillMods = new List<string>();
@@ -50,7 +59,7 @@ public class TacticActor : ActorSubGameStats
     // Equipment.
     public void ResetEquipment()
     {
-        for (int i = 0; i < baseEquipment.Count; i++)
+        for (int i = 0; i < baseEquipment.Length; i++)
         {
             baseEquipment[i].ResetStatsExceptSlot();
         }
@@ -58,10 +67,18 @@ public class TacticActor : ActorSubGameStats
         ResetWeapon();
         ResetEquipmentSkillsAndSpells();
     }
-    public List<Equipment> baseEquipment;
+    public Equipment[] baseEquipment = new Equipment[6]
+    {
+        new Equipment("Weapon"),
+        new Equipment("Armor"),
+        new Equipment("Charm"),
+        new Equipment("Helmet"),
+        new Equipment("Boots"),
+        new Equipment("Gloves")
+    };
     public void EquipToActor(Equipment newBaseEquip)
     {
-        for (int i = 0; i < baseEquipment.Count; i++)
+        for (int i = 0; i < baseEquipment.Length; i++)
         {
             if (baseEquipment[i].GetSlot() == newBaseEquip.GetSlot())
             {
@@ -71,17 +88,24 @@ public class TacticActor : ActorSubGameStats
             }
         }
     }
-    public List<Equipment> GetBaseEquipment(){return baseEquipment;}
-    public List<Equipment> currentEquipment;
+    public Equipment[] GetBaseEquipment(){return baseEquipment;}
+    public Equipment[] currentEquipment = new Equipment[6]
+    {
+        new Equipment("Weapon"),
+        new Equipment("Armor"),
+        new Equipment("Charm"),
+        new Equipment("Helmet"),
+        new Equipment("Boots"),
+        new Equipment("Gloves")
+    };
     public void UpdateCurrentEquipment()
     {
-        currentEquipment = new List<Equipment>();
-        for (int i = 0; i < baseEquipment.Count; i++)
+        for (int i = 0; i < baseEquipment.Length; i++)
         {
             Equipment copy = new Equipment();
             baseEquipment[i].RefreshStats();
             copy.SetAllStats(baseEquipment[i].GetStats());
-            currentEquipment.Add(copy);
+            currentEquipment[i] = copy;
         }
     }
     public void ResetWeapon()
@@ -111,13 +135,13 @@ public class TacticActor : ActorSubGameStats
         return Mathf.Max(weaponReach, GetBaseWeight(), 1);
     }
     public void SetWeaponReach(int newInfo){weaponReach = newInfo;}
-    public List<string> equipmentSkills;
+    public List<string> equipmentSkills = new();
     public void AddEquipmentSkill(string newSkill)
     {
         if (equipmentSkills.Contains(newSkill)){return;}
         equipmentSkills.Add(newSkill);
     }
-    public List<string> equipmentSpells;
+    public List<string> equipmentSpells = new();
     public void AddEquipmentSpell(string newSkill)
     {
         if (equipmentSpells.Contains(newSkill)){return;}
@@ -128,7 +152,7 @@ public class TacticActor : ActorSubGameStats
         equipmentSkills.Clear();
         equipmentSpells.Clear();
     }
-    public List<string> assignedItems;
+    public List<string> assignedItems = new();
     public void SetAssignedItems(List<string> newInfo){assignedItems = newInfo;}
     public List<string> GetAssignedItems(){return assignedItems;}
     public void GainItem(string newItem)
@@ -164,8 +188,6 @@ public class TacticActor : ActorSubGameStats
         return allSpells;
     }
     // Actor identity and battle membership.
-    public GameObject actorObject;
-    public void DestroyActor(){DestroyImmediate(actorObject);}
     protected bool sacrificed;
     public void MarkSacrificed(){sacrificed = true;}
     public bool WasSacrificed(){return sacrificed;}
@@ -174,7 +196,11 @@ public class TacticActor : ActorSubGameStats
     public int GetTeam(){return team;}
     public void SetTeam(int newTeam){team = newTeam;}
     public string personalName;
-    public void SetPersonalName(string newName){personalName = newName;}
+    public void SetPersonalName(string newName)
+    {
+        passiveHolderName = newName;
+        personalName = newName;
+    }
     public string GetPersonalName()
     {
         if (personalName.Length <= 0){return GetSpriteName();}
@@ -218,14 +244,14 @@ public class TacticActor : ActorSubGameStats
     public void ResetBonusActions(){bonusActions = 0;}
     public void GainBonusActions(int amount){bonusActions += amount;}
     public int GetActions(){return actions + bonusActions;}
-    public int baseAttackMultiplier = 100;
-    public void SetBaseAttackMultiplier(int newAmount)
+    public int baseBasicAttackMultiplier = 100;
+    public void SetBaseBasicAttackMultiplier(int newAmount)
     {
-        baseAttackMultiplier = newAmount;
+        baseBasicAttackMultiplier = newAmount;
     }
-    public void ChangeBaseAttackMultiplier(int newAmount)
+    public void ChangeBaseBasicAttackMultiplier(int newAmount)
     {
-        baseAttackMultiplier += newAmount;
+        baseBasicAttackMultiplier += newAmount;
     }
     public int basicAttackMultiplier = 100;
     public void SetBasicAttackMultiplier(int newAmount)
@@ -356,7 +382,7 @@ public class TacticActor : ActorSubGameStats
         ResetBonusActions();
         ResetEquipmentSkillsAndSpells();
         ClearTurnSkillMods();
-        basicAttackMultiplier = baseAttackMultiplier;
+        basicAttackMultiplier = baseBasicAttackMultiplier;
     }
     protected void TrackEndTurnRemainingStats()
     {
@@ -492,7 +518,7 @@ public class TacticActor : ActorSubGameStats
     }
 
     // Location and health history.
-    public List<int> locationsEachRound;
+    public List<int> locationsEachRound = new();
     public void ResetLocationTracker()
     {
         locationsEachRound.Clear();
@@ -510,7 +536,7 @@ public class TacticActor : ActorSubGameStats
     {
         return locationsEachRound[0];
     }
-    public List<int> healthEachRound;
+    public List<int> healthEachRound = new();
     public void ResetHealthTracker()
     {
         healthEachRound.Clear();
@@ -530,7 +556,7 @@ public class TacticActor : ActorSubGameStats
     }
 
     // Action history.
-    public List<int> actionsEachRound;
+    public List<int> actionsEachRound = new();
     public void ResetRoundActionTracker()
     {
         actionsEachRound.Clear();
@@ -569,7 +595,7 @@ public class TacticActor : ActorSubGameStats
         }
         return actionsEachRound.Sum();
     }
-    public List<int> remainingActionsEachRound;
+    public List<int> remainingActionsEachRound = new();
     public void ResetRoundRemainingActionTracker()
     {
         remainingActionsEachRound.Clear();
@@ -591,7 +617,7 @@ public class TacticActor : ActorSubGameStats
         return remainingActionsEachRound[remainingActionsEachRound.Count - 2];
     }
     // Attack history.
-    public List<int> attacksEachRound;
+    public List<int> attacksEachRound = new();
     public void ResetRoundAttackTracker()
     {
         attacksEachRound.Clear();
@@ -621,7 +647,7 @@ public class TacticActor : ActorSubGameStats
         return attacksEachRound.Sum();
     }
     // Defense history.
-    public List<int> defendsEachRound;
+    public List<int> defendsEachRound = new();
     public void ResetRoundDefendTracker()
     {
         defendsEachRound.Clear();
@@ -651,8 +677,8 @@ public class TacticActor : ActorSubGameStats
         return defendsEachRound.Sum();
     }
     // Skill history.
-    public List<int> skillsEachRound;
-    public List<string> skillsUsed;
+    public List<int> skillsEachRound = new();
+    public List<string> skillsUsed = new();
     public bool SkillUsedAlready(string skillName)
     {
         return skillsUsed.Contains(skillName);
@@ -673,7 +699,7 @@ public class TacticActor : ActorSubGameStats
             RemoveRandomActiveSkill();
         }
     }
-    public List<string> tempSkillsUsed;
+    public List<string> tempSkillsUsed = new();
     public bool RemoveTempActive(string skillName)
     {
         int indexOf = tempActives.IndexOf(skillName);
@@ -727,9 +753,9 @@ public class TacticActor : ActorSubGameStats
         return skillsEachRound.Sum();
     }
     // Spell history.
-    public List<int> spellsEachRound;
-    public List<string> spellsUsed;
-    public List<string> tempSpellsUsed;
+    public List<int> spellsEachRound = new();
+    public List<string> spellsUsed = new();
+    public List<string> tempSpellsUsed = new();
     public void RemoveTempSpellActive(string spellName)
     {
         int indexOf = tempSpells.IndexOf(spellName);
@@ -784,8 +810,8 @@ public class TacticActor : ActorSubGameStats
         return spellsEachRound.Sum();
     }
     // Item history.
-    public List<int> itemsEachRound;
-    public List<string> itemsUsed;
+    public List<int> itemsEachRound = new();
+    public List<string> itemsUsed = new();
     public bool ItemUsedAlready(string itemName)
     {
         return itemsUsed.Contains(itemName);
@@ -832,7 +858,7 @@ public class TacticActor : ActorSubGameStats
         return itemsEachRound.Sum();
     }
     // Move history.
-    public List<int> movesEachRound;
+    public List<int> movesEachRound = new();
     public void ResetRoundMoveTracker()
     {
         movesEachRound.Clear();
@@ -861,7 +887,7 @@ public class TacticActor : ActorSubGameStats
     {
         return movesEachRound.Sum();
     }
-    public List<int> remainingMovementEachRound;
+    public List<int> remainingMovementEachRound = new();
     public void ResetRoundRemainingMovementTracker()
     {
         remainingMovementEachRound.Clear();
@@ -883,9 +909,10 @@ public class TacticActor : ActorSubGameStats
         return remainingMovementEachRound[remainingMovementEachRound.Count - 2];
     }
     // Keep track of who hurt you, how many times and how much.
-    public List<TacticActor> hurtByList;
-    public List<int> hurtCount;
-    public List<int> hurtAmount;
+    [NonSerialized]
+    public List<TacticActor> hurtByList = new();
+    public List<int> hurtCount = new();
+    public List<int> hurtAmount = new();
     public void ResetHurtBy()
     {
         hurtByList.Clear();
@@ -984,6 +1011,7 @@ public class TacticActor : ActorSubGameStats
         return hurtByList[index];
     }
     // Targeting.
+    [NonSerialized]
     public TacticActor target;
     public void ResetTarget(){ target = null; }
     public void SetTarget(TacticActor newTarget) { target = newTarget; }
@@ -1004,6 +1032,7 @@ public class TacticActor : ActorSubGameStats
         return true;
     }
     // Grappling.
+    [NonSerialized]
     public TacticActor grappledActor;
     public TacticActor GetGrappledActor(){return grappledActor;}
     public void ResetGrappledActor(){grappledActor = null;}
@@ -1024,6 +1053,7 @@ public class TacticActor : ActorSubGameStats
         grappledActor = newGrapple;
         grappledActor.SetGrappledByActor(this);
     }
+    [NonSerialized]
     public TacticActor grappledByActor;
     public void SetGrappledByActor(TacticActor actor){grappledByActor = actor;}
     public TacticActor GetGrappledByActor(){return grappledByActor;}
@@ -1098,6 +1128,7 @@ public class TacticActor : ActorSubGameStats
     {
         return (summoned && summonedBy == null);
     }
+    [NonSerialized]
     public TacticActor summonedBy;
     public void SetSummonedBy(TacticActor summonedByActor)
     {
@@ -1109,7 +1140,8 @@ public class TacticActor : ActorSubGameStats
         summonedBy.ReleaseSummonedActor(this);
         summonedBy = null;
     }
-    public List<TacticActor> summonedActors;
+    [NonSerialized]
+    public List<TacticActor> summonedActors = new();
     public void AddSummonedActor(TacticActor newActor)
     {
         summonedActors.Add(newActor);

@@ -22,7 +22,7 @@ public class ActorSubGameStats : ActorStats
     }
     // AK AUTOCHESS STATS
     [Header("AK AUTOCHESS STATS")]
-    public List<AutoChessEquipment> autoChessEquipment;
+    public List<AutoChessEquipment> autoChessEquipment = new();
     public string autoSkill;
     public int autoSkillCooldown;
     public void SetSkillCoolDown(int newCD)
@@ -30,7 +30,7 @@ public class ActorSubGameStats : ActorStats
         autoSkillCooldown = newCD;
     }
     public int GetAutoSkillCoolDown(){return autoSkillCooldown;}
-    public List<AutoChessFaction> autoChessFactions;
+    public List<AutoChessFaction> autoChessFactions = new();
     public void ResetFactions(){autoChessFactions.Clear();}
     public void AddFaction(string factionName)
     {
@@ -53,10 +53,10 @@ public class ActorSubGameStats : ActorStats
             autoChessFactions.Add(Enum.Parse<AutoChessFaction>(blocks[i]));
         }
     }
-    public AutoChessTrait autoChessTrait;
+    public AutoChessTrait autoChessTrait = new();
     public string attackRangeShape;
     public int healer = 0;
     public int baseRespawnTimer;
     public int currentRespawnTimer = 0;
-    public List<AutoChessTrait> autoChessTemporaryTraits;
+    public List<AutoChessTrait> autoChessTemporaryTraits = new();
 }

@@ -37,7 +37,7 @@ public class ActorStats : ActorInitialStats
         stats = newStats;
         for (int i = 0; i < stats.Count; i++)
         {
-            SetInitialStat(stats[i], changeFormStatNames[i]);
+            SetInitialStat(stats[i], statNames[i]);
         }
         currentEnergy = baseEnergy;
         currentAttack = baseAttack;
@@ -278,10 +278,10 @@ public class ActorStats : ActorInitialStats
         damage = TakeDamage(damage, type);
         return damage;
     }
-    public List<string> bonusDmgTypes;
+    public List<string> bonusDmgTypes = new();
     // Deal bonus damage of type.
-    public List<int> baseDmgBonuses;
-    public List<int> currentDmgBonuses;
+    public List<int> baseDmgBonuses = new();
+    public List<int> currentDmgBonuses = new();
     public int ReturnDamageBonusOfType(string type)
     {
         int indexOf = bonusDmgTypes.IndexOf(type);
@@ -323,10 +323,10 @@ public class ActorStats : ActorInitialStats
             currentDmgBonuses[indexOf] += amount;
         }
     }
-    public List<string> resistDmgTypes;
+    public List<string> resistDmgTypes = new();
     // Resist damage.
-    public List<int> baseDmgResists;
-    public List<int> currentDmgResists;
+    public List<int> baseDmgResists = new();
+    public List<int> currentDmgResists = new();
     public int ReturnDamageResistanceOfType(string type)
     {
         int indexOf = resistDmgTypes.IndexOf(type);
@@ -562,7 +562,7 @@ public class ActorStats : ActorInitialStats
     {
         otherActor.LearnRandomActive(this);
     }
-    public List<string> tempActives;
+    public List<string> tempActives = new();
     public void RefreshTempActives()
     {
         for (int i = tempActives.Count - 1; i >= 0; i--)
@@ -607,7 +607,7 @@ public class ActorStats : ActorInitialStats
         allActives.AddRange(tempActives);
         return allActives;
     }
-    public List<string> tempSpells;
+    public List<string> tempSpells = new();
     public void ResetSpells()
     {
         spells.Clear();
@@ -663,7 +663,7 @@ public class ActorStats : ActorInitialStats
         dPassives.AddRange(GetBattleBuffsAndStatuses(buffDB, "Defend"));
         return dPassives;
     }
-    public List<string> buffs;
+    public List<string> buffs = new();
     public List<string> GetBattleBuffsAndStatuses(StatDatabase buffDB, string timing)
     {
         List<string> battleBS = new List<string>();
@@ -688,7 +688,7 @@ public class ActorStats : ActorInitialStats
         return battleBS;
     }
     public int defaultBuffDuration = 3;
-    public List<int> buffDurations;
+    public List<int> buffDurations = new();
     public List<string> GetBuffs(){return buffs;}
     public List<int> GetBuffDurations(){return buffDurations;}
     public void AddBuff(string newCondition, int duration)
@@ -830,7 +830,7 @@ public class ActorStats : ActorInitialStats
         List<string> unique = GetUniqueStatuses();
         for (int i = 0; i < unique.Count; i++)
         {
-            uniqueCount.Add(utility.CountStringsInList(statuses, unique[i]).ToString());
+            uniqueCount.Add(CountStringsInList(statuses, unique[i]).ToString());
         }
         return uniqueCount;
     }
@@ -841,7 +841,7 @@ public class ActorStats : ActorInitialStats
         int count = -1;
         for (int i = 0; i < unique.Count; i++)
         {
-            count = utility.CountStringsInList(statuses, unique[i]);
+            count = CountStringsInList(statuses, unique[i]);
             if (count > 1)
             {
                 uniqueCount.Add("-"+count);
@@ -879,7 +879,7 @@ public class ActorStats : ActorInitialStats
     }
     public int StatusStacks(string statusName)
     {
-        return utility.CountStringsInList(statuses, statusName);
+        return CountStringsInList(statuses, statusName);
     }
     public int ReturnStatusDuration(string statusName)
     {
@@ -930,12 +930,25 @@ public class ActorStats : ActorInitialStats
         CheckSilence();
         CheckSleeping();
     }
+    public (bool, int) DecrementBoolDuration(bool newBool, int boolDuration)
+    {
+        if (!newBool){return (newBool, boolDuration);}
+        if (boolDuration > 0)
+        {
+            boolDuration--;
+        }
+        if (boolDuration <= 0)
+        {
+            newBool = false;
+        }
+        return (newBool, boolDuration);
+    }
     public bool silenced = false;
     public bool GetSilenced(){return silenced;}
     public int silenceDuration;
     public void CheckSilence()
     {
-        (silenced, silenceDuration) = utility.DecrementBoolDuration(silenced, silenceDuration);
+        (silenced, silenceDuration) = DecrementBoolDuration(silenced, silenceDuration);
     }
     public void Silence(int duration)
     {
@@ -955,7 +968,7 @@ public class ActorStats : ActorInitialStats
     public int sleepDuration;
     public void CheckSleeping()
     {
-        (sleeping, sleepDuration) = utility.DecrementBoolDuration(sleeping, sleepDuration);
+        (sleeping, sleepDuration) = DecrementBoolDuration(sleeping, sleepDuration);
     }
     public void Sleep(int duration)
     {
@@ -983,7 +996,7 @@ public class ActorStats : ActorInitialStats
     }
     public void CheckInvisibility()
     {
-        (invisible, invisibleDuration) = utility.DecrementBoolDuration(invisible, invisibleDuration);
+        (invisible, invisibleDuration) = DecrementBoolDuration(invisible, invisibleDuration);
     }
     public void RemoveInvisibility()
     {
@@ -1003,7 +1016,7 @@ public class ActorStats : ActorInitialStats
     }
     public void CheckBarricade()
     {
-        (barricade, barricadeDuration) = utility.DecrementBoolDuration(barricade, barricadeDuration);
+        (barricade, barricadeDuration) = DecrementBoolDuration(barricade, barricadeDuration);
     }
     public void RemoveBarricade()
     {
@@ -1033,7 +1046,7 @@ public class ActorStats : ActorInitialStats
     }
     public void CheckGuard()
     {
-        (guarding, guardDuration) = utility.DecrementBoolDuration(guarding, guardDuration);
+        (guarding, guardDuration) = DecrementBoolDuration(guarding, guardDuration);
         if (!guarding)
         {
             guardRange = 0;
@@ -1059,7 +1072,7 @@ public class ActorStats : ActorInitialStats
     }
     public void CheckIntangible()
     {
-        (intangible, intangibleDuration) = utility.DecrementBoolDuration(intangible, intangibleDuration);
+        (intangible, intangibleDuration) = DecrementBoolDuration(intangible, intangibleDuration);
     }
     public void RemoveIntangible()
     {
@@ -1079,7 +1092,7 @@ public class ActorStats : ActorInitialStats
     }
     public void CheckImmortal()
     {
-        (immortal, immortalDuration) = utility.DecrementBoolDuration(immortal, immortalDuration);
+        (immortal, immortalDuration) = DecrementBoolDuration(immortal, immortalDuration);
     }
     public void RemoveImmortal()
     {

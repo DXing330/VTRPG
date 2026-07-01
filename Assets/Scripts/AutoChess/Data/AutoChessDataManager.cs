@@ -96,13 +96,17 @@ public class AutoChessDataManager : SavedData
     {
         round = newInfo;
     }
-    public void NewRound()
+    public override void NewRound()
     {
         round++;
         roundGainedActors = 0;
         roundSpentGold = 0;
         GainGold(GetNextRoundGold());
         SetNextRoundGold(0);
+        for (int i = 0; i < subDataManagers.Count; i++)
+        {
+            subDataManagers[i].NewRound();
+        }
     }
     public List<string> benchActorData;
     public List<string> fieldActorData;

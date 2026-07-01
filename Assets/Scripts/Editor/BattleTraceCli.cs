@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 
 public static class BattleTraceCli
 {
-    const string SimulatorScenePath = "Assets/Scenes/DebugScenes/BattleSimulator.unity";
+    /*const string SimulatorScenePath = "Assets/Scenes/DebugScenes/BattleSimulator.unity";
 
     public static void RunScenarioTrace()
     {
@@ -3820,6 +3820,7 @@ public static class BattleTraceCli
             inventoryAssignedIdsFound = inventory != null && inventory.assignedActorIDs != null
         };
     }
+    */
 }
 
 [Serializable]

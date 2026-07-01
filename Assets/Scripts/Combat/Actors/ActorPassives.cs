@@ -5,21 +5,22 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ActorPassives : MonoBehaviour
+public class ActorPassives
 {
+    public string passiveHolderName = "";
     public string passiveDelimiter = "+";
     // Only obtained from magic runes in equipment.
     // Later can make custom runes in the mage tower.
-    public List<string> runePassives;
+    public List<string> runePassives = new();
     public void AddRunePassive(string newRune)
     {
         if (runePassives.Contains(newRune)){return;}
         if (newRune.Length <= 1){return;}
         runePassives.Add(newRune);
     }
-    public List<string> GetRunePassives(){return runePassives;}
+    public List<string> GetRunePassives(){return new List<string>(runePassives);}
     // Only obtained through custom training.
-    public List<string> customPassives;
+    public List<string> customPassives = new();
     public int CustomPassiveCount()
     {
         return customPassives.Count;
@@ -59,7 +60,7 @@ public class ActorPassives : MonoBehaviour
         passiveSkills.Clear();
         passiveLevels.Clear();
     }
-    public List<string> passiveSkills;
+    public List<string> passiveSkills = new();
     public bool AnyPassiveExists(List<string> pNames)
     {
         for (int i = 0; i < pNames.Count; i++)
@@ -124,7 +125,7 @@ public class ActorPassives : MonoBehaviour
         if (index < 0 || index >= passiveSkills.Count){ return ""; }
         return passiveSkills[index];
     }
-    public List<string> passiveLevels;
+    public List<string> passiveLevels = new();
     public void SetPassiveLevels(List<string> newLevels)
     {
         passiveLevels = new List<string>(newLevels);
@@ -201,8 +202,8 @@ public class ActorPassives : MonoBehaviour
         passiveLevels[indexOf] = newLevel;
     }
     // Temporary Passives Are Always Level 1.
-    public List<string> tempPassives;
-    public List<int> tempPassiveDurations;
+    public List<string> tempPassives = new();
+    public List<int> tempPassiveDurations = new();
     // Bool to know if you need to add it to the passive list or just extend the duraction.
     public bool AddTempPassive(string passive, int duration)
     {
@@ -331,7 +332,7 @@ public class ActorPassives : MonoBehaviour
                 break;
         }
     }
-    public List<string> startBattlePassives;
+    public List<string> startBattlePassives = new();
     public List<string> GetStartBattlePassives() { return startBattlePassives; }
     public void AddStartBattlePassives(List<string> newSkills)
     {
@@ -345,7 +346,7 @@ public class ActorPassives : MonoBehaviour
     {
         startBattlePassives = new List<string>(passives);
     }
-    public List<string> startTurnPassives;
+    public List<string> startTurnPassives = new();
     public List<string> GetStartTurnPassives()
     {
         return new List<string>(startTurnPassives);
@@ -360,7 +361,7 @@ public class ActorPassives : MonoBehaviour
         }
     }
     public void SetStartTurnPassives(List<string> passives) { startTurnPassives = new List<string>(passives); }
-    public List<string> endTurnPassives;
+    public List<string> endTurnPassives = new();
     public List<string> GetEndTurnPassives()
     {
         return new List<string>(endTurnPassives);
@@ -375,7 +376,7 @@ public class ActorPassives : MonoBehaviour
         }
     }
     public void SetEndTurnPassives(List<string> passives) { endTurnPassives = new List<string>(passives); }
-    public List<string> attackingPassives;
+    public List<string> attackingPassives = new();
     public virtual List<string> GetAttackingPassives() { return attackingPassives; }
     public void AddAttackingPassive(string passiveName) { attackingPassives.Add(passiveName); }
     public void AddAttackingPassives(List<string> newSkills)
@@ -387,7 +388,7 @@ public class ActorPassives : MonoBehaviour
         }
     }
     public void SetAttackingPassives(List<string> passives) { attackingPassives = new List<string>(passives); }
-    public List<string> defendingPassives;
+    public List<string> defendingPassives = new();
     public virtual List<string> GetDefendingPassives() { return defendingPassives; }
     public void AddDefendingPassive(string passiveName) { defendingPassives.Add(passiveName); }
     public void AddDefendingPassives(List<string> newSkills)
@@ -399,7 +400,7 @@ public class ActorPassives : MonoBehaviour
         }
     }
     public void SetDefendingPassives(List<string> passives) { defendingPassives = new List<string>(passives); }
-    public List<string> takeDamagePassives;
+    public List<string> takeDamagePassives = new();
     public List<string> GetTakeDamagePassives() { return takeDamagePassives; }
     public void AddTakeDamagePassive(string passiveName) { takeDamagePassives.Add(passiveName); }
     public void AddTakeDamagePassives(List<string> newSkills)
@@ -411,7 +412,7 @@ public class ActorPassives : MonoBehaviour
         }
     }
     public void SetTakeDamagePassives(List<string> passives) { takeDamagePassives = new List<string>(passives); }
-    public List<string> movingPassives;
+    public List<string> movingPassives = new();
     public List<string> GetMovingPassives() { return movingPassives; }
     public void AddMovingPassive(string passiveName) { movingPassives.Add(passiveName); }
     public void AddMovingPassives(List<string> newSkills)
@@ -423,7 +424,7 @@ public class ActorPassives : MonoBehaviour
         }
     }
     public void SetMovingPassives(List<string> passives) { movingPassives = new List<string>(passives); }
-    public List<string> deathActives;
+    public List<string> deathActives = new();
     public bool deathActivesActive = true;
     public void DisableDeathActives(){deathActivesActive = false;}
     public List<string> GetDeathActives()
@@ -450,7 +451,7 @@ public class ActorPassives : MonoBehaviour
     {
         deathActives.Add(newDeathActive);
     }
-    public List<string> afterAttackPassives;
+    public List<string> afterAttackPassives = new();
     public List<string> GetAfterAttackPassives()
     {
         return afterAttackPassives;
@@ -471,7 +472,7 @@ public class ActorPassives : MonoBehaviour
     {
         afterAttackPassives = new List<string>(passives);
     }
-    public List<string> afterDefendPassives;
+    public List<string> afterDefendPassives = new();
     public List<string> GetAfterDefendPassives()
     {
         return afterDefendPassives;
@@ -492,7 +493,7 @@ public class ActorPassives : MonoBehaviour
     {
         afterDefendPassives = new List<string>(passives);
     }
-    public List<string> outOfCombatPassives;
+    public List<string> outOfCombatPassives = new();
     public List<string> GetOOCPassives(){return outOfCombatPassives;}
     public void AddOOCPassive(string passiveName){outOfCombatPassives.Add(passiveName);}
     public void AddOOCPassives(List<string> newSkills)
@@ -504,7 +505,7 @@ public class ActorPassives : MonoBehaviour
         }
     }
     public void SetOOCPassives(List<string> passives){outOfCombatPassives = new List<string>(passives);}
-    public List<string> adjustActivesPassives;
+    public List<string> adjustActivesPassives = new();
     public List<string> GetAdjustActivesPassives() { return adjustActivesPassives; }
     public void AddAdjustActivesPassives(List<string> newSkills)
     {
@@ -518,7 +519,7 @@ public class ActorPassives : MonoBehaviour
     {
         adjustActivesPassives = new List<string>(passives);
     }
-    public List<string> adjustSpellsPassives;
+    public List<string> adjustSpellsPassives = new();
     public List<string> GetAdjustSpellsPassives() { return adjustSpellsPassives; }
     public void AddAdjustSpellsPassives(List<string> newSkills)
     {
@@ -532,7 +533,7 @@ public class ActorPassives : MonoBehaviour
     {
         adjustSpellsPassives = new List<string>(passives);
     }
-    public List<string> afterSkillPassives;
+    public List<string> afterSkillPassives = new();
     public List<string> GetAfterSkillPassives()
     {
         return afterSkillPassives;
@@ -549,7 +550,7 @@ public class ActorPassives : MonoBehaviour
     {
         afterSkillPassives = new List<string>(passives);
     }
-    public List<string> afterSpellPassives;
+    public List<string> afterSpellPassives = new();
     public List<string> GetAfterSpellPassives()
     {
         return afterSpellPassives;

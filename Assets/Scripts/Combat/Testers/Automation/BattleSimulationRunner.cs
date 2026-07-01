@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 public static class BattleSimulationRunner
 {
-    static List<string> capturedErrors = new List<string>();
+    /*static List<string> capturedErrors = new List<string>();
 
     public static BattleSimulationRunResult RunScenarioInLoadedScene(BattleTestScenario scenario, int runIndex)
     {
@@ -2137,5 +2137,5 @@ public static class BattleSimulationRunner
         public bool canEvaluate;
         public bool matches;
         public string description;
-    }
+    }*/
 }

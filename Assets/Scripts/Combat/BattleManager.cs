@@ -104,7 +104,7 @@ public class BattleManager : MonoBehaviour
         // Apply start of battle passives.
         for (int i = 0; i < map.battlingActors.Count; i++)
         {
-            effectManager.StartBattle(map.battlingActors[i]);
+            effectManager.StartBattle(map.battlingActors[i], map);
         }
         // If the battle state records a win, then auto end the battle.
         if (battleState.GetWinningTeam() >= 0 && !battleEndManager.test)
@@ -152,7 +152,7 @@ public class BattleManager : MonoBehaviour
         TacticActor newActor = actorMaker.SummonActor(location, actorName, team);
         map.AddActorToBattle(newActor);
         ApplyBattleModifiersToActor(newActor);
-        effectManager.SummonedStartBattle(newActor);
+        effectManager.SummonedStartBattle(newActor, map);
         if (summoner != null)
         {
             summoner.AddSummonedActor(newActor);
@@ -1396,7 +1396,7 @@ public class BattleManager : MonoBehaviour
         {
             actor.FullRestore();
             // Apply Start Battle Effects Again.
-            effectManager.StartBattle(actor);
+            effectManager.StartBattle(actor, map);
             // Add The Actor Back To The Battle.
             map.ResurrectActor(actor);
             return;

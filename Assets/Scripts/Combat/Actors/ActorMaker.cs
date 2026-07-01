@@ -9,7 +9,6 @@ public class ActorMaker : MonoBehaviour
 {
     public GeneralUtility utility;
     public Equipment dummyEquip = new Equipment();
-    public TacticActor actorPrefab;
     public BattleModifier battleModifier;
     public StatDatabase actorStats;
     public StatDatabase elementPassives;
@@ -22,7 +21,7 @@ public class ActorMaker : MonoBehaviour
     [ContextMenu("New Actor")]
     public TacticActor CreateActor()
     {
-        TacticActor newActor = Instantiate(actorPrefab, transform.position, new Quaternion(0, 0, 0, 0));
+        TacticActor newActor = new TacticActor();
         // Need to reset somethings so that they don't carryover.
         ResetActor(newActor);
         return newActor;

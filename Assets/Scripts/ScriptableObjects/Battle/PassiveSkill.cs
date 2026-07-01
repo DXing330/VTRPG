@@ -321,7 +321,7 @@ public class PassiveSkill : SkillEffect
             }
         }
     }
-    public void ApplyStartBattlePassives(TacticActor actor, BattleState battleState)
+    public void ApplyStartBattlePassives(TacticActor actor, BattleMap map)
     {
         List<string> startBattlePassives = actor.GetStartBattlePassives();
         if (startBattlePassives.Count <= 0) { return; }
@@ -335,7 +335,7 @@ public class PassiveSkill : SkillEffect
             bool conditionsMet = true;
             for (int j = 0; j < conditions.Length; j++)
             {
-                conditionsMet = CheckStartBattleCondition(conditions[j], specifics[j], actor, battleState);
+                conditionsMet = CheckStartBattleCondition(conditions[j], specifics[j], actor, map);
                 if (!conditionsMet)
                 {
                     break;
@@ -563,7 +563,7 @@ public class PassiveSkill : SkillEffect
         }
         return CheckStartEndCondition(condition, specifics, actor, map);
     }
-    public bool CheckStartBattleCondition(string condition, string specifics, TacticActor actor, BattleState battleState)
+    public bool CheckStartBattleCondition(string condition, string specifics, TacticActor actor, BattleMap map)
     {
         switch (condition)
         {
@@ -572,13 +572,13 @@ public class PassiveSkill : SkillEffect
             case "Weapon<>":
                 return actor.NoWeapon();
             case "Weather":
-                return battleState.GetWeather().Contains(specifics);
+                return map.GetWeather().Contains(specifics);
             case "Weather<>":
-                return !battleState.GetWeather().Contains(specifics);
+                return !map.GetWeather().Contains(specifics);
             case "Time":
-                return specifics == battleState.GetTime();
+                return specifics == map.GetTime();
             case "Time<>":
-                return specifics != battleState.GetTime();
+                return specifics != map.GetTime();
         }
         return true;
     }

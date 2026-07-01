@@ -24,9 +24,9 @@ public class SceneTracker : SavedData
 
     public override void NewGame()
     {
-        allData = newGameData;
-        dataPath = Application.persistentDataPath+"/"+filename;
-        File.WriteAllText(dataPath, allData);
+        previousScene = "Hub";
+        currentScene = "Hub";
+        Save();
         Load();
     }
 

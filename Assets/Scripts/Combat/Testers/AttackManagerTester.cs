@@ -169,9 +169,9 @@ public class AttackManagerTester : MonoBehaviour
         map.AddActorToBattle(dummyDefender);
         map.AddActorToBattle(dummyGuard);
         // Apply Start Battle Passives
-        battleManager.effectManager.StartBattle(dummyAttacker);
-        battleManager.effectManager.StartBattle(dummyDefender);
-        battleManager.effectManager.StartBattle(dummyGuard);
+        battleManager.effectManager.StartBattle(dummyAttacker, map);
+        battleManager.effectManager.StartBattle(dummyDefender, map);
+        battleManager.effectManager.StartBattle(dummyGuard, map);
     }
     void ResetTestMapActorLayerScale()
     {

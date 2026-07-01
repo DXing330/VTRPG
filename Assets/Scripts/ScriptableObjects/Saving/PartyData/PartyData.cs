@@ -30,7 +30,7 @@ public class PartyData : SavedData
     public string exhaustStatus;
     public int exhaustDamage;
     public string hungerStatus;
-    public TacticActor dummyActor;
+    public TacticActor dummyActor = new();
     public string delimiterTwo;
     public List<string> partyNames;
     public int PartyCount() { return partyNames.Count; }

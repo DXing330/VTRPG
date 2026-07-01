@@ -47,9 +47,10 @@ public enum EquipmentRune
 [System.Serializable]
 public class Equipment
 {
-    public Equipment()
+    public Equipment(string newSlot = "None")
     {
         ResetStats();
+        SetSlot(newSlot);
     }
     public string delimiter = "|";
     public string allStats;

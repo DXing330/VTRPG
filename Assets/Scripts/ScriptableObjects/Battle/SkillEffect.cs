@@ -354,8 +354,8 @@ public class SkillEffect : ScriptableObject
             case "SetAttackActionCost":
                 target.SetAttackActionCost(int.Parse(effectSpecifics));
                 break;
-            case "BaseAttackPower":
-                target.ChangeBaseAttackMultiplier(int.Parse(effectSpecifics));
+            case "BaseBasicAttackPower":
+                target.ChangeBaseBasicAttackMultiplier(int.Parse(effectSpecifics));
                 break;
             case "BasicAttackPower":
                 target.ChangeBasicAttackMultiplier(int.Parse(effectSpecifics));

@@ -2,7 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class RuneGridManager : MonoBehaviour
+[CreateAssetMenu(fileName = "RuneGridManager", menuName = "ScriptableObjects/Utility/RuneGridManager", order = 1)]
+public class RuneGridManager : ScriptableObject
 {
     public StatDatabase runeLetters;
     public StatDatabase runeWords;
@@ -15,9 +16,9 @@ public class RuneGridManager : MonoBehaviour
         EquipSlots.Boots,
         EquipSlots.Gloves
     };
-    public Equipment ReturnEquipmentOfSlot(List<Equipment> equipment, EquipSlots slot)
+    public Equipment ReturnEquipmentOfSlot(Equipment[] equipment, EquipSlots slot)
     {
-        for (int i = 0; i < equipment.Count; i++)
+        for (int i = 0; i < equipment.Length; i++)
         {
             if (equipment[i].slot == slot)
             {
@@ -47,7 +48,7 @@ public class RuneGridManager : MonoBehaviour
             grid[row, col] = runes[col];
         }
     }
-    public string[,] ReturnRuneGrid(List<Equipment> equipment)
+    public string[,] ReturnRuneGrid(Equipment[] equipment)
     {
         string[,] grid = CreateEmptyRuneGrid();
         for (int row = 0; row < runeSlotOrder.Count; row++)

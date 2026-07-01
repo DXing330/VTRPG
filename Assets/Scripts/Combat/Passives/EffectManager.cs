@@ -2,7 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class EffectManager : MonoBehaviour
+[CreateAssetMenu(fileName = "EffectManager", menuName = "ScriptableObjects/BattleLogic/EffectManager", order = 1)]
+public class EffectManager : ScriptableObject
 {
     public PassiveOrganizer passiveOrganizer;
     public PassiveSkill passive;
@@ -10,20 +11,16 @@ public class EffectManager : MonoBehaviour
     // Condition is a bad name, since passives have conditions to activate.
     public Condition status;
     public StatDatabase statusData;
-    public BattleState battleState;
 
-
-    public void StartBattle(TacticActor actor)
+    public void StartBattle(TacticActor actor, BattleMap map)
     {
-        passive.ApplyStartBattlePassives(actor, battleState);
+        passive.ApplyStartBattlePassives(actor, map);
     }
-
-    public void SummonedStartBattle(TacticActor actor)
+    public void SummonedStartBattle(TacticActor actor, BattleMap map)
     {
-        StartBattle(actor);
+        StartBattle(actor, map);
         passive.AffectActor(actor, "SingleTemporarySkill", "Break Summon Link");
     }
-
     public void StartTurn(TacticActor actor, BattleMap map)
     {
         map.ActorStartsTurn(actor);
@@ -41,7 +38,6 @@ public class EffectManager : MonoBehaviour
         }
         actor.Grappling(map);
     }
-
     public void EndTurn(TacticActor actor, BattleMap map)
     {
         map.ActorEndsTurn(actor);

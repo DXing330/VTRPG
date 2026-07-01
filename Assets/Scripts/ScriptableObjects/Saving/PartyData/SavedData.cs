@@ -16,29 +16,28 @@ public class SavedData : ScriptableObject
     public List<string> dataList;
     public List<string> GetData(){return dataList;}
     public string delimiter;
-
     public virtual void NewDay(int dayCount)
     {
 
     }
-
+    public virtual void NewRound()
+    {
+        
+    }
     public virtual void AddHours(int hours)
     {
 
     }
-
     public virtual void Rest()
     {
         
     }
-
     public virtual void NewGame()
     {
         allData = newGameData;
         dataList = allData.Split(delimiter).ToList();
         Save();
     }
-
     public virtual void Save()
     {
         dataPath = Application.persistentDataPath+"/"+filename;
@@ -50,7 +49,6 @@ public class SavedData : ScriptableObject
         }
         File.WriteAllText(dataPath, allData);
     }
-
     public virtual void Load()
     {
         dataPath = Application.persistentDataPath + "/" + filename;

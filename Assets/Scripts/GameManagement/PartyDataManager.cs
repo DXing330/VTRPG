@@ -13,7 +13,7 @@ public class PartyDataManager : MonoBehaviour
     public SkillEffect partyEffects;
     // This is the one that the battle will actually read.
     public StatDatabase actorStats;
-    public TacticActor dummyActor;
+    public TacticActor dummyActor = new();
     public StatDatabase standardAttributes;
     public CharacterList fullParty;
     public List<PartyData> allParties;
@@ -358,11 +358,11 @@ public class PartyDataManager : MonoBehaviour
             ApplyEffectToPartyMember(effect, specifics, power, i);
         }
     }
-    public void UpdatePartyMember(TacticActor dummyActor, int index)
+    public void UpdatePartyMember(TacticActor newActorStats, int index)
     {
         (PartyData section, int localIndex) = ResolvePartyIndex(index);
         if (section == null){return;}
-        section.SetMemberStats(dummyActor, localIndex);
+        section.SetMemberStats(newActorStats, localIndex);
         SetFullParty();
     }
     public void RemovePartyMember(int index)

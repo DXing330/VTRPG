@@ -14,6 +14,10 @@ public class AutoChessEnemyDataManager : SavedData
     public StatDatabase enemyDifficulty;
     public RNGUtility autoChessEnemyRNG;
     public int round;
+    public override void NewRound()
+    {
+        round++;
+    }
     public List<string> availableEnemyGroups;
     public List<string> nextRoundEnemies;
     public List<string> GetNextRoundEnemies(){return nextRoundEnemies;}

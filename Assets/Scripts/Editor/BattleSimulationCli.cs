@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 
 public static class BattleSimulationCli
 {
-    const string FastSuitePath = "Assets/Scripts/Combat/TestData/BattleTestSuites/FastBattleSuite.asset";
+    /*const string FastSuitePath = "Assets/Scripts/Combat/TestData/BattleTestSuites/FastBattleSuite.asset";
     const string R1SuitePath = "Assets/Scripts/Combat/TestData/BattleTestSuites/RoguelikeFloor1Suite.asset";
     const string GuardianFocusScenarioPath = "Assets/Scripts/Combat/TestData/BattleTestSuites/Scenario_RL_F1_BossSSGuardian.asset";
     const string SimulatorScenePath = "Assets/Scenes/DebugScenes/BattleSimulator.unity";
@@ -414,5 +414,5 @@ public static class BattleSimulationCli
         }
         string projectRoot = Directory.GetParent(Application.dataPath).FullName;
         return Path.GetFullPath(Path.Combine(projectRoot, path));
-    }
+    }*/
 }

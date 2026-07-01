@@ -8,20 +8,49 @@ using UnityEngine;
 // Stats that are saved outside of battle + current health/mana/statuses
 public class ActorInitialStats : ActorPassives
 {
-    public GeneralUtility utility;
+
+    public int SafeParseInt(string intString, int defaultValue = 0)
+    {
+        try
+        {
+            return int.Parse(intString);
+        }
+        catch
+        {
+            return defaultValue;
+        }
+    }
+    public List<string> RemoveEmptyListItems(List<string> stringList, int minLength = 0)
+    {
+        for (int i = stringList.Count - 1; i >= 0; i--)
+        {
+            if (stringList[i].Length <= minLength)
+            {
+                stringList.RemoveAt(i);
+            }
+        }
+        return stringList;
+    }
+    public int CountStringsInList(List<string> stringList, string countedString)
+    {
+        int count = 0;
+        for (int i = 0; i < stringList.Count; i++)
+        {
+            if (stringList[i] == countedString){count++;}
+        }
+        return count;
+    }
     public string delimiter = "!";
-    public string allStatNames;
-    [ContextMenu("LoadStatNames")]
+    public string allStatNames = "Sprite!Species!Elements!Attributes!Health!Attack!Range!Defense!MoveSpeed!MoveType!Weight!Initiative!Energy!Luck!CritChance!CritPower!HitChance!Dodge!AttackSpeed!Passives!PassiveLevels!CustomPassives!Actives!ActiveMods!DeathActives!MagicPower!MagicResist!ManaEfficiency!MaxMana!Spells!SpellMods!CustomSpells!ItemSlots!CurrentMana!CurrentHealth!Curses";
     protected void LoadStatNames()
     {
         statNames = allStatNames.Split(delimiter).ToList();
         publicStats = allPublicStats.Split(delimiter).ToList();
     }
-    public List<string> statNames;
-    public string allPublicStats;
-    public List<string> publicStats;
-    public List<string> changeFormStatNames;
-    public List<string> stats;
+    public List<string> statNames = new();
+    public string allPublicStats = "0!0!0!0!0!0!0!0!0!0!0!0!0!0!1!1!1!1!1!0!0!0!0!0!0!1!1!1!1!0!0!0!0!1!0!0";
+    public List<string> publicStats = new();
+    public List<string> stats = new();
     public List<string> GetPublicStatNames()
     {
         List<string> names = new List<string>();
@@ -44,6 +73,7 @@ public class ActorInitialStats : ActorPassives
     }
     public string GetInitialStats()
     {
+        LoadStatNames();
         string allStats = "";
         for (int i = 0; i < stats.Count; i++)
         {
@@ -60,13 +90,12 @@ public class ActorInitialStats : ActorPassives
     // Make sure the ordering and naming is correct based on the statNames.
     public void SetInitialStats(List<string> newStats)
     {
-        List<string> newStatNames = new List<string>(statNames);
         ClearStatuses();
         ResetPassives();
         stats = newStats;
         for (int i = 0; i < stats.Count; i++)
         {
-            SetInitialStat(stats[i], newStatNames[i]);
+            SetInitialStat(stats[i], statNames[i]);
         }
         if (currentHealth <= 0) { currentHealth = GetBaseHealth(); }
         else if (currentHealth > GetBaseHealth()) { currentHealth = GetBaseHealth(); }
@@ -170,49 +199,49 @@ public class ActorInitialStats : ActorPassives
                 SetAttributesFromString(newStat);
                 break;
             case "Health":
-                SetBaseHealth(utility.SafeParseInt(newStat));
+                SetBaseHealth(SafeParseInt(newStat));
                 break;
             case "Energy":
-                SetBaseEnergy(utility.SafeParseInt(newStat));
+                SetBaseEnergy(SafeParseInt(newStat));
                 break;
             case "Attack":
-                SetBaseAttack(utility.SafeParseInt(newStat));
+                SetBaseAttack(SafeParseInt(newStat));
                 break;
             case "Range":
-                SetAttackRange(utility.SafeParseInt(newStat));
+                SetAttackRange(SafeParseInt(newStat));
                 break;
             case "Defense":
-                SetBaseDefense(utility.SafeParseInt(newStat));
+                SetBaseDefense(SafeParseInt(newStat));
                 break;
             case "MoveSpeed":
-                SetMoveSpeed(utility.SafeParseInt(newStat));
+                SetMoveSpeed(SafeParseInt(newStat));
                 break;
             case "MoveType":
                 SetMoveType(newStat);
                 break;
             case "Weight":
-                SetWeight(utility.SafeParseInt(newStat));
+                SetWeight(SafeParseInt(newStat));
                 break;
             case "Initiative":
-                SetInitiative(utility.SafeParseInt(newStat));
+                SetInitiative(SafeParseInt(newStat));
                 break;
             case "Luck":
-                SetLuck(utility.SafeParseInt(newStat));
+                SetLuck(SafeParseInt(newStat));
                 break;
             case "CritChance":
-                SetBaseCritChance(utility.SafeParseInt(newStat));
+                SetBaseCritChance(SafeParseInt(newStat));
                 break;
             case "CritPower":
-                SetBaseCritPower(utility.SafeParseInt(newStat));
+                SetBaseCritPower(SafeParseInt(newStat));
                 break;
             case "HitChance":
-                SetBaseHitChance(utility.SafeParseInt(newStat));
+                SetBaseHitChance(SafeParseInt(newStat));
                 break;
             case "Dodge":
-                SetBaseDodge(utility.SafeParseInt(newStat));
+                SetBaseDodge(SafeParseInt(newStat));
                 break;
             case "AttackSpeed":
-                SetBaseAttackSpeed(utility.SafeParseInt(newStat));
+                SetBaseAttackSpeed(SafeParseInt(newStat));
                 break;
             case "Passives":
                 SetPassiveSkills(newStat.Split(passiveDelimiter).ToList());
@@ -233,16 +262,16 @@ public class ActorInitialStats : ActorPassives
                 SetDeathActives(newStat.Split(",").ToList());
                 break;
             case "MagicPower":
-                SetMagicPower(utility.SafeParseInt(newStat));
+                SetMagicPower(SafeParseInt(newStat));
                 break;
             case "MagicResist":
-                SetMagicResist(utility.SafeParseInt(newStat));
+                SetMagicResist(SafeParseInt(newStat));
                 break;
             case "ManaEfficiency":
-                SetManaEfficiency(utility.SafeParseInt(newStat));
+                SetManaEfficiency(SafeParseInt(newStat));
                 break;
             case "MaxMana":
-                SetMaxMana(utility.SafeParseInt(newStat));
+                SetMaxMana(SafeParseInt(newStat));
                 break;
             case "Spells":
                 SetSpells(newStat.Split(",").ToList());
@@ -254,13 +283,13 @@ public class ActorInitialStats : ActorPassives
                 SetCustomSpells(newStat.Split(passiveDelimiter).ToList());
                 break;
             case "ItemSlots":
-                SetItemSlots(utility.SafeParseInt(newStat));
+                SetItemSlots(SafeParseInt(newStat));
                 break;
             case "CurrentMana":
-                SetMana(utility.SafeParseInt(newStat));
+                SetMana(SafeParseInt(newStat));
                 break;
             case "CurrentHealth":
-                SetCurrentHealth(utility.SafeParseInt(newStat));
+                SetCurrentHealth(SafeParseInt(newStat));
                 break;
             case "Curses":
                 // If they were kept then they must have had infinite duration.
@@ -279,7 +308,7 @@ public class ActorInitialStats : ActorPassives
     public string spriteName;
     public void SetSpriteName(string newName){spriteName = newName;}
     public string GetSpriteName(){return spriteName;}
-    public List<string> elements;
+    public List<string> elements = new();
     public void SetElementsFromString(string allElements, string delimiter = ",")
     {
         ResetElements();
@@ -297,7 +326,7 @@ public class ActorInitialStats : ActorPassives
     {
         return elements.Contains(newInfo);
     }
-    public List<string> attributes;
+    public List<string> attributes = new();
     public void ResetAttributes(){attributes.Clear();}
     public void AddAttribute(string newAttribute)
     {
@@ -308,7 +337,7 @@ public class ActorInitialStats : ActorPassives
     {
         ResetAttributes();
         attributes = newInfo.Split(delimiter).ToList();
-        utility.RemoveEmptyListItems(attributes);
+        RemoveEmptyListItems(attributes);
     }
     public string GetAttributeString()
     {
@@ -333,7 +362,12 @@ public class ActorInitialStats : ActorPassives
     }
     public int AttributeCount(string attribute)
     {
-        return utility.CountStringsInList(attributes, attribute);
+        int count = 0;
+        for (int i = 0; i < attributes.Count; i++)
+        {
+            if (attributes[i] == attribute){count++;}
+        }
+        return count;
     }
     public int baseHealth;
     public void SetBaseHealth(int newHealth) { baseHealth = newHealth; }
@@ -445,7 +479,7 @@ public class ActorInitialStats : ActorPassives
     }
     public void SetBaseEnergy(int newEnergy) { baseEnergy = newEnergy; }
     public int GetBaseEnergy() { return baseEnergy; }
-    public List<string> activeSkills;
+    public List<string> activeSkills = new();
     public void SetActiveSkills(List<string> newSkills)
     {
         activeSkills = newSkills;
@@ -464,7 +498,7 @@ public class ActorInitialStats : ActorPassives
     // TODO Implement The Active Mods And Display The Modified Actives In Armory
     // Active Mods Buff Power/Energy/Action/Range/Span
     // Each Active Can Have X(2+?) Mods But Each Mod Can Only Apply 1(2+?) Time To Each Active.
-    public List<string> activeMods;
+    public List<string> activeMods = new();
     public bool ActiveUpgraded(string skillName)
     {
         for (int i = 0; i < activeMods.Count; i++)
@@ -530,10 +564,6 @@ public class ActorInitialStats : ActorPassives
     public void AddActiveMod(string skillName, string modType, string delimiter = "_")
     {
         if (skillName.Length <= 0 || modType.Length <= 0){return;}
-        if (activeMods == null)
-        {
-            activeMods = new List<string>();
-        }
         if (ActiveHasModType(skillName, modType, delimiter)){return;}
         activeMods.Add(skillName + delimiter + modType);
     }
@@ -596,7 +626,7 @@ public class ActorInitialStats : ActorPassives
         maxMana = amount;
     }
     public int GetMaxMana(){return maxMana;}
-    public List<string> spells;
+    public List<string> spells = new();
     public string GetSpellsString()
     {
         if (spells.Count == 0) { return ""; }
@@ -611,7 +641,7 @@ public class ActorInitialStats : ActorPassives
             if (spells[i].Length <= 1) { spells.RemoveAt(i); }
         }
     }
-    public List<string> spellMods;
+    public List<string> spellMods = new();
     public string GetSpellModsString()
     {
         if (spellMods.Count == 0) { return ""; }
@@ -626,7 +656,7 @@ public class ActorInitialStats : ActorPassives
             if (spellMods[i].Length <= 1) { spellMods.RemoveAt(i); }
         }
     }
-    public List<string> customSpells;
+    public List<string> customSpells = new();
     public void SetCustomSpells(List<string> newInfo)
     {
         customSpells = new List<string>(newInfo);
@@ -638,8 +668,8 @@ public class ActorInitialStats : ActorPassives
         return String.Join(",", customSpells);
     }
     //// PERSISTENT STATS ACROSS BATTLES
-    public List<string> statuses;
-    public List<int> statusDurations;
+    public List<string> statuses = new();
+    public List<int> statusDurations = new();
     public List<string> GetStatuses() { return statuses; }
     public virtual void AddStatus(string newCondition, int duration)
     {
@@ -698,6 +728,7 @@ public class ActorInitialStats : ActorPassives
     }
     public void SetCurses(string newInfo)
     {
+        LoadStatNames();
         // Set implies reseting and starting from the beginning.
         ClearStatuses();
         int index = statNames.IndexOf(curseStatName);
