@@ -9,6 +9,7 @@ public class ActiveManager : MonoBehaviour
     // Basically everything in the battle needs to know the map state at all times.
     public BattleMap map;
     public GeneralUtility utility;
+    public AttackManager attackManager;
     public MagicSpell magicSpell;
     public TriggeredSkillResolver triggeredSkillResolver;
     public int triggeredSkillDepthLimit = 10000;
@@ -24,11 +25,11 @@ public class ActiveManager : MonoBehaviour
     {
         skillUser.UseMana(magicSpell.ReturnManaCost(skillUser));
         skillUser.SpendAction(magicSpell.GetActionCost());
-        List<TacticActor> targets = battle.map.GetActorsOnTiles(targetedTiles);
+        List<TacticActor> targets = map.GetActorsOnTiles(targetedTiles);
         List<string> effects = magicSpell.GetAllEffects();
         for (int i = 0; i < effects.Count; i++)
         {
-            ApplyActiveEffects(battle, targets, effects[i], magicSpell.GetSpecificsAt(i), magicSpell.GetPowerAt(i), magicSpell.GetSelectedTile(), true);
+            ApplyActiveEffects(targets, effects[i], magicSpell.GetSpecificsAt(i), magicSpell.GetPowerAt(i), magicSpell.GetSelectedTile(), true);
         }
     }
     public ActiveSkill active;
@@ -60,11 +61,11 @@ public class ActiveManager : MonoBehaviour
         targetableTiles.Clear();
         targetedTiles.Clear();
     }
-    public List<int> GetTargetableTiles(int start, MapPathfinder pathfinder, bool spell = false)
+    public List<int> GetTargetableTiles(int start, bool spell = false)
     {
         string shape = active.GetRangeShape();
         if (spell){ shape = magicSpell.GetRangeShape(); }
-        targetableTiles = new List<int>(GetTiles(start, shape, pathfinder, true, spell));
+        targetableTiles = new List<int>(GetTiles(start, shape, true, spell));
         if (targetableTiles.Count <= 0) { targetableTiles.Add(start); }
         return targetableTiles;
     }
@@ -77,7 +78,7 @@ public class ActiveManager : MonoBehaviour
             targetedTiles = new List<int>(targetableTiles);
         }
     }
-    public List<int> GetTargetedTiles(int start, MapPathfinder pathfinder, bool spellCast = false)
+    public List<int> GetTargetedTiles(int start, bool spellCast = false)
     {
         active.SetSelectedTile(start);
         string shape = active.GetShape();
@@ -86,7 +87,7 @@ public class ActiveManager : MonoBehaviour
             magicSpell.SetSelectedTile(start);
             shape = magicSpell.GetShape();
         }
-        targetedTiles = new List<int>(GetTiles(start, shape, pathfinder, false, spellCast));
+        targetedTiles = new List<int>(GetTiles(start, shape, false, spellCast));
         if (!spellCast)
         {
             if (active.GetShape() == "Circle" || active.GetShape() == "None")
@@ -106,7 +107,7 @@ public class ActiveManager : MonoBehaviour
     }
     public List<int> ReturnTargetedTiles(){return targetedTiles;}
     public bool ExistTargetedTiles(){return targetedTiles.Count > 0;}
-    protected List<int> GetTiles(int startTile, string shape, MapPathfinder pathfinder, bool targetable = true, bool spellCast = false)
+    protected List<int> GetTiles(int startTile, string shape, bool targetable = true, bool spellCast = false)
     {
         int range = active.GetRange(skillUser, map);
         if (spellCast){ range = magicSpell.GetRange(skillUser, map); }
@@ -118,10 +119,10 @@ public class ActiveManager : MonoBehaviour
                 range = magicSpell.GetSpan(skillUser, map);
             }
         }
-        int direction = pathfinder.DirectionBetweenLocations(skillUser.GetLocation(), startTile);
-        return pathfinder.mapUtility.GetTilesByShapeSpan(startTile, shape, range, pathfinder.mapSize, skillUser.GetLocation());
+        int direction = map.mapUtility.DirectionBetweenLocations(skillUser.GetLocation(), startTile, map.mapSize);
+        return map.mapUtility.GetTilesByShapeSpan(startTile, shape, range, map.mapSize, skillUser.GetLocation());
     }
-    protected void ApplyActiveEffects(BattleManager battle, List<TacticActor> targets, string effect, string specifics, int power, int selectedTile = -1, bool spellCast = false)
+    protected void ApplyActiveEffects(List<TacticActor> targets, string effect, string specifics, int power, int selectedTile = -1, bool spellCast = false)
     {
         int targetTile = -1;
         string powerString = power.ToString();
@@ -130,7 +131,7 @@ public class ActiveManager : MonoBehaviour
         {
             string[] allSpriteDetails = effect.Split("Equals");
             string specificSprite = allSpriteDetails[1];
-            targets = battle.map.AllActorsBySprite(specificSprite);
+            targets = map.AllActorsBySprite(specificSprite);
             active.AffectActors(targets, specifics, powerString, 1);
             return;
         }
@@ -138,51 +139,51 @@ public class ActiveManager : MonoBehaviour
         {
             string[] allSpeciesDetails = effect.Split("Equals");
             string specificSpecies = allSpeciesDetails[1];
-            targets = battle.map.AllActorsBySpecies(specificSpecies);
+            targets = map.AllActorsBySpecies(specificSpecies);
             active.AffectActors(targets, specifics, powerString, 1);
             return;
         }
         switch (effect)
         {
             case "TriggerSkill":
-                ResolveTriggeredSkill(battle, specifics);
+                ResolveTriggeredSkill(specifics);
                 return;
             case "Weather":
-                battle.map.SetWeather(specifics);
+                map.SetWeather(specifics);
                 return;
             case "Escape":
-                if (!battle.map.ActorCanEscape(skillUser)){return;}
-                battle.map.ActorEscapesBattle(skillUser);
+                if (!map.ActorCanEscape(skillUser)){return;}
+                map.ActorEscapesBattle(skillUser);
                 return;
             case "Time":
-                battle.map.SetTime(specifics);
+                map.SetTime(specifics);
                 return;
             case "Tile":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    battle.map.ChangeTerrain(targetedTiles[i], specifics);
+                    map.ChangeTerrain(targetedTiles[i], specifics);
                 }
                 return;
             case "Border":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    battle.map.ChangeBorder(targetedTiles[i], skillUser.GetDirection(), specifics);
+                    map.ChangeBorder(targetedTiles[i], skillUser.GetDirection(), specifics);
                 }
                 return;
             case "AllBorders":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    battle.map.ChangeAllBorders(targetedTiles[i], specifics);
+                    map.ChangeAllBorders(targetedTiles[i], specifics);
                 }
                 return;
             case "Attack+Tile":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    battle.map.ChangeTerrain(targetedTiles[i], specifics);
+                    map.ChangeTerrain(targetedTiles[i], specifics);
                 }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
                 }
                 return;
             case "BreakSummonLink":
@@ -193,27 +194,27 @@ public class ActiveManager : MonoBehaviour
                 return;
             case "Summon":
                 // Check if selected tile is free.
-                if (battle.map.GetActorOnTile(selectedTile) == null)
+                if (map.GetActorOnTile(selectedTile) == null)
                 {
                     // Create a new actor on that location on the same team.
-                    battle.SpawnAndAddActor(selectedTile, specifics, skillUser.GetTeam(), skillUser);
+                    map.SpawnAndAddActor(selectedTile, specifics, skillUser.GetTeam(), skillUser);
                 }
                 return;
             case "RespawnSummon":
                 // Try to respawn at the initial location.
                 selectedTile = skillUser.GetInitialLocation();
-                if (battle.map.GetActorOnTile(selectedTile) == null)
+                if (map.GetActorOnTile(selectedTile) == null)
                 {
                     // Create a new actor on that location on the same team.
-                    battle.SpawnAndAddActor(selectedTile, specifics, skillUser.GetTeam(), skillUser);
+                    map.SpawnAndAddActor(selectedTile, specifics, skillUser.GetTeam(), skillUser);
                 }
                 return;
             case "TributeSummon":
                 if (targetedTiles.Count <= 0){return;}
-                TacticActor tributeActor = battle.map.GetActorOnTile(targetedTiles[0]);
+                TacticActor tributeActor = map.GetActorOnTile(targetedTiles[0]);
                 if (tributeActor == null || tributeActor.GetTeam() != skillUser.GetTeam()){return;}
                 // Create a new actor on that location on the same team.
-                battle.SpawnAndAddActor(targetedTiles[0], specifics, skillUser.GetTeam(), skillUser);
+                map.SpawnAndAddActor(targetedTiles[0], specifics, skillUser.GetTeam(), skillUser);
                 // Kill the targeted ally as tribute.
                 tributeActor.MarkSacrificed();
                 tributeActor.SetCurrentHealth(0);
@@ -222,45 +223,45 @@ public class ActiveManager : MonoBehaviour
             case "MassSummon":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    if (battle.map.GetActorOnTile(targetedTiles[i]) == null)
+                    if (map.GetActorOnTile(targetedTiles[i]) == null)
                     {
-                        battle.SpawnAndAddActor(targetedTiles[i], specifics, skillUser.GetTeam(), skillUser);
+                        map.SpawnAndAddActor(targetedTiles[i], specifics, skillUser.GetTeam(), skillUser);
                     }
                 }
                 return;
             case "RandomSummon":
                 // Check if selected tile is free.
-                if (battle.map.GetActorOnTile(selectedTile) == null)
+                if (map.GetActorOnTile(selectedTile) == null)
                 {
                     // Create a new actor on that location on the same team.
                     // Pick a random actor from the specifics list.
                     string[] randomSummon = specifics.Split(",");
-                    battle.SpawnAndAddActor(selectedTile, randomSummon[UnityEngine.Random.Range(0, randomSummon.Length)], skillUser.GetTeam(), skillUser);
+                    map.SpawnAndAddActor(selectedTile, randomSummon[UnityEngine.Random.Range(0, randomSummon.Length)], skillUser.GetTeam(), skillUser);
                 }
                 return;
             case "MassRandomSummon":
                 string[] randomPool = specifics.Split(",");
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    if (battle.map.GetActorOnTile(targetedTiles[i]) == null)
+                    if (map.GetActorOnTile(targetedTiles[i]) == null)
                     {
-                        battle.SpawnAndAddActor(targetedTiles[i], randomPool[UnityEngine.Random.Range(0, randomPool.Length)], skillUser.GetTeam(), skillUser);
+                        map.SpawnAndAddActor(targetedTiles[i], randomPool[UnityEngine.Random.Range(0, randomPool.Length)], skillUser.GetTeam(), skillUser);
                     }
                 }
                 return;
             // Summon A Quantity Of Units Based On The Attack Divided By Power.
             case "AKSinkingSandSummon":
                 // Guarantee Summon 1 On Tile.
-                battle.SpawnAndAddActor(targetedTiles[0], specifics, skillUser.GetTeam(), skillUser);
+                map.SpawnAndAddActor(targetedTiles[0], specifics, skillUser.GetTeam(), skillUser);
                 int additionalSummons = skillUser.GetBaseAttack() / power;
-                List<int> adjacentTiles = battle.map.mapUtility.AdjacentTiles(targetedTiles[0], battle.map.mapSize);
+                List<int> adjacentTiles = map.mapUtility.AdjacentTiles(targetedTiles[0], map.mapSize);
                 int summonCount = 0;
                 for (int i = 0; i < adjacentTiles.Count; i++)
                 {
-                    if (battle.map.GetActorOnTile(adjacentTiles[i]) == null)
+                    if (map.GetActorOnTile(adjacentTiles[i]) == null)
                     {
                         summonCount++;
-                        battle.SpawnAndAddActor(adjacentTiles[i], specifics, skillUser.GetTeam(), skillUser);
+                        map.SpawnAndAddActor(adjacentTiles[i], specifics, skillUser.GetTeam(), skillUser);
                     }
                     if (summonCount >= additionalSummons){return;}
                 }
@@ -270,21 +271,21 @@ public class ActiveManager : MonoBehaviour
                 // If Less Than Half Health Then Do Nothing.
                 if (skillUser.GetHealth() <= skillUser.GetBaseHealth() / 2){return;}
                 // Get The Tile In Direction.
-                selectedTile = battle.map.mapUtility.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection(), battle.map.mapSize);
-                if (battle.map.GetActorOnTile(selectedTile) != null){return;}
+                selectedTile = map.mapUtility.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection(), map.mapSize);
+                if (map.GetActorOnTile(selectedTile) != null){return;}
                 skillUser.UpdateHealth(skillUser.GetBaseHealth() / 2);
-                battle.SpawnAndAddActor(selectedTile, "Dummy Substitute", skillUser.GetTeam(), skillUser);
+                map.SpawnAndAddActor(selectedTile, "Dummy Substitute", skillUser.GetTeam(), skillUser);
                 return;
             case "Revive":
                 if (specifics == "Random")
                 {
-                    battle.map.ReviveRandomAlly(skillUser);
+                    map.ReviveRandomAlly(skillUser);
                     return;
                 }
-                battle.map.ReviveDefeatedActorsBySprite(specifics);
+                map.ReviveDefeatedActorsBySprite(specifics);
                 return;
             case "AbsorbDeadEnemy":
-                TacticActor deadToAbsorb = battle.map.ReturnFirstDeadEnemy(skillUser);
+                TacticActor deadToAbsorb = map.ReturnFirstDeadEnemy(skillUser);
                 if (deadToAbsorb == null){return;}
                 int amountToAbsorb = 0;
                 // Determine the relevant base stat, usually attack.
@@ -296,50 +297,50 @@ public class ActiveManager : MonoBehaviour
                     active.AffectActor(skillUser, "BaseAttack", (amountToAbsorb / 2).ToString(), 1);
                     break;
                 }
-                battle.map.RemoveDefeatedActor(deadToAbsorb);
+                map.RemoveDefeatedActor(deadToAbsorb);
                 return;
             case "SummonEnemy":
                 // Check if selected tile is free.
-                if (battle.map.GetActorOnTile(selectedTile) == null)
+                if (map.GetActorOnTile(selectedTile) == null)
                 {
                     // Create a new actor on that location on the opposite team.
-                    battle.SpawnAndAddActor(selectedTile, specifics, (skillUser.GetTeam()+1) % 2);
+                    map.SpawnAndAddActor(selectedTile, specifics, (skillUser.GetTeam()+1) % 2);
                 }
                 return;
             case "Teleport":
                 // Check if selected tile is free.
-                if (battle.map.GetActorOnTile(targetedTiles[0]) == null)
+                if (map.GetActorOnTile(targetedTiles[0]) == null)
                 {
                     skillUser.SetLocation(targetedTiles[0]);
-                    battle.map.UpdateActors();
+                    map.UpdateActors();
                 }
                 return;
             case "TeleportTarget":
-                if (battle.map.GetActorOnTile(targetedTiles[0]) == null && skillUser.GetTarget() != null)
+                if (map.GetActorOnTile(targetedTiles[0]) == null && skillUser.GetTarget() != null)
                 {
                     skillUser.GetTarget().SetLocation(targetedTiles[0]);
-                    battle.map.UpdateActors();
+                    map.UpdateActors();
                 }
                 return;
             // This Acts Like A Teleport
             case "Move+Tile":
                 // Check if selected tile is free.
-                if (battle.map.GetActorOnTile(targetedTiles[0]) == null)
+                if (map.GetActorOnTile(targetedTiles[0]) == null)
                 {
-                    battle.map.ChangeTerrain(skillUser.GetLocation(), specifics);
-                    battle.moveManager.MoveActorToTile(skillUser, targetedTiles[0], battle.map);
-                    battle.map.ChangeTerrain(skillUser.GetLocation(), specifics);
-                    battle.map.UpdateMap();
+                    map.ChangeTerrain(skillUser.GetLocation(), specifics);
+                    map.MoveActorToTile(skillUser, targetedTiles[0]);
+                    map.ChangeTerrain(skillUser.GetLocation(), specifics);
+                    map.UpdateMap();
                 }
                 return;
             // The teleport behind you skill.
             case "Teleport+Attack":
                 targetTile = targetedTiles[0];
-                TacticActor targetActor = battle.map.GetActorOnTile(targetTile);
+                TacticActor targetActor = map.GetActorOnTile(targetTile);
                 if (targetActor == null) { return; }
-                if (battle.moveManager.TeleportToTarget(skillUser, targetActor, specifics, battle.map))
+                if (map.TeleportToTarget(skillUser, targetActor, specifics))
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targetActor, battle.map, power);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targetActor, map, power);
                 }
                 return;
             case "Attack+Grapple":
@@ -350,7 +351,7 @@ public class ActiveManager : MonoBehaviour
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
                     }
                 }
                 return;
@@ -363,19 +364,19 @@ public class ActiveManager : MonoBehaviour
                 if (!skillUser.Grappling()){return;}
                 targetTile = targetedTiles[0];
                 // Check if there is anyone there.
-                if (battle.map.GetActorOnTile(targetTile) != null)
+                if (map.GetActorOnTile(targetTile) != null)
                 {
                     // If so then damage both thrown and thrown into.
-                    battle.moveManager.DisplaceDamage(skillUser.GetGrappledActor(), Mathf.Max(skillUser.GetWeight(), 1), battle.map, targetTile, true, battle.map.GetActorOnTile(targetTile));
+                    map.DisplaceDamage(skillUser.GetGrappledActor(), Mathf.Max(skillUser.GetWeight(), 1), targetTile, true, map.GetActorOnTile(targetTile));
                     // Bounce the thrown onto the nearest empty tile.
-                    battle.moveManager.MoveActorToTile(skillUser.GetGrappledActor(), battle.map.GetClosestEmptyTile(battle.map.GetActorOnTile(targetTile)), battle.map);
+                    map.MoveActorToTile(skillUser.GetGrappledActor(), map.GetClosestEmptyTile(map.GetActorOnTile(targetTile)));
                 }
                 // Else move the thrown into the tile.
                 else
                 {
-                    battle.moveManager.MoveActorToTile(skillUser.GetGrappledActor(), targetTile, battle.map);
+                    map.MoveActorToTile(skillUser.GetGrappledActor(), targetTile);
                 }
-                battle.map.UpdateMap();
+                map.UpdateMap();
                 skillUser.ReleaseGrapple();
                 return;
             case "Ingest":
@@ -389,10 +390,10 @@ public class ActiveManager : MonoBehaviour
                 {
                     int grapplerLocation = skillUser.GetLocation();
                     int grappledLocation = skillUser.GetGrappledActor().GetLocation();
-                    battle.moveManager.MoveActorToTile(skillUser, grappledLocation, battle.map);
-                    battle.moveManager.MoveActorToTile(skillUser.GetGrappledActor(), grapplerLocation, battle.map);
+                    map.MoveActorToTile(skillUser, grappledLocation);
+                    map.MoveActorToTile(skillUser.GetGrappledActor(), grapplerLocation);
                     skillUser.ReleaseGrapple();
-                    battle.map.UpdateActors();
+                    map.UpdateActors();
                 }
                 return;
             case "Attack":
@@ -401,18 +402,18 @@ public class ActiveManager : MonoBehaviour
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
                     }
                 }
                 return;
             case "AttackAllEnemies":
-                targets = battle.map.AllEnemies(skillUser);
+                targets = map.AllEnemies(skillUser);
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
                     }
                 }
                 return;
@@ -422,7 +423,7 @@ public class ActiveManager : MonoBehaviour
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
                         skillUser.UpdateHealth(Mathf.Max(1, skillUser.GetAttack() - targets[i].GetDefense()), false);
                     }
                 }
@@ -431,7 +432,7 @@ public class ActiveManager : MonoBehaviour
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
                     active.AffectActor(targets[i], "Status", specifics, power);
                 }
                 return;
@@ -439,7 +440,7 @@ public class ActiveManager : MonoBehaviour
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
                     if (specifics == "Charmed" || specifics == "Taunted")
                     {
                         targets[i].SetTarget(skillUser);
@@ -451,99 +452,102 @@ public class ActiveManager : MonoBehaviour
                 if (targets.Count <= 0) { return; }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
                 }
-                battle.moveManager.DisplaceSkill(skillUser, targetedTiles, specifics, power, battle.map);
+                map.DisplaceSkill(skillUser, targetedTiles, specifics, power);
                 return;
             case "Attack+Move":
                 if (targets.Count <= 0) { return; }
+                targetTile = targetedTiles[0];
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
                 }
-                battle.moveManager.MoveSkill(skillUser, specifics, power, battle.map);
+                map.MoveSkill(skillUser, targetTile, specifics, power);
                 return;
             case "Move":
-                battle.moveManager.MoveSkill(skillUser, specifics, power, battle.map);
+                targetTile = targetedTiles[0];
+                map.MoveSkill(skillUser, targetTile, specifics, power);
                 return;
             case "Move+Attack":
                 // Move to the tile selected.
                 int prevTile = skillUser.GetLocation();
                 targetTile = targetedTiles[0];
-                if (battle.map.GetActorOnTile(targetTile) == null)
+                if (map.GetActorOnTile(targetTile) == null)
                 {
-                    battle.moveManager.MoveActorToTile(skillUser, targetTile, battle.map);
-                    battle.map.UpdateActors();
+                    map.MoveActorToTile(skillUser, targetTile);
+                    map.UpdateActors();
                 }
                 else { return; }
                 // Check if an actor is on the specified tile(s).
-                int attackTargetTile = battle.moveManager.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection());
-                if (battle.map.GetActorOnTile(attackTargetTile) != null)
+                int attackTargetTile = map.mapUtility.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection(), map.mapSize);
+                if (map.GetActorOnTile(attackTargetTile) != null)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, battle.map.GetActorOnTile(attackTargetTile), battle.map);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, map.GetActorOnTile(attackTargetTile), map);
                 }
                 return;
             case "MoveThrough+Attack":
                 targetTile = targetedTiles[0];
-                if (battle.map.GetActorOnTile(targetTile) == null)
+                if (map.GetActorOnTile(targetTile) == null)
                 {
                     return;
                 }
-                battle.moveManager.MoveThroughSkill(skillUser, targetTile, battle.map);
-                battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, battle.map.GetActorOnTile(targetTile), battle.map, power);
+                map.MoveThroughSkill(skillUser, targetTile);
+                attackManager.ActorAttacksActorWithAttackSpeed(skillUser, map.GetActorOnTile(targetTile), map, power);
                 return;
             case "Charge+Attack":
                 int startChargeTile = skillUser.GetLocation();
                 targetTile = targetedTiles[0];
                 // Try to move in straight line to the target.
-                List<int> chargePath = battle.moveManager.actorPathfinder.StraightPathToTile(startChargeTile, targetTile);
+                List<int> chargePath = map.mapUtility.StraightPathToTile(startChargeTile, targetTile, map.mapSize);
                 if (chargePath.Count <= 0){return;}
                 for (int i = 0; i < chargePath.Count; i++)
                 {
-                    if (battle.map.GetActorOnTile(chargePath[i]) != null)
+                    if (map.GetActorOnTile(chargePath[i]) != null)
                     {
                         break;
                     }
-                    battle.moveManager.MoveActorToTile(skillUser, chargePath[i], battle.map);
+                    map.MoveActorToTile(skillUser, chargePath[i]);
                 }
-                skillUser.SetDirection(battle.moveManager.DirectionBetweenLocations(startChargeTile, targetTile));
-                battle.map.UpdateActors();
+                skillUser.SetDirection(map.mapUtility.DirectionBetweenLocations(startChargeTile, targetTile, map.mapSize));
+                map.UpdateActors();
                 // Check if an actor is on the specified tile(s).
-                int chargeInto = battle.moveManager.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection());
-                if (battle.map.GetActorOnTile(chargeInto) != null)
+                int chargeInto = map.mapUtility.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection(), map.mapSize);
+                if (map.GetActorOnTile(chargeInto) != null)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, battle.map.GetActorOnTile(chargeInto), battle.map, power);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, map.GetActorOnTile(chargeInto), map, power);
                 }
                 return;
             case "Displace":
-                battle.moveManager.DisplaceSkill(skillUser, targetedTiles, specifics, power, battle.map);
+                map.DisplaceSkill(skillUser, targetedTiles, specifics, power);
                 return;
             case "TerrainEffect":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    battle.map.ChangeTEffect(targetedTiles[i], specifics);
+                    map.ChangeTEffect(targetedTiles[i], specifics);
                 }
                 return;
             case "DelayedTileEffect":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    battle.map.AddAura(skillUser, targetedTiles[i], specifics, power);
+                    map.AddAura(skillUser, targetedTiles[i], specifics, power);
                 }
                 return;
             case "Attack+TerrainEffect":
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
                 }
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    battle.map.ChangeTEffect(targetedTiles[i], specifics);
+                    map.ChangeTEffect(targetedTiles[i], specifics);
                 }
                 return;
             case "Trap":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
-                    battle.interactableMaker.PlaceTrap(battle.map, specifics, targetedTiles[i], skillUser);
+                    // TODO Move This To Map.
+                    // interactableMaker.PlaceTrap(map, specifics, targetedTiles[i], skillUser);
                 }
                 return;
             case "Swap":
@@ -552,20 +556,20 @@ public class ActiveManager : MonoBehaviour
                 {
                     case "Location":
                         if (targets.Count <= 0) { break; }
-                        battle.map.SwitchActorLocations(targets[0], skillUser);
+                        map.SwitchActorLocations(targets[0], skillUser);
                         break;
                     case "TerrainEffect":
-                        battle.map.SwitchTerrainEffect(targetedTiles[0], skillUser.GetLocation());
+                        map.SwitchTerrainEffect(targetedTiles[0], skillUser.GetLocation());
                         break;
                     case "Tile":
-                        battle.map.SwitchTile(targetedTiles[0], skillUser.GetLocation());
+                        map.SwitchTile(targetedTiles[0], skillUser.GetLocation());
                         break;
                 }
                 return;
             case "True Attack":
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.TrueDamageAttack(skillUser, targets[i], battle.map, power, specifics);
+                    attackManager.TrueDamageAttack(skillUser, targets[i], map, power, specifics);
                 }
                 return;
             // Should go through the attack manager for stab/mastery bonuses.
@@ -574,32 +578,32 @@ public class ActiveManager : MonoBehaviour
                 for (int i = 0; i < targets.Count; i++)
                 {
                     // Do an attack with stab and stuff.
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power, specifics);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, specifics);
                     // Also apply the elemental damage effects.
-                    active.AffectActor(targets[i], specifics + "Damage", skillUser.GetMagicPower().ToString(), 1, battle.map.combatLog);
+                    active.AffectActor(targets[i], specifics + "Damage", skillUser.GetMagicPower().ToString(), 1, map.combatLog);
                     // Also affect the map.
-                    battle.map.ElementalAttackOnTile(specifics, targets[i].GetLocation());
+                    map.ElementalAttackOnTile(specifics, targets[i].GetLocation());
                 }
                 return;
             // Directly does the elemental damage, doesn't need to go through the attack manager.
             case "ElementalDamage":
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    active.AffectActor(targets[i], specifics + "Damage", (power + skillUser.GetMagicPower()).ToString(), 1, battle.map.combatLog);
-                    battle.map.ElementalAttackOnTile(specifics, targets[i].GetLocation());
+                    active.AffectActor(targets[i], specifics + "Damage", (power + skillUser.GetMagicPower()).ToString(), 1, map.combatLog);
+                    map.ElementalAttackOnTile(specifics, targets[i].GetLocation());
                 }
                 return;
             case "Flat Attack":
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.FlatDamageAttack(skillUser, targets[i], battle.map, int.Parse(specifics));
+                    attackManager.FlatDamageAttack(skillUser, targets[i], map, int.Parse(specifics));
                 }
                 return;
             // Remove a random active skill.
             case "Attack+Amnesia":
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map, power);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
                         targets[i].RemoveRandomActiveSkill();
@@ -608,11 +612,11 @@ public class ActiveManager : MonoBehaviour
                 return;
             case "AllAllies":
                 // Get all allies from the map.
-                targets = battle.map.AllAllies(skillUser);
+                targets = map.AllAllies(skillUser);
                 active.AffectActors(targets, specifics, powerString, 1);
                 return;
             case "AllEnemies":
-                targets = battle.map.AllEnemies(skillUser);
+                targets = map.AllEnemies(skillUser);
                 active.AffectActors(targets, specifics, powerString, 1);
                 return;
             case "Command":
@@ -636,23 +640,23 @@ public class ActiveManager : MonoBehaviour
                         }
                         break;
                         case "Attack":
-                        if (battle.map.FacingActor(targets[i]))
+                        if (map.FacingActor(targets[i]))
                         {
-                            battle.attackManager.ActorAttacksActorWithAttackSpeed(targets[i], battle.map.ReturnClosestFacingActor(targets[i]), battle.map);
+                            attackManager.ActorAttacksActorWithAttackSpeed(targets[i], map.ReturnClosestFacingActor(targets[i]), map);
                         }
                         break;
                         case "Forward":
                         // Try to move forward.
-                        if (battle.map.FacingEmptyTile(targets[i]))
+                        if (map.FacingEmptyTile(targets[i]))
                         {
-                            battle.moveManager.CommandMovement(targets[i], battle.map);
+                            map.CommandMovement(targets[i]);
                         }
                         break;
                         case "Backward":
                         // Try to move backward.
-                        if (battle.map.FacingEmptyTile(targets[i], false))
+                        if (map.FacingEmptyTile(targets[i], false))
                         {
-                            battle.moveManager.CommandMovement(targets[i], battle.map, false);
+                            map.CommandMovement(targets[i], false);
                         }
                         break;
                     }
@@ -660,24 +664,24 @@ public class ActiveManager : MonoBehaviour
                 return;
             case "ChainLightningAttack":
                 // Keep track of the targets.
-                targets = battle.map.ChainLightningTargets(targetedTiles[0], int.Parse(specifics), power);
+                targets = map.ChainLightningTargets(targetedTiles[0], int.Parse(specifics), power);
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    battle.attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], battle.map);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
                 }
                 return;
             case "ChainLightning":
                 // Keep track of the targets.
-                targets = battle.map.ChainLightningTargets(targetedTiles[0]);
+                targets = map.ChainLightningTargets(targetedTiles[0]);
                 active.AffectActors(targets, specifics, powerString, 1);
                 return;
             case "MapChainLightning":
                 // Keep track of the targets.
-                targets = battle.map.ChainLightningTargets(targetedTiles[0]);
+                targets = map.ChainLightningTargets(targetedTiles[0]);
                 for (int i = 0; i < targets.Count; i++)
                 {
                     if (targets[i] == null){continue;}
-                    battle.map.ChangeTile(targets[i].GetLocation(), specifics, powerString);
+                    map.ChangeTile(targets[i].GetLocation(), specifics, powerString);
                 }
                 return;
             case "Learn":
@@ -708,13 +712,13 @@ public class ActiveManager : MonoBehaviour
                 }
                 return;
             case "Aura":
-                battle.map.AddAura(skillUser, targetedTiles[0], specifics, power);
+                map.AddAura(skillUser, targetedTiles[0], specifics, power);
                 return;
             case "Manaize":
                 // Light/Dark is different.
                 if (specifics == "Light")
                 {
-                    if (battle.map.GetTime() == "Day")
+                    if (map.GetTime() == "Day")
                     {
                         skillUser.RestoreMana(power);
                     }
@@ -722,7 +726,7 @@ public class ActiveManager : MonoBehaviour
                 }
                 else if (specifics == "Dark")
                 {
-                    if (battle.map.GetTime() == "Night")
+                    if (map.GetTime() == "Night")
                     {
                         skillUser.RestoreMana(power);
                     }
@@ -731,10 +735,10 @@ public class ActiveManager : MonoBehaviour
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
                     // Check if the target tile is of the terrain effect.
-                    if (battle.map.GetTerrainEffectOnTile(targetedTiles[i]).Contains(specifics))
+                    if (map.GetTerrainEffectOnTile(targetedTiles[i]).Contains(specifics))
                     {
                         // If so absorb the terrain effect to gain mana.
-                        battle.map.RemoveTerrainEffectOnTile(targetedTiles[i]);
+                        map.RemoveTerrainEffectOnTile(targetedTiles[i]);
                         skillUser.RestoreMana(power);
                     }
                 }
@@ -767,11 +771,11 @@ public class ActiveManager : MonoBehaviour
         active.AffectActors(targets, effect, specifics, power);
     }
     // All Skill Usage Should Go Through Here
-    public bool ActivateSkill(BattleManager battle, bool cost = true)
+    public bool ActivateSkill(bool cost = true)
     {
-        return ActivateSkillInternal(battle, cost, cost);
+        return ActivateSkillInternal(cost, cost);
     }
-    protected bool ActivateSkillInternal(BattleManager battle, bool spendEnergy, bool spendAction)
+    protected bool ActivateSkillInternal(bool spendEnergy, bool spendAction)
     {
         if (spendEnergy || spendAction)
         {
@@ -791,14 +795,14 @@ public class ActiveManager : MonoBehaviour
         bool temp = skillUser.RemoveTempActive(active.GetSkillName());
         skillUser.UpdateRoundSkillTracker(active.GetSkillName());
         skillUser.ClearNextSkillMods();
-        List<TacticActor> targets = battle.map.GetActorsOnTiles(targetedTiles);
+        List<TacticActor> targets = map.GetActorsOnTiles(targetedTiles);
         List<string> effects = active.GetAllEffects();
         for (int i = 0; i < effects.Count; i++)
         {
-            ApplyActiveEffects(battle, targets, effects[i], active.GetSpecificsAt(i), active.GetPowerAt(i), active.GetSelectedTile());
+            ApplyActiveEffects(targets, effects[i], active.GetSpecificsAt(i), active.GetPowerAt(i), active.GetSelectedTile());
         }
         passive.ApplyAfterSkillPassives(skillUser, targets, map, active, temp);
-        battle.map.ApplyAuraEffects(skillUser, "Skill");
+        map.ApplyAuraEffects(skillUser, "Skill");
         return true;
     }
     protected bool CanPaySkillCost(bool spendEnergy, bool spendAction)
@@ -808,11 +812,11 @@ public class ActiveManager : MonoBehaviour
         if (spendAction && skillUser.GetActions() < active.GetActionCost(skillUser, map)){return false;}
         return true;
     }
-    public bool CheckTriggeredSkillCost(BattleMap map)
+    public bool CheckTriggeredSkillCost()
     {
         return CanPaySkillCost(true, false);
     }
-    protected void ResolveTriggeredSkill(BattleManager battle, string triggerData)
+    protected void ResolveTriggeredSkill(string triggerData)
     {
         if (triggeredSkillDepth >= triggeredSkillDepthLimit || triggeredSkillDepth >= triggeredSkillStackDepthLimit)
         {
@@ -839,7 +843,7 @@ public class ActiveManager : MonoBehaviour
         triggeredSkillDepth++;
         try
         {
-            bool resolved = triggeredSkillResolver.TryResolve(triggerData, skillUser, this, battle, out triggeredCast);
+            bool resolved = triggeredSkillResolver.TryResolve(triggerData, skillUser, this, out triggeredCast);
             if (resolved)
             {
                 LogTriggeredSkillLoadedDetails("Resolved");
@@ -847,7 +851,7 @@ public class ActiveManager : MonoBehaviour
                 targetedTiles = new List<int>(triggeredCast.targetedTiles);
                 triggeredSkillEnergyBeforeCast = skillUser.GetEnergy();
                 triggeredSkillActionsBeforeCast = skillUser.GetActions();
-                ActivateSkillInternal(battle, true, false);
+                ActivateSkillInternal(true, false);
                 LogTriggeredSkillLoadedDetails("AfterCast");
             }
         }

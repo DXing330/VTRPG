@@ -720,7 +720,7 @@ public class ActorInitialStats : ActorPassives
             }
         }
     }
-    public string curseStatName;
+    public string curseStatName = "Curses";
     public void AddCurse(string newInfo)
     {
         if (newInfo.Length <= 0){return;}

@@ -16,11 +16,6 @@ public class EffectManager : ScriptableObject
     {
         passive.ApplyStartBattlePassives(actor, map);
     }
-    public void SummonedStartBattle(TacticActor actor, BattleMap map)
-    {
-        StartBattle(actor, map);
-        passive.AffectActor(actor, "SingleTemporarySkill", "Break Summon Link");
-    }
     public void StartTurn(TacticActor actor, BattleMap map)
     {
         map.ActorStartsTurn(actor);

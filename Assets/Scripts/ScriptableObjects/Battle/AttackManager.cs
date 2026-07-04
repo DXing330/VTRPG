@@ -59,8 +59,8 @@ public class AttackManager : ScriptableObject
         {
             if (showLog)
             {
-                map.combatLog.UpdateNewestLog("The attack misses!");
-                map.combatLog.AddDetailedLogs(passiveEffectString);
+                map.UpdateCombatLog("The attack misses!");
+                map.UpdateCombatLog(passiveEffectString, true);
             }
             return false;
         }
@@ -160,7 +160,7 @@ public class AttackManager : ScriptableObject
         damage = receiver.TakeDamage(damage, element);
         if (map != null)
         {
-            map.combatLog.UpdateNewestLog(receiver.GetPersonalName() + " takes " + damage + " " + element + " damage.");
+            map.UpdateCombatLog(receiver.GetPersonalName() + " takes " + damage + " " + element + " damage.");
         }
     }
     // Used for most spell effects.
@@ -187,9 +187,9 @@ public class AttackManager : ScriptableObject
         {
             defender.SetTarget(attacker);
         }
-        map.combatLog.UpdateNewestLog(defender.GetPersonalName() + " takes " + baseDamage + " damage.");
+        map.UpdateCombatLog(defender.GetPersonalName() + " takes " + baseDamage + " damage.");
         map.damageTracker.UpdateDamageStat(attacker, defender, baseDamage);
-        map.combatLog.AddDetailedLogs(finalDamageCalculation);
+        map.UpdateCombatLog(finalDamageCalculation, true);
     }
     protected void CheckMapPassives(TacticActor attacker, TacticActor defender, BattleMap map, int defenderTile, bool forAttacker = true, bool forDefender = true)
     {
@@ -210,7 +210,7 @@ public class AttackManager : ScriptableObject
         if (guard)
         {
             attackTarget = GetGuard(target, attacker, map);
-            map.combatLog.UpdateNewestLog(attackTarget.GetPersonalName() + " defends " + target.GetPersonalName() + " from the attack.");
+            map.UpdateCombatLog(attackTarget.GetPersonalName() + " defends " + target.GetPersonalName() + " from the attack.");
         }
         UpdateBattleStats(attacker, attackTarget);
         advantage = 0;
@@ -238,7 +238,7 @@ public class AttackManager : ScriptableObject
         {
             attackTarget.SetTarget(attacker);
         }
-        map.combatLog.UpdateNewestLog(attackTarget.GetPersonalName() + " takes " + baseDamage + " damage.");
+        map.UpdateCombatLog(attackTarget.GetPersonalName() + " takes " + baseDamage + " damage.");
         map.combatLog.AddDetailedLogs(passiveEffectString);
         map.combatLog.AddDetailedLogs(damageRolls);
         map.combatLog.AddDetailedLogs(finalDamageCalculation);
@@ -279,7 +279,7 @@ public class AttackManager : ScriptableObject
         {
             defender.SetTarget(attacker);
         }
-        map.combatLog.UpdateNewestLog(defender.GetPersonalName() + " takes " + baseDamage + " damage.");
+        map.UpdateCombatLog(defender.GetPersonalName() + " takes " + baseDamage + " damage.");
         passive.ApplyAfterAttackPassives(attacker, defender, baseDamage, map, true, critHit, counterAttack);
         map.damageTracker.UpdateDamageStat(attacker, defender, baseDamage);
     }
@@ -336,7 +336,7 @@ public class AttackManager : ScriptableObject
         if (guard)
         {
             attackTarget = GetGuard(target, attacker, map);
-            map.combatLog.UpdateNewestLog(attackTarget.GetPersonalName() + " defends " + target.GetPersonalName() + " from the attack.");
+            map.UpdateCombatLog(attackTarget.GetPersonalName() + " defends " + target.GetPersonalName() + " from the attack.");
         }
         attackTarget.UpdateRoundDefendTracker();
         advantage = 0;
@@ -407,7 +407,7 @@ public class AttackManager : ScriptableObject
         {
             attackTarget.SetTarget(attacker);
         }
-        map.combatLog.UpdateNewestLog(attackTarget.GetPersonalName() + " takes " + baseDamage + " damage.");
+        map.UpdateCombatLog(attackTarget.GetPersonalName() + " takes " + baseDamage + " damage.");
         map.damageTracker.UpdateDamageStat(attacker, attackTarget, baseDamage);
         map.combatLog.AddDetailedLogs(passiveEffectString);
         map.combatLog.AddDetailedLogs("Damage Calculations:");
@@ -421,21 +421,26 @@ public class AttackManager : ScriptableObject
             attackTarget.UseCounterAttack();
             // Set Counter Attack Equal To True Only Right Before The Counter Attack Hits.
             counterAttack = true;
-            map.combatLog.UpdateNewestLog(attackTarget.GetPersonalName() + " counter attacks " + attacker.GetPersonalName());
+            map.UpdateCombatLog(attackTarget.GetPersonalName() + " counter attacks " + attacker.GetPersonalName());
             ActorAttacksActor(attackTarget, attacker, map);
         }
         counterAttack = false;
         // TODO Trigger After Attack Auras Here.
         map.ApplyAuraEffects(attacker, "Attack");
     }
-
+    public int SimpleActorAttacksActor(TacticActor attacker, TacticActor target, int attack, int defense, int damageMultiplier = 100, string type = "Physical")
+    {
+        int finalDamage = attack;
+        finalDamage -= defense;
+        finalDamage = finalDamage * damageMultiplier / 100;
+        return target.TakeDamage(finalDamage, type);
+    }
     protected int RollAttackDamage(int baseAttack)
     {
         int roll = baseAttack + Random.Range(-baseAttack/3, baseAttack/3);
         damageRolls += " "+roll+" ";
         return roll;
     }
-
     protected int Advantage(int baseAttack, int advantage)
     {
         if (advantage < 0)
@@ -455,7 +460,6 @@ public class AttackManager : ScriptableObject
         damageRolls += ") + "+advantage.ToString();
         return damage + advantage;
     }
-
     protected int Disadvantage(int baseAttack, int disadvantage)
     {
         damageRolls += "Min(";
@@ -467,7 +471,6 @@ public class AttackManager : ScriptableObject
         damageRolls += ") - "+disadvantage.ToString();
         return damage - disadvantage;
     }
-
     protected void CheckPassives(List<string> characterPassives, TacticActor target, TacticActor attacker, BattleMap map)
     {
         for (int i = 0; i < characterPassives.Count; i++)
@@ -475,7 +478,6 @@ public class AttackManager : ScriptableObject
             ApplyPassiveEffect(characterPassives[i], target, attacker, map);
         }
     }
-
     protected void ActivatePassiveEffect(string passiveName, List<string> passiveStats, TacticActor target, TacticActor attacker, BattleMap map)
     {
         switch (passiveStats[3])
@@ -563,7 +565,6 @@ public class AttackManager : ScriptableObject
             break;
         }
     }
-
     protected void ApplyPassiveEffect(string pData, TacticActor target, TacticActor attacker, BattleMap map)
     {
         if (pData.Length < 6 || !pData.Contains("|"))
@@ -582,7 +583,6 @@ public class AttackManager : ScriptableObject
             ActivatePassiveEffect(passiveName, pStats, target, attacker, map);
         }
     }
-
     protected void ApplyAuraEffect(AuraEffect aura, TacticActor target, TacticActor attacker, BattleMap map)
     {
         List<string> pStats = aura.ReturnPassiveStats();
@@ -591,7 +591,6 @@ public class AttackManager : ScriptableObject
             ActivatePassiveEffect(pStats[0], pStats, target, attacker, map);
         }
     }
-
     protected int CheckTakeDamagePassives(List<string> passives, int damage, string damageType, TacticActor attacker, TacticActor target)
     {
         int originalDamage = damage;
@@ -608,7 +607,6 @@ public class AttackManager : ScriptableObject
         }
         return damage;
     }
-
     protected void CheckWeatherPassives(TacticActor target, TacticActor attacker, BattleMap map, bool forAttacker = true, bool forTarget = true)
     {
         string weather = map.GetWeather();
@@ -623,7 +621,6 @@ public class AttackManager : ScriptableObject
             ApplyPassiveEffect(attackingPassive, target, attacker, map);
         }
     }
-
     protected void CheckTEffectPassives(TacticActor target, TacticActor attacker, BattleMap map, int targetTileNumber, bool forAttacker = true, bool forTarget = true)
     {
         string targetTile = map.terrainEffectTiles[targetTileNumber];
@@ -639,7 +636,6 @@ public class AttackManager : ScriptableObject
             ApplyPassiveEffect(attackingPassive, target, attacker, map);
         }
     }
-
     protected void CheckTerrainPassives(TacticActor target, TacticActor attacker, BattleMap map, int targetTileNumber, bool forAttacker = true, bool forTarget = true)
     {
         string targetTile = map.mapInfo[targetTileNumber];
@@ -655,7 +651,6 @@ public class AttackManager : ScriptableObject
             ApplyPassiveEffect(attackingPassive, target, attacker, map);
         }
     }
-
     protected void CheckBorderPassives(TacticActor target, TacticActor attacker, BattleMap map, int targetTile, bool forAttacker = true, bool forTarget = true)
     {
         // Get the direction from the attacker to the direction.
@@ -676,7 +671,6 @@ public class AttackManager : ScriptableObject
             ApplyPassiveEffect(defendingPassive, target, attacker, map);
         }
     }
-
     protected void CheckBuildingPassives(TacticActor target, TacticActor attacker, BattleMap map, int targetTileNumber, bool forAttacker = true, bool forTarget = true)
     {
         // Check if any buildings are on the tiles.
@@ -693,7 +687,6 @@ public class AttackManager : ScriptableObject
             ApplyPassiveEffect(defendingPassive, target, attacker, map);
         }
     }
-
     // Always check for both.
     protected void CheckAuraEffects(TacticActor target, TacticActor attacker, BattleMap map)
     {

@@ -20,9 +20,19 @@ public class ActorSubGameStats : ActorStats
         currentRespawnTimer = 0;
         autoChessTemporaryTraits.Clear();
     }
-    // AK AUTOCHESS STATS
     [Header("AK AUTOCHESS STATS")]
+    public int autoChessLevel = 1;
+    public void SetAutoChessLevel(int newLevel){autoChessLevel = newLevel;}
+    public int GetAutoChessLevel(){return autoChessLevel;}
     public List<AutoChessEquipment> autoChessEquipment = new();
+    public List<AutoChessEquipment> GetAutoChessEquipment(){return autoChessEquipment;}
+    protected int autoChessMaxEquipCount = 3;
+    public bool AutoChessMaxEquipCount(){return (autoChessEquipment.Count >= autoChessMaxEquipCount);}
+    public void AddAutoChessEquipment(AutoChessEquipment newEquip)
+    {
+        if (AutoChessMaxEquipCount()){return;}
+        autoChessEquipment.Add(newEquip);
+    }
     public string autoSkill;
     public int autoSkillCooldown;
     public void SetSkillCoolDown(int newCD)
@@ -34,13 +44,18 @@ public class ActorSubGameStats : ActorStats
     public void ResetFactions(){autoChessFactions.Clear();}
     public void AddFaction(string factionName)
     {
-        autoChessFactions.Add(Enum.Parse<AutoChessFaction>(factionName));
+        AutoChessFaction newFaction = Enum.Parse<AutoChessFaction>(factionName);
+        if (autoChessFactions.Contains(newFaction)){return;}
+        autoChessFactions.Add(newFaction);
     }
-    public bool Faction(string factionName)
+    protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kjerag", "Laterano", "Sargon", "Victoria", "Yan"};
+    public bool AutoChessFaction(string factionName)
     {
         for (int i = 0; i < autoChessFactions.Count; i++)
         {
-            if (autoChessFactions[i].ToString() == factionName){return true;}
+            string factionString = autoChessFactions[i].ToString();
+            if (factionString == factionName){return true;}
+            if (factionString == "Harmony" && (autoChessMainFactions.Contains(factionName))){return true;}
         }
         return false;
     }

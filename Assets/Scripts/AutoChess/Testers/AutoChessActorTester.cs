@@ -23,7 +23,7 @@ public class AutoChessActorTester : MonoBehaviour
     {
         for (int i = 0; i < allFactions.Count; i++)
         {
-            Debug.Log(allFactions[i] + " Exists: " + testAutoChessActor.Faction(allFactions[i]));
+            Debug.Log(allFactions[i] + " Exists: " + testAutoChessActor.AutoChessFaction(allFactions[i]));
         }
     }
 }

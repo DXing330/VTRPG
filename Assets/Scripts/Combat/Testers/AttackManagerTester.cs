@@ -213,8 +213,8 @@ public class AttackManagerTester : MonoBehaviour
     {
         InitializeMap();
         activeManager.SetSkillFromName(activeName, dummyAttacker);
-        activeManager.GetTargetableTiles(dummyAttacker.GetLocation(), battleManager.moveManager.actorPathfinder);
-        activeManager.GetTargetedTiles(activeTargetTile, battleManager.moveManager.actorPathfinder);
+        activeManager.GetTargetableTiles(dummyAttacker.GetLocation());
+        activeManager.GetTargetedTiles(activeTargetTile);
         battleManager.ActivateSkill(activeName, dummyAttacker);
         map.combatLog.DebugLatestDetailsLog();
     }
@@ -223,8 +223,8 @@ public class AttackManagerTester : MonoBehaviour
     {
         InitializeMap();
         activeManager.SetSkillUser(dummyAttacker);
-        activeManager.GetTargetableTiles(dummyAttacker.GetLocation(), battleManager.moveManager.actorPathfinder);
-        activeManager.GetTargetedTiles(activeTargetTile, battleManager.moveManager.actorPathfinder);
+        activeManager.GetTargetableTiles(dummyAttacker.GetLocation());
+        activeManager.GetTargetedTiles(activeTargetTile);
         battleManager.ActivateSkill(activeName, dummyAttacker);
     }
     public string spellData;
@@ -234,8 +234,8 @@ public class AttackManagerTester : MonoBehaviour
         InitializeMap();
         activeManager.SetSkillUser(dummyAttacker);
         activeManager.SetSpell(spellData);
-        activeManager.GetTargetableTiles(dummyAttacker.GetLocation(), battleManager.moveManager.actorPathfinder, true);
-        activeManager.GetTargetedTiles(activeTargetTile, battleManager.moveManager.actorPathfinder, true);
+        activeManager.GetTargetableTiles(dummyAttacker.GetLocation(), true);
+        activeManager.GetTargetedTiles(activeTargetTile, true);
         battleManager.ActivateSpell(dummyAttacker);
         map.UpdateMap();
     }

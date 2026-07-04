@@ -11,10 +11,9 @@ public class BattleMapUtility : ScriptableObject
     public TacticActor GetActorOnTile(BattleMap map, int tileNumber, bool includeInvisible = true)
     {
         if (tileNumber < 0){ return null; }
-        string actorName = map.actorTiles[tileNumber];
         for (int i = 0; i < map.battlingActors.Count; i++)
         {
-            if (map.battlingActors[i].GetSpriteName() == actorName && map.battlingActors[i].GetLocation() == tileNumber && map.battlingActors[i].GetHealth() > 0)
+            if (map.battlingActors[i].GetLocation() == tileNumber && map.battlingActors[i].GetHealth() > 0)
             {
                 if (!includeInvisible && map.battlingActors[i].invisible){return null;}
                 return map.battlingActors[i];
@@ -96,6 +95,42 @@ public class BattleMapUtility : ScriptableObject
         int facingTile = mapUtility.PointInDirection(facingActor.GetLocation(), facingActor.GetDirection(), map.mapSize);
         return GetActorOnTile(map, facingTile);
     }
+    // Moving Utilities
+    public void MoveSkill(TacticActor mover, int targetTile, string moveDirection, int distance, BattleMap map)
+    {
+        int currentLocation = mover.GetLocation();
+        int moveSkillDirection = mapUtility.DirectionBetweenLocations(currentLocation, targetTile, map.mapSize);
+        switch (moveDirection)
+        {
+            case "Forward":
+                break;
+            case "Back":
+                moveSkillDirection = (moveSkillDirection + 3) % 6;
+                break;
+        }
+        // Get the tile to move to.
+        int nextLocation = mapUtility.GetTileByDirectionDistance(currentLocation, moveSkillDirection, distance, map.mapSize);
+        // Check if it is availabe.
+        if (GetActorOnTile(map, nextLocation) == null)
+        {
+            // Move to the tile.
+            map.MoveActorToTile(mover, nextLocation);
+        }
+    }
+    public void MoveThroughSkill(TacticActor mover, int tile, BattleMap map)
+    {
+        int distance = mapUtility.DistanceBetweenTiles(mover.GetLocation(), tile, map.mapSize);
+        int direction = mapUtility.DirectionBetweenLocations(mover.GetLocation(), tile, map.mapSize);
+        int nextLocation = tile;
+        for (int i = 0; i < distance; i++)
+        {
+            nextLocation = mapUtility.PointInDirection(nextLocation, direction, map.mapSize);
+        }
+        if (GetActorOnTile(map, nextLocation) == null)
+        {
+            map.MoveActorToTile(mover, nextLocation);
+        }
+    }
     public int AKRaidMove(TacticActor actor, BattleMap map)
     {
         // Get All Enemies.
@@ -112,6 +147,161 @@ public class BattleMapUtility : ScriptableObject
             }
         }
         return -1;
+    }
+    public bool TeleportToTarget(TacticActor mover, TacticActor target, string direction, BattleMap map)
+    {
+        int dir = -1;
+        int tile = -1;
+        switch (direction)
+        {
+            case "Behind":
+                dir = target.GetDirection();
+                dir = (dir + 3) % 6;
+                break;
+        }
+        if (dir == -1) { return false; }
+        tile = mapUtility.PointInDirection(target.GetLocation(), dir, map.mapSize);
+        // Can't teleport is already actor there.
+        if (GetActorOnTile(map, tile) != null) { return false; }
+        mover.SetLocation(tile);
+        return true;
+    }
+    public void DisplaceSkill(TacticActor displacer, List<int> targetedTiles, string displaceType, int force, BattleMap map)
+    {
+        int relativeForce = force;
+        int elevationDifference = 0;
+        TacticActor displaced = null;
+        switch (displaceType)
+        {
+            case "Pull":
+            for (int i = 0; i < targetedTiles.Count; i++)
+            {
+                displaced = GetActorOnTile(map, targetedTiles[i]);
+                if (displaced == null){continue;}
+                elevationDifference = map.ReturnElevation(displacer.GetLocation()) - map.ReturnElevation(displaced.GetLocation());
+                relativeForce = force - elevationDifference + displacer.GetWeight() - displaced.GetWeight();
+                DisplaceActor(displaced, map.DirectionBetweenActors(displaced, displacer), relativeForce, map);
+            }
+            break;
+            case "Push":
+            for (int i = 0; i < targetedTiles.Count; i++)
+            {
+                displaced = GetActorOnTile(map, targetedTiles[i]);
+                if (displaced == null){continue;}
+                elevationDifference = map.ReturnElevation(displacer.GetLocation()) - map.ReturnElevation(displaced.GetLocation());
+                relativeForce = force + elevationDifference + displacer.GetWeight() - displaced.GetWeight();
+                DisplaceActor(displaced, map.DirectionBetweenActors(displacer, displaced), relativeForce, map);
+            }
+                break;
+            case "Flip":
+                for (int i = 0; i < targetedTiles.Count; i++)
+                {
+                    displaced = GetActorOnTile(map, targetedTiles[i]);
+                    if (displaced == null) { continue; }
+                    elevationDifference = map.ReturnElevation(displacer.GetLocation()) - map.ReturnElevation(displaced.GetLocation());
+                    relativeForce = force - Mathf.Abs(elevationDifference) + displacer.GetWeight() - displaced.GetWeight();
+                    if (relativeForce >= 0)
+                    {
+                        // Get the tile that is in the opposite direction the same distance away.
+                        int direction = map.DirectionBetweenActors(displaced, displacer);
+                        int distance = Mathf.Max(map.DistanceBetweenActors(displacer, displaced), force);
+                        int tile = displacer.GetLocation();
+                        int furthestTile = displaced.GetLocation();
+                        for (int j = 0; j < distance; j++)
+                        {
+                            int nextTile = mapUtility.PointInDirection(tile, direction, map.mapSize);
+                            if (nextTile < 0)
+                            {
+                                break;
+                            }
+                            if (GetActorOnTile(map, nextTile) == null)
+                            {
+                                furthestTile = nextTile;
+                            }
+                            tile = nextTile;
+                        }
+                        // Check if the tile is empty.
+                        if (GetActorOnTile(map, tile) == null)
+                        {
+                            // Move the displaced into that tile.
+                            map.MoveActorToTile(displaced, tile);
+                        }
+                        else
+                        {
+                            map.MoveActorToTile(displaced, furthestTile);
+                        }
+                    }
+                }
+                break;
+            case "Sideways":
+                // Randomly move them in a direction that is not forward or back.
+                for (int i = 0; i < targetedTiles.Count; i++)
+                {
+                    displaced = GetActorOnTile(map, targetedTiles[i]);
+                    if (displaced == null){continue;}
+                    elevationDifference = map.ReturnElevation(displacer.GetLocation()) - map.ReturnElevation(displaced.GetLocation());
+                    relativeForce = force + elevationDifference + displacer.GetWeight() - displaced.GetWeight();
+                    List<int> exceptDirections = new List<int>();
+                    exceptDirections.Add(map.DirectionBetweenActors(displaced, displacer));
+                    exceptDirections.Add(map.DirectionBetweenActors(displacer, displaced));
+                    DisplaceActor(displaced, ReturnRandomDirection(exceptDirections), relativeForce, map);
+                }
+                break;
+        }
+        map.UpdateActors();
+    }
+    public int ReturnRandomDirection(List<int> except)
+    {
+        if (except.Count > 5){return -1;}
+        int direction = Random.Range(0, 6);
+        if (except.Contains(direction))
+        {
+            return ReturnRandomDirection(except);
+        }
+        return direction;
+    }
+    protected void DisplaceActor(TacticActor actor, int direction, int force, BattleMap map)
+    {
+        int displaceDamage = Mathf.Max(actor.GetWeight(), 1) * force * 6;
+        int nextTile = actor.GetLocation();
+        int initialElevation = map.GetTileElevation(nextTile);
+        for (int i = 0; i < force; i++)
+        {
+            nextTile = mapUtility.PointInDirection(nextTile, direction, map.mapSize);
+            // Can't push someone out of bounds.
+            if (nextTile < 0) { break; }
+            // TODO Can't push someone through a wall.
+            // Need to check the border in the opposite direction of the next tile.
+            // Can't push someone through a building.
+            if (map.GetBuildingOnTile(nextTile) != "")
+            {
+                map.DisplaceDamage(actor, force, nextTile, false, null, true);
+                break;
+            }
+            // Tiles are passable if no one is occupying them.
+            if (GetActorOnTile(map, nextTile) == null)
+            {
+                map.MoveActorToTile(actor, nextTile);
+            }
+            else if (GetActorOnTile(map, nextTile) != null)
+            {
+                TacticActor oActor = GetActorOnTile(map, nextTile);
+                // Damage both the displaced actor and actor displaced into.
+                map.DisplaceDamage(actor, force, nextTile, true, oActor);
+                // Chain displacement for fun.
+                if (i < force - 1)
+                {
+                    DisplaceActor(oActor, direction, force - i - 1, map);
+                }
+                break;
+            }
+        }
+        int finalElevation = map.GetTileElevation(actor.GetLocation());
+        // Falling damage.
+        if (finalElevation < initialElevation)
+        {
+            map.FallingDamage(actor, initialElevation - finalElevation);
+        }
     }
     // Calculation Utilities.
     public int AverageActorHealth(BattleMap map)

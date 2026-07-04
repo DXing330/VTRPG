@@ -250,6 +250,7 @@ public class BattleMap : MapManager
         buildingHealths.Add(int.Parse(buHPDef[0]));
         buildingDefenses.Add(int.Parse(buHPDef[1]));
         UpdateMoveCostManager();
+        UpdateMap();
     }
     protected void ApplyBuildingMovingEffect(TacticActor actor, int tileNumber)
     {
@@ -358,10 +359,35 @@ public class BattleMap : MapManager
         endOfB.AddRange(battlingActors);
         return endOfB;
     }
+    public ActorMaker actorMaker;
     public List<TacticActor> battlingActors;
+    // All Summoning Should Go Through Here?
+    public void SpawnAndAddActor(int location, string actorName, int team = 0, TacticActor summoner = null)
+    {
+        TacticActor newActor = actorMaker.SummonActor(location, actorName, team);
+        // TODO Add Battle Modifiers?
+        AddActorToBattle(newActor);
+        passiveEffect.ApplyStartBattlePassives(newActor, this);
+        if (summoner != null)
+        {
+            passiveEffect.AffectActor(newActor, "SingleTemporarySkill", "Break Summon Link");
+            summoner.AddSummonedActor(newActor);
+        }
+    }
     public void ResetActors()
     {
         battlingActors.Clear();
+    }
+    public void RemoveActorWithID(int ID)
+    {
+        for (int i = 0; i < battlingActors.Count; i++)
+        {
+            if (battlingActors[i].GetID() == ID)
+            {
+                battlingActors.RemoveAt(i);
+                return;
+            }
+        }
     }
     public void AddActorToBattle(TacticActor actor)
     {
@@ -556,8 +582,7 @@ public class BattleMap : MapManager
             int akRaidTile = battleMapUtility.AKRaidMove(actor, this);
             if (akRaidTile >= 0)
             {
-                battleManager.moveManager.MoveActorToTile(actor, akRaidTile, this);
-                UpdateMap();
+                MoveActorToTile(actor, akRaidTile);
             }
             // Else return, don't try to move if there's no valid target.
             return;
@@ -565,8 +590,7 @@ public class BattleMap : MapManager
         int rTile = mapUtility.PointInDirection(actor.GetLocation(), direction, mapSize);
         if (GetActorOnTile(rTile) == null)
         {
-            battleManager.moveManager.MoveActorToTile(actor, rTile, this);
-            UpdateMap();
+            MoveActorToTile(actor, rTile);
         }
     }
     public void SwitchActorLocations(TacticActor actor1, TacticActor actor2)
@@ -680,18 +704,15 @@ public class BattleMap : MapManager
     {
         ReviveActor(actor);
     }
-    public List<TacticActor> RemoveActorsFromBattle(int turnNumber = -1)
+    public List<TacticActor> RemoveActorsFromBattle()
     {
         List<TacticActor> deadActors = new List<TacticActor>();
-        int originalTurnNumber = turnNumber;
         for (int i = battlingActors.Count - 1; i >= 0; i--)
         {
             if (ActorEscaped(battlingActors[i].GetSpriteName()))
             {
                 UpdateCombatLog(battlingActors[i].GetPersonalName() + " escaped from the battle.");
                 battlingActors.RemoveAt(i);
-                // If someone whose turn already passed escapes, then the turn count needs to be decremented to avoid skipping someones turn.
-                if (i <= originalTurnNumber) { turnNumber--; }
                 continue;
             }
             if (battlingActors[i].GetHealth() <= 0)
@@ -706,15 +727,12 @@ public class BattleMap : MapManager
                 if (battlingActors[i].WasSacrificed())
                 {
                     battlingActors.RemoveAt(i);
-                    if (i <= originalTurnNumber) { turnNumber--; }
                     continue;
                 }
                 // Apply the death passives here.
                 deadActors.Add(battlingActors[i]);
                 defeatedActors.Add(battlingActors[i]);
                 battlingActors.RemoveAt(i);
-                // If someone whose turn already passed dies, then the turn count needs to be decremented to avoid skipping someones turn.
-                if (i <= originalTurnNumber){turnNumber--;}
             }
         }
         return deadActors;
@@ -981,6 +999,10 @@ public class BattleMap : MapManager
     }
     public StatDatabase terrainTerrainInteractions;
     public List<string> terrainEffectTiles;
+    public void SetTerrainEffectTiles(List<string> newInfo)
+    {
+        terrainEffectTiles = new List<string>(newInfo);
+    }
     public string GetTerrainEffectOnTile(int tileNumber)
     {
         if (tileNumber < 0 || tileNumber >= terrainEffectTiles.Count){return "";}
@@ -1997,7 +2019,99 @@ public class BattleMap : MapManager
         }
         return all;
     }
-
+    // MOVEMENT UTILITIES.
+    public void DisplaceSkill(TacticActor displacer, List<int> targetedTiles, string displaceType, int force)
+    {
+        battleMapUtility.DisplaceSkill(displacer, targetedTiles, displaceType, force, this);
+    }
+    public void DisplaceDamage(TacticActor actor, int force, int nextTile, bool actorCollide = false, TacticActor actor2 = null, bool buildingCollide = false)
+    {
+        int displaceDamage = Mathf.Max(actor.GetWeight(), 1) * force * 6;
+        int collideDamage = actor.TakeEffectDamage(displaceDamage);
+        if (buildingCollide)
+        {
+            UpdateCombatLog(actor.GetPersonalName() + " collides with a " + GetBuildingOnTile(nextTile) + " and takes " + collideDamage + " damage.");
+        }
+        else if (actorCollide)
+        {
+            UpdateCombatLog(actor.GetPersonalName() + " collides with " + actor2.GetPersonalName() + " and takes " + collideDamage + " damage.");
+            collideDamage = actor2.TakeEffectDamage(displaceDamage);
+            UpdateCombatLog(actor2.GetPersonalName() + " takes " + collideDamage + " damage.");
+        }
+        else
+        {
+            UpdateCombatLog(actor.GetPersonalName() + " collides with a " + mapInfo[nextTile] + " and takes " + collideDamage + " damage.");
+        }
+    }
+    public void FallingDamage(TacticActor actor, int fallHeight)
+    {
+        //Flyers don't take falling damage.
+        if (actor.GetMoveType() == "Flying"){return;}
+        int potentiaFallDamage = Mathf.Max(actor.GetWeight(), 1) * fallHeight * fallHeight * 6;
+        int fallDamage = actor.TakeEffectDamage(potentiaFallDamage);
+        UpdateCombatLog(actor.GetPersonalName() + " takes " + fallDamage + " damage from falling.");
+    }
+    public void CommandMovement(TacticActor actor, bool forward = true)
+    {
+        int dir = actor.GetDirection();
+        if (!forward)
+        {
+            dir = (dir + 3) % 6;
+        }
+        int newTile = mapUtility.PointInDirection(actor.GetLocation(), dir, mapSize);
+        MoveActorToTile(actor, newTile);
+    }
+    public bool TeleportToTarget(TacticActor mover, TacticActor target, string direction)
+    {
+        return battleMapUtility.TeleportToTarget(mover, target, direction, this);
+    }
+    public void MoveSkill(TacticActor mover, int targetTile, string moveDirection, int distance)
+    {
+        battleMapUtility.MoveSkill(mover, targetTile, moveDirection, distance, this);
+    }
+    public void MoveThroughSkill(TacticActor mover, int tile)
+    {
+        battleMapUtility.MoveThroughSkill(mover, tile, this);
+    }
+    // ALL Movement Should Go Through Here.
+    public void MoveActorToTile(TacticActor actor, int tile, MoveCostManager moveManager = null)
+    {
+        actor.SetDirection(mapUtility.DirectionBetweenLocations(actor.GetLocation(), tile, mapSize));
+        actor.SetLocation(tile);
+        ApplyMovePassiveEffects(actor, tile, moveManager);
+        UpdateMap();
+    }
+    public void ApplyMovePassiveEffects(TacticActor actor, int location, MoveCostManager moveManager = null)
+    {
+        // Updates the combat log when moving.
+        ApplyMovingTileEffect(actor, location, moveManager);
+        List<string> movingPassives = actor.GetMovingPassives();
+        List<string> passiveInfo = new List<string>();
+        //int location = mover.GetLocation();
+        for (int i = 0; i < movingPassives.Count; i++)
+        {
+            passiveInfo = movingPassives[i].Split("|").ToList();
+            if (passiveInfo.Count < 6) { continue; }
+            // Only apply passives that affect the user or the map.
+            switch (passiveInfo[3])
+            {
+                case "Self":
+                    if (passiveEffect.CheckMovingCondition(actor, passiveInfo[1], passiveInfo[2], location, this))
+                    {
+                        passiveEffect.AffectActor(actor, passiveInfo[4], passiveInfo[5]);
+                    }
+                    break;
+                case "MoveCost":
+                    break;
+                case "Map":
+                    if (passiveEffect.CheckMovingCondition(actor, passiveInfo[1], passiveInfo[2], location, this))
+                    {
+                        passiveEffect.AffectMap(actor, passiveInfo[4], passiveInfo[5], this);
+                    }
+                    break;
+            }
+        }
+    }
     public void MoveActor(TacticActor actor, string effect, string specifics)
     {
         int tile = -1;
@@ -2011,10 +2125,9 @@ public class BattleMap : MapManager
             tile = mapUtility.PointInDirection(start, direction, mapSize);
             if (tile == start || tile < 0){return;}
             if (GetActorOnTile(tile) != null){return;}
-            battleManager.moveManager.MoveActorToTile(actor, tile, this);
+            MoveActorToTile(actor, tile);
             break;
         }
-        UpdateMap();
     }
     // ALL Movement Should Go Through Here. Thus update the combat log here, the actor's direction should be updated before this is called, based on how the actor moved into the tile.
     public bool ApplyMovingTileEffect(TacticActor actor, int tileNumber, MoveCostManager moveManager = null)

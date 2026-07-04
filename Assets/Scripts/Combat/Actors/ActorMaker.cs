@@ -109,7 +109,7 @@ public class ActorMaker : MonoBehaviour
         newActor.SetPersonalName(actorName);
         newActor.SetTeam(team);
         passiveOrganizer.OrganizeActorPassives(newActor);
-        newActor.StartTurnResetStats();
+        newActor.InitializeStats();
         return newActor;
     }
     // Actor Maker is in charge of equipment in relation to actor starting stats for now.

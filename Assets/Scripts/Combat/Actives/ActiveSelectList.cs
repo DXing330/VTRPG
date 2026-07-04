@@ -52,7 +52,7 @@ public class ActiveSelectList : SelectList
             ResetState();
             return;
         }
-        activeManager.GetTargetableTiles(battle.GetTurnActor().GetLocation(), battle.moveManager.actorPathfinder);
+        activeManager.GetTargetableTiles(battle.GetTurnActor().GetLocation());
         activeManager.ResetTargetedTiles();
         activeManager.CheckIfSingleTargetableTile();
         battle.map.UpdateHighlights(activeManager.ReturnTargetableTiles());
@@ -76,7 +76,7 @@ public class ActiveSelectList : SelectList
             return;
         }
         activeDescription.text = descriptionViewer.ReturnSpellDescription(activeManager.magicSpell, activeManager.skillUser);
-        activeManager.GetTargetableTiles(battle.GetTurnActor().GetLocation(), battle.moveManager.actorPathfinder, true);
+        activeManager.GetTargetableTiles(battle.GetTurnActor().GetLocation(), true);
         activeManager.ResetTargetedTiles();
         activeManager.CheckIfSingleTargetableTile();
         battle.map.UpdateHighlights(activeManager.ReturnTargetableTiles());

@@ -86,12 +86,7 @@ public class MapDisplayer : ScriptableObject
             {
                 spriteScale = 1f;
             }
-            mapTiles[i].UpdateStyledLayerSprite(
-                layerSprites[layer].SpriteDictionary(mapInfo[nextTile]),
-                layerSprites[layer].GetColor(mapInfo[nextTile], mapTiles[i].GetDefaultLayerColor(layer)),
-                spriteScale,
-                layer
-            );
+            mapTiles[i].UpdateStyledLayerSprite(layerSprites[layer].SpriteDictionary(mapInfo[nextTile]), layerSprites[layer].GetColor(mapInfo[nextTile], mapTiles[i].GetDefaultLayerColor(layer)), spriteScale, layer);
         }
         if (updateDirections)
         {

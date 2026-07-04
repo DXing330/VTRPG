@@ -40,10 +40,10 @@ public class TriggeredSkillResolver : MonoBehaviour
         }
     }
 
-    public bool TryResolve(string triggerData, TacticActor caster, ActiveManager activeManager, BattleManager battle, out TriggeredSkillCast resolvedCast)
+    public bool TryResolve(string triggerData, TacticActor caster, ActiveManager activeManager, out TriggeredSkillCast resolvedCast)
     {
         resolvedCast = null;
-        if (string.IsNullOrEmpty(triggerData) || caster == null || activeManager == null || battle == null){return false;}
+        if (string.IsNullOrEmpty(triggerData) || caster == null || activeManager == null){return false;}
         string[] triggerDetails = SplitTriggerData(triggerData);
         if (triggerDetails.Length < 2){return false;}
         string selectorData = triggerDetails[0];
@@ -57,7 +57,7 @@ public class TriggeredSkillResolver : MonoBehaviour
         for (int i = 0; i < candidateSkills.Count; i++)
         {
             TriggeredSkillCast candidateCast;
-            if (TryResolveCandidate(candidateSkills[i], targetMode, caster, activeManager, battle, out candidateCast))
+            if (TryResolveCandidate(candidateSkills[i], targetMode, caster, activeManager, out candidateCast))
             {
                 legalCasts.Add(candidateCast);
             }
@@ -68,7 +68,7 @@ public class TriggeredSkillResolver : MonoBehaviour
         if (legalCasts.Count <= 0){return false;}
         resolvedCast = legalCasts[Random.Range(0, legalCasts.Count)];
         activeManager.SetSkillFromName(resolvedCast.skillName, caster);
-        DebugResolvedCast(targetMode, resolvedCast, battle);
+        DebugResolvedCast(targetMode, resolvedCast, activeManager.map);
         return true;
     }
 
@@ -186,27 +186,27 @@ public class TriggeredSkillResolver : MonoBehaviour
         return names;
     }
 
-    protected bool TryResolveCandidate(string skillName, string targetMode, TacticActor caster, ActiveManager activeManager, BattleManager battle, out TriggeredSkillCast resolvedCast)
+    protected bool TryResolveCandidate(string skillName, string targetMode, TacticActor caster, ActiveManager activeManager, out TriggeredSkillCast resolvedCast)
     {
         resolvedCast = null;
         if (!activeManager.SkillExists(skillName)){return false;}
         activeManager.SetSkillFromName(skillName, caster);
-        if (!activeManager.CheckTriggeredSkillCost(battle.map)){return false;}
+        if (!activeManager.CheckTriggeredSkillCost()){return false;}
 
         switch (targetMode)
         {
             case "Self":
-            return TryResolveSelf(skillName, caster, activeManager, battle, out resolvedCast);
+            return TryResolveSelf(skillName, caster, activeManager, out resolvedCast);
             case "RandomEnemy":
-            return TryResolveRandomEnemy(skillName, caster, activeManager, battle, out resolvedCast);
+            return TryResolveRandomEnemy(skillName, caster, activeManager, out resolvedCast);
         }
         return false;
     }
 
-    protected bool TryResolveSelf(string skillName, TacticActor caster, ActiveManager activeManager, BattleManager battle, out TriggeredSkillCast resolvedCast)
+    protected bool TryResolveSelf(string skillName, TacticActor caster, ActiveManager activeManager, out TriggeredSkillCast resolvedCast)
     {
         int selectedTile = caster.GetLocation();
-        List<int> targetedTiles = activeManager.GetTargetedTiles(selectedTile, battle.moveManager.actorPathfinder);
+        List<int> targetedTiles = activeManager.GetTargetedTiles(selectedTile);
         if (!targetedTiles.Contains(selectedTile))
         {
             targetedTiles.Add(selectedTile);
@@ -215,19 +215,19 @@ public class TriggeredSkillResolver : MonoBehaviour
         return true;
     }
 
-    protected bool TryResolveRandomEnemy(string skillName, TacticActor caster, ActiveManager activeManager, BattleManager battle, out TriggeredSkillCast resolvedCast)
+    protected bool TryResolveRandomEnemy(string skillName, TacticActor caster, ActiveManager activeManager, out TriggeredSkillCast resolvedCast)
     {
         resolvedCast = null;
         List<TriggeredSkillCast> legalCasts = new List<TriggeredSkillCast>();
-        List<int> targetableTiles = activeManager.GetTargetableTiles(caster.GetLocation(), battle.moveManager.actorPathfinder);
-        List<TacticActor> enemies = battle.map.AllEnemies(caster);
+        List<int> targetableTiles = activeManager.GetTargetableTiles(caster.GetLocation());
+        List<TacticActor> enemies = activeManager.map.AllEnemies(caster);
         for (int i = 0; i < enemies.Count; i++)
         {
             if (enemies[i] == null || enemies[i].GetHealth() <= 0){continue;}
             int enemyTile = enemies[i].GetLocation();
             if (!targetableTiles.Contains(enemyTile)){continue;}
-            List<int> targetedTiles = activeManager.GetTargetedTiles(enemyTile, battle.moveManager.actorPathfinder);
-            List<TacticActor> targetedActors = battle.map.GetActorsOnTiles(targetedTiles);
+            List<int> targetedTiles = activeManager.GetTargetedTiles(enemyTile);
+            List<TacticActor> targetedActors = activeManager.map.GetActorsOnTiles(targetedTiles);
             if (!targetedActors.Contains(enemies[i])){continue;}
             legalCasts.Add(new TriggeredSkillCast(skillName, enemyTile, new List<int>(targetedTiles)));
         }
@@ -236,10 +236,10 @@ public class TriggeredSkillResolver : MonoBehaviour
         return true;
     }
 
-    protected void DebugResolvedCast(string targetMode, TriggeredSkillCast resolvedCast, BattleManager battle)
+    protected void DebugResolvedCast(string targetMode, TriggeredSkillCast resolvedCast, BattleMap map)
     {
         if (!debugTriggeredSkillTargets){return;}
-        List<TacticActor> targetedActors = battle.map.GetActorsOnTiles(resolvedCast.targetedTiles);
+        List<TacticActor> targetedActors = map.GetActorsOnTiles(resolvedCast.targetedTiles);
         List<string> actorDetails = new List<string>();
         for (int i = 0; i < targetedActors.Count; i++)
         {

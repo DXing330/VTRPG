@@ -6,6 +6,8 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "PassiveOrganizer", menuName = "ScriptableObjects/BattleLogic/PassiveOrganizer", order = 1)]
 public class PassiveOrganizer : ScriptableObject
 {
+    // Realistic 6 In Game, Can Increase Indefinitely.
+    protected int maxLevelPerPassive = 12;
     public List<string> testPassiveList;
     public List<string> testPassiveLevels;
     public MultiKeyStatDatabase passiveNameLevels;
@@ -50,7 +52,8 @@ public class PassiveOrganizer : ScriptableObject
         for (int i = 0; i < passives.Count; i++)
         {
             List<string> sortedPassives = new List<string>();
-            for (int j = 1; j <= int.Parse(passiveLevels[i]); j++)
+            // Set a limit since the autochess stacking passives can go arbitrarily high levels.
+            for (int j = 1; j <= Mathf.Min(int.Parse(passiveLevels[i]), maxLevelPerPassive); j++)
             {
                 passiveName = passiveNameLevels.GetMultiKeyValue(passives[i], j.ToString());
                 if (passiveName.Length <= 1)
@@ -70,8 +73,9 @@ public class PassiveOrganizer : ScriptableObject
 
     public void AddSortedPassiveNewLevel(TacticActor actor, string passive, int passiveLevel)
     {
+        if (passiveLevel > maxLevelPerPassive){return;}
         string passiveName = passiveNameLevels.GetMultiKeyValue(passive, passiveLevel.ToString());
-        if (passiveName == passive && passiveLevel > 1){return;}
+        if (passiveName == ""){return;}
         AddSortedPassive(actor, passiveName);
     }
 

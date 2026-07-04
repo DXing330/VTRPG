@@ -366,7 +366,7 @@ public class PassiveSkill : SkillEffect
             targets = map.AllAllies(actor);
             for (int i = 0; i < targets.Count; i++)
             {
-                if (targets[i].Faction(targetFaction))
+                if (targets[i].AutoChessFaction(targetFaction))
                 {
                     AffectActor(targets[i], effect, specifics);
                 }
@@ -394,6 +394,18 @@ public class PassiveSkill : SkillEffect
             case "AKRaidMove":
             case "MoveSelf":
                 map.MoveActorPassive(actor, effect, specifics);
+                break;
+            case "AKAgile":
+                // Always give it to yourself.
+                AffectActor(actor, effect, specifics);
+                targets = map.GetAdjacentAllies(actor);
+                for (int j = 0; j < targets.Count; j++)
+                {
+                    // Don't let allies double dip on agile stacks.
+                    if (targets[j].AutoChessFaction("Agile")){return;}
+                    if (targets[j].GetBaseAttackSpeed() >= int.Parse(specifics)){return;}
+                    AffectActor(targets[j], effect, specifics);
+                }
                 break;
             case "AdjacentAllies":
                 AffectActor(actor, effect, specifics);

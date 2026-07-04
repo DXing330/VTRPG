@@ -19,13 +19,16 @@ public class BattleStartManager : ScriptableObject
     {
         // Initialize Map
         map.ForceStart();
-        manager.combatLog.ForceStart();
-        manager.combatLog.AddNewLog();
+        if (manager.combatLog != null)
+        {
+            manager.combatLog.ForceStart();
+            manager.combatLog.AddNewLog();
+        }
         manager.UI.UpdateWinConString();
         map.SetWeather(battleState.GetWeather());
-        manager.combatLog.UpdateNewestLog("The weather is " + battleState.GetWeather());
+        manager.UpdateCombatLog("The weather is " + battleState.GetWeather());
         map.SetTime(battleState.GetTime());
-        manager.combatLog.UpdateNewestLog("The time is " + battleState.GetTime());
+        manager.UpdateCombatLog("The time is " + battleState.GetTime());
         // Custom Map Stuff
         customEnemyStartingLocations.Clear();
         customAllyStartingLocations.Clear();

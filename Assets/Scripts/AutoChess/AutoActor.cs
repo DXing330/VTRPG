@@ -128,6 +128,7 @@ public class AutoActorRollUpData
         return baseStatString;
     }
     public List<string> equipmentNames = new List<string>();
+    public List<string> GetEquipmentNames(){return equipmentNames;}
     // Need The Trait Since Some Traits Activate During Prep Phase.
     public AutoChessTrait trait;
     public void LoadBaseStats(StatDatabase autoActorData, int newLevel = 1)
@@ -212,6 +213,7 @@ public class AutoActorRollUpData
     }
 }
 
+[System.Serializable]
 public class AutoActor : TacticActor
 {
     public override void SetInitialStatsFromString(string newStats)
@@ -242,5 +244,27 @@ public class AutoActor : TacticActor
         SetPassiveSkills(statBlocks[11].Split(passiveDelimiter).ToList());
         SetPassiveLevels(statBlocks[12].Split(passiveDelimiter).ToList());
         baseRespawnTimer = int.Parse(statBlocks[15]);
+    }
+    public void EnemySetInitialStatsFromString(string newStats)
+    {
+        // Initialize Regular Stats.
+        baseCrit = 0;
+        baseCritPower = 200;
+        baseHitChance = 100;
+        baseDodge = 0;
+        ResetEquipment();
+        ResetPassives();
+        // Load AutoStats
+        string[] statBlocks = newStats.Split("|");
+        autoSkill = statBlocks[0];
+        SetBaseEnergy(int.Parse(statBlocks[1]));
+        SetCurrentEnergy(int.Parse(statBlocks[2]));
+        SetBaseHealth(int.Parse(statBlocks[3]));
+        SetCurrentHealth(int.Parse(statBlocks[3]));
+        SetBaseAttack(int.Parse(statBlocks[4]));
+        SetBaseDefense(int.Parse(statBlocks[5]));
+        SetAttackRange(int.Parse(statBlocks[6]));
+        SetPassiveSkills(statBlocks[7].Split(passiveDelimiter).ToList());
+        SetPassiveLevels(statBlocks[8].Split(passiveDelimiter).ToList());
     }
 }

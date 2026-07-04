@@ -110,6 +110,10 @@ public class AutoChessDataManager : SavedData
     }
     public List<string> benchActorData;
     public List<string> fieldActorData;
+    public List<string> GetFieldActorData()
+    {
+        return fieldActorData;
+    }
     public int roundGainedActors;
     public void SetRoundActors(int amount)
     {
@@ -122,7 +126,9 @@ public class AutoChessDataManager : SavedData
     }
     public int mapSize = 7;
     public List<string> mapTiles;
+    public List<string> GetMapTiles(){return mapTiles;}
     public List<string> mapTerrain;
+    public List<string> GetMapTerrain(){return mapTerrain;}
     public List<string> equipment;
     public List<string> GetEquipment()
     {

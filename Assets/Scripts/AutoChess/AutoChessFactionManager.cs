@@ -61,6 +61,7 @@ public class AutoChessFactionManager : MonoBehaviour
         }
         return allFactionsWithUnits[index];
     }
+    public List<int> activeFactionCounts;
     public List<string> ReturnAllUnitsOfFaction(string factionName)
     {
         List<string> unitNames = new List<string>();
@@ -99,6 +100,7 @@ public class AutoChessFactionManager : MonoBehaviour
         uniqueUnitNames.Clear();
         uniqueEmblems.Clear();
         activeFactions.Clear();
+        activeFactionCounts.Clear();
         allFactionsWithUnits.Clear();
         allFactionCounts.Clear();
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
@@ -129,8 +131,11 @@ public class AutoChessFactionManager : MonoBehaviour
             if (FactionActive(allFactionsWithUnits[i]))
             {
                 activeFactions.Add(allFactionsWithUnits[i]);
+                activeFactionCounts.Add(allFactionCounts[i]);
             }
         }
+        factionData.SetActiveFactions(activeFactions);
+        factionData.SetActiveFactionCount(activeFactionCounts);
         UpdateFactionDisplay();
     }
     public void GainFactionStacks(string faction, int stackAmount)

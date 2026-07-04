@@ -185,10 +185,6 @@ public class MapManager : SimpleMapManager
         }
     }
     public List<string> GetMapInfo(){return mapInfo;}
-    public void SetMapInfo(List<string> newInfo)
-    {
-        mapInfo = new List<string>(newInfo);
-    }
     public virtual void InitializeMapInfo()
     {
         InitializeEmptyList();
@@ -249,7 +245,6 @@ public class MapManager : SimpleMapManager
             emptyList.Add("");
         }
     }
-    public int mapSize;
     public int MapMaxPartyCapacity()
     {
         return (mapSize * mapSize) / 3;
@@ -308,17 +303,14 @@ public class MapManager : SimpleMapManager
             }
         }
     }
-
     protected virtual void Start()
     {
         UpdateMap();
     }
-
     public List<string> MakeRandomMap()
     {
         return mapMaker.MakeRandomMap(mapSize);
     }
-
     [ContextMenu("Get New Map")]
     public virtual void GetNewMap()
     {
@@ -328,7 +320,6 @@ public class MapManager : SimpleMapManager
         centerTile = mapUtility.DetermineCenterTile(mapSize);
         UpdateMap();
     }
-
     public virtual void GetNewMapFeatures(List<string> featuresAndPatterns, string baseTileType = "Plains")
     {
         mapInfo = mapMaker.MakeBasicMap(mapSize, baseTileType);
@@ -340,7 +331,6 @@ public class MapManager : SimpleMapManager
         }
         UpdateMap();
     }
-
     public List<int> AllConnectedTilesOfSameType(int tileNumber)
     {
         List<int> connected = new List<int>();
@@ -373,7 +363,6 @@ public class MapManager : SimpleMapManager
         }
         return connected;
     }
-
     // Probably never use this. Moving the map should happen automatically as the player icon moves.
     // This is used to move the map up/down/left/right.
     public void MoveMap(int direction)
@@ -381,12 +370,10 @@ public class MapManager : SimpleMapManager
         RectangularMoveCenterTile(direction);
         UpdateMap();
     }
-
     protected virtual void UpdateCurrentTiles()
     {
         currentTiles = currentTileManager.GetCurrentTilesFromCenter(centerTile, mapSize, gridSize);
     }
-
     public List<string> ReturnMapInfoPlusElevation()
     {
         List<string> infoAndElevation = new List<string>(mapInfo);
@@ -396,13 +383,11 @@ public class MapManager : SimpleMapManager
         }
         return infoAndElevation;
     }
-
     [ContextMenu("Test Update Map")]
     public void TestUpdateMap()
     {
         UpdateMap();
     }
-
     [ContextMenu("Test Show Elevation")]
     public void TestShowElevation()
     {
@@ -411,28 +396,25 @@ public class MapManager : SimpleMapManager
             mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E"+mapTiles[i].GetElevation().ToString()));
         }
     }
-
-    public virtual void UpdateMap()
+    public void BaseUpdateMap()
     {
         UpdateCurrentTiles();
         mapDisplayers[0].DisplayCurrentTiles(mapTiles, mapInfo, currentTiles);
     }
-
+    public virtual void UpdateMap()
+    {
+        BaseUpdateMap();
+    }
     /*[ContextMenu("Move 0")]
     public void Move0(){MoveMap(0);}
-
     [ContextMenu("Move 1")]
     public void Move1(){MoveMap(1);}
-
     [ContextMenu("Move 2")]
     public void Move2(){MoveMap(2);}
-
     [ContextMenu("Move 3")]
     public void Move3(){MoveMap(3);}
-
     [ContextMenu("Move 4")]
     public void Move4(){MoveMap(4);}
-
     [ContextMenu("Move 5")]
     public void Move5(){MoveMap(5);}*/
 }

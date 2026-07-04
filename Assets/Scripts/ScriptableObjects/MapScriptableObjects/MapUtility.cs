@@ -353,7 +353,6 @@ public class MapUtility : ScriptableObject
         }
         return tiles;
     }
-
     public List<int> GetTileInLineBetweenPoints(int loc1, int loc2, int size)
     {
         List<int> tiles = new List<int>();
@@ -363,7 +362,39 @@ public class MapUtility : ScriptableObject
         tiles = GetTilesInLineDirection(loc1, direction, distance - 1, size);
         return tiles;
     }
-
+    public int GetTileByDirectionDistance(int startTile, int direction, int distance, int mapSize)
+    {
+        int current = startTile;
+        for (int i = 0; i < distance; i++)
+        {
+            if (DirectionCheck(current, direction, mapSize))
+            {
+                current = PointInDirection(current, direction, mapSize);
+            }
+            else
+            {
+                return startTile;
+            }
+        }
+        return current;
+    }
+    public List<int> StraightPathToTile(int start, int end, int mapSize)
+    {
+        List<int> path = new List<int>();
+        if (StraightLineBetweenPoints(start, end, mapSize))
+        {
+            return path;
+        }
+        int direction = DirectionBetweenLocations(start, end, mapSize);
+        int distance = DistanceBetweenTiles(start, end, mapSize);
+        int nextTile = start;
+        for (int i = 0; i < distance; i++)
+        {
+            nextTile = PointInDirection(nextTile, direction, mapSize);
+            path.Add(nextTile);
+        }
+        return path;
+    }
     public List<int> GetTilesInLineDirection(int location, int direction, int range, int size)
     {
         List<int> tiles = new List<int>();
@@ -379,7 +410,6 @@ public class MapUtility : ScriptableObject
         }
         return tiles;
     }
-
     public List<int> GetTilesInConeShape(int startTile, int range, int coneCenter, int size)
     {
         List<int> tiles = new List<int>();

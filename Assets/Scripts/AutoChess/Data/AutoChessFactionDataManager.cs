@@ -51,10 +51,44 @@ public class AutoChessFactionDataManager : SavedData
         }
         allFactionStacks[indexOf] = (int.Parse(allFactionStacks[indexOf]) + stackAmount).ToString();
     }
+    public List<string> activeFactions;
+    public void SetActiveFactions(List<string> newFactions)
+    {
+        utility.RemoveEmptyListItems(newFactions);
+        activeFactions = newFactions;
+    }
+    public List<string> GetActiveFactions(){return activeFactions;}
+    public bool FactionActive(string factionName)
+    {
+        return activeFactions.Contains(factionName);
+    }
+    public List<int> activeFactionCount;
+    public void SetActiveFactionCount(List<int> newFactions)
+    {
+        activeFactionCount = newFactions;
+    }
+    public List<int> GetActiveFactionCount(){return activeFactionCount;}
+    public List<int> GetActiveFactionStacks()
+    {
+        List<int> stacks = new List<int>();
+        for (int i = 0; i < activeFactions.Count; i++)
+        {
+            stacks.Add(int.Parse(GetStacksOfFaction(activeFactions[i])));
+        }
+        return stacks;
+    }
+    public int GetCountOfFaction(string factionName)
+    {
+        int indexOf = activeFactions.IndexOf(factionName);
+        if (indexOf <= 0){return 0;}
+        return activeFactionCount[indexOf];
+    }
     public override void NewGame()
     {
         allFactions.Clear();
         allFactionStacks.Clear();
+        activeFactions.Clear();
+        activeFactionCount.Clear();
         Save();
     }
     public override void Save()
@@ -63,6 +97,8 @@ public class AutoChessFactionDataManager : SavedData
         allData = "";
         allData += "Factions=" + String.Join(delimiter2, allFactions) + delimiter;
         allData += "Stacks=" + String.Join(delimiter2, allFactionStacks) + delimiter;
+        allData += "Active=" + String.Join(delimiter2, activeFactions) + delimiter;
+        allData += "ActiveFieldCount=" + String.Join(delimiter2, activeFactionCount) + delimiter;
         File.WriteAllText(dataPath, allData);
     }
     public override void Load()
@@ -98,6 +134,12 @@ public class AutoChessFactionDataManager : SavedData
             return;
             case "Stacks":
             SetAllFactionStacks(value.Split(delimiter2).ToList());
+            return;
+            case "Active":
+            SetActiveFactions(value.Split(delimiter2).ToList());
+            return;
+            case "ActiveFieldCount":
+            SetActiveFactionCount(utility.ConvertStringListToIntList(value.Split(delimiter2).ToList()));
             return;
         }
     }

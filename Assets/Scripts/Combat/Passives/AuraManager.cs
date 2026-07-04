@@ -68,15 +68,15 @@ public class AuraManager : MonoBehaviour
             case "RitualSummon":
             if (auraTarget == null)
             {
-                map.combatLog.UpdateNewestLog("Ritual summoning failed!");
+                map.UpdateCombatLog("Ritual summoning failed!");
                 return true;
             }
-            map.combatLog.UpdateNewestLog(auraTarget.GetPersonalName() + " is consumed by the ritual.");
+            map.UpdateCombatLog(auraTarget.GetPersonalName() + " is consumed by the ritual.");
             auraTarget.MarkSacrificed();
             auraTarget.SetCurrentHealth(-1);
             map.battlingActors.Remove(auraTarget);
-            map.battleManager.SpawnAndAddActor(auraTarget.GetLocation(), aura.GetEffect(), auraTarget.GetTeam());
-            map.combatLog.UpdateNewestLog("By offering " + auraTarget.GetPersonalName() + " a " + aura.GetEffect() + " is summoned.");
+            map.SpawnAndAddActor(auraTarget.GetLocation(), aura.GetEffect(), auraTarget.GetTeam());
+            map.UpdateCombatLog("By offering " + auraTarget.GetPersonalName() + " a " + aura.GetEffect() + " is summoned.");
             return true;
         }
     }
@@ -85,8 +85,8 @@ public class AuraManager : MonoBehaviour
         if (!aura.TriggerAura(triggerType)){return;}
         if (passive.CheckAuraCondition(aura, actor, map))
         {
-            map.combatLog.UpdateNewestLog(actor.GetPersonalName() + " is affected by " + aura.GetAuraName() + ".");
-            map.combatLog.AddDetailedLogs(map.detailViewer.ReturnAuraDetails(aura));
+            map.UpdateCombatLog(actor.GetPersonalName() + " is affected by " + aura.GetAuraName() + ".");
+            map.UpdateCombatLog(map.detailViewer.ReturnAuraDetails(aura), true);
             // Check if the effect is special.
             if (SpecialAuraEffect(actor, aura))
             {

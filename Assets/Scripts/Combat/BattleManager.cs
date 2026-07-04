@@ -45,6 +45,18 @@ public class BattleManager : MonoBehaviour
     public InitiativeTracker initiativeTracker;
     public TurnOrderManager turnOrderManager;
     public CombatLog combatLog;
+    public void UpdateCombatLog(string newLog, bool detailed = false)
+    {
+        if (combatLog == null){return;}
+        if (detailed)
+        {
+            combatLog.AddDetailedLogs(newLog);
+        }
+        else
+        {
+            combatLog.UpdateNewestLog(newLog);
+        }
+    }
     public BattleStatsTracker battleStatsTracker;
     public PopUpMessage popUpMessage;
     public CharacterList playerParty;
@@ -66,7 +78,7 @@ public class BattleManager : MonoBehaviour
         StopAllCoroutines();
         if (autoWin)
         {
-            combatLog.UpdateNewestLog("Automatically Ending The Battle");
+            UpdateCombatLog("Automatically Ending The Battle");
             battleEndManager.EndBattle(winningTeam);
             return;
         }
@@ -74,9 +86,9 @@ public class BattleManager : MonoBehaviour
         {
             battleState.SetWinningTeam(winningTeam);
         }
-        combatLog.UpdateNewestLog("Team "+winningTeam+" wins.");
+        UpdateCombatLog("Team "+winningTeam+" wins.");
         battleEndManager.UpdatePartyAfterBattle(map, winningTeam);
-        combatLog.UpdateNewestLog("Finished updating team stats.");
+        UpdateCombatLog("Finished updating team stats.");
         battleEndManager.EndBattle(winningTeam);
     }
     public BattleUIManager UI;
@@ -146,18 +158,6 @@ public class BattleManager : MonoBehaviour
         if (autoBattle) { NPCTurn(); }
         else if (turnActor.GetTeam() > 0 && !controlAI) { NPCTurn(); }
     }
-    // All Summoning Should Go Through Here?
-    public void SpawnAndAddActor(int location, string actorName, int team = 0, TacticActor summoner = null)
-    {
-        TacticActor newActor = actorMaker.SummonActor(location, actorName, team);
-        map.AddActorToBattle(newActor);
-        ApplyBattleModifiersToActor(newActor);
-        effectManager.SummonedStartBattle(newActor, map);
-        if (summoner != null)
-        {
-            summoner.AddSummonedActor(newActor);
-        }
-    }
     protected void ApplyBattleModifiersToActor(TacticActor actor)
     {
         List<TacticActor> actors = new List<TacticActor>();
@@ -207,7 +207,7 @@ public class BattleManager : MonoBehaviour
         int winningTeam = FindWinningTeam();
         if (winningTeam >= 0)
         {
-            combatLog.UpdateNewestLog("Ending Battle By Map Effects");
+            UpdateCombatLog("Ending Battle By Map Effects");
             EndBattle(winningTeam);
             return false;
         }
@@ -231,7 +231,7 @@ public class BattleManager : MonoBehaviour
         combatLog.AddNewLog();
         if (map.battlingActors.Count <= 0 && roundNumber > 1)
         {
-            combatLog.UpdateNewestLog("Everyone is Dead");
+            UpdateCombatLog("Everyone is Dead");
             // End the battle immediately.
             int winningTeam = FindWinningTeam();
             EndBattle(winningTeam);
@@ -242,7 +242,7 @@ public class BattleManager : MonoBehaviour
             if (!NextRound()){return false;}
             if (!TryFindNextValidTurn())
             {
-                combatLog.UpdateNewestLog("Everyone is Dead");
+                UpdateCombatLog("Everyone is Dead");
                 int winningTeam = FindWinningTeam();
                 EndBattle(winningTeam);
                 return false;
@@ -251,7 +251,7 @@ public class BattleManager : MonoBehaviour
         turnActor = roundTurnOrder[turnNumber];
         // Reset Stats/TickDown Effects.
         turnActor.NewTurn();
-        combatLog.UpdateNewestLog(turnActor.GetPersonalName() + "'s Turn");
+        UpdateCombatLog(turnActor.GetPersonalName() + "'s Turn");
         // Apply Status/Passives.
         effectManager.StartTurn(turnActor, map);
         RefreshUI();
@@ -294,7 +294,7 @@ public class BattleManager : MonoBehaviour
         int winningTeam = FindWinningTeam();
         if (winningTeam >= 0)
         {
-            combatLog.UpdateNewestLog("Ending Battle By Clicking Next Turn");
+            UpdateCombatLog("Ending Battle By Clicking Next Turn");
             EndBattle(winningTeam);
             return;
         }
@@ -307,7 +307,7 @@ public class BattleManager : MonoBehaviour
         winningTeam = FindWinningTeam();
         if (winningTeam >= 0)
         {
-            combatLog.UpdateNewestLog("Ending Battle By Clicking Next Turn");
+            UpdateCombatLog("Ending Battle By Clicking Next Turn");
             EndBattle(winningTeam);
             return;
         }
@@ -319,27 +319,27 @@ public class BattleManager : MonoBehaviour
         switch (mentalState)
         {
             case "Terrified":
-                combatLog.UpdateNewestLog(turnActor.GetPersonalName() + " is Terrified.");
+                UpdateCombatLog(turnActor.GetPersonalName() + " is Terrified.");
                 UI.NPCTurn();
                 TerrifiedTurn(turnActor.GetActions());
                 return;
             case "Enraged":
-                combatLog.UpdateNewestLog(turnActor.GetPersonalName() + " is Enraged.");
+                UpdateCombatLog(turnActor.GetPersonalName() + " is Enraged.");
                 UI.NPCTurn();
                 EnragedTurn(turnActor.GetActions());
                 return;
             case "Charmed":
-                combatLog.UpdateNewestLog(turnActor.GetPersonalName() + " is Charmed.");
+                UpdateCombatLog(turnActor.GetPersonalName() + " is Charmed.");
                 UI.NPCTurn();
                 CharmedTurn(turnActor.GetActions());
                 return;
             case "Taunted":
-                combatLog.UpdateNewestLog(turnActor.GetPersonalName() + " is Taunted.");
+                UpdateCombatLog(turnActor.GetPersonalName() + " is Taunted.");
                 UI.NPCTurn();
                 TauntedTurn(turnActor.GetActions());
                 return;
             case "Confused":
-                combatLog.UpdateNewestLog(turnActor.GetPersonalName() + " is Confused.");
+                UpdateCombatLog(turnActor.GetPersonalName() + " is Confused.");
                 UI.NPCTurn();
                 ConfusedTurn(turnActor.GetActions());
                 return;
@@ -570,19 +570,19 @@ public class BattleManager : MonoBehaviour
             case "Skill":
             // Target the tile and update the targeted tiles.
             if (!activeManager.ReturnTargetableTiles().Contains(selectedTile)){return;}
-            activeManager.GetTargetedTiles(selectedTile, moveManager.actorPathfinder);
+            activeManager.GetTargetedTiles(selectedTile);
             map.UpdateHighlights(activeManager.targetedTiles, "Attack", 4);
             break;
             case "Spell":
             // Target the tile and update the targeted tiles.
             if (!activeManager.ReturnTargetableTiles().Contains(selectedTile)){return;}
-            activeManager.GetTargetedTiles(selectedTile, moveManager.actorPathfinder, true);
+            activeManager.GetTargetedTiles(selectedTile, true);
             map.UpdateHighlights(activeManager.targetedTiles, "Attack", 4);
             break;
             case "Item":
             // Target the tile and update the targeted tiles.
             if (!activeManager.ReturnTargetableTiles().Contains(selectedTile)){return;}
-            activeManager.GetTargetedTiles(selectedTile, moveManager.actorPathfinder);
+            activeManager.GetTargetedTiles(selectedTile);
             map.UpdateHighlights(activeManager.targetedTiles, "Attack", 4);
             break;
         }
@@ -672,7 +672,7 @@ public class BattleManager : MonoBehaviour
             if (!attacker.AttackActionsLeft()){return;}
             attacker.PayAttackCost();
         }
-        combatLog.UpdateNewestLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName() + ".");
+        UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName() + ".");
         // Show Attack Speed Rolls In The combatLog?
         attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier());
         if (AdjustTurnNumber())
@@ -907,7 +907,7 @@ public class BattleManager : MonoBehaviour
                 BasicNPCAction();
                 return;
             }
-            activeManager.GetTargetedTiles(targetedTile, moveManager.actorPathfinder);
+            activeManager.GetTargetedTiles(targetedTile);
             // If the skill has no valid targets in the case of an AOE, then just do a normal action.
             if (!actorAI.ValidSkillTargets(turnActor, map, activeManager))
             {
@@ -931,13 +931,12 @@ public class BattleManager : MonoBehaviour
         {
             return false;
         }
-        activeManager.GetTargetedTiles(targetedTile, moveManager.actorPathfinder, true);
+        activeManager.GetTargetedTiles(targetedTile, true);
         if (!actorAI.ValidSkillTargets(turnActor, map, activeManager, true))
         {
             return false;
         }
         ActivateSpell();
-        AdjustTurnNumber();
         return true;
     }
 
@@ -975,7 +974,7 @@ public class BattleManager : MonoBehaviour
             return false;
         }
         // Check Target Appropriate
-        activeManager.GetTargetedTiles(targetedTile, moveManager.actorPathfinder);
+        activeManager.GetTargetedTiles(targetedTile);
         // If the skill has no valid targets in the case of an AOE, let caller decide fallback.
         if (!actorAI.ValidSkillTargets(turnActor, map, activeManager))
         {
@@ -983,7 +982,6 @@ public class BattleManager : MonoBehaviour
         }
         ActivateSkill(skillToUse);
         // Preserve the same battle-end / actor-death handling order.
-        AdjustTurnNumber();
         return true;
     }
 
@@ -1224,7 +1222,7 @@ public class BattleManager : MonoBehaviour
                 {
                     targetTile = turnActor.GetLocation();
                 }
-                activeManager.GetTargetedTiles(targetTile, moveManager.actorPathfinder);
+                activeManager.GetTargetedTiles(targetTile);
                 // Turn to face the target in case the skill is not a real attack or an AOE.
                 turnActor.SetDirection(moveManager.DirectionBetweenActors(turnActor, turnActor.GetTarget()));
                 ActivateSkill(attackActive);
@@ -1368,17 +1366,17 @@ public class BattleManager : MonoBehaviour
         int targetedTile = actorAI.ChooseSkillTargetLocation(skillUser, map, moveManager);
         Debug.Log("AUTOSKILL TARGET: " + targetedTile);
         if (targetedTile < 0){return;}
-        activeManager.GetTargetedTiles(targetedTile, moveManager.actorPathfinder);
+        activeManager.GetTargetedTiles(targetedTile);
         // Use The Skill For Free.
-        activeManager.ActivateSkill(this, false);
+        activeManager.ActivateSkill(false);
     }
     public void ActivateSkill(string skillName, TacticActor actor = null)
     {
         ResetState();
         if (actor == null){actor = turnActor;}
-        combatLog.UpdateNewestLog(actor.GetPersonalName() + " uses " + skillName + ".");
+        UpdateCombatLog(actor.GetPersonalName() + " uses " + skillName + ".");
         activeManager.ActivateSkill(this);
-        ActivateDeathPassives(map.RemoveActorsFromBattle(GetTurnIndex()));
+        ActivateDeathPassives(map.RemoveActorsFromBattle());
         map.UpdateMap();
     }
     public void ActivateSpell(TacticActor actor = null)
@@ -1387,7 +1385,7 @@ public class BattleManager : MonoBehaviour
         if (actor == null) { actor = turnActor; }
         activeManager.ActivateSpell(this);
         map.UpdateMap();
-        combatLog.UpdateNewestLog(actor.GetPersonalName()+" casts  " + activeManager.magicSpell.GetSkillName());
+        UpdateCombatLog(actor.GetPersonalName()+" casts  " + activeManager.magicSpell.GetSkillName());
     }
     // ALL Dead Actors Should Pass Through Here.
     public void ActivateDeathPassive(TacticActor actor)
@@ -1406,7 +1404,7 @@ public class BattleManager : MonoBehaviour
         {
             if (deathActives[i].Length <= 0) { continue; }
             activeManager.SetSkillFromName(deathActives[i], actor);
-            activeManager.GetTargetedTiles(actor.GetLocation(), moveManager.actorPathfinder);
+            activeManager.GetTargetedTiles(actor.GetLocation());
             ActivateSkill(deathActives[i], actor);
         }
     }
