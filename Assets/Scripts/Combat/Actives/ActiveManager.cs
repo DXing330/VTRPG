@@ -78,6 +78,15 @@ public class ActiveManager : MonoBehaviour
             targetedTiles = new List<int>(targetableTiles);
         }
     }
+    public void DebugTargetedTiles()
+    {
+        string debugTargetedTiles = "";
+        for (int i = 0; i < targetedTiles.Count; i++)
+        {
+            debugTargetedTiles += targetedTiles[i] + " ";
+        }
+        Debug.Log(debugTargetedTiles);
+    }
     public List<int> GetTargetedTiles(int start, bool spellCast = false)
     {
         active.SetSelectedTile(start);
@@ -119,7 +128,6 @@ public class ActiveManager : MonoBehaviour
                 range = magicSpell.GetSpan(skillUser, map);
             }
         }
-        int direction = map.mapUtility.DirectionBetweenLocations(skillUser.GetLocation(), startTile, map.mapSize);
         return map.mapUtility.GetTilesByShapeSpan(startTile, shape, range, map.mapSize, skillUser.GetLocation());
     }
     protected void ApplyActiveEffects(List<TacticActor> targets, string effect, string specifics, int power, int selectedTile = -1, bool spellCast = false)
@@ -183,7 +191,7 @@ public class ActiveManager : MonoBehaviour
                 }
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, skillUser.GetBasicAttackDamageType());
                 }
                 return;
             case "BreakSummonLink":
@@ -340,7 +348,7 @@ public class ActiveManager : MonoBehaviour
                 if (targetActor == null) { return; }
                 if (map.TeleportToTarget(skillUser, targetActor, specifics))
                 {
-                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targetActor, map, power);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targetActor, map, power, skillUser.GetBasicAttackDamageType());
                 }
                 return;
             case "Attack+Grapple":
@@ -351,7 +359,7 @@ public class ActiveManager : MonoBehaviour
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, skillUser.GetBasicAttackDamageType());
                     }
                 }
                 return;
@@ -402,7 +410,17 @@ public class ActiveManager : MonoBehaviour
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, skillUser.GetBasicAttackDamageType());
+                    }
+                }
+                return;
+            case "AttackEnemies":
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    if (targets[i].GetTeam() == skillUser.GetTeam()){continue;}
+                    for (int j = 0; j < int.Parse(specifics); j++)
+                    {
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, skillUser.GetBasicAttackDamageType());
                     }
                 }
                 return;
@@ -413,7 +431,7 @@ public class ActiveManager : MonoBehaviour
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, skillUser.GetBasicAttackDamageType());
                     }
                 }
                 return;
@@ -423,7 +441,7 @@ public class ActiveManager : MonoBehaviour
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
                     {
-                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, skillUser.GetBasicAttackDamageType());
                         skillUser.UpdateHealth(Mathf.Max(1, skillUser.GetAttack() - targets[i].GetDefense()), false);
                     }
                 }
@@ -493,7 +511,7 @@ public class ActiveManager : MonoBehaviour
                     return;
                 }
                 map.MoveThroughSkill(skillUser, targetTile);
-                attackManager.ActorAttacksActorWithAttackSpeed(skillUser, map.GetActorOnTile(targetTile), map, power);
+                attackManager.ActorAttacksActorWithAttackSpeed(skillUser, map.GetActorOnTile(targetTile), map, power, skillUser.GetBasicAttackDamageType());
                 return;
             case "Charge+Attack":
                 int startChargeTile = skillUser.GetLocation();
@@ -515,7 +533,7 @@ public class ActiveManager : MonoBehaviour
                 int chargeInto = map.mapUtility.PointInDirection(skillUser.GetLocation(), skillUser.GetDirection(), map.mapSize);
                 if (map.GetActorOnTile(chargeInto) != null)
                 {
-                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, map.GetActorOnTile(chargeInto), map, power);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, map.GetActorOnTile(chargeInto), map, power, skillUser.GetBasicAttackDamageType());
                 }
                 return;
             case "Displace":
@@ -536,7 +554,7 @@ public class ActiveManager : MonoBehaviour
             case "Attack+TerrainEffect":
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, skillUser.GetBasicAttackDamageType());
                 }
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
@@ -615,6 +633,14 @@ public class ActiveManager : MonoBehaviour
                 targets = map.AllAllies(skillUser);
                 active.AffectActors(targets, specifics, powerString, 1);
                 return;
+            case "TargetAllies":
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    if (targets[i].GetTeam() != skillUser.GetTeam()){continue;}
+                    // Grant them your weight and defense.
+                    active.AffectActor(targets[i], specifics, powerString, 1);
+                }
+                return;
             case "AllEnemies":
                 targets = map.AllEnemies(skillUser);
                 active.AffectActors(targets, specifics, powerString, 1);
@@ -667,7 +693,7 @@ public class ActiveManager : MonoBehaviour
                 targets = map.ChainLightningTargets(targetedTiles[0], int.Parse(specifics), power);
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, skillUser.GetBasicAttackMultiplier(), skillUser.GetBasicAttackDamageType());
                 }
                 return;
             case "ChainLightning":

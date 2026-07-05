@@ -34,6 +34,7 @@ public class ActorSubGameStats : ActorStats
         autoChessEquipment.Add(newEquip);
     }
     public string autoSkill;
+    public string GetAutoSkill(){return autoSkill;}
     public int autoSkillCooldown;
     public void SetSkillCoolDown(int newCD)
     {
@@ -69,8 +70,10 @@ public class ActorSubGameStats : ActorStats
         }
     }
     public AutoChessTrait autoChessTrait = new();
-    public string attackRangeShape;
+    public string autoChessAttackRangeShape;
+    public string GetAutoChessAttackRangeShape(){return autoChessAttackRangeShape;}
     public int healer = 0;
+    public bool AKHealer(){return healer > 0;}
     public int baseRespawnTimer;
     public int currentRespawnTimer = 0;
     public List<AutoChessTrait> autoChessTemporaryTraits = new();

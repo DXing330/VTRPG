@@ -14,6 +14,11 @@ public class SkillEffect : ScriptableObject
     public void AffectActor(TacticActor target, string effect, string effectSpecifics, int level = 1, CombatLog combatLog = null)
     {
         if (target == null){return;}
+        if (effect.EndsWith("Damage"))
+        {
+            ApplyElementalDamageToTarget(target, effect, int.Parse(effectSpecifics) * level, combatLog);
+            return;
+        }
         int changeAmount = 0;
         switch (effect)
         {
@@ -131,124 +136,6 @@ public class SkillEffect : ScriptableObject
             case "Health":
                 target.UpdateHealth(int.Parse(effectSpecifics) * level, false);
                 break;
-            case "Damage":
-                int effectDamage = int.Parse(effectSpecifics) * level;
-                effectDamage = target.TakeEffectDamage(effectDamage);
-                if (combatLog != null)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + effectDamage + " damage.");
-                }
-                break;
-            case "TrueDamage":
-                target.currentHealth -= int.Parse(effectSpecifics) * level;
-                if (combatLog != null)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + int.Parse(effectSpecifics) * level + " damage.");
-                }
-                break;
-            // ALL the elemental damage types go here as well.
-            case "LightningDamage":
-                int lightningDamage = int.Parse(effectSpecifics) * level;
-                // Double Damage + Bonus Damage If Wet.
-                if (target.StatusExists("Wet"))
-                {
-                    lightningDamage *= 2;
-                    lightningDamage += target.ReturnStatusDuration("Wet");
-                }
-                lightningDamage = target.ApplyMagicResist(lightningDamage);
-                lightningDamage = target.TakeEffectDamage(lightningDamage, "Lightning");
-                if (combatLog != null && lightningDamage > 0)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + lightningDamage + " lightning damage.");
-                }
-                break;
-            case "FireDamage":
-                // Fire removes bleeds/freeze.
-                target.RemoveStatus("Bleed");
-                target.RemoveStatus("Frozen");
-                int fireDamage = int.Parse(effectSpecifics) * level;
-                fireDamage = target.ApplyMagicResist(fireDamage);
-                // Bonus Damage For Each Burn Stack, Penetrates Magic Resist.
-                fireDamage += target.StatusStacks("Burn");
-                fireDamage = target.TakeEffectDamage(fireDamage, "Fire");
-                if (combatLog != null && fireDamage > 0)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + fireDamage + " fire damage.");
-                }
-                break;
-            case "WaterDamage":
-                int waterDamage = int.Parse(effectSpecifics) * level;
-                waterDamage = target.ApplyMagicResist(waterDamage);
-                // Bonus Damage Based On Wet Duration, Penetrates Magic Resist.
-                waterDamage += target.ReturnStatusDuration("Wet");
-                waterDamage = target.TakeEffectDamage(waterDamage, "Water");
-                if (combatLog != null && waterDamage > 0)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + waterDamage + " water damage.");
-                }
-                break;
-            case "IceDamage":
-                int iceDamage = int.Parse(effectSpecifics) * level;
-                // Ice removes bleeds.
-                target.RemoveStatus("Bleed");
-                // Freeze If Wet.
-                if (target.StatusExists("Wet"))
-                {
-                    int freezeDuration = target.ReturnStatusDuration("Wet");
-                    target.RemoveStatus("Wet");
-                    target.AddStatus("Frozen", freezeDuration);
-                }
-                iceDamage = target.ApplyMagicResist(iceDamage);
-                iceDamage = target.TakeEffectDamage(iceDamage, "Ice");
-                if (combatLog != null && iceDamage > 0)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + iceDamage + " ice damage.");
-                }
-                break;
-            case "EarthDamage":
-                int earthDamage = int.Parse(effectSpecifics) * level;
-                // Multiplied By Weight.
-                earthDamage *= Mathf.Max(1, target.GetWeight());
-                earthDamage = target.ApplyMagicResist(earthDamage);
-                earthDamage = target.TakeEffectDamage(earthDamage, "Earth");
-                if (combatLog != null && earthDamage > 0)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + earthDamage + " earth damage.");
-                }
-                break;
-            case "LightDamage":
-                int lightDamage = int.Parse(effectSpecifics) * level;
-                // Reveal invisibility.
-                target.RemoveInvisibility();
-                lightDamage = target.ApplyMagicResist(lightDamage);
-                lightDamage = target.TakeEffectDamage(lightDamage, "Light");
-                if (combatLog != null && lightDamage > 0)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + lightDamage + " light damage.");
-                }
-                break;
-            case "DarkDamage":
-                int darkDamage = int.Parse(effectSpecifics) * level;
-                darkDamage = target.ApplyMagicResist(darkDamage);
-                // Bonus Damage For Each Unique Status, Penetrates Magic Resist.
-                darkDamage += target.GetUniqueStatuses().Count;
-                darkDamage = target.TakeEffectDamage(darkDamage, "Dark");
-                if (combatLog != null && darkDamage > 0)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + darkDamage + " dark damage.");
-                }
-                break;
-            case "AirDamage":
-                // Decrease weight.
-                target.UpdateWeight(-1);
-                int airDamage = int.Parse(effectSpecifics) * level;
-                airDamage = target.ApplyMagicResist(airDamage);
-                airDamage = target.TakeEffectDamage(airDamage, "Air");
-                if (combatLog != null && airDamage > 0)
-                {
-                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + airDamage + " air damage.");
-                }
-                break;
             case "Energy":
                 target.UpdateEnergy(int.Parse(effectSpecifics) * level);
                 break;
@@ -358,11 +245,29 @@ public class SkillEffect : ScriptableObject
             case "SetAttackActionCost":
                 target.SetAttackActionCost(int.Parse(effectSpecifics));
                 break;
+            case "BaseBasicAttackDamageType":
+                target.SetBaseBasicAttackDamageType(effectSpecifics);
+                break;
+            case "BasicAttackDamageType":
+                target.SetBasicAttackDamageType(effectSpecifics);
+                break;
             case "BaseBasicAttackPower":
                 target.ChangeBaseBasicAttackMultiplier(int.Parse(effectSpecifics));
                 break;
             case "BasicAttackPower":
                 target.ChangeBasicAttackMultiplier(int.Parse(effectSpecifics));
+                break;
+            case "BaseBasicAttackShape":
+                target.SetBaseBasicAttackShape(effectSpecifics);
+                break;
+            case "BasicAttackShape":
+                target.SetBasicAttackShape(effectSpecifics);
+                break;
+            case "BaseBasicAttackSpan":
+                target.SetBaseBasicAttackSpan(int.Parse(effectSpecifics));
+                break;
+            case "BasicAttackSpan":
+                target.SetBasicAttackSpan(int.Parse(effectSpecifics));
                 break;
             case "TempRange":
                 target.UpdateBonusAttackRange(int.Parse(effectSpecifics));
@@ -611,8 +516,11 @@ public class SkillEffect : ScriptableObject
             case "MagicPower":
                 target.GainMagicPower(int.Parse(effectSpecifics));
                 break;
+            case "BaseMagicResist":
+                target.ChangeBaseMagicResist(int.Parse(effectSpecifics));
+                break;
             case "MagicResist":
-                target.GainMagicResist(int.Parse(effectSpecifics));
+                target.ChangeMagicResist(int.Parse(effectSpecifics));
                 break;
             case "Artifact":
                 target.GainArtifactStack(int.Parse(effectSpecifics));
@@ -653,7 +561,123 @@ public class SkillEffect : ScriptableObject
                 break;
         }
     }
-
+    public int ApplyElementalDamageToTarget(TacticActor target, string damageType, int damageAmount, CombatLog combatLog = null)
+    {
+        int damage = damageAmount;
+        switch (damageType)
+        {
+            case "Damage":
+                damage = target.TakeEffectDamage(damage);
+                if (combatLog != null)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " damage.");
+                }
+                break;
+            case "TrueDamage":
+                target.currentHealth -= damage;
+                if (combatLog != null)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " damage.");
+                }
+                break;
+            // ALL the elemental damage types go here as well.
+            case "LightningDamage":
+                // Double Damage + Bonus Damage If Wet.
+                if (target.StatusExists("Wet"))
+                {
+                    damage *= 2;
+                    damage += target.ReturnStatusDuration("Wet");
+                }
+                damage = target.ApplyMagicResist(damage);
+                damage = target.TakeEffectDamage(damage, "Lightning");
+                if (combatLog != null && damage > 0)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " lightning damage.");
+                }
+                break;
+            case "FireDamage":
+                // Fire removes bleeds/freeze.
+                target.RemoveStatus("Bleed");
+                target.RemoveStatus("Frozen");
+                damage = target.ApplyMagicResist(damage);
+                // Bonus Damage For Each Burn Stack, Penetrates Magic Resist.
+                damage += target.StatusStacks("Burn");
+                damage = target.TakeEffectDamage(damage, "Fire");
+                if (combatLog != null && damage > 0)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " fire damage.");
+                }
+                break;
+            case "WaterDamage":
+                damage = target.ApplyMagicResist(damage);
+                // Bonus Damage Based On Wet Duration, Penetrates Magic Resist.
+                damage += target.ReturnStatusDuration("Wet");
+                damage = target.TakeEffectDamage(damage, "Water");
+                if (combatLog != null && damage > 0)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " water damage.");
+                }
+                break;
+            case "IceDamage":
+                // Ice removes bleeds.
+                target.RemoveStatus("Bleed");
+                // Freeze If Wet.
+                if (target.StatusExists("Wet"))
+                {
+                    int freezeDuration = target.ReturnStatusDuration("Wet");
+                    target.RemoveStatus("Wet");
+                    target.AddStatus("Frozen", freezeDuration);
+                }
+                damage = target.ApplyMagicResist(damage);
+                damage = target.TakeEffectDamage(damage, "Ice");
+                if (combatLog != null && damage > 0)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " ice damage.");
+                }
+                break;
+            case "EarthDamage":
+                // Multiplied By Weight.
+                damage *= Mathf.Max(1, target.GetWeight());
+                damage = target.ApplyMagicResist(damage);
+                damage = target.TakeEffectDamage(damage, "Earth");
+                if (combatLog != null && damage > 0)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " earth damage.");
+                }
+                break;
+            case "LightDamage":
+                // Reveal invisibility.
+                target.RemoveInvisibility();
+                damage = target.ApplyMagicResist(damage);
+                damage = target.TakeEffectDamage(damage, "Light");
+                if (combatLog != null && damage > 0)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " light damage.");
+                }
+                break;
+            case "DarkDamage":
+                damage = target.ApplyMagicResist(damage);
+                // Bonus Damage For Each Unique Status, Penetrates Magic Resist.
+                damage += target.GetUniqueStatuses().Count;
+                damage = target.TakeEffectDamage(damage, "Dark");
+                if (combatLog != null && damage > 0)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " dark damage.");
+                }
+                break;
+            case "AirDamage":
+                // Decrease weight.
+                target.UpdateWeight(-1);
+                damage = target.ApplyMagicResist(damage);
+                damage = target.TakeEffectDamage(damage, "Air");
+                if (combatLog != null && damage > 0)
+                {
+                    combatLog.UpdateNewestLog(target.GetPersonalName() + " takes " + damage + " air damage.");
+                }
+                break;
+        }
+        return damage;
+    }
     protected int GetScalingInt(TacticActor target, string scaling, string scalingSpecifics, string scalingMultiplier)
     {
         switch (scaling)

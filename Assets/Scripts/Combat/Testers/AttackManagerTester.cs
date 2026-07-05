@@ -244,7 +244,7 @@ public class AttackManagerTester : MonoBehaviour
     public void TestStartTurn()
     {
         InitializeMap();
-        dummyAttacker.NewTurn();
+        dummyAttacker.StartTurn();
         battleManager.effectManager.StartTurn(dummyAttacker, map);
         dummyAttacker.EndTurn();
         battleManager.effectManager.EndTurn(dummyAttacker, map);
@@ -258,7 +258,7 @@ public class AttackManagerTester : MonoBehaviour
         dummyAttacker.EndTurn();
         battleManager.effectManager.EndTurn(dummyAttacker, map);
         map.ApplyEndTerrainEffect(dummyAttacker);
-        dummyAttacker.NewTurn();
+        dummyAttacker.StartTurn();
         battleManager.effectManager.StartTurn(dummyAttacker, map);
         map.UpdateMap();
     }

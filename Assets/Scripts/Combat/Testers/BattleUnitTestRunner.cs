@@ -142,12 +142,12 @@ public class BattleUnitTestRunner : MonoBehaviour
             AssertEqual("Walking", attackTester.dummyAttacker.GetMoveType(), "move type");
         });
 
-        RunCase("new turn restores actions", "Actor state", "Inspect TacticActor.NewTurn and action reset logic.", delegate
+        RunCase("new turn restores actions", "Actor state", "Inspect TacticActor.StartTurn and action reset logic.", delegate
         {
             ConfigureBasicFixture();
             attackTester.dummyAttacker.SetActions(0);
-            attackTester.dummyAttacker.NewTurn();
-            AssertEqual(attackTester.dummyAttacker.GetBaseActions(), attackTester.dummyAttacker.GetActions(), "actions after NewTurn");
+            attackTester.dummyAttacker.StartTurn();
+            AssertEqual(attackTester.dummyAttacker.GetBaseActions(), attackTester.dummyAttacker.GetActions(), "actions after StartTurn");
         });
 
         RunCase("healing clamps to base health", "Actor state", "Inspect ActorStats.Heal and ActorStats.SetCurrentHealth.", delegate
@@ -222,7 +222,7 @@ public class BattleUnitTestRunner : MonoBehaviour
     private void AddTurnLifecycleTests()
     {
         // These follow the same order the battle manager uses:
-        // NewTurn/StartTurn at the beginning, then TacticActor.EndTurn,
+        // StartTurn at the beginning, then TacticActor.EndTurn,
         // EffectManager.EndTurn, and map end terrain effects at the end.
         RunCase("start turn manager applies weather start effects", "Turn Lifecycle", "Inspect EffectManager.StartTurn and BattleMap.ApplyWeatherStartEffect.", delegate
         {

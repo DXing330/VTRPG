@@ -162,7 +162,7 @@ public class ActorInitialStats : ActorPassives
             case "MagicPower":
                 return GetMagicPower().ToString();
             case "MagicResist":
-                return GetMagicResist().ToString();
+                return GetBaseMagicResist().ToString();
             case "ManaEfficiency":
                 return GetManaEfficiency().ToString();
             case "MaxMana":
@@ -265,7 +265,7 @@ public class ActorInitialStats : ActorPassives
                 SetMagicPower(SafeParseInt(newStat));
                 break;
             case "MagicResist":
-                SetMagicResist(SafeParseInt(newStat));
+                SetBaseMagicResist(SafeParseInt(newStat));
                 break;
             case "ManaEfficiency":
                 SetManaEfficiency(SafeParseInt(newStat));
@@ -590,23 +590,15 @@ public class ActorInitialStats : ActorPassives
     {
         magicPower += amount;
     }
-    public int magicResist;
-    public void SetMagicResist(int newInfo)
+    public int baseMagicResist;
+    public void SetBaseMagicResist(int newInfo)
     {
-        magicResist = newInfo;
+        baseMagicResist = newInfo;
     }
-    public int GetMagicResist(){return magicResist;}
-    public void GainMagicResist(int amount)
+    public int GetBaseMagicResist(){return baseMagicResist;}
+    public void ChangeBaseMagicResist(int amount)
     {
-        magicResist += amount;
-    }
-    // Only applies to elemental damage, which is from actives and spells.
-    public int ApplyMagicResist(int damage)
-    {
-        if (GetMagicResist() >= 100){return 0;}
-        // Magic Resist is a percentage reduction.
-        damage = damage * (100 - GetMagicResist()) / 100;
-        return damage;
+        baseMagicResist += amount;
     }
     // How much bonus mana you get from consuming 1 mana.
     // Can be negative.

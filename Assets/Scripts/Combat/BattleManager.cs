@@ -112,7 +112,7 @@ public class BattleManager : MonoBehaviour
         {
             customAllyStartingTiles = startManager.GetCustomAllyStartingTiles(map, map.AllTeamMembers(0).Count);
         }
-        battleStatsTracker.InitializeTracker(map.battlingActors);
+        battleStatsTracker.InitializeDamageTracker(map.battlingActors);
         // Apply start of battle passives.
         for (int i = 0; i < map.battlingActors.Count; i++)
         {
@@ -250,7 +250,7 @@ public class BattleManager : MonoBehaviour
         }
         turnActor = roundTurnOrder[turnNumber];
         // Reset Stats/TickDown Effects.
-        turnActor.NewTurn();
+        turnActor.StartTurn();
         UpdateCombatLog(turnActor.GetPersonalName() + "'s Turn");
         // Apply Status/Passives.
         effectManager.StartTurn(turnActor, map);
@@ -674,7 +674,7 @@ public class BattleManager : MonoBehaviour
         }
         UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName() + ".");
         // Show Attack Speed Rolls In The combatLog?
-        attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier());
+        attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
         if (AdjustTurnNumber())
         {
             return;

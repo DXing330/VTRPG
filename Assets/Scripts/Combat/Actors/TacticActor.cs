@@ -244,28 +244,6 @@ public class TacticActor : ActorSubGameStats
     public void ResetBonusActions(){bonusActions = 0;}
     public void GainBonusActions(int amount){bonusActions += amount;}
     public int GetActions(){return actions + bonusActions;}
-    public int baseBasicAttackMultiplier = 100;
-    public void SetBaseBasicAttackMultiplier(int newAmount)
-    {
-        baseBasicAttackMultiplier = newAmount;
-    }
-    public void ChangeBaseBasicAttackMultiplier(int newAmount)
-    {
-        baseBasicAttackMultiplier += newAmount;
-    }
-    public int basicAttackMultiplier = 100;
-    public void SetBasicAttackMultiplier(int newAmount)
-    {
-        basicAttackMultiplier = newAmount;
-    }
-    public int GetBasicAttackMultiplier()
-    {
-        return basicAttackMultiplier;
-    }
-    public void ChangeBasicAttackMultiplier(int newAmount)
-    {
-        basicAttackMultiplier += newAmount;
-    }
     public int attackActionCost = 2;
     public void SetAttackActionCost(int newCost)
     {
@@ -355,7 +333,7 @@ public class TacticActor : ActorSubGameStats
         movement = 0;
     }
     // Start of Turn
-    public void NewTurn()
+    public void StartTurn()
     {
         // Default is two actions.
         counterAttacks = 0;
@@ -382,7 +360,6 @@ public class TacticActor : ActorSubGameStats
         ResetBonusActions();
         ResetEquipmentSkillsAndSpells();
         ClearTurnSkillMods();
-        basicAttackMultiplier = baseBasicAttackMultiplier;
     }
     protected void TrackEndTurnRemainingStats()
     {
@@ -409,12 +386,12 @@ public class TacticActor : ActorSubGameStats
     {
         return (movement + (GetSpeed() * actionCount));
     }
-    public int GetMaxMoveRange()
+    public virtual int GetMaxMoveRange()
     {
         // Max of current / base speed and base / current actions.
         return Mathf.Max(GetSpeed(), GetMoveSpeed()) * Mathf.Max(baseActions, actions) + Mathf.Max(0, GetMovement());
     }
-    public int GetMoveRange(bool current = true)
+    public virtual int GetMoveRange(bool current = true)
     {
         if (current)
         {

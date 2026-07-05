@@ -246,6 +246,18 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " grant the " + specifics + " modifier to a random skill";
             case "SkillMod":
                 return " gain the " + specifics + " modifier";
+            case "BaseBasicAttackDamageType":
+                return " change basic attack damage type to " + specifics;
+            case "BasicAttackDamageType":
+                return " change basic attack damage type to " + specifics + " for one turn";
+            case "BaseBasicAttackShape":
+                return " change basic attack shape to " + specifics;
+            case "BasicAttackShape":
+                return " change basic attack shape to " + specifics + " for one turn";
+            case "BaseBasicAttackSpan":
+                return " change basic attack span to " + specifics;
+            case "BasicAttackSpan":
+                return " change basic attack span to " + specifics + " for one turn";
         }
         return " increase " + effect + " of " + target + " by " + specifics;
     }

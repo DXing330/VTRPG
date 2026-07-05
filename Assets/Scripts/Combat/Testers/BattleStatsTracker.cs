@@ -54,7 +54,7 @@ public class BattleStatsTracker : MonoBehaviour
         actorsDamageDealt = new List<int>();
         actorsDamageTaken = new List<int>();
     }
-    public void InitializeTracker(List<TacticActor> startingActors)
+    public void InitializeDamageTracker(List<TacticActor> startingActors)
     {
         ResetTracker();
         for (int i = 0; i < startingActors.Count; i++)

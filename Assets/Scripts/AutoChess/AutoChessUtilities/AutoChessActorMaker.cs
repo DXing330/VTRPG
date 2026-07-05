@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class AutoChessActorMaker : MonoBehaviour
+public class AutoChessActorMaker : ActorMaker
 {
     public StatDatabase actorData;
     public StatDatabase enemyData;
@@ -16,20 +16,35 @@ public class AutoChessActorMaker : MonoBehaviour
         currentID++;
         return returnedID;
     }
-    public AutoActor CreateActor(string actorRollUpData)
+    public AutoActor CreateActor(string actorRollUpData, int location = -1, int direction = -1)
     {
         AutoActorRollUpData newActor = new AutoActorRollUpData();
         newActor.LoadRollUpData(actorRollUpData);
-        return CreateActor(newActor);
+        return CreateActor(newActor, location, direction);
     }
-    public AutoActor CreateActor(AutoActorRollUpData rollUpActor)
+    public AutoActor CreateActor(AutoActorRollUpData rollUpActor, int location = -1, int direction = -1)
     {
         AutoActor newActor = new AutoActor();
         string actorStats = actorData.ReturnValue(rollUpActor.GetName());
         newActor.SetPersonalName(rollUpActor.GetName());
-        newActor.SetInitialStatsFromString(actorStats);
-        newActor.SetLocation(rollUpActor.GetLocation());
-        newActor.SetDirection(rollUpActor.GetDirection());
+        newActor.AutoChessSetInitialStatsFromString(actorStats);
+        passiveOrganizer.OrganizeActorPassives(newActor);
+        if (location < 0)
+        {
+            newActor.SetLocation(rollUpActor.GetLocation());
+        }
+        else
+        {
+            newActor.SetLocation(location);
+        }
+        if (direction < 0)
+        {
+            newActor.SetDirection(rollUpActor.GetDirection());
+        }
+        else
+        {
+            newActor.SetDirection(location);
+        }
         newActor.SetTeam(0);
         newActor.SetID(GetCurrentID());
         AddAutoChessEquipmentToActor(rollUpActor, newActor);
@@ -40,7 +55,8 @@ public class AutoChessActorMaker : MonoBehaviour
         AutoActor newActor = new AutoActor();
         string actorStats = enemyData.ReturnValue(actorName);
         newActor.SetPersonalName(actorName);
-        newActor.EnemySetInitialStatsFromString(actorStats);
+        newActor.AutoChessEnemySetInitialStatsFromString(actorStats);
+        passiveOrganizer.OrganizeActorPassives(newActor);
         newActor.SetLocation(actorLocation);
         newActor.SetTeam(1);
         newActor.SetID(GetCurrentID());

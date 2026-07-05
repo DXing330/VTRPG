@@ -216,7 +216,7 @@ public class AutoActorRollUpData
 [System.Serializable]
 public class AutoActor : TacticActor
 {
-    public override void SetInitialStatsFromString(string newStats)
+    public void AutoChessSetInitialStatsFromString(string newStats)
     {
         // Initialize Regular Stats.
         baseCrit = 0;
@@ -240,12 +240,13 @@ public class AutoActor : TacticActor
         SetBaseAttack(int.Parse(statBlocks[8]));
         SetBaseDefense(int.Parse(statBlocks[9]));
         SetAttackRange(int.Parse(statBlocks[10]));
-        attackRangeShape =  statBlocks[13];
+        autoChessAttackRangeShape =  statBlocks[13];
         SetPassiveSkills(statBlocks[11].Split(passiveDelimiter).ToList());
         SetPassiveLevels(statBlocks[12].Split(passiveDelimiter).ToList());
+        healer = int.Parse(statBlocks[14]);
         baseRespawnTimer = int.Parse(statBlocks[15]);
     }
-    public void EnemySetInitialStatsFromString(string newStats)
+    public void AutoChessEnemySetInitialStatsFromString(string newStats)
     {
         // Initialize Regular Stats.
         baseCrit = 0;
@@ -266,5 +267,14 @@ public class AutoActor : TacticActor
         SetAttackRange(int.Parse(statBlocks[6]));
         SetPassiveSkills(statBlocks[7].Split(passiveDelimiter).ToList());
         SetPassiveLevels(statBlocks[8].Split(passiveDelimiter).ToList());
+        SetMoveType(statBlocks[9]);
+    }
+    public override int GetMaxMoveRange()
+    {
+        return 333;
+    }
+    public override int GetMoveRange(bool current = true)
+    {
+        return 333;
     }
 }

@@ -63,6 +63,7 @@ public class ActorStats : ActorInitialStats
     {
         currentAttack = baseAttack;
         currentDefense = baseDefense;
+        magicResist = baseMagicResist;
         currentSpeed = moveSpeed;
         currentWeight = weight;
         currentDodge = baseDodge;
@@ -87,6 +88,10 @@ public class ActorStats : ActorInitialStats
         currentCrit = baseCrit;
         currentHitChance = baseHitChance;
         currentAttackSpeed = baseAttackSpeed;
+        basicAttackDamageType = baseBasicAttackDamageType;
+        basicAttackMultiplier = baseBasicAttackMultiplier;
+        basicAttackShape = baseBasicAttackShape;
+        basicAttackSpan = baseBasicAttackSpan;
     }
     // For Testing Passive Effects.
     public string ReturnTestStatsString()
@@ -323,6 +328,18 @@ public class ActorStats : ActorInitialStats
             currentDmgBonuses[indexOf] += amount;
         }
     }
+    public int magicResist;
+    public int GetMagicResist(){return magicResist;}
+    public void SetMagicResist(int newValue){magicResist = newValue;}
+    public void ChangeMagicResist(int amount){magicResist += amount;}
+    // Only applies to elemental damage, which is from actives and spells.
+    public int ApplyMagicResist(int damage)
+    {
+        if (GetMagicResist() >= 100){return 0;}
+        // Magic Resist is a percentage reduction.
+        damage = damage * (100 - GetMagicResist()) / 100;
+        return damage;
+    }
     public List<string> resistDmgTypes = new();
     // Resist damage.
     public List<int> baseDmgResists = new();
@@ -431,6 +448,58 @@ public class ActorStats : ActorInitialStats
     public int currentAttack;
     public int GetAttack() { return currentAttack + tempAttack; }
     public void UpdateAttack(int changeAmount) { currentAttack += changeAmount; }
+    public string baseBasicAttackDamageType = "Physical";
+    public void SetBaseBasicAttackDamageType(string newType){baseBasicAttackDamageType = newType;}
+    public string basicAttackDamageType;
+    public void SetBasicAttackDamageType(string newType){basicAttackDamageType = newType;}
+    public string GetBasicAttackDamageType(){return basicAttackDamageType;}
+    public string baseBasicAttackShape = "";
+    public void SetBaseBasicAttackShape(string newShape)
+    {
+        baseBasicAttackShape = newShape;
+    }
+    public string basicAttackShape;
+    public void SetBasicAttackShape(string newShape)
+    {
+        basicAttackShape = newShape;
+    }
+    public string GetBasicAttackShape()
+    {
+        return basicAttackShape;
+    }
+    public int baseBasicAttackSpan = 0;
+    public void SetBaseBasicAttackSpan(int newSpan)
+    {
+        baseBasicAttackSpan = newSpan;
+    }
+    public int basicAttackSpan;
+    public void SetBasicAttackSpan(int newSpan)
+    {
+        basicAttackSpan = newSpan;
+    }
+    public int GetBasicAttackSpan(){return basicAttackSpan;}
+    public int baseBasicAttackMultiplier = 100;
+    public void SetBaseBasicAttackMultiplier(int newAmount)
+    {
+        baseBasicAttackMultiplier = newAmount;
+    }
+    public void ChangeBaseBasicAttackMultiplier(int newAmount)
+    {
+        baseBasicAttackMultiplier += newAmount;
+    }
+    public int basicAttackMultiplier = 100;
+    public void SetBasicAttackMultiplier(int newAmount)
+    {
+        basicAttackMultiplier = newAmount;
+    }
+    public int GetBasicAttackMultiplier()
+    {
+        return basicAttackMultiplier;
+    }
+    public void ChangeBasicAttackMultiplier(int newAmount)
+    {
+        basicAttackMultiplier += newAmount;
+    }
     public int tempDefense; // Used specifically for end of turn attack buffs.
     public void ResetTempDefense() { tempDefense = 0; }
     public void UpdateTempDefense(int changeAmount) { tempDefense += changeAmount; }

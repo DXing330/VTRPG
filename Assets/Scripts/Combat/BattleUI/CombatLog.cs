@@ -88,6 +88,15 @@ public class CombatLog : MonoBehaviour
         return combatTurnTracker[combatTurnTracker.Count - 1];
     }
     public List<string> allLogs;
+    public void DebugAllLogs()
+    {
+        string allLogsDebug = "";
+        for (int i = 0; i < allLogs.Count; i++)
+        {
+            allLogsDebug += allLogs[i] + "\n";
+        }
+        Debug.Log(allLogsDebug);
+    }
     public List<string> currentLogs;
     public List<string> detailKeys;
     public List<string> detailedLogs;
@@ -120,12 +129,20 @@ public class CombatLog : MonoBehaviour
     }
     public void AddNewLog()
     {
-        round = battleManager.GetRoundNumber();
-        if (round == GetLatestRound())
+        if (battleManager != null)
         {
-            turn = GetLatestTurn() + 1;
+            round = battleManager.GetRoundNumber();
+            if (round == GetLatestRound())
+            {
+                turn = GetLatestTurn() + 1;
+            }
+            else{turn = 0;}
         }
-        else{turn = 0;}
+        else
+        {
+            round = 0;
+            turn++;
+        }
         combatRoundTracker.Add(round);
         combatTurnTracker.Add(turn);
         allLogs.Add("");
@@ -141,7 +158,6 @@ public class CombatLog : MonoBehaviour
             allLogs[allLogs.Count - 1] = allLogs[allLogs.Count - 1]+"|"+newText;
         }
         UpdateLog(false);
-        //if (round == battleManager.GetRoundNumber() && turn == battleManager.GetTurnIndex()){UpdateLog(false);}
     }
     public string GetLatestLog()
     {
@@ -151,6 +167,7 @@ public class CombatLog : MonoBehaviour
     {
         return (allLogs[allLogs.Count - 1].Split("|").Length - 1);
     }
+    // TODO Move This To Another Script, This Will Only Store The Logs.
     public TMP_Text roundTrackerText;
     public TMP_Text turnTrackerText;
     public GameObject detailLogObject;
@@ -158,6 +175,7 @@ public class CombatLog : MonoBehaviour
     public SelectList eventLogs;
     public void UpdateLog(bool manual = true)
     {
+        if (roundTrackerText == null || turnTrackerText == null || eventLog == null){return;}
         detailLogObject.SetActive(false);
         eventLogs.StartingPage();
         for (int i = 0; i < combatRoundTracker.Count; i++)

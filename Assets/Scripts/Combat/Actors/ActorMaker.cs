@@ -91,7 +91,7 @@ public class ActorMaker : MonoBehaviour
             actor.AddPassiveSkill(passives[i], levels[i]);
         }
     }
-    public TacticActor SummonActor(int location, string actorName, int team = 0)
+    public virtual TacticActor SummonActor(int location, string actorName, int team = 0)
     {
         TacticActor newActor = SpawnActor(location, actorName, team);
         AddElementPassives(newActor);
@@ -141,7 +141,6 @@ public class ActorMaker : MonoBehaviour
         }
         List<string> uniqueSets = equipmentSets.Distinct().ToList();
         List<int> uniqueSetLevels = new List<int>();
-        // TODO Test That This Works As Intended With Sets.
         for (int i = 0; i < uniqueSets.Count; i++)
         {
             uniqueSetLevels.Add(utility.CountStringsInList(equipmentSets, uniqueSets[i]));

@@ -115,6 +115,15 @@ public class BattleMap : MapManager
     }
     public string GetTime(){ return time; }
     public CombatLog combatLog;
+    public void AddNewCombatLog()
+    {
+        combatLog.AddNewLog();
+    }
+    public void InitializeCombatLog()
+    {
+        if (combatLog == null){return;}
+        combatLog.ForceStart();
+    }
     public void UpdateCombatLog(string newLog, bool detailed = false)
     {
         if (combatLog == null){return;}
@@ -128,6 +137,16 @@ public class BattleMap : MapManager
         }
     }
     public BattleStatsTracker damageTracker;
+    public void InitializeDamageTracker()
+    {
+        if (damageTracker == null){return;}
+        damageTracker.InitializeDamageTracker(battlingActors);
+    }
+    public void UpdateDamageStat(TacticActor dealer, TacticActor taker, int damage)
+    {
+        if (damageTracker == null){return;}
+        damageTracker.UpdateDamageStat(dealer, taker, damage);
+    }
     public TerrainPassivesList terrainPassives;
     public string ReturnTerrainStartPassive(TacticActor actor)
     {
@@ -179,6 +198,10 @@ public class BattleMap : MapManager
     public TerrainPassivesList buildingEffectData;
     public StatDatabase buildingStats;
     public List<string> buildings;
+    public bool BuildingExists(string buildingName)
+    {
+        return buildings.Contains(buildingName);
+    }
     public List<int> buildingLocations;
     public void ResetBuildings()
     {
@@ -212,9 +235,16 @@ public class BattleMap : MapManager
         if (indexOf < 0){return -1;}
         return buildingDefenses[indexOf];
     }
-    public void DamageActorBuilding(int targetLocation, TacticActor attacker, int damage)
+    public void SetBuildingHealthAndDefense(int tileNumber, int newHealth, int newDefense)
     {
-        int index = GetBuildingIndexFromLocation(targetLocation);
+        int index = GetBuildingIndexFromLocation(tileNumber);
+        if (index < 0){return;}
+        buildingHealths[index] = newHealth;
+        buildingDefenses[index] = newDefense;
+    }
+    public void DamageTileBuilding(int tileNumber, TacticActor attacker, int damage)
+    {
+        int index = GetBuildingIndexFromLocation(tileNumber);
         if (index < 0){return;}
         damage = Mathf.Max(0, damage - buildingDefenses[index]);
         buildingHealths[index] -= damage;

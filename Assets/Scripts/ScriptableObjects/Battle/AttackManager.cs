@@ -97,16 +97,101 @@ public class AttackManager : ScriptableObject
         }
         return damage;
     }
+    // Purely For The Calculation, Doesn't Actually Change The Damage.
     public void ElementalResistance(TacticActor defender, int damage, string type, bool showLog = true)
     {
+        if (!showLog){return;}
         int resistance = defender.ReturnDamageResistanceOfType(type);
-        if (resistance != 0)
+        int magicResist = defender.GetMagicResist();
+        switch (type)
         {
-            if (showLog)
+            case "Physical":
+            if (resistance != 0)
             {
                 finalDamageCalculation += "\n" + type + " Resistance = " + resistance + "%";
                 finalDamageCalculation += "\n" + baseDamage + " * " + (100 - resistance) + "% = " + (baseDamage * (100 - resistance) / 100);
             }
+            break;
+            case "Light":
+            case "Ice":
+            case "Air":
+            resistance += magicResist;
+            if (resistance != 0)
+            {
+                finalDamageCalculation += "\n" + type + " Resistance = " + resistance + "%";
+                finalDamageCalculation += "\n" + baseDamage + " * " + (100 - resistance) + "% = " + (baseDamage * (100 - resistance) / 100);
+            }
+            break;
+            case "Fire":
+            if (magicResist != 0)
+            {
+                finalDamageCalculation += "\n" + "Magic Resistance = " + magicResist + "%";
+                finalDamageCalculation += "\n" + baseDamage + " * " + (100 - magicResist) + "% = " + (baseDamage * (100 - magicResist) / 100);
+            }
+            int burnCount = defender.StatusStacks("Burn");
+            finalDamageCalculation += "\n" + "Bonus Fire Damage From Burn = " + burnCount;
+            finalDamageCalculation += "\n" + baseDamage + " + " + burnCount + " = " + (baseDamage + burnCount);
+            if (resistance != 0)
+            {
+                finalDamageCalculation += "\n" + type + " Resistance = " + resistance + "%";
+                finalDamageCalculation += "\n" + (baseDamage + burnCount) + " * " + (100 - resistance) + "% = " + ((baseDamage + burnCount) * (100 - resistance) / 100);
+            }
+            break;
+            case "Lightning":
+            int lWetCount = defender.ReturnStatusDuration("Wet");
+            if (lWetCount > 0)
+            {
+                finalDamageCalculation += "\n" + "Bonus Lightning Damage From Wet = " + (lWetCount + baseDamage);
+                finalDamageCalculation += "\n" + baseDamage + " + " + (lWetCount + baseDamage) + " = " + (baseDamage + lWetCount + baseDamage);
+            }
+            resistance += magicResist;
+            if (resistance != 0)
+            {
+                finalDamageCalculation += "\n" + type + " Resistance = " + resistance + "%";
+                finalDamageCalculation += "\n" + (baseDamage + lWetCount + baseDamage) + " * " + (100 - resistance) + "% = " + ((baseDamage + lWetCount + baseDamage) * (100 - resistance) / 100);
+            }
+            break;
+            case "Water":
+            if (magicResist != 0)
+            {
+                finalDamageCalculation += "\n" + "Magic Resistance = " + magicResist + "%";
+                finalDamageCalculation += "\n" + baseDamage + " * " + (100 - magicResist) + "% = " + (baseDamage * (100 - magicResist) / 100);
+            }
+            int wetCount = defender.ReturnStatusDuration("Wet");
+            finalDamageCalculation += "\n" + "Bonus Water Damage From Wet = " + wetCount;
+            finalDamageCalculation += "\n" + baseDamage + " + " + wetCount + " = " + (baseDamage + wetCount);
+            if (resistance != 0)
+            {
+                finalDamageCalculation += "\n" + type + " Resistance = " + resistance + "%";
+                finalDamageCalculation += "\n" + (baseDamage + wetCount) + " * " + (100 - resistance) + "% = " + ((baseDamage + wetCount) * (100 - resistance) / 100);
+            }
+            break;
+            case "Dark":
+            if (magicResist != 0)
+            {
+                finalDamageCalculation += "\n" + "Magic Resistance = " + magicResist + "%";
+                finalDamageCalculation += "\n" + baseDamage + " * " + (100 - magicResist) + "% = " + (baseDamage * (100 - magicResist) / 100);
+            }
+            int uStatusCount = defender.GetUniqueStatuses().Count;
+            finalDamageCalculation += "\n" + "Bonus Dark Damage From Statuses = " + uStatusCount;
+            finalDamageCalculation += "\n" + baseDamage + " + " + uStatusCount + " = " + (baseDamage + uStatusCount);
+            if (resistance != 0)
+            {
+                finalDamageCalculation += "\n" + type + " Resistance = " + resistance + "%";
+                finalDamageCalculation += "\n" + (baseDamage + uStatusCount) + " * " + (100 - resistance) + "% = " + ((baseDamage + uStatusCount) * (100 - resistance) / 100);
+            }
+            break;
+            case "Earth":
+            int wMulti = Mathf.Max(1, defender.GetWeight());
+            finalDamageCalculation += "\n" + "Weight Damage Multiplier = " + wMulti;
+            finalDamageCalculation += "\n" + baseDamage + " * " + wMulti + " = " + (baseDamage * wMulti);
+            resistance += magicResist;
+            if (resistance != 0)
+            {
+                finalDamageCalculation += "\n" + type + " Resistance = " + resistance + "%";
+                finalDamageCalculation += "\n" + (baseDamage * wMulti) + " * " + (100 - resistance) + "% = " + ((baseDamage * wMulti) * (100 - resistance) / 100);
+            }
+            break;
         }
     }
     public bool CritRoll(TacticActor attacker, int damage, bool showLog = true)
@@ -188,7 +273,7 @@ public class AttackManager : ScriptableObject
             defender.SetTarget(attacker);
         }
         map.UpdateCombatLog(defender.GetPersonalName() + " takes " + baseDamage + " damage.");
-        map.damageTracker.UpdateDamageStat(attacker, defender, baseDamage);
+        map.UpdateDamageStat(attacker, defender, baseDamage);
         map.UpdateCombatLog(finalDamageCalculation, true);
     }
     protected void CheckMapPassives(TacticActor attacker, TacticActor defender, BattleMap map, int defenderTile, bool forAttacker = true, bool forDefender = true)
@@ -239,10 +324,10 @@ public class AttackManager : ScriptableObject
             attackTarget.SetTarget(attacker);
         }
         map.UpdateCombatLog(attackTarget.GetPersonalName() + " takes " + baseDamage + " damage.");
-        map.combatLog.AddDetailedLogs(passiveEffectString);
-        map.combatLog.AddDetailedLogs(damageRolls);
-        map.combatLog.AddDetailedLogs(finalDamageCalculation);
-        map.damageTracker.UpdateDamageStat(attacker, attackTarget, baseDamage);
+        map.UpdateCombatLog(passiveEffectString, true);
+        map.UpdateCombatLog(damageRolls, true);
+        map.UpdateCombatLog(finalDamageCalculation, true);
+        map.UpdateDamageStat(attacker, attackTarget, baseDamage);
     }
     public void TrueDamageAttack(TacticActor attacker, TacticActor defender, BattleMap map, int attackMultiplier = -1, string type = "Attack")
     {
@@ -281,7 +366,7 @@ public class AttackManager : ScriptableObject
         }
         map.UpdateCombatLog(defender.GetPersonalName() + " takes " + baseDamage + " damage.");
         passive.ApplyAfterAttackPassives(attacker, defender, baseDamage, map, true, critHit, counterAttack);
-        map.damageTracker.UpdateDamageStat(attacker, defender, baseDamage);
+        map.UpdateDamageStat(attacker, defender, baseDamage);
     }
     protected void UpdateBattleStats(TacticActor attacker, TacticActor defender)
     {
@@ -374,7 +459,7 @@ public class AttackManager : ScriptableObject
         // Apply Attack / Defense Multipliers/Bonuses.
         AttackDefenseMultipliersBonuses();
         // Deal Damage To Any Buildings Supporting The Target.
-        map.DamageActorBuilding(target.GetLocation(), attacker, baseDamage);
+        map.DamageTileBuilding(target.GetLocation(), attacker, baseDamage);
         // Ranged attacks get elevation bonus/penalties.
         if (attacker.GetAttackRange() > 1)
         {
@@ -387,11 +472,14 @@ public class AttackManager : ScriptableObject
                 finalDamageCalculation += damageMultiplier + "\n";
             }
         }
-        // First subtract defense.
-        finalDamageCalculation += "Subtract Defense: " + baseDamage + " - " + defenseValue + " = ";
-        baseDamage = baseDamage - defenseValue;
-        if (baseDamage < 0){ baseDamage = 0; }
-        finalDamageCalculation += baseDamage;
+        // First subtract defense if physical damage.
+        if (type == "Physical")
+        {
+            finalDamageCalculation += "Subtract Defense: " + baseDamage + " - " + defenseValue + " = ";
+            baseDamage = baseDamage - defenseValue;
+            if (baseDamage < 0){ baseDamage = 0; }
+            finalDamageCalculation += baseDamage;
+        }
         // Then multiply by damage multiplier.
         if (damageMultiplier < 0) { damageMultiplier = 0; }
         finalDamageCalculation += "\n" + "Damage Multiplier: " + baseDamage + " * " + damageMultiplier + "% = ";
@@ -401,18 +489,25 @@ public class AttackManager : ScriptableObject
         baseDamage = CheckTakeDamagePassives(attackTarget.GetTakeDamagePassives(), baseDamage, type, attacker, attackTarget);
         // Show the resistance calculation.
         ElementalResistance(attackTarget, baseDamage, type);
-        baseDamage = attackTarget.TakeDamage(baseDamage, type);
+        if (type == "Physical")
+        {
+            baseDamage = attackTarget.TakeDamage(baseDamage, type);
+        }
+        else
+        {
+            baseDamage = passive.ApplyElementalDamageToTarget(attackTarget, type + "Damage", baseDamage);
+        }
         attackTarget.HurtBy(attacker, baseDamage);
         if (attackTarget.GetHurtBy() == attacker)
         {
             attackTarget.SetTarget(attacker);
         }
-        map.UpdateCombatLog(attackTarget.GetPersonalName() + " takes " + baseDamage + " damage.");
-        map.damageTracker.UpdateDamageStat(attacker, attackTarget, baseDamage);
-        map.combatLog.AddDetailedLogs(passiveEffectString);
-        map.combatLog.AddDetailedLogs("Damage Calculations:");
-        map.combatLog.AddDetailedLogs(damageRolls);
-        map.combatLog.AddDetailedLogs(finalDamageCalculation);
+        map.UpdateCombatLog(attackTarget.GetPersonalName() + " takes " + baseDamage + " " + type + " damage.");
+        map.UpdateDamageStat(attacker, attackTarget, baseDamage);
+        map.UpdateCombatLog(passiveEffectString, true);
+        map.UpdateCombatLog("Damage Calculations:", true);
+        map.UpdateCombatLog(damageRolls, true);
+        map.UpdateCombatLog(finalDamageCalculation, true);
         passive.ApplyAfterAttackPassives(attacker, attackTarget, baseDamage, map, hit, critHit, counterAttack);
         passive.ApplyAfterDefendPassives(attacker, attackTarget, baseDamage, map, hit, critHit, counterAttack);
         // Check if the defender is alive, has counter attacks available and is in range.
