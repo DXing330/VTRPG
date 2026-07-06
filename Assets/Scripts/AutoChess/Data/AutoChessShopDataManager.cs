@@ -14,6 +14,7 @@ public class AutoChessShopDataManager : SavedData
     public StatDatabase unitRarity;
     public RNGUtility autoChessShopRNG;
     public int shopLevel;
+    public int frozenShop = 0;
     public void SetShopLevel(string newData)
     {
         shopLevel = utility.SafeParseInt(newData, 1);
@@ -175,10 +176,20 @@ public class AutoChessShopDataManager : SavedData
     {
         currentListing.RemoveAt(index);
     }
+    public override void NewRound()
+    {
+        // TODO If frozen then don't.
+        if (frozenShop == 0)
+        {
+            GenerateCurrentListing();
+        }
+        frozenShop = 0;
+    }
     [ContextMenu("New Game")]
     public override void NewGame()
     {
         shopLevel = 1;
+        frozenShop = 0;
         currentPool.Clear();
         currentPoolRarity.Clear();
         currentPoolFactions.Clear();
@@ -203,6 +214,7 @@ public class AutoChessShopDataManager : SavedData
         dataPath = Application.persistentDataPath + "/" + filename;
         allData = "";
         allData += "ShopLevel=" + shopLevel + delimiter;
+        allData += "FrozenShop=" + frozenShop + delimiter;
         allData += "CurrentPool=" + String.Join(delimiter2, currentPool) + delimiter;
         allData += "CurrentPoolRarity=" + String.Join(delimiter2, currentPoolRarity) + delimiter;
         allData += "CurrentPoolFactions=" + String.Join(delimiter2, currentPoolFactions) + delimiter;
@@ -241,6 +253,9 @@ public class AutoChessShopDataManager : SavedData
             return;
             case "ShopLevel":
             SetShopLevel(value);
+            return;
+            case "FrozenShop":
+            frozenShop = int.Parse(value);
             return;
             case "CurrentPool":
             SetCurrentPool(value);

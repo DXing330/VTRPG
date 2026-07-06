@@ -334,13 +334,12 @@ public class BattleMapUtility : ScriptableObject
     public int ReturnLowestMoveCostTile(BattleMap map, TacticActor actor, List<int> tiles)
     {
         if (tiles == null || tiles.Count <= 0) { return -1; }
-        if (map.battleManager == null || map.battleManager.moveManager == null)
+        if (map.moveManager == null)
         {
             return mapUtility.ReturnClosestTile(actor.GetLocation(), tiles, map.mapSize);
         }
-        MoveCostManager moveManager = map.battleManager.moveManager;
-        moveManager.GetAllMoveCosts(actor, map.battlingActors);
-        return moveManager.GetLowestMoveCostTile(actor.GetLocation(), tiles);
+        map.moveManager.GetAllMoveCosts(actor, map.battlingActors);
+        return map.moveManager.GetLowestMoveCostTile(actor.GetLocation(), tiles);
     }
     public bool TileSandwiched(BattleMap map, TacticActor actor, string tileType)
     {
@@ -477,9 +476,9 @@ public class BattleMapUtility : ScriptableObject
     }
     public int ReturnLowestMoveCostGuardTile(BattleMap map, TacticActor guardActor)
     {
-        if (map == null || guardActor == null || map.battleManager == null || map.battleManager.moveManager == null) { return -1; }
+        if (map == null || guardActor == null || map.moveManager == null) { return -1; }
         List<int> guardTiles = ReturnGuardTiles(map, guardActor);
-        MoveCostManager moveManager = map.battleManager.moveManager;
+        MoveCostManager moveManager = map.moveManager;
         moveManager.GetAllMoveCosts(guardActor, map.battlingActors);
         return moveManager.GetLowestMoveCostTile(guardActor.GetLocation(), guardTiles);
     }

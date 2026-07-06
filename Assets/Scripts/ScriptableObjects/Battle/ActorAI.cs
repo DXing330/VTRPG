@@ -272,13 +272,13 @@ public class ActorAI : ScriptableObject
         if (target.GetHealth() <= 0) { return false; }
         return map.TileInAttackRange(currentActor, target.GetLocation());
     }
-    public int ChooseSkillTargetLocation(TacticActor currentActor, BattleMap map, MoveCostManager moveManager)
+    public int ChooseSkillTargetLocation(TacticActor currentActor, BattleMap map)
     {
         if (active.GetRange(currentActor) == 0)
         {
             return currentActor.GetLocation();
         }
-        List<int> targetableTiles = moveManager.actorPathfinder.FindTilesInRange(currentActor.GetLocation(), active.GetRange(currentActor));
+        List<int> targetableTiles = map.moveManager.actorPathfinder.FindTilesInRange(currentActor.GetLocation(), active.GetRange(currentActor));
         if (targetableTiles.Count <= 0){return -1;}
         if (targetableTiles.Count == 1){return targetableTiles[0];}
         // TODO this is more complicated since move is often displacement as well.
@@ -298,12 +298,12 @@ public class ActorAI : ScriptableObject
             int direction = -1;
             if (currentActor.GetTarget() != null && currentActor.GetTarget().GetHealth() > 0)
             {
-                direction = moveManager.DirectionBetweenActors(currentActor, currentActor.GetTarget());
+                direction = map.moveManager.DirectionBetweenActors(currentActor, currentActor.GetTarget());
             }
             // Else find the direction between you and a random enemy.
             else
             {
-                direction = moveManager.DirectionBetweenActors(currentActor, map.GetClosestEnemy(currentActor));
+                direction = map.moveManager.DirectionBetweenActors(currentActor, map.GetClosestEnemy(currentActor));
             }
             return map.mapUtility.PointInDirection(currentActor.GetLocation(), direction, map.mapSize);
         }

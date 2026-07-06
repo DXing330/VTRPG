@@ -90,6 +90,10 @@ public class AutoChessDataManager : SavedData
     {
         health = newInfo;
     }
+    public void LoseHealth(int amount)
+    {
+        health -= amount;
+    }
     public int round;
     public int GetRound(){return round;}
     public void SetRound(int newInfo)

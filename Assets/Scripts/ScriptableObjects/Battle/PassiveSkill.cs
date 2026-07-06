@@ -465,7 +465,7 @@ public class PassiveSkill : SkillEffect
                 break;
             // TODO Determine Skill Based On Effect/Specifics, Determine Targets Based On AI Manager.
             case "AutoSkill":
-                map.battleManager.AutoSkill(actor, effect, specifics);
+                map.activeManager.AutoSkill(actor, effect, specifics);
                 break;
             case "AutoSpell":
                 break;

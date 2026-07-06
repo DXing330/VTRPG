@@ -3,13 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MoveCostManager : MonoBehaviour
+[CreateAssetMenu(fileName = "MoveCostManager", menuName = "ScriptableObjects/BattleLogic/MoveCostManager", order = 1)]
+public class MoveCostManager : ScriptableObject
 {
     public PassiveSkill passiveSkill;
     public StatDatabase passiveData;
     public int bigInt = 999;
     public List<string> stopDisplacement;
-    public int moveTypeIndex;
     public void UpdateInfoFromBattleMap(BattleMap map)
     {
         SetMapInfo(map.mapInfo);
@@ -64,12 +64,6 @@ public class MoveCostManager : MonoBehaviour
             borderCosts.Add(cost);
         }
         actorPathfinder.SetBorders(borderCosts);
-    }
-    // You can move through teammates but not enemies?
-    public List<string> teamInfo;
-    public void SetTeamInfo(List<string> newInfo)
-    {
-        teamInfo = newInfo;
     }
     public StatDatabase allMoveCosts;
     public StatDatabase tEffectMoveCosts;
@@ -143,14 +137,16 @@ public class MoveCostManager : MonoBehaviour
                 }
             }
         }
-        if (!actor.PassThroughMoving())
+        // Fliers can move through allies but not enemies?
+        for (int i = 0; i < actors.Count; i++)
         {
-            for (int i = 0; i < actors.Count; i++)
+            if (!actor.PassThroughMoving() || actors[i].GetTeam() != actor.GetTeam())
             {
                 currentMoveCosts[actors[i].GetLocation()] = bigInt;
             }
         }
         // If ever a single tile costs more than your max possible movement, then treat it as a big int instead of a regular high cost tile.
+        // Why? I forgot why, but just keep it unless it's causing problems.
         int maxMovement = actor.GetMaxMoveRange();
         for (int i = 0; i < currentMoveCosts.Count; i++)
         {
@@ -160,8 +156,6 @@ public class MoveCostManager : MonoBehaviour
             }
         }
     }
-    public List<string> moveTypeTiles;
-    public List<int> moveTypeCosts;
     public int moveCost;
     public int GetMoveCost(){ return moveCost; }
     // Full Distance To A Tile Based On Paths From A Tile.
@@ -195,7 +189,6 @@ public class MoveCostManager : MonoBehaviour
     {
         return actorPathfinder.ClosestAdjacentTile(tile);
     }
-
     public List<int> GetPrecomputedPath(int startIndex, int endIndex, bool AI = false)
     {
         moveCost = 0;
@@ -332,6 +325,6 @@ public class MoveCostManager : MonoBehaviour
     // This Ignores Checks For Empty Tiles, Only Call It When You're Sure The Tile Is Empty Or It's Acceptable To Overlap.
     public void MoveActorToTile(TacticActor actor, int tile, BattleMap map)
     {
-        map.MoveActorToTile(actor, tile, this);
+        map.MoveActorToTile(actor, tile);
     }
 }

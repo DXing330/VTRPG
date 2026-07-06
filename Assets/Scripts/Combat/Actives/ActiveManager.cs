@@ -154,7 +154,7 @@ public class ActiveManager : MonoBehaviour
         switch (effect)
         {
             case "TriggerSkill":
-                ResolveTriggeredSkill(specifics);
+                AutoSkillByName(skillUser, specifics);
                 return;
             case "Weather":
                 map.SetWeather(specifics);
@@ -597,18 +597,13 @@ public class ActiveManager : MonoBehaviour
                 {
                     // Do an attack with stab and stuff.
                     attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, specifics);
-                    // Also apply the elemental damage effects.
-                    active.AffectActor(targets[i], specifics + "Damage", skillUser.GetMagicPower().ToString(), 1, map.combatLog);
-                    // Also affect the map.
-                    map.ElementalAttackOnTile(specifics, targets[i].GetLocation());
                 }
                 return;
             // Directly does the elemental damage, doesn't need to go through the attack manager.
             case "ElementalDamage":
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    active.AffectActor(targets[i], specifics + "Damage", (power + skillUser.GetMagicPower()).ToString(), 1, map.combatLog);
-                    map.ElementalAttackOnTile(specifics, targets[i].GetLocation());
+                    active.ApplyElementalDamageToTarget(targets[i], specifics + "Damage", (power + skillUser.GetMagicPower()), map);
                 }
                 return;
             case "Flat Attack":
@@ -842,7 +837,51 @@ public class ActiveManager : MonoBehaviour
     {
         return CanPaySkillCost(true, false);
     }
-    protected void ResolveTriggeredSkill(string triggerData)
+    // TODO AUTO CASTING SKILLS/SPELLS
+    public ActorAI actorAI;
+    public void AutoSkillByName(TacticActor skillUser, string skillName)
+    {
+        if (skillName == "" || skillUser == null){return;}
+        SetSkillFromName(skillName, skillUser);
+        int targetedTile = actorAI.ChooseSkillTargetLocation(skillUser, map);
+        if (targetedTile < 0){return;}
+        GetTargetedTiles(targetedTile);
+        ActivateSkill(false);
+    }
+    public void AutoSkill(TacticActor skillUser, string effect, string specifics)
+    {
+        // Determine what skill to use.
+        string skillName = "";
+        switch (effect)
+        {
+            default:
+            return;
+            case "LastUsed":
+            skillName = skillUser.ReturnMostRecentSkill();
+            break;
+        }
+        Debug.Log("AUTOSKILL NAME: " + skillName);
+        if (skillName == ""){return;}
+        // Load The Active By Name?
+        SetSkillFromName(skillName, skillUser);
+        // Determine what targets and if targets are valid.
+        // The Actor AI uses the same scriptable object so the skill should already be loaded and ready to check.
+        int targetedTile = actorAI.ChooseSkillTargetLocation(skillUser, map);
+        Debug.Log("AUTOSKILL TARGET: " + targetedTile);
+        if (targetedTile < 0){return;}
+        GetTargetedTiles(targetedTile);
+        // Use The Skill For Free.
+        ActivateSkill(false);
+    }
+    public bool CheckSkillCost(BattleMap map)
+    {
+        return active.Activatable(skillUser, map);
+    }
+    public bool CheckSpellCost(BattleMap map)
+    {
+        return magicSpell.Activatable(skillUser, map);
+    }
+    /*protected void ResolveTriggeredSkill(string triggerData)
     {
         if (triggeredSkillDepth >= triggeredSkillDepthLimit || triggeredSkillDepth >= triggeredSkillStackDepthLimit)
         {
@@ -946,13 +985,5 @@ public class ActiveManager : MonoBehaviour
         public int selectedTile;
         public List<int> targetableTiles;
         public List<int> targetedTiles;
-    }
-    public bool CheckSkillCost(BattleMap map)
-    {
-        return active.Activatable(skillUser, map);
-    }
-    public bool CheckSpellCost(BattleMap map)
-    {
-        return magicSpell.Activatable(skillUser, map);
-    }
+    }*/
 }

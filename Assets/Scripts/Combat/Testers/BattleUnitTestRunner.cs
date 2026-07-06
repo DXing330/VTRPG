@@ -1109,7 +1109,7 @@ public class BattleUnitTestRunner : MonoBehaviour
             map.ChangeTEffect(attackTester.dummyAttacker.GetLocation(), "Fire", true);
             moveManager.GetAllMoveCosts(attackTester.dummyAttacker, map.battlingActors);
             int before = attackTester.dummyAttacker.GetHealth();
-            map.ApplyMovingTileEffect(attackTester.dummyAttacker, attackTester.dummyAttacker.GetLocation(), moveManager);
+            map.ApplyMovingTileEffect(attackTester.dummyAttacker, attackTester.dummyAttacker.GetLocation());
             AssertLess(attackTester.dummyAttacker.GetHealth(), before, "health after Fire terrain-effect moving passive");
         });
 

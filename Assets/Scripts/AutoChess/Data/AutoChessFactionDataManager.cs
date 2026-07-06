@@ -8,6 +8,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AutoChessFactionDataManager", menuName = "ScriptableObjects/AutoChess/AutoChessFactionDataManager", order = 1)]
 public class AutoChessFactionDataManager : SavedData
 {
+    public RNGUtility autoChessShopRNG;
     public string delimiter2;
     public List<string> mainFactions; // Require 3 field units to activate.
     public bool MainFaction(string factionName)
@@ -61,6 +62,22 @@ public class AutoChessFactionDataManager : SavedData
     public bool FactionActive(string factionName)
     {
         return activeFactions.Contains(factionName);
+    }
+    public string HighestStackActiveFaction()
+    {
+        if (activeFactions.Count <= 0){return "";}
+        int stackCount = -1;
+        int index = -1;
+        for (int i = 0; i < activeFactions.Count; i++)
+        {
+            int stacks = int.Parse(GetStacksOfFaction(activeFactions[i]));
+            if (stacks > stackCount)
+            {
+                stackCount = stacks;
+                index = i;
+            }
+        }
+        return activeFactions[index];
     }
     public List<int> activeFactionCount;
     public void SetActiveFactionCount(List<int> newFactions)
@@ -141,6 +158,55 @@ public class AutoChessFactionDataManager : SavedData
             case "ActiveFieldCount":
             SetActiveFactionCount(utility.ConvertStringListToIntList(value.Split(delimiter2).ToList()));
             return;
+        }
+    }
+    public void GainStacksFromTraitSwitch(AutoChessTrait trait, List<string> actorFactions, int amount = 1, List<string> frontFactions = null)
+    {
+        amount = Mathf.Max(amount, utility.SafeParseInt(trait.specifics));
+        switch (trait.effect)
+        {
+            default:
+            case "Self":
+            for (int i = 0; i < actorFactions.Count; i++)
+            {
+                GainFactionStacks(actorFactions[i], amount);
+            }
+            break;
+            case "SelfActive":
+            for (int i = 0; i < actorFactions.Count; i++)
+            {
+                if (!activeFactions.Contains(actorFactions[i])){continue;}
+                GainFactionStacks(actorFactions[i], amount);
+            }
+            break;
+            case "FrontActive":
+            for (int i = 0; i < frontFactions.Count; i++)
+            {
+                if (!activeFactions.Contains(frontFactions[i])){continue;}
+                GainFactionStacks(frontFactions[i], amount);
+            }
+            break;
+            case "SelfAndFrontActive":
+            for (int i = 0; i < frontFactions.Count; i++)
+            {
+                if (!activeFactions.Contains(frontFactions[i])){continue;}
+                GainFactionStacks(frontFactions[i], amount);
+            }
+            for (int i = 0; i < actorFactions.Count; i++)
+            {
+                if (!activeFactions.Contains(actorFactions[i])){continue;}
+                GainFactionStacks(actorFactions[i], amount);
+            }
+            break;
+            case "RandomActive":
+            if (activeFactions.Count <= 0){return;}
+            string randomFaction = activeFactions[autoChessShopRNG.SeedRange(0, activeFactions.Count)];
+            GainFactionStacks(randomFaction, amount);
+            break;
+            case "HighestActive":
+            if (activeFactions.Count <= 0){return;}
+            GainFactionStacks(HighestStackActiveFaction(), amount);
+            break;
         }
     }
 }

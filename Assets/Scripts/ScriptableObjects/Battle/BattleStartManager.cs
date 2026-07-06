@@ -43,7 +43,7 @@ public class BattleStartManager : ScriptableObject
         manager.moveManager.UpdateInfoFromBattleMap(map);
         manager.actorMaker.SetMapSize(map.mapSize);
         // Spawn The Actors
-        SpawnActors(map, manager.actorMaker);
+        SpawnActors(map, manager);
         // TODO Apply Starting Relics?
         if (roguelike)
         {
@@ -59,33 +59,30 @@ public class BattleStartManager : ScriptableObject
             map.RandomEnemyStartingPositions(battleState.GetEnemySpawnPattern());
         }
     }
-
-    public void SpawnActors(BattleMap map, ActorMaker actorMaker)
+    public void SpawnActors(BattleMap map, BattleManager battleManager)
     {
         int partySizeCap = map.MapMaxPartyCapacity();
         // Spawn actors in patterns based on teams.
         List<TacticActor> actors = new List<TacticActor>();
-        actors = actorMaker.SpawnTeamInPattern(battleState.GetAllySpawnPattern(), 0, playerParty.characters, playerParty.stats, playerParty.characterNames, playerParty.equipment, playerParty.characterIDs);
-        actorMaker.ApplyBattleModifiers(actors, playerParty.GetBattleModifiers());
+        actors = battleManager.actorMaker.SpawnTeamInPattern(battleState.GetAllySpawnPattern(), 0, playerParty.characters, playerParty.stats, playerParty.characterNames, playerParty.equipment, playerParty.characterIDs);
+        battleManager.actorMaker.ApplyBattleModifiers(actors, playerParty.GetBattleModifiers());
         for (int i = 0; i < Mathf.Min(partySizeCap, actors.Count); i++)
         {
             map.AddActorToBattle(actors[i]);
-            if (map.battleManager.partyData == null){continue;}
+            if (battleManager.partyData == null){continue;}
             // Add the assigned items to the actors from the inventory.
-            actors[i].SetAssignedItems(map.battleManager.partyData.inventory.GetItemsAssignedToActorID(actors[i].GetID()));
+            actors[i].SetAssignedItems(battleManager.partyData.inventory.GetItemsAssignedToActorID(actors[i].GetID()));
         }
         actors = new List<TacticActor>();
-        actors = actorMaker.SpawnTeamInPattern(battleState.GetEnemySpawnPattern(), 1, enemyParty.characters, enemyParty.stats, enemyParty.characterNames, enemyParty.equipment, enemyParty.characterIDs);
-        actorMaker.ApplyBattleModifiers(actors, enemyParty.GetBattleModifiers());
+        actors = battleManager.actorMaker.SpawnTeamInPattern(battleState.GetEnemySpawnPattern(), 1, enemyParty.characters, enemyParty.stats, enemyParty.characterNames, enemyParty.equipment, enemyParty.characterIDs);
+        battleManager.actorMaker.ApplyBattleModifiers(actors, enemyParty.GetBattleModifiers());
         for (int i = 0; i < Mathf.Min(partySizeCap, actors.Count); i++){ map.AddActorToBattle(actors[i]); }
     }
-
     // Apply relics/ascension/etc. battle modifier effects here.
     public void ApplyRelics(BattleManager manager)
     {
 
     }
-
     protected bool TryLoadCustomBattleMap(BattleMap map)
     {
         customEnemyStartingLocations.Clear();
@@ -136,7 +133,6 @@ public class BattleStartManager : ScriptableObject
         map.UpdateMap();
         return true;
     }
-    
     protected void ApplyCustomEnemyStartingPositions(BattleMap map)
     {
         List<TacticActor> enemyTeam = map.AllTeamMembers(1);

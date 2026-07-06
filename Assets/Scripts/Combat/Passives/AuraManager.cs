@@ -58,8 +58,7 @@ public class AuraManager : MonoBehaviour
             return false;
             case "Attack":
             if (auraTarget == null){return true;}
-            // Battle Manager Attack, Don't Consume Actions.
-            map.battleManager.PublicAAA(aura.actor, auraTarget, false);
+            map.activeManager.attackManager.ActorAttacksActorWithAttackSpeed(aura.actor, auraTarget, map, aura.actor.GetBasicAttackMultiplier(), aura.actor.GetBasicAttackDamageType());
             return true;
             // Affect the map directly.
             case "Map":

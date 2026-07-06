@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -21,6 +24,7 @@ public class AutoChessPrepManager : ClickTileManager
     {
         UIManager.UpdateUI(this);
         factionManager.UpdateActiveFactions();
+        shopManager.UpdateAutoChessShopUI();
     }
     void Start()
     {
@@ -53,6 +57,45 @@ public class AutoChessPrepManager : ClickTileManager
     }
     // MAP
     public MapUtility mapUtility;
+    public AutoActorRollUpData GetFrontActor(AutoActorRollUpData actor)
+    {
+        int location = actor.GetLocation();
+        int direction = actor.GetDirection();
+        int target = mapUtility.PointInDirection(location, direction, mapSize);
+        if (target < 0){return null;}
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            if (fieldSlots[i].GetLocation() == target){return fieldSlots[i];}
+        }
+        return null;
+    }
+    public AutoActorRollUpData GetBackActor(AutoActorRollUpData actor)
+    {
+        int location = actor.GetLocation();
+        int direction = (actor.GetDirection() + 3) % 6;
+        int target = mapUtility.PointInDirection(location, direction, mapSize);
+        if (target < 0){return null;}
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            if (fieldSlots[i].GetLocation() == target){return fieldSlots[i];}
+        }
+        return null;
+    }
+    public List<AutoActorRollUpData> GetActorsInLineDirection(AutoActorRollUpData actor)
+    {
+        List<AutoActorRollUpData> lineActors = new();
+        int location = actor.GetLocation();
+        int direction = actor.GetDirection();
+        List<int> lineTiles = mapUtility.GetTilesInLineDirection(location, direction, mapSize, mapSize);
+        for (int j = 0; j < lineTiles.Count; j++)
+        {
+            for (int i = 0; i < fieldSlots.Count; i++)
+            {
+                if (fieldSlots[i].GetLocation() == lineTiles[j]){lineActors.Add(fieldSlots[i]);}
+            }
+        }
+        return lineActors;
+    }
     public int mapSize = 7;
     public int GetCastleTile()
     {
@@ -83,14 +126,58 @@ public class AutoChessPrepManager : ClickTileManager
         factionManager.GainFactionStacks(faction, stackAmount);
     }
     public AutoChessTraitManager traitManager;
-    public void ApplyGainActorTrait(AutoActorRollUpData newActor)
+    public void ApplyActorTrait(AutoActorRollUpData actor, AutoChessTrait trait, bool copied = false)
     {
-        AutoChessTrait trait = newActor.trait;
-        int intSpecifics = traitManager.ReturnTraitSpecificsInt(newActor, this);
+        if (trait == null){return;}
+        int intSpecifics = traitManager.ReturnTraitSpecificsInt(actor, this);
+        AutoActorRollUpData backActor = GetBackActor(actor);
+        AutoActorRollUpData frontActor = GetFrontActor(actor);
+        List<string> factionsToAdd = new List<string>();
         switch (trait.effect)
         {
+            // Self/SelfActive/HighestActive/RandomActive
             default:
-            factionManager.GainStacksSwitch(newActor, intSpecifics);
+            factionManager.GainStacksSwitch(actor, intSpecifics);
+            break;
+            case "SelfAndBackActive":
+            factionsToAdd.AddRange(actor.GetFactions().Distinct().ToList());
+            if (backActor != null)
+            {
+                factionsToAdd.AddRange(backActor.GetFactions().Distinct().ToList());
+            }
+            factionManager.GainActiveStacks(factionsToAdd, intSpecifics);
+            break;
+            case "SelfAndFrontActive":
+            factionsToAdd.AddRange(actor.GetFactions().Distinct().ToList());
+            if (frontActor != null)
+            {
+                factionsToAdd.AddRange(frontActor.GetFactions().Distinct().ToList());
+            }
+            factionManager.GainActiveStacks(factionsToAdd, intSpecifics);
+            break;
+            case "SelfAndFrontLineActive":
+            List<AutoActorRollUpData> lineActors = GetActorsInLineDirection(actor);
+            for (int i = 0; i < lineActors.Count; i++)
+            {
+                factionsToAdd.AddRange(lineActors[i].GetFactions().Distinct().ToList());
+            }
+            factionManager.GainActiveStacks(factionsToAdd, intSpecifics);
+            break;
+            case "AllActiveBench":
+            for (int i = 0; i < benchSlots.Count; i++)
+            {
+                factionsToAdd.AddRange(benchSlots[i].GetFactions().Distinct().ToList());
+            }
+            factionManager.GainActiveStacks(factionsToAdd, intSpecifics);
+            break;
+            // Don't Unlimited Copy.
+            case "CopyFront":
+            if (copied || frontActor == null){break;}
+            ApplyActorTrait(actor, frontActor.trait, true);
+            break;
+            case "CopyBack":
+            if (copied || backActor == null){break;}
+            ApplyActorTrait(actor, backActor.trait, true);
             break;
             case "Gold":
             dataManager.GainGold(intSpecifics);
@@ -115,6 +202,19 @@ public class AutoChessPrepManager : ClickTileManager
             }
             break;
         }
+    }
+    public void ApplyStartBattleActorTraits()
+    {
+        ResetSelected();
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            AutoChessTrait trait = fieldSlots[i].trait;
+            if (trait.timing == "StartBattle")
+            {
+                ApplyActorTrait(fieldSlots[i], fieldSlots[i].trait);
+            }
+        }
+        // TODO Check The Swire Thing On Bench.
         UpdateAllUI();
     }
     // SHOP
@@ -162,8 +262,9 @@ public class AutoChessPrepManager : ClickTileManager
         AutoChessTrait trait = newActor.trait;
         if (trait.timing == "OnPurchase")
         {
-            ApplyGainActorTrait(newActor);
+            ApplyActorTrait(newActor, trait);
         }
+        UpdateAllUI();
     }
     public void BuySelectedActor()
     {

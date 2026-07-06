@@ -242,7 +242,7 @@ public class AttackManager : ScriptableObject
         damage = STAB(dealer, damage, element, false);
         damage = ElementalMastery(dealer, damage, element, false);
         ElementalResistance(receiver, damage, element, false);
-        damage = receiver.TakeDamage(damage, element);
+        damage = passive.ApplyElementalDamageToTarget(receiver, element + "Damage", damage, map);
         if (map != null)
         {
             map.UpdateCombatLog(receiver.GetPersonalName() + " takes " + damage + " " + element + " damage.");
@@ -266,7 +266,7 @@ public class AttackManager : ScriptableObject
         }
         // Resistance
         ElementalResistance(defender, baseDamage, element);
-        baseDamage = defender.TakeDamage(baseDamage, element);
+        baseDamage = passive.ApplyElementalDamageToTarget(defender, element + "Damage", baseDamage, map);
         defender.HurtBy(attacker, baseDamage);
         if (defender.GetHurtBy() == attacker)
         {
@@ -495,7 +495,7 @@ public class AttackManager : ScriptableObject
         }
         else
         {
-            baseDamage = passive.ApplyElementalDamageToTarget(attackTarget, type + "Damage", baseDamage);
+            baseDamage = passive.ApplyElementalDamageToTarget(attackTarget, type + "Damage", baseDamage, map);
         }
         attackTarget.HurtBy(attacker, baseDamage);
         if (attackTarget.GetHurtBy() == attacker)

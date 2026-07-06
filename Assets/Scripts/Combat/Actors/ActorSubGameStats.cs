@@ -42,6 +42,15 @@ public class ActorSubGameStats : ActorStats
     }
     public int GetAutoSkillCoolDown(){return autoSkillCooldown;}
     public List<AutoChessFaction> autoChessFactions = new();
+    public List<string> GetAutoChessFactions()
+    {
+        List<string> factions = new();
+        for (int i = 0; i < autoChessFactions.Count; i++)
+        {
+            factions.Add(autoChessFactions[i].ToString());
+        }
+        return factions;
+    }
     public void ResetFactions(){autoChessFactions.Clear();}
     public void AddFaction(string factionName)
     {
@@ -76,5 +85,12 @@ public class ActorSubGameStats : ActorStats
     public bool AKHealer(){return healer > 0;}
     public int baseRespawnTimer;
     public int currentRespawnTimer = 0;
+    public void ResetRespawnTimer(){currentRespawnTimer = 0;}
+    public bool ReadyToRespawn()
+    {
+        PrepareToRespawn();
+        return currentRespawnTimer >= baseRespawnTimer;
+    }
+    public void PrepareToRespawn(){currentRespawnTimer++;}
     public List<AutoChessTrait> autoChessTemporaryTraits = new();
 }

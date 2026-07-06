@@ -17,6 +17,7 @@ public class AutoChessEnemyDataManager : SavedData
     public override void NewRound()
     {
         round++;
+        GenerateNextRoundEnemies();
     }
     public List<string> availableEnemyGroups;
     public List<string> nextRoundEnemies;

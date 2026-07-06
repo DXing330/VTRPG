@@ -42,13 +42,14 @@ public class BattleMap : MapManager
         return layer >= 0 && layer < mapDisplayers.Count && mapDisplayers[layer] != null;
     }
     // UTILITIES
-    public BattleManager battleManager;
+    public MoveCostManager moveManager;
     public void UpdateMoveCostManager()
     {
-        if (battleManager == null){return;}
-        battleManager.moveManager.UpdateInfoFromBattleMap(this);
+        moveManager.UpdateInfoFromBattleMap(this);
     }
     public BattleMapUtility battleMapUtility;
+    // For attacking/skill usage, since some auto trigger when moving or checking map conditions.
+    public ActiveManager activeManager;
     public MapPatternLocations mapPatterns;
     public StatusDetailViewer detailViewer;
     public void ActorStartsTurn(TacticActor actor)
@@ -451,14 +452,18 @@ public class BattleMap : MapManager
     {
         return defeatedActors;
     }
-    public void RemoveDefeatedActor(TacticActor actor)
+    public bool RemoveDefeatedActor(TacticActor actor)
     {
+        if (!defeatedActors.Contains(actor)){return false;}
         defeatedActors.Remove(actor);
+        return true;
     }
     public void ReviveActor(TacticActor actor)
     {
-        RemoveDefeatedActor(actor);
-        AddActorToBattle(actor);
+        if (RemoveDefeatedActor(actor))
+        {
+            AddActorToBattle(actor);
+        }
     }
     public int ReviveDefeatedActorsBySprite(string spriteName)
     {
@@ -1338,11 +1343,6 @@ public class BattleMap : MapManager
         UpdateAuraLocations();
         auraManager.TriggerAllAuraEffects(auras, triggeringActor, triggerType);
     }
-    [ContextMenu("Test Aura Highlights")]
-    public void HighlightSelectedActorAuras()
-    {
-        HighlightActorAuras(battleManager.GetSelectedActor());
-    }
     public void HighlightAura(AuraEffect aura)
     {
         UpdateHighlights(aura.GetAuraTiles(this));
@@ -1424,7 +1424,7 @@ public class BattleMap : MapManager
         if (!DisplayLayerExists(buildingLayer)){return;}
         mapDisplayers[buildingLayer].DisplayCurrentTiles(mapTiles, buildingTiles, currentTiles);
     }
-    public void UpdateMovingHighlights(TacticActor selectedActor, MoveCostManager moveManager, bool current = true)
+    public void UpdateMovingHighlights(TacticActor selectedActor, bool current = true)
     {
         if (emptyList.Count < mapSize * mapSize)
         {
@@ -1439,7 +1439,7 @@ public class BattleMap : MapManager
         }
     }
 
-    public void UpdateMovingPath(TacticActor actor, MoveCostManager moveManager, int selectedTile)
+    public void UpdateMovingPath(TacticActor actor, int selectedTile)
     {
         List<string> originalHighlightedTiles = new List<string>(highlightedTiles);
         List<int> path = moveManager.GetPrecomputedPath(actor.GetLocation(), selectedTile);
@@ -1504,38 +1504,27 @@ public class BattleMap : MapManager
         mapDisplayers[highlightLayer].HighlightCurrentTiles(mapTiles, highlightedTiles, currentTiles);
         mapDisplayers[highlightLayer + 1].HighlightCurrentTiles(mapTiles, highlightedTiles, currentTiles);
     }
-    //public <AnyScript> clickManager;
-    public override void ClickOnTile(int tileNumber)
-    {
-        battleManager.ClickOnTile(tileNumber);
-    }
-
     public TacticActor GetActorOnTile(int tileNumber, bool includeInvisible = true)
     {
         return battleMapUtility.GetActorOnTile(this, tileNumber, includeInvisible);
     }
-
     public TacticActor GetActorByIndex(int index)
     {
         if (index < 0 || index >= battlingActors.Count) { return null; }
         return battlingActors[index];
     }
-
     public string GetTileInfoOfActor(TacticActor actor)
     {
         return mapInfo[actor.GetLocation()];
     }
-
     public bool TileTypeExists(string tileType)
     {
         return mapInfo.Contains(tileType);
     }
-
     public int ReturnClosestTileOfType(TacticActor actor, string tileType)
     {
         return battleMapUtility.ReturnClosestTileOfType(this, actor, tileType);
     }
-
     // Override this to ignore tiles that have actors on them and then give the next closest tile.
     public override int ReturnClosestTileWithinElevationDifference(int start, int end, int maxElvDiff, List<int> moveCosts)
     {
@@ -1557,7 +1546,6 @@ public class BattleMap : MapManager
         }
         return target;
     }
-
     public int ReturnClosestTileWithLineOfSight(int start, int end, int attackRange, List<int> moveCosts)
     {
         int target = end;
@@ -1577,29 +1565,24 @@ public class BattleMap : MapManager
         }
         return target;
     }
-
     public List<string> excludedTileTypesForNonFlying;
     public bool TileExcluded(TacticActor actor, string tile)
     {
         if (actor.GetMoveType() == "Flying"){return false;}
         return excludedTileTypesForNonFlying.Contains(tile);
     }
-
     public bool TileSandwiched(TacticActor actor, string tileType)
     {
         return battleMapUtility.TileSandwiched(this, actor, tileType);
     }
-
     public bool TileSandwichable(TacticActor actor, string tileType)
     {
         return ReturnClosestTileSandwiched(actor, tileType) >= 0;
     }
-
     public int ReturnClosestTileSandwiched(TacticActor actor, string tileType)
     {
         return battleMapUtility.ReturnClosestTileSandwiched(this, actor, tileType);
     }
-
     public bool SandwichedByTarget(TacticActor actor, string tileType)
     {
         if (actor.GetTarget() == null || actor.GetTarget().GetHealth() <= 0 || actor.GetTarget().invisible){return false;}
@@ -1611,7 +1594,6 @@ public class BattleMap : MapManager
         if (sandwichingPoint < 0){return false;}
         return mapInfo[sandwichingPoint].Contains(tileType);
     }
-
     public bool TargetSandwiched(TacticActor actor, string tileType)
     {
         if (actor.GetTarget() == null || actor.GetTarget().GetHealth() <= 0 || actor.GetTarget().invisible){return false;}
@@ -1623,12 +1605,10 @@ public class BattleMap : MapManager
         if (sandwichingPoint < 0){return false;}
         return mapInfo[sandwichingPoint].Contains(tileType);
     }
-
     public bool TargetSandwichable(TacticActor actor, string tileType)
     {
         return ReturnClosestSandwichTargetBetweenTileOfType(actor, tileType) >= 0;
     }
-
     public int ReturnClosestSandwichTargetBetweenTileOfType(TacticActor actor, string tileType)
     {
         List<int> tiles = new List<int>();
@@ -1652,28 +1632,23 @@ public class BattleMap : MapManager
         }
         return battleMapUtility.ReturnLowestMoveCostTile(this, actor, tiles);
     }
-
     public string GetTileEffectOfActor(TacticActor actor)
     {
         return terrainEffectTiles[actor.GetLocation()];
     }
-
     public List<TacticActor> GetActorsOnTiles(List<int> tiles)
     {
         return battleMapUtility.GetActorsOnTiles(this, tiles);
     }
-
     public List<TacticActor> GetAdjacentActors(int tileNumber)
     {
         return GetActorsOnTiles(mapUtility.AdjacentTiles(tileNumber, mapSize));
     }
-
     public bool TileInAttackRange(TacticActor actor, int tileIndex)
     {
         List<int> attackable = GetAttackableTiles(actor);
         return attackable.Contains(tileIndex);
     }
-
     // Melees have to deal with elevation differences, ranged needs to deal with line of sight. Obviously ranged is still superior since you can always attack all adjacent tiles at least.
     public List<int> GetAttackableTiles(TacticActor actor, bool current = true, int startTile = -1)
     {
@@ -1733,7 +1708,6 @@ public class BattleMap : MapManager
         if (tEffect == "Fog" || tEffect == "Toxic Mist"){return true;}
         return false;
     }
-
     public void UpdateSelectedAttackTile(TacticActor actor, int selectedTile)
     {
         List<int> attackable = GetAttackableTiles(actor);
@@ -1743,7 +1717,6 @@ public class BattleMap : MapManager
         selected.Add(selectedTile);
         UpdateHighlightsWithoutReseting(selected, "Green");
     }
-
     public List<TacticActor> GetAttackableEnemies(TacticActor actor)
     {
         List<TacticActor> attackableEnemies = GetActorsOnTiles(GetAttackableTiles(actor));
@@ -1756,14 +1729,12 @@ public class BattleMap : MapManager
         }
         return attackableEnemies;
     }
-
     public List<int> GetShootableTiles(TacticActor actor, int shootingRange = 2)
     {
         List<int> attackable = mapUtility.GetTilesInCircleShape(actor.GetLocation(), shootingRange, mapSize);
         attackable.Remove(actor.GetLocation());
         return attackable;
     }
-
     public bool ShootableEnemies(TacticActor actor, int shootingRange = 2)
     {
         List<TacticActor> attackableEnemies = GetActorsOnTiles(GetShootableTiles(actor, shootingRange));
@@ -1776,27 +1747,22 @@ public class BattleMap : MapManager
         }
         return attackableEnemies.Count > 0;
     }
-
     public int GetRandomEnemyLocation(TacticActor actor, List<int> targetedTiles)
     {
         return battleMapUtility.GetRandomEnemyLocation(actor, targetedTiles, this);
     }
-
     public int GetRandomAllyLocation(TacticActor actor, List<int> targetedTiles)
     {
         return battleMapUtility.GetRandomAllyLocation(actor, targetedTiles, this);
     }
-
     public int DirectionBetweenActors(TacticActor actor1, TacticActor actor2)
     {
         return mapUtility.DirectionBetweenLocations(actor1.GetLocation(), actor2.GetLocation(), mapSize);
     }
-
     public int DirectionBetweenActorAndLocation(TacticActor actor, int location)
     {
         return mapUtility.DirectionBetweenLocations(actor.GetLocation(), location, mapSize);
     }
-
     public int DistanceBetweenActors(TacticActor actor1, TacticActor actor2)
     {
         if (actor1 == null || actor2 == null)
@@ -1805,7 +1771,6 @@ public class BattleMap : MapManager
         }
         return mapUtility.DistanceBetweenTiles(actor1.GetLocation(), actor2.GetLocation(), mapSize);
     }
-
     public bool StraightLineBetweenActors(TacticActor actor1, TacticActor actor2)
     {
         if (actor1 == null || actor2 == null)
@@ -1814,7 +1779,6 @@ public class BattleMap : MapManager
         }
         return mapUtility.StraightLineBetweenPoints(actor1.GetLocation(), actor2.GetLocation(), mapSize);
     }
-
     public TacticActor GetClosestEnemy(TacticActor actor)
     {
         List<TacticActor> enemies = AllEnemies(actor);
@@ -1830,7 +1794,6 @@ public class BattleMap : MapManager
         }
         return enemies[index];
     }
-
     public int GetClosestEmptyTile(TacticActor actor)
     {
         int location = actor.GetLocation();
@@ -1856,7 +1819,6 @@ public class BattleMap : MapManager
         }
         return tile;
     }
-
     public List<int> GetAdjacentEmptyTiles(int tileNumber)
     {
         List<int> allAdjacent = mapUtility.AdjacentTiles(tileNumber, mapSize);
@@ -1869,7 +1831,6 @@ public class BattleMap : MapManager
         }
         return allAdjacent;
     }
-
     public int ReturnRandomAdjacentEmptyTile(int tileNumber)
     {
         List<int> emptyAdjacent = GetAdjacentEmptyTiles(tileNumber);
@@ -1884,13 +1845,11 @@ public class BattleMap : MapManager
         }
         return tile;
     }
-
     public int ReturnTileInRelativeDirection(TacticActor actor, int relativeDirection)
     {
         int direction = (actor.GetDirection() + relativeDirection) % 6;
         return mapUtility.PointInDirection(actor.GetLocation(), direction, mapSize);
     }
-
     public bool AlliesInTiles(TacticActor actor, List<int> tiles)
     {
         int team = actor.GetTeam();
@@ -1908,7 +1867,6 @@ public class BattleMap : MapManager
         }
         return false;
     }
-
     public List<TacticActor> ReturnAlliesInTiles(TacticActor actor, List<int> tiles)
     {
         int team = actor.GetTeam();
@@ -1927,7 +1885,6 @@ public class BattleMap : MapManager
         }
         return actors;
     }
-
     public bool EnemiesInTiles(TacticActor actor, List<int> tiles)
     {
         int team = actor.GetTeam();
@@ -1945,7 +1902,6 @@ public class BattleMap : MapManager
         }
         return false;
     }
-
     public List<TacticActor> ReturnEnemiesInTiles(TacticActor actor, List<int> tiles)
     {
         int team = actor.GetTeam();
@@ -1964,7 +1920,6 @@ public class BattleMap : MapManager
         }
         return actors;
     }
-
     public List<TacticActor> GetAdjacentAllies(TacticActor actor)
     {
         List<TacticActor> all = new List<TacticActor>();
@@ -1976,7 +1931,14 @@ public class BattleMap : MapManager
         }
         return all;
     }
-
+    public TacticActor GetActorBehindActor(TacticActor actor)
+    {
+        int location = actor.GetLocation();
+        int direction = (actor.GetDirection() + 3) % 6;
+        int target = mapUtility.PointInDirection(location, direction, mapSize);
+        if (target < 0){return null;}
+        return GetActorOnTile(target);
+    }
     // The tankiest adjacent/closest guarding ally will take the hit for you.
     public TacticActor GetGuardingAlly(TacticActor target, TacticActor attacker)
     {
@@ -2104,17 +2066,17 @@ public class BattleMap : MapManager
         battleMapUtility.MoveThroughSkill(mover, tile, this);
     }
     // ALL Movement Should Go Through Here.
-    public void MoveActorToTile(TacticActor actor, int tile, MoveCostManager moveManager = null)
+    public void MoveActorToTile(TacticActor actor, int tile)
     {
         actor.SetDirection(mapUtility.DirectionBetweenLocations(actor.GetLocation(), tile, mapSize));
         actor.SetLocation(tile);
-        ApplyMovePassiveEffects(actor, tile, moveManager);
+        ApplyMovePassiveEffects(actor, tile);
         UpdateMap();
     }
-    public void ApplyMovePassiveEffects(TacticActor actor, int location, MoveCostManager moveManager = null)
+    public void ApplyMovePassiveEffects(TacticActor actor, int location)
     {
         // Updates the combat log when moving.
-        ApplyMovingTileEffect(actor, location, moveManager);
+        ApplyMovingTileEffect(actor, location);
         List<string> movingPassives = actor.GetMovingPassives();
         List<string> passiveInfo = new List<string>();
         //int location = mover.GetLocation();
@@ -2160,7 +2122,7 @@ public class BattleMap : MapManager
         }
     }
     // ALL Movement Should Go Through Here. Thus update the combat log here, the actor's direction should be updated before this is called, based on how the actor moved into the tile.
-    public bool ApplyMovingTileEffect(TacticActor actor, int tileNumber, MoveCostManager moveManager = null)
+    public bool ApplyMovingTileEffect(TacticActor actor, int tileNumber)
     {
         UpdateCombatLog(actor.GetPersonalName() + " moves to " + mapUtility.GetRowColumnCoordinateString(tileNumber, mapSize));
         actor.UpdateRoundMoveTracker();

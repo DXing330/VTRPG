@@ -13,18 +13,42 @@ public class AutoActorDisplay : MonoBehaviour
     public StatDatabase actorData;
     public StatDatabase actorRarity;
     public ActiveDetailViewerSwitch activeViewer;
+    public List<GameObject> displayPages;
+    public List<TMP_Text> displayPageStrings;
+    public int currentPage;
+    public void SetPage(int newPage)
+    {
+        currentPage = newPage;
+        utility.DisableGameObjects(displayPages);
+        displayPages[currentPage].SetActive(true);
+        for (int i = 0; i < displayPageStrings.Count; i++)
+        {
+            displayPageStrings[i].fontStyle = FontStyles.Normal;
+            if (i == currentPage)
+            {
+                displayPageStrings[i].fontStyle = FontStyles.Underline;
+            }
+        }
+    }
     public SpriteContainer factionSprites;
     public TMP_Text actorName;
+    public TMP_Text HPText;
+    public TMP_Text ATKText;
+    public TMP_Text DEFText;
     public TMP_Text traitText;
     public TMP_Text skillText;
     public List<GameObject> factionIconObjects;
     public List<Image> factionIcons;
     public void ResetDisplay()
     {
+        SetPage(0);
         utility.DisableGameObjects(factionIconObjects);
         actorName.text = "";
         traitText.text = "";
         skillText.text = "";
+        HPText.text = "";
+        ATKText.text = "";
+        DEFText.text = "";
     }
     public void DisplayActor(string newName)
     {
@@ -39,6 +63,9 @@ public class AutoActorDisplay : MonoBehaviour
         }
         traitText.text = ReturnTraitDescription(blocks[1], blocks[2], blocks[3]);
         skillText.text = activeViewer.ReturnActiveDescriptionOnlyFromName(blocks[4]);
+        HPText.text = blocks[7];
+        ATKText.text = blocks[8];
+        DEFText.text = blocks[9];
     }
     public void DisplayActor(AutoActorRollUpData actor)
     {

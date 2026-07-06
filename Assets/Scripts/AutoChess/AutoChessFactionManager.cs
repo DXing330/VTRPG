@@ -144,28 +144,22 @@ public class AutoChessFactionManager : MonoBehaviour
     }
     public RNGUtility autoChessShopRNG;
     // Assuming That Timing Is Already Checked.
+    public void GainStacksFromTraitSwitch(AutoChessTrait trait, List<string> actorFactions, int amount = 1, List<string> frontFactions = null)
+    {
+        factionData.GainStacksFromTraitSwitch(trait, actorFactions, amount, frontFactions);
+        UpdateFactionDisplay();
+    }
     public void GainStacksSwitch(AutoActorRollUpData actor, int amount = 1)
     {
         AutoChessTrait trait = actor.trait;
-        switch (trait.effect)
+        GainStacksFromTraitSwitch(trait, actor.GetFactions().Distinct().ToList(), amount);
+    }
+    public void GainActiveStacks(List<string> factionNames, int amount = 1)
+    {
+        for (int i = 0; i < factionNames.Count; i++)
         {
-            default:
-            case "Self":
-            List<string> actorFactions = new List<string>(actor.GetFactions()).Distinct().ToList();
-            for (int i = 0; i < actorFactions.Count; i++)
-            {
-                GainFactionStacks(actorFactions[i], amount);
-            }
-            break;
-            case "RandomActive":
-            if (activeFactions.Count <= 0){return;}
-            string randomFaction = activeFactions[autoChessShopRNG.SeedRange(0, activeFactions.Count)];
-            GainFactionStacks(randomFaction, amount);
-            break;
-            case "HighestActive":
-            if (activeFactions.Count <= 0){return;}
-            GainFactionStacks(HighestStackActiveFaction(), amount);
-            break;
+            if (!activeFactions.Contains(factionNames[i])){continue;}
+            GainFactionStacks(factionNames[i], amount);
         }
     }
 }
