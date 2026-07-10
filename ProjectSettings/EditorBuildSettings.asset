@@ -77,4 +77,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/RogueLikeScenes/StSTreasureRoom.unity
     guid: 5af60a64d2ff84345a0ced96f1fd58a7
+  - enabled: 1
+    path: Assets/Scenes/AutoChess/AutoScene.unity
+    guid: 15bedc0b77e56c546aa194beaafc0190
   m_configObjects: {}

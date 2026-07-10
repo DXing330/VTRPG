@@ -737,6 +737,7 @@ public class BattleMap : MapManager
     }
     public void ResurrectActor(TacticActor actor)
     {
+        actor.FullRestore();
         ReviveActor(actor);
     }
     public List<TacticActor> RemoveActorsFromBattle()
@@ -1902,13 +1903,14 @@ public class BattleMap : MapManager
         }
         return false;
     }
-    public List<TacticActor> ReturnEnemiesInTiles(TacticActor actor, List<int> tiles)
+    // Normally Used For Attack Targeting, So Don't Hit Invisible.
+    public List<TacticActor> ReturnEnemiesInTiles(TacticActor actor, List<int> tiles, bool includeInvisible = false)
     {
         int team = actor.GetTeam();
         List<TacticActor> actors = new List<TacticActor>();
         for (int i = 0; i < tiles.Count; i++)
         {
-            TacticActor tileActor = GetActorOnTile(tiles[i]);
+            TacticActor tileActor = GetActorOnTile(tiles[i], includeInvisible);
             if (tileActor == null)
             {
                 continue;

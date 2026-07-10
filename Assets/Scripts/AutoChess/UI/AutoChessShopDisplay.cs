@@ -22,7 +22,7 @@ public class AutoChessShopDisplay : MonoBehaviour
             string factions = manager.ReturnActorFactions(actor);
             int rarity = manager.ReturnActorRarity(actor);
             int cost = manager.ReturnActorCost(actor);
-            shopSlots[i].UpdateAutoChessShopSlot(actor.GetBaseStatString(), factions, iconSprites, rarity, cost);
+            shopSlots[i].UpdateAutoChessShopSlot(actor.GetBaseStatString(), factions, iconSprites, rarity, cost, manager.GetFrozen());
         }
     }
 }

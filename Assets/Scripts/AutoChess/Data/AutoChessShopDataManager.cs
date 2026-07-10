@@ -15,6 +15,10 @@ public class AutoChessShopDataManager : SavedData
     public RNGUtility autoChessShopRNG;
     public int shopLevel;
     public int frozenShop = 0;
+    public void FreezeShop()
+    {
+        frozenShop = (frozenShop + 1) % 2;
+    }
     public void SetShopLevel(string newData)
     {
         shopLevel = utility.SafeParseInt(newData, 1);
@@ -119,7 +123,7 @@ public class AutoChessShopDataManager : SavedData
     public List<string> currentPoolFactions;
     public void SetCurrentPoolFactions(string newData)
     {
-        currentPoolRarity = newData.Split(delimiter2).ToList();
+        currentPoolFactions = newData.Split(delimiter2).ToList();
     }
     public List<string> ReturnCurrentPoolOfFaction(string faction)
     {
@@ -178,12 +182,12 @@ public class AutoChessShopDataManager : SavedData
     }
     public override void NewRound()
     {
-        // TODO If frozen then don't.
-        if (frozenShop == 0)
+        if (frozenShop == 1)
         {
-            GenerateCurrentListing();
+            frozenShop = 0;
+            return;
         }
-        frozenShop = 0;
+        GenerateCurrentListing();
     }
     [ContextMenu("New Game")]
     public override void NewGame()
@@ -207,6 +211,7 @@ public class AutoChessShopDataManager : SavedData
             }
         }
         GenerateCurrentListing();
+        autoChessShopRNG.NewGame();
         Save();
     }
     public override void Save()

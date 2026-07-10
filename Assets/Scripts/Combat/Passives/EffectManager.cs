@@ -8,6 +8,10 @@ public class EffectManager : ScriptableObject
     public PassiveOrganizer passiveOrganizer;
     public PassiveSkill passive;
     public StatDatabase passiveData;
+    public void ApplyPassiveByName(TacticActor actor, BattleMap map, string passiveName)
+    {
+        passive.ApplyPassive(actor, map, passiveData.ReturnValue(passiveName));
+    }
     // Condition is a bad name, since passives have conditions to activate.
     public Condition status;
     public StatDatabase statusData;

@@ -10,6 +10,9 @@ public class AutoChessShopSlot : MonoBehaviour
     public GeneralUtility utility;
     public List<GameObject> factionIconObjects;
     public List<Image> factionIcons;
+    public Image bgImage;
+    public Sprite defaultSprite;
+    public Sprite frozenSprite;
     // Later replace with a sprite.
     public TMP_Text actorName;
     // Gold Stars?
@@ -22,11 +25,19 @@ public class AutoChessShopSlot : MonoBehaviour
         goldCost.text = "";
         actorName.text = "";
     }
-    public void UpdateAutoChessShopSlot(string newName, string factions, SpriteContainer factionSprites, int actorRarity, int actorCost)
+    public void UpdateAutoChessShopSlot(string newName, string factions, SpriteContainer factionSprites, int actorRarity, int actorCost, int frozen = 0)
     {
         ResetAutoChessShopSlot();
         actorName.text = newName;
         goldCost.text = actorCost.ToString();
+        if (frozen == 0)
+        {
+            bgImage.sprite = defaultSprite;
+        }
+        else
+        {
+            bgImage.sprite = frozenSprite;
+        }
         for (int i = 0; i < actorRarity; i++)
         {
             rarityObjects[i].SetActive(true);

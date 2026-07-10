@@ -243,10 +243,6 @@ public class AttackManager : ScriptableObject
         damage = ElementalMastery(dealer, damage, element, false);
         ElementalResistance(receiver, damage, element, false);
         damage = passive.ApplyElementalDamageToTarget(receiver, element + "Damage", damage, map);
-        if (map != null)
-        {
-            map.UpdateCombatLog(receiver.GetPersonalName() + " takes " + damage + " " + element + " damage.");
-        }
     }
     // Used for most spell effects.
     public void ElementalFlatDamage(TacticActor attacker, TacticActor defender, BattleMap map, int damage, string element)
@@ -272,7 +268,6 @@ public class AttackManager : ScriptableObject
         {
             defender.SetTarget(attacker);
         }
-        map.UpdateCombatLog(defender.GetPersonalName() + " takes " + baseDamage + " damage.");
         map.UpdateDamageStat(attacker, defender, baseDamage);
         map.UpdateCombatLog(finalDamageCalculation, true);
     }
@@ -492,9 +487,11 @@ public class AttackManager : ScriptableObject
         if (type == "Physical")
         {
             baseDamage = attackTarget.TakeDamage(baseDamage, type);
+            map.UpdateCombatLog(attackTarget.GetPersonalName() + " takes " + baseDamage + " " + type + " damage.");
         }
         else
         {
+            // The Passive Will Update The Combat Log.
             baseDamage = passive.ApplyElementalDamageToTarget(attackTarget, type + "Damage", baseDamage, map);
         }
         attackTarget.HurtBy(attacker, baseDamage);
@@ -502,7 +499,6 @@ public class AttackManager : ScriptableObject
         {
             attackTarget.SetTarget(attacker);
         }
-        map.UpdateCombatLog(attackTarget.GetPersonalName() + " takes " + baseDamage + " " + type + " damage.");
         map.UpdateDamageStat(attacker, attackTarget, baseDamage);
         map.UpdateCombatLog(passiveEffectString, true);
         map.UpdateCombatLog("Damage Calculations:", true);

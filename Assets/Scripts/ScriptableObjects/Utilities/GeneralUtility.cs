@@ -16,12 +16,10 @@ public class GeneralUtility : ScriptableObject
             Debug.Log(dList[i]);
         }
     }
-
     public int GetPageIndex(int index, int page, int pageLength)
     {
         return (index + (page * pageLength));
     }
-
     public int ChangeIndex(int currentIndex, bool right, int maxIndex, int minIndex = 0)
     {
         if (right)
@@ -35,7 +33,6 @@ public class GeneralUtility : ScriptableObject
             else { return maxIndex; }
         }
     }
-
     public string GetNextItemInList(List<string> allItems, string currentItem, bool increase = true)
     {
         if (allItems.Count <= 0){ return ""; }
@@ -51,7 +48,6 @@ public class GeneralUtility : ScriptableObject
         }
         return allItems[indexOf];
     }
-
     public int ChangePage(int currentPage, bool right, List<GameObject> pageLength, List<string> dataList)
     {
         int maxPage = dataList.Count / pageLength.Count;
@@ -155,7 +151,6 @@ public class GeneralUtility : ScriptableObject
             objects[i].SetActive(false);
         }
     }
-
     public void EnableGameObjects(List<GameObject> objects)
     {
         for (int i = 0; i < objects.Count; i++)
@@ -163,7 +158,13 @@ public class GeneralUtility : ScriptableObject
             objects[i].SetActive(true);
         }
     }
-
+    public void ResetTextList(List<TMP_Text> texts, string defaultText = "")
+    {
+        for (int i = 0; i < texts.Count; i++)
+        {
+            texts[i].text = defaultText;
+        }
+    }
     public void SetTextSizes(List<TMP_Text> texts, int size)
     {
         for (int i = 0; i < texts.Count; i++)
@@ -171,12 +172,10 @@ public class GeneralUtility : ScriptableObject
             SetTextSize(texts[i], size);
         }
     }
-
     public void SetTextSize(TMP_Text text, int size)
     {
         text.fontSize = size;
     }
-
     public List<string> RemoveEmptyListItems(List<string> stringList, int minLength = 0)
     {
         for (int i = stringList.Count - 1; i >= 0; i--)
@@ -188,7 +187,6 @@ public class GeneralUtility : ScriptableObject
         }
         return stringList;
     }
-
     public List<int> RemoveEmptyValues(List<int> intList, int emptyValue = 0)
     {
         for (int i = intList.Count - 1; i >= 0; i--)

@@ -1361,8 +1361,8 @@ public class BattleManager : ClickTileManager
         if (actor.Resurrect())
         {
             actor.FullRestore();
-            // Apply Start Battle Effects Again.
-            effectManager.StartBattle(actor, map);
+            // Don't Apply Start Battle Effects Again For Resurrected Actors, Only For Newly Summoned Actors.
+            //effectManager.StartBattle(actor, map);
             // Add The Actor Back To The Battle.
             map.ResurrectActor(actor);
             return;

@@ -5,6 +5,10 @@ using UnityEngine;
 public class AutoChessShopManager : MonoBehaviour
 {
     public AutoChessShopDataManager shopData;
+    public void RemoveFromPool(string actorName)
+    {
+        shopData.RemoveFromPool(actorName);
+    }
     public AutoChessShopDisplay UI;
     public StatDatabase actorData;
     public string ReturnActorFactions(AutoActorRollUpData actor)
@@ -25,9 +29,9 @@ public class AutoChessShopManager : MonoBehaviour
     public List<AutoActorRollUpData> shopActors;
     void Start()
     {
+        ResetSelected();
         // Load The Data.
         shopData.Load();
-        RefreshData();
         // Update The UI.
         UpdateAutoChessShopUI();
     }
@@ -47,20 +51,24 @@ public class AutoChessShopManager : MonoBehaviour
             newActor.LoadBaseStats(actorData);
             shopActors.Add(newActor);
         }
-        selectedIndex = -1;
     }
     public void UpdateAutoChessShopUI()
     {
+        RefreshData();
         UI.UpdateAutoChessShopUI(this);
     }
     public void Reroll()
     {
+        ResetSelected();
         shopData.GenerateCurrentListing();
-        RefreshData();
         UpdateAutoChessShopUI();
     }
-    public void Freeze()
+    public int GetFrozen(){return shopData.frozenShop;}
+    public void FreezeShop()
     {
+        ResetSelected();
+        shopData.FreezeShop();
+        UpdateAutoChessShopUI();
     }
     public int selectedIndex = -1;
     public void ResetSelected(){selectedIndex = -1;}

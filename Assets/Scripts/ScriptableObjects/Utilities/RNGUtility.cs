@@ -74,6 +74,7 @@ public class RNGUtility : SavedData
         {
             seedHistory.Add(seed);
         }
+        if (seed == 0){RandomSeed();}
         seed ^= seed << 13;
         seed ^= seed >> 7;
         seed ^= seed << 17;

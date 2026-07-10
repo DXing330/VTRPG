@@ -5,6 +5,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AutoChessTraitManager", menuName = "ScriptableObjects/AutoChess/AutoChessTraitManager", order = 1)]
 public class AutoChessTraitManager : ScriptableObject
 {
+    public GeneralUtility utility;
     public int ReturnTraitSpecificsInt(AutoActorRollUpData actor, AutoChessPrepManager manager)
     {
         AutoChessTrait trait = actor.trait;
@@ -13,11 +14,11 @@ public class AutoChessTraitManager : ScriptableObject
         string[] blocks = trait.specifics.Split("MultiBy");
         if (blocks.Length > 1)
         {
-            baseAmount = int.Parse(blocks[1]);
+            baseAmount = utility.SafeParseInt(blocks[1], 1);
         }
         else
         {
-            return level * int.Parse(blocks[0]);
+            return level * utility.SafeParseInt(blocks[0], 1);
         }
         switch (blocks[0])
         {

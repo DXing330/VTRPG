@@ -124,11 +124,35 @@ public class AutoActorRollUpData
         {
             baseStatString += "+";
         }
-        baseStatString += "\n" + "HP:" + GetHealth() + " ATK:" + GetAttack() + " DEF:" + GetDefense();
+        /*baseStatString += "\n" + "HP:" + GetHealth() + " ATK:" + GetAttack() + " DEF:" + GetDefense();*/
         return baseStatString;
     }
     public List<string> equipmentNames = new List<string>();
-    public List<string> GetEquipmentNames(){return equipmentNames;}
+    public List<string> GetEquipmentNames()
+    {
+        for (int i = equipmentNames.Count - 1; i >= 0; i--)
+        {
+            if (equipmentNames[i].Length <= 0)
+            {
+                equipmentNames.RemoveAt(i);
+            }
+        }
+        return equipmentNames;
+    }
+    public void RemoveLatestEquipment()
+    {
+        if (equipmentNames.Count <= 0){return;}
+        equipmentNames.RemoveAt(equipmentNames.Count - 1);
+    }
+    public void EquipEquipment(string equipName)
+    {
+        equipmentNames.Add(equipName);
+    }
+    public string GetLatestEquipment()
+    {
+        if (equipmentNames.Count <= 0){return "";}
+        return equipmentNames[equipmentNames.Count - 1];
+    }
     // Need The Trait Since Some Traits Activate During Prep Phase.
     public AutoChessTrait trait;
     public void LoadBaseStats(StatDatabase autoActorData, int newLevel = 1)
@@ -139,8 +163,8 @@ public class AutoActorRollUpData
         trait = new AutoChessTrait();
         trait.LoadBaseTrait(blocks[1], blocks[2], blocks[3]);
         SetFactions(blocks[0].Split(",").ToList());
-        SetHealth(int.Parse(blocks[7]));
-        SetAttack(int.Parse(blocks[8]));
+        SetHealth(int.Parse(blocks[7]) + (10 * (newLevel - 1)));
+        SetAttack(int.Parse(blocks[8]) + (2 * (newLevel - 1)));
         SetDefense(int.Parse(blocks[9]));
     }
     // Seat/Tile
@@ -216,7 +240,7 @@ public class AutoActorRollUpData
 [System.Serializable]
 public class AutoActor : TacticActor
 {
-    public void AutoChessSetInitialStatsFromString(string newStats)
+    public void AutoChessSetInitialStatsFromString(string newStats, int level = 1)
     {
         // Initialize Regular Stats.
         baseCrit = 0;
@@ -235,9 +259,9 @@ public class AutoActor : TacticActor
         autoSkill = statBlocks[4];
         SetBaseEnergy(int.Parse(statBlocks[5]));
         SetCurrentEnergy(int.Parse(statBlocks[6]));
-        SetBaseHealth(int.Parse(statBlocks[7]));
-        SetCurrentHealth(int.Parse(statBlocks[7]));
-        SetBaseAttack(int.Parse(statBlocks[8]));
+        SetBaseHealth(int.Parse(statBlocks[7]) + (10 * (level - 1)));
+        SetCurrentHealth(int.Parse(statBlocks[7]) + (10 * (level - 1)));
+        SetBaseAttack(int.Parse(statBlocks[8]) + (2 * (level - 1)));
         SetBaseDefense(int.Parse(statBlocks[9]));
         SetAttackRange(int.Parse(statBlocks[10]));
         autoChessAttackRangeShape =  statBlocks[13];

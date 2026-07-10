@@ -39,7 +39,6 @@ public class StatDatabase : ScriptableObject
     }
     public List<string> keys;
     public List<string> values;
-
     public void DBSetDirty()
     {
         #if UNITY_EDITOR
@@ -52,7 +51,6 @@ public class StatDatabase : ScriptableObject
             EditorUtility.SetDirty(this);
         #endif
     }
-
     public virtual void Initialize()
     {
         if (inputKeysAndValues)
@@ -64,27 +62,22 @@ public class StatDatabase : ScriptableObject
         GetKeys();
         GetValues();
     }
-
     public void SetAllKeys(string newKeys)
     {
         allKeys = newKeys;
     }
-
     public void SetValues(string newValues)
     {
         allValues = newValues;
     }
-
     public virtual void GetKeys()
     {
         keys = allKeys.Split(keyDelimiter).ToList();
     }
-
     public virtual void GetValues()
     {
         values = allValues.Split(keyDelimiter).ToList();
     }
-
     public List<string> ReturnStats(string statName)
     {
         int indexOf = keys.IndexOf(statName);
@@ -93,24 +86,25 @@ public class StatDatabase : ScriptableObject
         stats = values[indexOf].Split(valueDelimiter).ToList();
         return stats;
     }
-
     public bool KeyExists(string key)
     {
         return keys.Contains(key);
     }
-
-    public string ReturnRandomKey(List<string> except = null)
+    public string ReturnRandomKey(List<string> except = null, RNGUtility rng = null)
     {
         int index = Random.Range(0, keys.Count);
+        if (rng != null)
+        {
+            index = rng.SeedRange(0, keys.Count);
+        }
         string rKey = keys[index];
         if (except != null && except.Count < keys.Count && except.Contains(rKey))
         {
-            return ReturnRandomKey(except);
+            return ReturnRandomKey(except, rng);
         }
         return rKey;
     }
-
-    public string ReturnRandomWeightedKey(List<string> except = null)
+    public string ReturnRandomWeightedKey(List<string> except = null, RNGUtility rng = null)
     {
         int totalWeight = 0;
         for (int i = 0; i < values.Count; i++)
@@ -118,6 +112,10 @@ public class StatDatabase : ScriptableObject
             totalWeight += int.Parse(values[i]);
         }
         int roll = Random.Range(0, totalWeight);
+        if (rng != null)
+        {
+            roll = rng.SeedRange(0, totalWeight);
+        }
         for (int i = 0; i < values.Count; i++)
         {
             if (roll < int.Parse(values[i]))
@@ -129,21 +127,19 @@ public class StatDatabase : ScriptableObject
                 roll -= int.Parse(values[i]);
             }
         }
-        return ReturnRandomKey(except);
+        return ReturnRandomWeightedKey(except, rng);
     }
-
-    public List<string> ReturnRandomKeys(int count = 1)
+    public List<string> ReturnRandomKeys(int count = 1, RNGUtility rng = null)
     {
         List<string> rKeys = new List<string>();
         for (int i = 0; i < count; i++)
         {
-            rKeys.Add(ReturnRandomKey(rKeys));
+            rKeys.Add(ReturnRandomKey(rKeys, rng));
         }
         return rKeys;
     }
-
     // Used specifically for selecting random enemies for the roguelike.
-    public string ReturnRandomKeyBasedOnIntValue(int value)
+    public string ReturnRandomKeyBasedOnIntValue(int value, RNGUtility rng = null)
     {
         List<string> possibleKeys = new List<string>();
         for (int i = 0; i < keys.Count; i++)
@@ -155,23 +151,26 @@ public class StatDatabase : ScriptableObject
         }
         if (possibleKeys.Count == 0 && value > 0)
         {
-            return ReturnRandomKeyBasedOnIntValue(value - 1);
+            return ReturnRandomKeyBasedOnIntValue(value - 1, rng);
         }
         else if (possibleKeys.Count > 0)
         {
-            return possibleKeys[Random.Range(0, possibleKeys.Count)];
+            int index = Random.Range(0, possibleKeys.Count);
+            if (rng != null)
+            {
+                index = rng.SeedRange(0, possibleKeys.Count);
+            }
+            return possibleKeys[index];
         }
         if (defaultsEnabled){return defaultKey;}
         return "";
     }
-
     public string ReturnKeyFromValue(string value)
     {
         int index = values.IndexOf(value);
         if (index < 0){return "";}
         return keys[index];
     }
-
     public string ReturnKeyAtIndex(int index)
     {
         if (index >= 0 && index < keys.Count)
@@ -181,12 +180,10 @@ public class StatDatabase : ScriptableObject
         if (defaultsEnabled){return defaultKey;}
         return "";
     }
-
     public List<string> GetAllKeys()
     {
         return new List<string>(keys);
     }
-
     public List<string> GetFilteredKeys(List<string> filters)
     {
         List<string> filtered = new List<string>();
@@ -197,18 +194,43 @@ public class StatDatabase : ScriptableObject
                 if (keys[i].Contains(filters[j]))
                 {
                     filtered.Add(keys[i]);
+                }
+            }
+        }
+        return filtered;
+    }
+    public List<string> GetKeysFilteringByValues(string filter)
+    {
+        List<string> filtered = new List<string>();
+        for (int i = 0; i < values.Count; i++)
+        {
+            if (values[i].Contains(filter))
+            {
+                filtered.Add(keys[i]);
+            }
+        }
+        return filtered;
+    }
+    public List<string> GetKeysFilteringByValues(List<string> filters)
+    {
+        List<string> filtered = new List<string>();
+        for (int i = 0; i < values.Count; i++)
+        {
+            for (int j = 0; j < filters.Count; j++)
+            {
+                if (values[i].Contains(filters[j]))
+                {
+                    filtered.Add(keys[i]);
                     break;
                 }
             }
         }
         return filtered;
     }
-
     public List<string> GetAllValues()
     {
         return new List<string>(values);
     }
-
     public List<string> GetFilteredValues(List<string> filters)
     {
         List<string> filtered = new List<string>();
@@ -225,7 +247,6 @@ public class StatDatabase : ScriptableObject
         }
         return filtered;
     }
-
     public virtual string ReturnValue(string key)
     {
         int index = keys.IndexOf(key);
@@ -240,7 +261,6 @@ public class StatDatabase : ScriptableObject
             return "";
         }
     }
-
     // No longer a dictionary if one key has multiple values.
     public List<string> ReturnAllValues(string key)
     {
@@ -254,7 +274,6 @@ public class StatDatabase : ScriptableObject
         }
         return allValuesForKey;
     }
-
     public string ReturnValueAtIndex(int index)
     {
         if (index >= 0 && index < values.Count)
@@ -264,18 +283,19 @@ public class StatDatabase : ScriptableObject
         if (defaultsEnabled){return defaultValue;}
         return "";
     }
-
-    public string ReturnRandomValue()
+    public string ReturnRandomValue(RNGUtility rng = null)
     {
         int index = Random.Range(0, values.Count);
+        if (rng != null)
+        {
+            index = rng.SeedRange(0, values.Count);
+        }
         return values[index];
     }
-
     public string ReturnMiddleValue()
     {
         return values[values.Count / 2];
     }
-
     public virtual void RemoveKey(string key)
     {
         int index = keys.IndexOf(key);
@@ -286,7 +306,6 @@ public class StatDatabase : ScriptableObject
         }
         DBSetDirty();
     }
-
     public virtual void UpsertValue(string key, string updatedValue)
     {
         int index = keys.IndexOf(key);

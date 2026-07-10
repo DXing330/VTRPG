@@ -14,30 +14,36 @@ public class AutoChessPrepUIManager : MonoBehaviour
     public AutoActorDisplay actorDisplay;
     public GameObject sellActorObject;
     public GameObject rotateActorObject;
+    public GameObject manageEquipObject;
     public void ResetObjects()
     {
         actorDisplay.ResetDisplay();
         actorDisplayObject.SetActive(false);
         sellActorObject.SetActive(false);
         rotateActorObject.SetActive(false);
+        manageEquipObject.SetActive(false);
     }
-    public void ActivateSellObject()
+    public void ActivateFieldActorObjects()
     {
         sellActorObject.SetActive(true);
-    }
-    public void ActivateRotateObject()
-    {
         rotateActorObject.SetActive(true);
+        manageEquipObject.SetActive(true);
+    }
+    public void ActivateBenchActorObjects()
+    {
+        sellActorObject.SetActive(true);
+        manageEquipObject.SetActive(true);
     }
     public void UpdateActorDisplay(AutoActorRollUpData actor)
     {
-        UpdateActorDisplayByName(actor.GetName());
+        actorDisplayObject.SetActive(true);
+        actorDisplay.DisplayActor(actor);
     }
     public void UpdateActorDisplayByName(string newName)
     {
-        actorDisplayObject.SetActive(true);
         actorDisplay.DisplayActor(newName);
     }
+    public TMP_Text roundText;
     public TMP_Text levelText;
     public TMP_Text goldText;
     public TMP_Text castleHealthText;
@@ -52,12 +58,10 @@ public class AutoChessPrepUIManager : MonoBehaviour
         for (int i = 0; i < prepManager.benchSlots.Count; i++)
         {
             int benchIndex = prepManager.benchSlots[i].GetLocation();
-            string benchSlotText = prepManager.benchSlots[i].GetName();
-            benchSlotText += "\n";
             benchSlots[benchIndex].UpdateBenchSlot(prepManager.benchSlots[i].GetBaseStatString());
         }
         UpdateMap(prepManager);
-        // TODO Update Faction Slots
+        roundText.text = dataManager.GetRound().ToString();
         if (dataManager.MaxLevel())
         {
             levelText.text = "MAX";

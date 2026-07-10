@@ -559,6 +559,9 @@ public class SkillEffect : ScriptableObject
                     break;
                 }
                 break;
+            case "AKRespawnTimer":
+                target.ChangeRespawnTimer(int.Parse(effectSpecifics));
+                break;
         }
     }
     public int ApplyElementalDamageToTarget(TacticActor target, string damageType, int damageAmount, BattleMap map = null)

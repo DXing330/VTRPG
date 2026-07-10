@@ -84,12 +84,17 @@ public class ActorSubGameStats : ActorStats
     public int healer = 0;
     public bool AKHealer(){return healer > 0;}
     public int baseRespawnTimer;
+    public void ChangeRespawnTimer(int amount)
+    {
+        baseRespawnTimer += amount;
+        baseRespawnTimer = Mathf.Max(1, baseRespawnTimer);
+    }
     public int currentRespawnTimer = 0;
     public void ResetRespawnTimer(){currentRespawnTimer = 0;}
     public bool ReadyToRespawn()
     {
         PrepareToRespawn();
-        return currentRespawnTimer >= baseRespawnTimer;
+        return currentRespawnTimer > baseRespawnTimer;
     }
     public void PrepareToRespawn(){currentRespawnTimer++;}
     public List<AutoChessTrait> autoChessTemporaryTraits = new();

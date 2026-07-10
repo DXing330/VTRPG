@@ -9,6 +9,11 @@ using TMPro;
 
 public class AutoActorDisplay : MonoBehaviour
 {
+    public GameObject thisObject;
+    public void DisableDisplay()
+    {
+        thisObject.SetActive(false);
+    }
     public GeneralUtility utility;
     public StatDatabase actorData;
     public StatDatabase actorRarity;
@@ -30,7 +35,7 @@ public class AutoActorDisplay : MonoBehaviour
             }
         }
     }
-    public SpriteContainer factionSprites;
+    public SpriteContainer masterSprites;
     public TMP_Text actorName;
     public TMP_Text HPText;
     public TMP_Text ATKText;
@@ -39,6 +44,9 @@ public class AutoActorDisplay : MonoBehaviour
     public TMP_Text skillText;
     public List<GameObject> factionIconObjects;
     public List<Image> factionIcons;
+    // Later upgrade this to icons?
+    public List<GameObject> currentEquipImageObjects;
+    public List<Image> currentEquipImages;
     public void ResetDisplay()
     {
         SetPage(0);
@@ -49,6 +57,7 @@ public class AutoActorDisplay : MonoBehaviour
         HPText.text = "";
         ATKText.text = "";
         DEFText.text = "";
+        utility.DisableGameObjects(currentEquipImageObjects);
     }
     public void DisplayActor(string newName)
     {
@@ -59,10 +68,10 @@ public class AutoActorDisplay : MonoBehaviour
         for (int i = 0; i < allFactions.Length; i++)
         {
             factionIconObjects[i].SetActive(true);
-            factionIcons[i].sprite = factionSprites.SpriteDictionary(allFactions[i]);
+            factionIcons[i].sprite = masterSprites.SpriteDictionary(allFactions[i]);
         }
         traitText.text = ReturnTraitDescription(blocks[1], blocks[2], blocks[3]);
-        skillText.text = activeViewer.ReturnActiveDescriptionOnlyFromName(blocks[4]);
+        skillText.text = activeViewer.ReturnActiveDescriptionOnlyFromName(blocks[4]) + "\n" + "CD: " + blocks[5];
         HPText.text = blocks[7];
         ATKText.text = blocks[8];
         DEFText.text = blocks[9];
@@ -70,6 +79,15 @@ public class AutoActorDisplay : MonoBehaviour
     public void DisplayActor(AutoActorRollUpData actor)
     {
         DisplayActor(actor.GetName());
+        List<string> equipNames = actor.GetEquipmentNames();
+        for (int i = 0; i < Mathf.Min(currentEquipImages.Count, equipNames.Count); i++)
+        {
+            currentEquipImageObjects[i].SetActive(true);
+            masterSprites.ApplyToImage(currentEquipImages[i], equipNames[i]);
+        }
+        HPText.text = actor.GetHealth().ToString();
+        ATKText.text = actor.GetAttack().ToString();
+        DEFText.text = actor.GetDefense().ToString();
     }
     // TRAIT DETAILS, Maybe Move This To A Utility Later.
     public string ReturnTraitDescription(string timing, string effect, string specifics)
@@ -120,6 +138,8 @@ public class AutoActorDisplay : MonoBehaviour
             return " increase own active faction stacks by " + amount + ".";
             case "Gold":
             return " gain " + amount + " gold.";
+            case "NextRoundGold":
+            return " gain " + amount + " gold, next round.";
             case "HighestActive":
             return " increase highest active faction stacks by " + amount + ".";
             case "Unit":

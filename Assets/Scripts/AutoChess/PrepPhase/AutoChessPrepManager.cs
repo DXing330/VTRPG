@@ -20,11 +20,13 @@ public class AutoChessPrepManager : ClickTileManager
         shopManager.shopData.NewGame();
     }
     public AutoChessPrepUIManager UIManager;
+    // Put The Equipment UI Reset Here For Now.
     public void UpdateAllUI()
     {
         UIManager.UpdateUI(this);
         factionManager.UpdateActiveFactions();
         shopManager.UpdateAutoChessShopUI();
+        equipManager.StopManagingEquipment();
     }
     void Start()
     {
@@ -43,7 +45,7 @@ public class AutoChessPrepManager : ClickTileManager
             if (dataManager.benchActorData[i].Length <= 0){continue;}
             AutoActorRollUpData newBenchActor = new AutoActorRollUpData();
             newBenchActor.LoadRollUpData(dataManager.benchActorData[i]);
-            newBenchActor.LoadBaseStats(actorData);
+            newBenchActor.LoadBaseStats(actorData, newBenchActor.GetLevel());
             benchSlots.Add(newBenchActor);
         }
         for (int i = 0; i < dataManager.fieldActorData.Count; i++)
@@ -51,7 +53,7 @@ public class AutoChessPrepManager : ClickTileManager
             if (dataManager.fieldActorData[i].Length <= 0){continue;}
             AutoActorRollUpData newFieldActor = new AutoActorRollUpData();
             newFieldActor.LoadRollUpData(dataManager.fieldActorData[i]);
-            newFieldActor.LoadBaseStats(actorData);
+            newFieldActor.LoadBaseStats(actorData, newFieldActor.GetLevel());
             fieldSlots.Add(newFieldActor);
         }
     }
@@ -121,11 +123,16 @@ public class AutoChessPrepManager : ClickTileManager
     }
     // Factions/Traits
     public AutoChessFactionManager factionManager;
-    public void GainFactionStacks(string faction, int stackAmount)
-    {
-        factionManager.GainFactionStacks(faction, stackAmount);
-    }
     public AutoChessTraitManager traitManager;
+    public void CheckTraitTiming(AutoActorRollUpData actor, string timing)
+    {
+        AutoChessTrait trait = actor.trait;
+        if (trait == null){return;}
+        if (trait.timing == timing)
+        {
+            ApplyActorTrait(actor, trait);
+        }
+    }
     public void ApplyActorTrait(AutoActorRollUpData actor, AutoChessTrait trait, bool copied = false)
     {
         if (trait == null){return;}
@@ -188,12 +195,36 @@ public class AutoChessPrepManager : ClickTileManager
             case "Equipment":
             dataManager.GainEquipment(trait.specifics);
             break;
+            case "AegirUnit":
+            for (int i = 0; i < Mathf.Max(1, intSpecifics); i++)
+            {
+                List<string> randomAegirUnits = new List<string>{"Specter", "Skadi", "Andreana"};
+                string randomGainedAegir = randomAegirUnits[shopManager.shopData.autoChessShopRNG.SeedRange(0, randomAegirUnits.Count)];
+                AutoActorRollUpData gainedAegir = new AutoActorRollUpData();
+                gainedAegir.SetName(randomGainedAegir);
+                gainedAegir.LoadBaseStats(actorData);
+                GainActor(gainedAegir);
+                shopManager.RemoveFromPool(randomGainedAegir);
+            }
+            break;
+            case "Unit":
+            for (int i = 0; i < Mathf.Max(1, intSpecifics); i++)
+            {
+                string gainedUnitName = trait.specifics;
+                AutoActorRollUpData gainedUnit = new AutoActorRollUpData();
+                gainedUnit.SetName(gainedUnitName);
+                gainedUnit.LoadBaseStats(actorData);
+                GainActor(gainedUnit);
+                shopManager.RemoveFromPool(gainedUnitName);
+            }
+            break;
             case "HighestActiveUnit":
             string faction = factionManager.HighestUnitCountFaction();
             if (faction == ""){break;}
             for (int i = 0; i < Mathf.Max(1, intSpecifics); i++)
             {
                 // Generate A Random Actor Of That Type.
+                // This Will Remove It From The Pool.
                 string newActorName = shopManager.shopData.ReturnRandomActorFromFaction(faction);
                 AutoActorRollUpData gainedActor = new AutoActorRollUpData();
                 gainedActor.SetName(newActorName);
@@ -208,14 +239,16 @@ public class AutoChessPrepManager : ClickTileManager
         ResetSelected();
         for (int i = 0; i < fieldSlots.Count; i++)
         {
-            AutoChessTrait trait = fieldSlots[i].trait;
-            if (trait.timing == "StartBattle")
-            {
-                ApplyActorTrait(fieldSlots[i], fieldSlots[i].trait);
-            }
+            CheckTraitTiming(fieldSlots[i], "StartBattle");
         }
         // TODO Check The Swire Thing On Bench.
         UpdateAllUI();
+    }
+    // EQUIP
+    public AutoChessPrepEquipmentManager equipManager;
+    public void ManageActorEquipment()
+    {
+        equipManager.ManageActorEquipment(ReturnSelectedActor());
     }
     // SHOP
     public StatDatabase actorData;
@@ -245,9 +278,22 @@ public class AutoChessPrepManager : ClickTileManager
         dataManager.GainExp(expCost);
         UpdateAllUI();
     }
+    public void FreezeShop()
+    {
+        shopManager.FreezeShop();
+    }
     // New Actors Go To The Bench.
     public void GainActor(AutoActorRollUpData newActor)
     {
+        // Check For Merging To Level Up.
+        if (GetLevelOneActorsWithName(newActor.GetName()) >= 2)
+        {
+            CheckTraitTiming(newActor, "OnPurchase");
+            MergeIntoLevelTwoActor(newActor.GetName());
+            // Don't Add The Actor Since It Will Be Merged Away Along With One Actor On The Bench/Field.
+            UpdateAllUI();
+            return;
+        }
         int newSlot = AvailableBenchSlot();
         if (newSlot < 0)
         {
@@ -259,11 +305,7 @@ public class AutoChessPrepManager : ClickTileManager
         newActor.LoadBaseStats(actorData);
         benchSlots.Add(newActor);
         // Determine If A Trait Is Triggered.
-        AutoChessTrait trait = newActor.trait;
-        if (trait.timing == "OnPurchase")
-        {
-            ApplyActorTrait(newActor, trait);
-        }
+        CheckTraitTiming(newActor, "OnPurchase");
         UpdateAllUI();
     }
     public void BuySelectedActor()
@@ -285,19 +327,18 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public void SellSelectedActor()
     {
-        if (selectedActorLocation < 0 || selectedActorIndex < 0){return;}
         // Determine The Actor.
-        // TODO Apply OnSold Traits.
+        AutoActorRollUpData soldActor = ReturnSelectedActor();
+        if (soldActor == null){return;}
+        CheckTraitTiming(soldActor, "OnSold");
+        dataManager.ReclaimEquipmentFromActor(soldActor);
+        shopManager.SellActor(soldActor);
         if (selectedActorLocation == 0)
         {
-            AutoActorRollUpData soldBenchActor = benchSlots[selectedActorIndex];
-            shopManager.SellActor(soldBenchActor);
             benchSlots.RemoveAt(selectedActorIndex);
         }
         else if (selectedActorLocation == 1)
         {
-            AutoActorRollUpData soldFieldActor = fieldSlots[selectedActorIndex];
-            shopManager.SellActor(soldFieldActor);
             fieldSlots.RemoveAt(selectedActorIndex);
         }
         ResetSelected();
@@ -378,12 +419,82 @@ public class AutoChessPrepManager : ClickTileManager
         }
         return -1;
     }
+    public int GetLevelOneActorsWithName(string newName)
+    {
+        int count = 0;
+        for (int i = 0; i < benchSlots.Count; i++)
+        {
+            if (benchSlots[i].GetName() == newName && benchSlots[i].GetLevel() == 1)
+            {
+                count++;
+            }
+        }
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            if (fieldSlots[i].GetName() == newName && fieldSlots[i].GetLevel() == 1)
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+    public void MergeIntoLevelTwoActor(string newName)
+    {
+        // Need To Make Sure Equipment Returns To Equipment Inventory.
+        // Determine The Actor To Level Up.
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            if (fieldSlots[i].GetName() == newName && fieldSlots[i].GetLevel() < 2)
+            {
+                fieldSlots[i].SetLevel(2);
+                fieldSlots[i].LoadBaseStats(actorData, 2);
+                // Pretend That You're Gaining The Actor And Trigger OnPurchase Traits.
+                CheckTraitTiming(fieldSlots[i], "OnPurchase");
+                break;
+            }
+        }
+        // Determine Which Copy To Remove, Only Need To Remove One Copy Since One Copy Is Consumed From GainActor().
+        for (int i = 0; i < benchSlots.Count; i++)
+        {
+            if (benchSlots[i].GetName() == newName && benchSlots[i].GetLevel() < 2)
+            {
+                // Remove Equipment.
+                dataManager.ReclaimEquipmentFromActor(benchSlots[i]);
+                // Remove Actor.
+                benchSlots.RemoveAt(i);
+                return;
+            }
+        }
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            if (fieldSlots[i].GetName() == newName && fieldSlots[i].GetLevel() < 2)
+            {
+                // Remove Equipment.
+                dataManager.ReclaimEquipmentFromActor(fieldSlots[i]);
+                // Remove Actor.
+                fieldSlots.RemoveAt(i);
+                return;
+            }
+        }
+    }
     public int selectedActorLocation;
     public int selectedActorIndex;
     public void ResetSelected()
     {
         selectedActorLocation = -1;
         selectedActorIndex = -1;
+    }
+    public AutoActorRollUpData ReturnSelectedActor()
+    {
+        if (selectedActorLocation < 0 || selectedActorIndex < 0){return null;}
+        if (selectedActorLocation == 0)
+        {
+            return benchSlots[selectedActorIndex];
+        }
+        else
+        {
+            return fieldSlots[selectedActorIndex];
+        }
     }
     // Move From Map To Bench, Select Actor On Bench, Move From Bench To Bench
     public void ClickOnBenchTile(int clickedLocation)
@@ -398,7 +509,8 @@ public class AutoChessPrepManager : ClickTileManager
                     selectedActorIndex = i;
                     selectedActorLocation = 0;
                     UIManager.UpdateActorDisplay(benchSlots[i]);
-                    UIManager.ActivateSellObject();
+                    UIManager.ActivateBenchActorObjects();
+                    equipManager.SetCurrentActor(ReturnSelectedActor());
                     return;
                 }
             }
@@ -458,10 +570,10 @@ public class AutoChessPrepManager : ClickTileManager
                 {
                     selectedActorIndex = i;
                     UIManager.UpdateActorDisplay(fieldSlots[i]);
-                    UIManager.ActivateSellObject();
-                    UIManager.ActivateRotateObject();
+                    UIManager.ActivateFieldActorObjects();
                     UIManager.HighlightSelectedAttackRange(this, fieldSlots[i]);
                     selectedActorLocation = 1;
+                    equipManager.SetCurrentActor(ReturnSelectedActor());
                     return;
                 }
             }

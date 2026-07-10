@@ -89,6 +89,7 @@ public class AutoChessEnemyDataManager : SavedData
         round = 1;
         nextRoundEnemies.Clear();
         availableEnemyGroups = enemyGroups.GetAllValues().Distinct().ToList();
+        autoChessEnemyRNG.NewGame();
         // TODO Determine What Enemy Groups Are Available By Removing Some.
         GenerateNextRoundEnemies();
         Save();

@@ -24,6 +24,7 @@ public class AutoChessBattleMap : BattleMap
         }
         for (int i = 0; i < battlingActors.Count; i++)
         {
+            if (battlingActors[i].GetInvisible()){continue;}
             mapTiles[battlingActors[i].GetLocation()].UpdateText(battlingActors[i].GetPersonalName() + "\n" + battlingActors[i].GetHealth() + "/" + battlingActors[i].GetBaseHealth());
         }
     }

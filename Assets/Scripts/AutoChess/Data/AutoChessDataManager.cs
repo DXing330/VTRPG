@@ -51,6 +51,10 @@ public class AutoChessDataManager : SavedData
         exp += amount;
         LevelUp();
     }
+    public void GainExpAfterBattle()
+    {
+        GainExp(6 + (round / 2));
+    }
     public int gold;
     public int GetGold(){return gold;}
     public void SetGold(int newInfo)
@@ -60,6 +64,13 @@ public class AutoChessDataManager : SavedData
     public void GainGold(int amount)
     {
         gold += amount;
+    }
+    public void GainGoldAfterBattle()
+    {
+        // Gain Interest.
+        gold += Mathf.Min(5, gold / 10);
+        // Gain More Gold As The Rounds Go On.
+        gold += 6 + (round / 2);
     }
     public int nextRoundGold;
     public void GainNextRoundGold(int amount)
@@ -107,6 +118,7 @@ public class AutoChessDataManager : SavedData
         roundSpentGold = 0;
         GainGold(GetNextRoundGold());
         SetNextRoundGold(0);
+        GainEquipmentDrops();
         for (int i = 0; i < subDataManagers.Count; i++)
         {
             subDataManagers[i].NewRound();
@@ -133,6 +145,46 @@ public class AutoChessDataManager : SavedData
     public List<string> GetMapTiles(){return mapTiles;}
     public List<string> mapTerrain;
     public List<string> GetMapTerrain(){return mapTerrain;}
+    public StatDatabase equipmentRarity;
+    public RNGUtility shopRNG;
+    // Get 2 Random Equipment At The Start Of The Game.
+    public List<string> GenerateEquipmentOfRarity(int rarity = 1, int quantity = 1)
+    {
+        List<string> equipmentOfRarity = equipmentRarity.GetKeysFilteringByValues(rarity.ToString());
+        List<string> generatedEquipment = new List<string>();
+        for (int i = 0; i < Mathf.Max(1, quantity); i++)
+        {
+            generatedEquipment.Add(equipmentOfRarity[shopRNG.SeedRange(0, equipmentOfRarity.Count)]);
+        }
+        return generatedEquipment;
+    }
+    public void GenerateStarterEquipment()
+    {
+        List<string> starterEquipment = GenerateEquipmentOfRarity(1, 2);
+        for (int i = 0; i < starterEquipment.Count; i++)
+        {
+            GainEquipment(starterEquipment[i]);
+        }
+    }
+    public void GainEquipmentDrops()
+    {
+        // Formula Based On Round #.
+        // 1 2 3 4 5 6 7 8 9 0 1 2 3 4 - Round
+        // 1 1 2 2 2 3 3 1 1 1 2 2 2 3 - Quantity
+        // 1 1 1 1 1 1 1 4 4 4 4 4 4 4 - Rarity
+        int quantity = 1 + ((round % 8) / 3);
+        // Rounds (1-7) -> Rarity 1, 7+ -> Rarity 4. 
+        int rarity = 1;
+        if (round >= 8)
+        {
+            rarity = 4;
+        }
+        List<string> equipmentDrops = GenerateEquipmentOfRarity(rarity, quantity);
+        for (int i = 0; i < equipmentDrops.Count; i++)
+        {
+            GainEquipment(equipmentDrops[i]);
+        }
+    }
     public List<string> equipment;
     public List<string> GetEquipment()
     {
@@ -142,10 +194,30 @@ public class AutoChessDataManager : SavedData
         }
         return equipment;
     }
+    public void UseEquipment(string equipName)
+    {
+        int indexOf = equipment.IndexOf(equipName);
+        if (indexOf >= 0)
+        {
+            equipment.RemoveAt(indexOf);
+        }
+    }
+    public int GetEquipmentCount(string equipName)
+    {
+        return utility.CountStringsInList(equipment, equipName);
+    }
     public void GainEquipment(string equipName)
     {
         if (equipName.Length <= 0){return;}
         equipment.Add(equipName);
+    }
+    public void ReclaimEquipmentFromActor(AutoActorRollUpData actor)
+    {
+        List<string> actorEquipment = actor.GetEquipmentNames();
+        for (int i = 0; i < actorEquipment.Count; i++)
+        {
+            GainEquipment(actorEquipment[i]);
+        }
     }
     // public string mode; // Normal/Hard/Hell/Endless?
     [ContextMenu("New Game")]
@@ -164,6 +236,7 @@ public class AutoChessDataManager : SavedData
         mapTiles.Clear(); // All Plains.
         mapTerrain.Clear(); // All Blank.
         equipment.Clear();
+        GenerateStarterEquipment();
         for (int i = 0; i < mapSize * mapSize; i++)
         {
             mapTiles.Add("Plains");

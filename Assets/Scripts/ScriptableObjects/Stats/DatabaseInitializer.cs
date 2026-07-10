@@ -32,19 +32,21 @@ public class DatabaseInitializer : MonoBehaviour
     public void InitializeStatAndSpriteData()
     {
         string[] blocks = allData.Split(allDataDelimiter);
+        int blockIndex = 0;
         if (stats)
         {
-            allStatData = blocks[0];
+            allStatData = blocks[blockIndex];
             masterDatabase.SetAllData(allStatData);
             masterDatabase.Initialize();
             for (int i = 0; i < specificStats.Count; i++)
             {
                 specificStats[i].Initialize();
             }
+            blockIndex++;
         }
         if (sprites)
         {
-            allSpriteData = blocks[1];
+            allSpriteData = blocks[blockIndex];
             masterSprites.SetAllData(allSpriteData);
             masterSprites.Initialize();
         }

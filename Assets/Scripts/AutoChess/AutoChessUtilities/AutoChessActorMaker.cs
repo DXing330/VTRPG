@@ -27,7 +27,7 @@ public class AutoChessActorMaker : ActorMaker
         AutoActor newActor = new AutoActor();
         string actorStats = actorData.ReturnValue(rollUpActor.GetName());
         newActor.SetPersonalName(rollUpActor.GetName());
-        newActor.AutoChessSetInitialStatsFromString(actorStats);
+        newActor.AutoChessSetInitialStatsFromString(actorStats, rollUpActor.GetLevel());
         passiveOrganizer.OrganizeActorPassives(newActor);
         if (location < 0)
         {

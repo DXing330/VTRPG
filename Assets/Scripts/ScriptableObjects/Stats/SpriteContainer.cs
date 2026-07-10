@@ -86,19 +86,16 @@ public class SpriteContainer : ScriptableObject
         return sprites[Random.Range(0, sprites.Count)].name;
     }
     public List<string> values;
-
     public string SpriteNameByIndex(int index)
     {
         if (index < 0 || index >= sprites.Count){return "";}
         return sprites[index].name;
     }
-
-    bool SearchLinkedContainers()
+    protected bool SearchLinkedContainers()
     {
         return searchLinkedSpriteContainers && linkedSpriteContainers != null;
     }
-
-    Sprite SpriteByNameLocal(string spriteName)
+    protected Sprite SpriteByNameLocal(string spriteName)
     {
         if (sprites == null){return null;}
         for (int i = 0; i < sprites.Count; i++)
@@ -107,8 +104,7 @@ public class SpriteContainer : ScriptableObject
         }
         return null;
     }
-
-    string LocalSpriteName(string spriteName)
+    protected string LocalSpriteName(string spriteName)
     {
         if (keys != null && values != null)
         {
@@ -120,8 +116,7 @@ public class SpriteContainer : ScriptableObject
         }
         return spriteName;
     }
-
-    Sprite SpriteDictionaryFromLinkedContainers(string spriteName)
+    protected Sprite SpriteDictionaryFromLinkedContainers(string spriteName)
     {
         if (!SearchLinkedContainers()){return null;}
         for (int i = 0; i < linkedSpriteContainers.Count; i++)
@@ -132,7 +127,6 @@ public class SpriteContainer : ScriptableObject
         }
         return null;
     }
-
     public Sprite SpriteDictionary(string spriteName)
     {
         spriteName = LocalSpriteName(spriteName);
@@ -146,7 +140,6 @@ public class SpriteContainer : ScriptableObject
         }
         return null;
     }
-
     public Sprite SpriteByIndex(int index)
     {
         if (index < 0 || index >= sprites.Count)
@@ -159,7 +152,6 @@ public class SpriteContainer : ScriptableObject
         }
         return sprites[index];
     }
-
     public Sprite SpriteByKey(string nKey)
     {
         int indexOf = keys == null ? -1 : keys.IndexOf(nKey);
@@ -173,12 +165,10 @@ public class SpriteContainer : ScriptableObject
         }
         return SpriteDictionary(values[indexOf]);
     }
-
     public Sprite GetSprite(string spriteName)
     {
         return SpriteDictionary(spriteName);
     }
-
     string GetColorNameLocal(string nKey)
     {
         int indexOf = keys == null ? -1 : keys.IndexOf(nKey);
@@ -192,12 +182,10 @@ public class SpriteContainer : ScriptableObject
         }
         return colorNames[indexOf];
     }
-
     public string GetColorName(string nKey)
     {
         return GetColorNameLocal(nKey);
     }
-
     Color GetColorLocal(string nKey, Color defaultColor)
     {
         string colorName = GetColorNameLocal(nKey);
@@ -207,12 +195,10 @@ public class SpriteContainer : ScriptableObject
         }
         return colors.GetColorByName(colorName);
     }
-
     public Color GetColor(string nKey, Color defaultColor)
     {
         return GetColorLocal(nKey, defaultColor);
     }
-
     string GetSizeLocal(string nKey)
     {
         int indexOf = keys == null ? -1 : keys.IndexOf(nKey);
@@ -226,12 +212,10 @@ public class SpriteContainer : ScriptableObject
         }
         return sizes[indexOf];
     }
-
     public string GetSize(string nKey)
     {
         return GetSizeLocal(nKey);
     }
-
     [ContextMenu("Log Linked Sprite Duplicate Names")]
     public void LogLinkedSpriteDuplicateNames()
     {
@@ -284,7 +268,6 @@ public class SpriteContainer : ScriptableObject
 
         Debug.LogWarning("Sprite duplicate check for "+name+":\n"+string.Join("\n", reportLines), this);
     }
-
     static Dictionary<string, int> SpriteNameCounts(SpriteContainer spriteContainer)
     {
         Dictionary<string, int> counts = new Dictionary<string, int>();
@@ -301,14 +284,12 @@ public class SpriteContainer : ScriptableObject
         }
         return counts;
     }
-
     static void AddInternalDuplicateReport(string containerName, Dictionary<string, int> names, List<string> reportLines)
     {
         List<string> duplicates = names.Where(x => x.Value > 1).Select(x => x.Key).OrderBy(x => x).ToList();
         if (duplicates.Count == 0){return;}
         reportLines.Add(containerName+" has duplicate sprite references: "+string.Join(", ", duplicates));
     }
-
     static void AddOverlapReport(string leftName, Dictionary<string, int> leftNames, string rightName, Dictionary<string, int> rightNames, List<string> reportLines)
     {
         List<string> duplicates = leftNames.Keys.Where(x => rightNames.ContainsKey(x)).OrderBy(x => x).ToList();

@@ -60,8 +60,17 @@ public class AutoBattleManager : MonoBehaviour
         return spawnTiles;
     }
     public List<string> enemyPool;
+    // Faction Specific Stuff.
     public int aegirRevives = 0;
     public int kjeragWindCD = -1;
+    public void ResilientCheckResurrectedAlly(TacticActor actor)
+    {
+        if (actor.PassiveExists("AKResilient"))
+        {
+            // Trigger The Passive Again.
+            effectManager.ApplyPassiveByName(actor, map, "AKResilient");
+        }
+    }
     public int currentRound = 1;
     public void StartBattle()
     {
@@ -162,7 +171,20 @@ public class AutoBattleManager : MonoBehaviour
                 SpawnEnemy(spawnedEnemyName, spawnZones[i]);
             }
         }
-        // Update Any Dead Allies That Are Ready And Open.
+        // Update Any Dead Allies That Are Ready And Have Open Tiles.
+        List<TacticActor> defeatedActors = map.GetDefeatedActors();
+        for (int i = 0; i < defeatedActors.Count; i++)
+        {
+            if (defeatedActors[i].GetTeam() != 0){continue;}
+            if (defeatedActors[i].ReadyToRespawn())
+            {
+                // Check If The Tile Is Open.
+                if (map.GetActorOnTile(defeatedActors[i].GetLocation()) != null){continue;}
+                // Revive Them.
+                map.ResurrectActor(defeatedActors[i]);
+                ResilientCheckResurrectedAlly(defeatedActors[i]);
+            }
+        }
         map.UpdateMap();
     }
     public void SpawnEnemy(string enemyName, int enemyLocation)
@@ -245,8 +267,8 @@ public class AutoBattleManager : MonoBehaviour
             // Lose Health Based On Castle Damage.
             data.LoseHealth(CastleHealthLoss());
             // Gain Gold + Exp Based On Win/Lose/Etc.
-            data.GainExp(6);
-            data.GainGold(6);
+            data.GainExpAfterBattle();
+            data.GainGoldAfterBattle();
             // Increment Round.
             data.NewRound();
             // SAVE
@@ -277,16 +299,7 @@ public class AutoBattleManager : MonoBehaviour
             EndTurn(actor);
             return;
         }
-        // Priority 2: Path Toward Castle
-        enemyPath = actorAI.FindPathToTile(actor, map, moveManager, castleTile);
-        // Don't Move If Frozen.
-        if (map.GetActorOnTile(enemyPath[enemyPath.Count - 1]) == null && !actor.StatusExists("Frozen"))
-        {
-            map.MoveActorToTile(actor, enemyPath[enemyPath.Count - 1]);
-            EndTurn(actor);
-            return;
-        }
-        // Priority 3: Attack Player Units
+        // Priority 2: Attack Player Units
         List<TacticActor> enemies = map.ReturnEnemiesInTiles(actor, attackable);
         if (enemies.Count > 0)
         {
@@ -294,9 +307,23 @@ public class AutoBattleManager : MonoBehaviour
             // TODO Check For Skill Usage.
             ActorAttacksActor(actor, targetedEnemy);
         }
+        // Don't Move If Frozen.
+        if (actor.StatusExists("Frozen"))
+        {
+            EndTurn(actor);
+            return;
+        }
+        // Priority 3: Path Toward Castle
+        enemyPath = actorAI.FindPathToTile(actor, map, moveManager, castleTile);
+        if (enemyPath.Count > 0 && map.GetActorOnTile(enemyPath[enemyPath.Count - 1]) == null)
+        {
+            map.MoveActorToTile(actor, enemyPath[enemyPath.Count - 1]);
+            EndTurn(actor);
+            return;
+        }
         // Priority 4: Path Toward Player Units
         enemyPath = actorAI.FindPathToTarget(actor, map, moveManager);
-        if (enemyPath.Count > 0 && map.GetActorOnTile(enemyPath[enemyPath.Count - 1]) == null && !actor.StatusExists("Frozen"))
+        if (enemyPath.Count > 0 && map.GetActorOnTile(enemyPath[enemyPath.Count - 1]) == null)
         {
             map.MoveActorToTile(actor, enemyPath[enemyPath.Count - 1]);
             EndTurn(actor);
@@ -402,9 +429,11 @@ public class AutoBattleManager : MonoBehaviour
         // Resurrect After Gaining Stacks.
         if (actor.Resurrect())
         {
-            actor.FullRestore();
-            effectManager.StartBattle(actor, map);
+            // Can't Just Start Battle, The BS Stat Buffs Will Stack.
+            // effectManager.StartBattle(actor, map);
+            // Need To Do The Resilient Check.
             map.ResurrectActor(actor);
+            ResilientCheckResurrectedAlly(actor);
             return;
         }
         List<string> deathActives = new List<string>(actor.GetDeathActives());
