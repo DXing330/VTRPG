@@ -5,7 +5,24 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "PassiveDetailViewerSwitch", menuName = "ScriptableObjects/UIData/PassiveDetailViewerSwitch", order = 1)]
 public class PassiveDetailViewerSwitch : ScriptableObject
 {
+    public MultiKeyStatDatabase allPassiveGroups;
     public StatDatabase allPassives;
+    public string ReturnPassiveAtLevelDetails(string passiveName, int passiveLevel)
+    {
+        string allPassiveDetails = "";
+        for (int i = 1; i < passiveLevel + 1; i++)
+        {
+            string passiveAtLevel = allPassiveGroups.GetMultiKeyValue(passiveName, i.ToString());
+            allPassiveDetails += ReturnPassiveDetails(allPassives.ReturnValue(passiveAtLevel));
+            if (i < passiveLevel){allPassiveDetails += "\n";}
+        }
+        return allPassiveDetails;
+    }
+    public string ReturnPassiveDetailsFromName(string passiveName)
+    {
+        return ReturnPassiveDetails(allPassives.ReturnValue(passiveName));
+    }
+    // Returns for a single passive, ie a single level of a passive group.
     public string ReturnPassiveDetails(string newInfo)
     {
         if (!newInfo.Contains("|"))
@@ -74,6 +91,10 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "AfterSpell":
             return "After using a spell,";
         }
+        return "";
+    }
+    public string EffectString(string effect, string specifics)
+    {
         return "";
     }
     public string PassiveEffect(string effect, string specifics, string target)

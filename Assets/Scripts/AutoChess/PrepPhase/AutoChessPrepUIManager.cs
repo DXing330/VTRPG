@@ -9,9 +9,11 @@ public class AutoChessPrepUIManager : MonoBehaviour
     public AutoChessDataManager dataManager;
     public List<AutoChessBenchSlot> benchSlots;
     public List<MapTile> mapSlots;
+    public SpriteContainer masterSprites;
     public Sprite castleSprite;
     public GameObject actorDisplayObject;
     public AutoActorDisplay actorDisplay;
+    public AutoChessEquipmentDisplay equipDisplay;
     public GameObject sellActorObject;
     public GameObject rotateActorObject;
     public GameObject manageEquipObject;
@@ -48,7 +50,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
     public TMP_Text goldText;
     public TMP_Text castleHealthText;
     public TMP_Text deployLimitText;
-    public void UpdateUI(AutoChessPrepManager prepManager)
+    public void UpdateAutoChessUI(AutoChessPrepManager prepManager)
     {
         ResetObjects();
         for (int i = 0; i < benchSlots.Count; i++)
@@ -73,6 +75,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
         goldText.text = dataManager.GetGold().ToString();
         castleHealthText.text = dataManager.GetHealth().ToString();
         deployLimitText.text = prepManager.fieldSlots.Count + "/" + (prepManager.GetMaxFieldSlots()).ToString();
+        equipDisplay.UpdateDisplay();
     }
     public void UpdateMap(AutoChessPrepManager prepManager)
     {
@@ -82,12 +85,23 @@ public class AutoChessPrepUIManager : MonoBehaviour
             mapSlots[i].UpdateText();
             mapSlots[i].ResetDirectionArrows();
             mapSlots[i].ResetHighlight();
+            // Reset Any Terrain Changes From The Battle.
+            mapSlots[i].ResetLayerSprite(3);
+            mapSlots[i].ResetAutoChessEquipment();
         }
         // Display The Actors (As Text For Now).
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
-            mapSlots[prepManager.fieldSlots[i].GetLocation()].UpdateText(prepManager.fieldSlots[i].GetBaseStatString());
-            mapSlots[prepManager.fieldSlots[i].GetLocation()].ActivateDirectionArrow(prepManager.fieldSlots[i].GetDirection());
+            int location = prepManager.fieldSlots[i].GetLocation();
+            mapSlots[location].UpdateText(prepManager.fieldSlots[i].GetBaseStatString());
+            mapSlots[location].ActivateDirectionArrow(prepManager.fieldSlots[i].GetDirection());
+            List<string> equipNames = prepManager.fieldSlots[i].GetEquipmentNames();
+            for (int j = 0; j < equipNames.Count; j++)
+            {
+                if (equipNames[j].Length <= 0){continue;}
+                mapSlots[location].EnableEquipSlot(j);
+                masterSprites.ApplyToImage(mapSlots[location].GetEquipSlotImage(j), equipNames[j]);
+            }
         }
         int castleTile = prepManager.GetCastleTile();
         mapSlots[castleTile].UpdateLayerSprite(castleSprite, 1);

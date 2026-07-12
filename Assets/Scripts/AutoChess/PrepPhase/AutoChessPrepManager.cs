@@ -23,7 +23,7 @@ public class AutoChessPrepManager : ClickTileManager
     // Put The Equipment UI Reset Here For Now.
     public void UpdateAllUI()
     {
-        UIManager.UpdateUI(this);
+        UIManager.UpdateAutoChessUI(this);
         factionManager.UpdateActiveFactions();
         shopManager.UpdateAutoChessShopUI();
         equipManager.StopManagingEquipment();
@@ -241,6 +241,20 @@ public class AutoChessPrepManager : ClickTileManager
         {
             CheckTraitTiming(fieldSlots[i], "StartBattle");
         }
+        List<string> activeFactions = factionManager.factionData.GetActiveFactions();
+        if (activeFactions.Contains("Aid"))
+        {
+            int aidCount = factionManager.factionData.GetCountOfFaction("Aid");
+            int aidBonus = 2;
+            if (aidCount >= 3)
+            {
+                aidBonus = 4;
+            }
+            for (int i = 0; i < activeFactions.Count; i++)
+            {
+                factionManager.factionData.GainFactionStacks(activeFactions[i], aidBonus);
+            }
+        }
         // TODO Check The Swire Thing On Bench.
         UpdateAllUI();
     }
@@ -442,6 +456,7 @@ public class AutoChessPrepManager : ClickTileManager
     {
         // Need To Make Sure Equipment Returns To Equipment Inventory.
         // Determine The Actor To Level Up.
+        bool merged = false;
         for (int i = 0; i < fieldSlots.Count; i++)
         {
             if (fieldSlots[i].GetName() == newName && fieldSlots[i].GetLevel() < 2)
@@ -450,7 +465,24 @@ public class AutoChessPrepManager : ClickTileManager
                 fieldSlots[i].LoadBaseStats(actorData, 2);
                 // Pretend That You're Gaining The Actor And Trigger OnPurchase Traits.
                 CheckTraitTiming(fieldSlots[i], "OnPurchase");
+                merged = true;
                 break;
+            }
+        }
+        // Else Check The Bench.
+        if (!merged)
+        {
+            for (int i = 0; i < benchSlots.Count; i++)
+            {
+                if (benchSlots[i].GetName() == newName && benchSlots[i].GetLevel() < 2)
+                {
+                    benchSlots[i].SetLevel(2);
+                    benchSlots[i].LoadBaseStats(actorData, 2);
+                    // Pretend That You're Gaining The Actor And Trigger OnPurchase Traits.
+                    CheckTraitTiming(benchSlots[i], "OnPurchase");
+                    merged = true;
+                    break;
+                }
             }
         }
         // Determine Which Copy To Remove, Only Need To Remove One Copy Since One Copy Is Consumed From GainActor().
@@ -483,6 +515,7 @@ public class AutoChessPrepManager : ClickTileManager
     {
         selectedActorLocation = -1;
         selectedActorIndex = -1;
+        UpdateAllUI();
     }
     public AutoActorRollUpData ReturnSelectedActor()
     {

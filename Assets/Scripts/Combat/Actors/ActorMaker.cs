@@ -14,6 +14,10 @@ public class ActorMaker : MonoBehaviour
     public StatDatabase elementPassives;
     public StatDatabase speciesPassives;
     public PassiveOrganizer passiveOrganizer;
+    public void ReorganizeActorPassives(TacticActor actor)
+    {
+        passiveOrganizer.OrganizeActorPassives(actor);
+    }
     public MapPatternLocations mapPatterns;
     public int mapSize;
     public void SetMapSize(int newSize) { mapSize = newSize; }
@@ -97,7 +101,7 @@ public class ActorMaker : MonoBehaviour
         AddElementPassives(newActor);
         AddAttributePassives(newActor);
         AddSpeciesPassives(newActor);
-        passiveOrganizer.OrganizeActorPassives(newActor);
+        ReorganizeActorPassives(newActor);
         newActor.StartTurnResetStats();
         return newActor;
     }
@@ -108,7 +112,7 @@ public class ActorMaker : MonoBehaviour
         SetActorName(newActor, actorName);
         newActor.SetPersonalName(actorName);
         newActor.SetTeam(team);
-        passiveOrganizer.OrganizeActorPassives(newActor);
+        ReorganizeActorPassives(newActor);
         newActor.InitializeStats();
         return newActor;
     }
@@ -158,7 +162,7 @@ public class ActorMaker : MonoBehaviour
         AddElementPassives(actor);
         AddAttributePassives(actor);
         AddSpeciesPassives(actor);
-        passiveOrganizer.OrganizeActorPassives(actor);
+        ReorganizeActorPassives(actor);
         actor.StartTurnResetStats();
         return actor;
     }
@@ -199,7 +203,7 @@ public class ActorMaker : MonoBehaviour
             AddElementPassives(actors[i]);
             AddAttributePassives(actors[i]);
             AddSpeciesPassives(actors[i]);
-            passiveOrganizer.OrganizeActorPassives(actors[i]);
+            ReorganizeActorPassives(actors[i]);
             actors[i].StartTurnResetStats();
         }
         return actors;
@@ -216,7 +220,7 @@ public class ActorMaker : MonoBehaviour
         AddSpeciesPassives(actor);
         // Set the new base health equal to the current health.
         actor.SetBaseHealth(actor.GetHealth());
-        passiveOrganizer.OrganizeActorPassives(actor);
+        ReorganizeActorPassives(actor);
     }
     public TacticActor CloneActor(TacticActor actor, int location)
     {
@@ -226,7 +230,7 @@ public class ActorMaker : MonoBehaviour
         newActor.SetLocation(location);
         newActor.CopyBaseStats(actor);
         newActor.SetTeam(actor.GetTeam());
-        passiveOrganizer.OrganizeActorPassives(actor);
+        ReorganizeActorPassives(actor);
         return newActor;
     }
     public void ApplyBattleModifiers(List<TacticActor> actors, List<string> battleMods)

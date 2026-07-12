@@ -67,8 +67,7 @@ public class AutoChessFactionDisplay : MonoBehaviour
         {
             rectsToAdjust.Add(rectTiles[i]);
         }
-        adjustor.SetRectTiles(rectsToAdjust);
-        adjustor.Initialize();
+        adjustor.SetRectTilesToRow(rectsToAdjust);
     }
     public void ClickFactionToolTipButton(int index)
     {
@@ -136,9 +135,9 @@ public class AutoChessFactionDisplay : MonoBehaviour
             return "All allies gain {+" + (40 + stacks) + "%} defense. At the start of each battle, all active factions gain 2 stacks. If there are 3+ Aid Faction allies, then instead gain 4 stacks.";
             // ECON
             case "Marvel": // Not In Battle
-            return "When rerolling, there is {~" + ((100 * stacks) / (100 + stacks)) + "%} chance to gain 1 gold. Every 50 stacks, gain 10 gold.";
+            return "When rerolling, there is {~" + ((100 * stacks) / (100 + stacks)) + "%} chance to gain 1 gold. Every 50 stacks, gain 10 gold next round.";
             case "Foresight": // Not In Battle
-            return "Every 10 stacks, gain 2 gold. At 100+ stacks, shop units cost -1 gold.";
+            return "Every 10 stacks, gain 2 gold next round. At 100+ stacks, shop units cost -1 gold.";
             case "Investor": // Not In Battle
             return "Double all [When Obtained] trait effects. At 70+ stacks, triple the effects.";
         }

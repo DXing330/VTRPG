@@ -294,4 +294,24 @@ public class MapTile : MonoBehaviour
         }
         cMap.ClickDirection(tileNumber, direction);
     }
+    // AUTOCHESS SPECIFIC ITEMS
+    public List<GameObject> autoChessEquipmentObjects;
+    public List<Image> autoChessEquipmentImages;
+    public void ResetAutoChessEquipment()
+    {
+        for (int i = 0; i < autoChessEquipmentObjects.Count; i++)
+        {
+            autoChessEquipmentObjects[i].SetActive(false);
+        }
+    }
+    public void EnableEquipSlot(int index)
+    {
+        if (index >= autoChessEquipmentObjects.Count){return;}
+        autoChessEquipmentObjects[index].SetActive(true);
+    }
+    public Image GetEquipSlotImage(int index)
+    {
+        if (index >= autoChessEquipmentImages.Count){return null;}
+        return autoChessEquipmentImages[index];
+    }
 }

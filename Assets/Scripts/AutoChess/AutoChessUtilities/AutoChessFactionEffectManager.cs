@@ -51,7 +51,7 @@ public class AutoChessFactionEffectManager : ScriptableObject
             case "Durable":
             if (factionCount >= 3)
             {
-                actor.AddPassiveSkill(passiveName + "II", "1");
+                actor.AddPassiveSkill(passiveName + " II", "1");
             }
             break;
             // Differences Between 2/6 Stacks.
@@ -60,7 +60,7 @@ public class AutoChessFactionEffectManager : ScriptableObject
             case "Victoria":
             if (factionCount >= 6)
             {
-                actor.AddPassiveSkill(passiveName + "II", "1");
+                actor.AddPassiveSkill(passiveName + " II", "1");
             }
             break;
         }

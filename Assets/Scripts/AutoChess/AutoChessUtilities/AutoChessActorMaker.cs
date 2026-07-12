@@ -27,6 +27,7 @@ public class AutoChessActorMaker : ActorMaker
         AutoActor newActor = new AutoActor();
         string actorStats = actorData.ReturnValue(rollUpActor.GetName());
         newActor.SetPersonalName(rollUpActor.GetName());
+        newActor.SetSpriteName(rollUpActor.GetName());
         newActor.AutoChessSetInitialStatsFromString(actorStats, rollUpActor.GetLevel());
         passiveOrganizer.OrganizeActorPassives(newActor);
         if (location < 0)
@@ -57,6 +58,7 @@ public class AutoChessActorMaker : ActorMaker
         newActor.SetPersonalName(actorName);
         newActor.AutoChessEnemySetInitialStatsFromString(actorStats);
         passiveOrganizer.OrganizeActorPassives(newActor);
+        newActor.SetSpriteName(actorName);
         newActor.SetLocation(actorLocation);
         newActor.SetTeam(1);
         newActor.SetID(GetCurrentID());

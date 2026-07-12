@@ -811,6 +811,8 @@ public class MapUtility : ScriptableObject
         int direction = DirectionBetweenLocations(start, selected, size);
         switch (shape)
         {
+            case "Circle":
+                return GetTilesInCircleShape(start, span, size);
             case "Beam":
                 return GetTilesInBeamRange(start, direction, 1, size, span);
             case "Line":

@@ -11,9 +11,11 @@ public class AutoBattleManager : MonoBehaviour
     public AutoChessFactionManager factionManager;
     public void TriggerTrait(TacticActor actor, string timing, TacticActor otherActor = null)
     {
+        // TODO Update The Combat Log To Show Stack Gain.
         AutoChessTrait trait = actor.autoChessTrait;
         if (trait.timing == timing)
         {
+            map.UpdateCombatLog(actor.GetPersonalName() + "'s Trait Activates");
             if (otherActor == null)
             {
                 factionManager.GainStacksFromTraitSwitch(trait, actor.GetAutoChessFactions());
@@ -80,6 +82,7 @@ public class AutoBattleManager : MonoBehaviour
         currentRound = 1;
         actorMaker.ResetID();
         // Reset The Map.
+        map.combatLog.ForceStart();
         map.ForceStart();
         // Load The Tiles/Terrain From The DataManager.
         map.SetMapInfo(data.GetMapTiles());
@@ -92,13 +95,14 @@ public class AutoBattleManager : MonoBehaviour
             // Track The Actors.
             allAutoActors.Add(newActor);
         }
+        // Apply Faction Effects.
+        factionEffectManager.ApplyFactionEffects(allAutoActors, factionManager.factionData.GetActiveFactions(), factionManager.factionData.GetActiveFactionCount(), factionManager.factionData.GetActiveFactionStacks());
         // Apply Equipment Effects.
         for (int i = 0; i < allAutoActors.Count; i++)
         {
             actorMaker.ApplyAutoChessEquipmentEffects(allAutoActors[i], allAutoActors);
+            actorMaker.ReorganizeActorPassives(allAutoActors[i]);
         }
-        // Apply Faction Effects.
-        factionEffectManager.ApplyFactionEffects(allAutoActors, factionManager.factionData.GetActiveFactions(), factionManager.factionData.GetActiveFactionCount(), factionManager.factionData.GetActiveFactionStacks());
         // Track special faction effects here: Aegir/Yan/Kjerag
         if (factionManager.factionData.GetCountOfFaction("Kjerag") > 5)
         {
@@ -156,6 +160,21 @@ public class AutoBattleManager : MonoBehaviour
     }
     public void SpawnPhase()
     {
+        // Update Any Dead Allies That Are Ready And Have Open Tiles.
+        List<TacticActor> defeatedActors = map.GetDefeatedActors();
+        for (int i = 0; i < defeatedActors.Count; i++)
+        {
+            if (defeatedActors[i].GetTeam() != 0){continue;}
+            Debug.Log(defeatedActors[i].currentRespawnTimer + "/" + defeatedActors[i].baseRespawnTimer);
+            if (defeatedActors[i].ReadyToRespawn())
+            {
+                // Check If The Tile Is Open.
+                if (map.GetActorOnTile(defeatedActors[i].GetLocation()) != null){continue;}
+                // Revive Them.
+                map.ResurrectActor(defeatedActors[i]);
+                ResilientCheckResurrectedAlly(defeatedActors[i]);
+            }
+        }
         if (enemyPool.Count <= 0){return;}
         // for each spawn zone, spawn a random enemy from the pool
         List<int> spawnZones = GetSpawnTiles();
@@ -169,20 +188,6 @@ public class AutoBattleManager : MonoBehaviour
                 string spawnedEnemyName = enemyPool[randomIndex];
                 enemyPool.RemoveAt(randomIndex);
                 SpawnEnemy(spawnedEnemyName, spawnZones[i]);
-            }
-        }
-        // Update Any Dead Allies That Are Ready And Have Open Tiles.
-        List<TacticActor> defeatedActors = map.GetDefeatedActors();
-        for (int i = 0; i < defeatedActors.Count; i++)
-        {
-            if (defeatedActors[i].GetTeam() != 0){continue;}
-            if (defeatedActors[i].ReadyToRespawn())
-            {
-                // Check If The Tile Is Open.
-                if (map.GetActorOnTile(defeatedActors[i].GetLocation()) != null){continue;}
-                // Revive Them.
-                map.ResurrectActor(defeatedActors[i]);
-                ResilientCheckResurrectedAlly(defeatedActors[i]);
             }
         }
         map.UpdateMap();
@@ -269,6 +274,7 @@ public class AutoBattleManager : MonoBehaviour
             // Gain Gold + Exp Based On Win/Lose/Etc.
             data.GainExpAfterBattle();
             data.GainGoldAfterBattle();
+            // TODO Gain Gold Based On Foresight/Marvel Stacks.
             // Increment Round.
             data.NewRound();
             // SAVE
@@ -295,6 +301,7 @@ public class AutoBattleManager : MonoBehaviour
         if (attackable.Contains(castleTile))
         {
             map.UpdateCombatLog(actor.GetPersonalName() + " attacks the castle");
+            actor.UpdateRoundAttackTracker();
             map.DamageTileBuilding(castleTile, actor, actor.GetAttack());
             EndTurn(actor);
             return;

@@ -69,12 +69,12 @@ public class AutoChessEnemyDataManager : SavedData
     public void GenerateNextRoundEnemies()
     {
         nextRoundEnemies.Clear();
-        int normalCount = autoChessEnemyRNG.SeedRange(round * 2, Math.Max(round * round, round * 2 + 1));
+        int normalCount = autoChessEnemyRNG.SeedRange(1 + round * 2, 1 + round * 3);
         int eliteCount = 0;
         // First few round have no elites.
-        if (round > 4)
+        if (round > 5)
         {
-            eliteCount = autoChessEnemyRNG.SeedRange(round, round * 2);
+            eliteCount = autoChessEnemyRNG.SeedRange(0, round);
         }
         // Determine The Group Being Fought.
         string group = availableEnemyGroups[autoChessEnemyRNG.SeedRange(0, availableEnemyGroups.Count)];

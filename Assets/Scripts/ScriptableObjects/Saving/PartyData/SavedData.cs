@@ -24,6 +24,10 @@ public class SavedData : ScriptableObject
     {
         
     }
+    public virtual void LevelUp()
+    {
+        
+    }
     public virtual void AddHours(int hours)
     {
 

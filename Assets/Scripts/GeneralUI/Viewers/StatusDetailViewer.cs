@@ -13,7 +13,6 @@ public class StatusDetailViewer : PassiveDetailViewer
         if (statusSelect.GetSelected() < 0){return;}
         popUp.SetMessage(ReturnStatusDetails(allStatuses.ReturnValue(statusSelect.GetSelectedStat())));
     }
-
     public string ReturnWeatherDetails(string weatherName)
     {
         string wDetails = weatherName + ":";
@@ -27,7 +26,6 @@ public class StatusDetailViewer : PassiveDetailViewer
         }
         return wDetails;
     }
-
     [ContextMenu("View All Statuses")]
     public void ViewAllStatuses()
     {
@@ -37,7 +35,6 @@ public class StatusDetailViewer : PassiveDetailViewer
             Debug.Log(statusNames[i] + " : " + ReturnStatusDetails(allStatuses.ReturnValue(statusNames[i])));
         }
     }
-
     public string ReturnStatusDetails(string newInfo)
     {
         return ReturnPassiveDetails(newInfo);

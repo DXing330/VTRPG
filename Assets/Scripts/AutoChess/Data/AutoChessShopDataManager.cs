@@ -14,6 +14,10 @@ public class AutoChessShopDataManager : SavedData
     public StatDatabase unitRarity;
     public RNGUtility autoChessShopRNG;
     public int shopLevel;
+    public override void LevelUp()
+    {
+        shopLevel++;
+    }
     public int frozenShop = 0;
     public void FreezeShop()
     {

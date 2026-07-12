@@ -25,7 +25,7 @@ public class AutoChessDataManager : SavedData
     {
         level = newInfo;
     }
-    public void LevelUp()
+    public override void LevelUp()
     {
         if (MaxLevel()){return;}
         // Check If EXP Is Sufficient
@@ -33,6 +33,10 @@ public class AutoChessDataManager : SavedData
         if (exp >= expToLevel)
         {
             level++;
+            for (int i = 0; i < subDataManagers.Count; i++)
+            {
+                subDataManagers[i].LevelUp();
+            }
             exp -= expToLevel;
         }
     }
@@ -44,7 +48,7 @@ public class AutoChessDataManager : SavedData
     }
     public int ExpToLevelUp()
     {
-        return (level + 1) * (level + 1) * (level + 1);
+        return (2) * (level + 1) * (level + 1);
     }
     public void GainExp(int amount)
     {

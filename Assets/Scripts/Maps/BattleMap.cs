@@ -408,6 +408,7 @@ public class BattleMap : MapManager
     public void ResetActors()
     {
         battlingActors.Clear();
+        defeatedActors.Clear();
     }
     public void RemoveActorWithID(int ID)
     {

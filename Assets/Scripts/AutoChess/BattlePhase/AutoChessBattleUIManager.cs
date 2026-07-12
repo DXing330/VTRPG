@@ -5,6 +5,7 @@ using UnityEngine;
 public class AutoChessBattleUIManager : MonoBehaviour
 {
     public AutoChessPrepManager prepManager;
+    public AutoChessEnemyDisplay enemyDisplay;
     public GeneralUtility utility;
     public List<GameObject> nonBattleUI;
     public List<GameObject> defaultNonBattleUI;
@@ -22,5 +23,6 @@ public class AutoChessBattleUIManager : MonoBehaviour
         utility.EnableGameObjects(defaultNonBattleUI);
         mapRect.localScale = endBattleSize;
         prepManager.UpdateAllUI();
+        enemyDisplay.UpdateDisplay();
     }
 }

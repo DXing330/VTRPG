@@ -149,7 +149,11 @@ public class CombatLog : MonoBehaviour
     }
     public void UpdateNewestLog(string newText)
     {
-        if (allLogs[allLogs.Count - 1] == "")
+        if (allLogs.Count <= 0)
+        {
+            allLogs.Add(newText);
+        }
+        else if (allLogs[allLogs.Count - 1] == "")
         {
             allLogs[allLogs.Count - 1] = newText;
         }

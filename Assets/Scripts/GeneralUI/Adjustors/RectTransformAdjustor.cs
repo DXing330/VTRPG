@@ -5,7 +5,7 @@ using UnityEngine;
 public class RectTransformAdjustor : MonoBehaviour
 {
     public List<RectTransform> rectTiles;
-    public void SetRectTiles(List<RectTransform> newRectTiles)
+    public void SetRectTilesToRow(List<RectTransform> newRectTiles)
     {
         rectTiles = newRectTiles;
         gridWidth = rectTiles.Count;
@@ -18,7 +18,7 @@ public class RectTransformAdjustor : MonoBehaviour
         {
             gridHeight = 1 + rectTiles.Count / maxGridWidth;
         }
-        Initialize();
+        InitializeRow();
     }
     public int maxGridWidth;
     public int gridWidth = 16;
@@ -27,6 +27,32 @@ public class RectTransformAdjustor : MonoBehaviour
     public int offsetHeight;
     [ContextMenu("Initialize")]
     public virtual void Initialize()
+    {
+        int tileIndex = 0;
+        float xPivot = 0f + (float)offsetWidth/(gridWidth + offsetWidth + offsetWidth - 1);
+        float yPivot = 0.5f;
+        if (gridHeight != 1)
+        {
+            yPivot = 1f - (float)offsetHeight/(gridHeight + offsetHeight + offsetHeight - 1);
+        }
+        for (int i = 0; i < gridHeight; i++)
+        {
+            // Start from the left every iteration.
+            for (int j = 0; j < gridWidth; j++)
+            {
+                // Set the pivot.
+                rectTiles[tileIndex].pivot = new Vector2(xPivot, yPivot);
+                tileIndex++;
+                xPivot += 1f/(gridWidth + offsetWidth + offsetWidth - 1);
+                if (tileIndex > rectTiles.Count){return;}
+            }
+            // Move down every iteration.
+            yPivot -= 1f/(gridHeight + offsetHeight + offsetHeight - 1);
+            xPivot = 0f + (float)offsetWidth/(gridWidth + offsetWidth + offsetWidth - 1);
+        }
+    }
+    [ContextMenu("InitializeRow")]
+    public virtual void InitializeRow()
     {
         // Should Always Try To Center Them If Possible.
         gridWidth = rectTiles.Count;

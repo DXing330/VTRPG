@@ -12,16 +12,13 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
     public GeneralUtility utility;
     public List<string> allUniqueEquipment;
     public List<int> uniqueEquipmentQuantity;
-    public List<string> allEquipAndQuantity;
-    public void UpdateEquipment()
+    public void UpdateEquipmentSelectList()
     {
         allUniqueEquipment = dataManager.GetEquipment().Distinct().ToList();
         uniqueEquipmentQuantity.Clear();
-        allEquipAndQuantity.Clear();
         for (int i = 0; i < allUniqueEquipment.Count; i++)
         {
             uniqueEquipmentQuantity.Add(dataManager.GetEquipmentCount(allUniqueEquipment[i]));
-            allEquipAndQuantity.Add(allUniqueEquipment[i] + " X" + uniqueEquipmentQuantity[i]);
         }
         selectEquipList.SetSelectables(allUniqueEquipment);
     }
@@ -45,20 +42,25 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
             masterSprites.ApplyToImage(currentEquipImages[i], equipNames[i]);
         }
     }
-    public StatDatabase equipmentDescriptions;
+    public EquipmentDetailViewerSwitch equipmentDescriptions;
+    public void ViewEquipment(AutoChessEquipmentToolTip clickedToolTip)
+    {
+        string equipName = clickedToolTip.GetEquipName();
+        clickedToolTip.ShowTooltip(equipName + ":\n" + equipmentDescriptions.ReturnAutoChessEquipmentDescription(equipName));
+    }
     public void ViewCurrentEquipment(AutoChessEquipmentToolTip clickedToolTip)
     {
         if (currentActor == null){return;}
         List<string> equipped = currentActor.GetEquipmentNames();
         string equipName = equipped[clickedToolTip.tooltipIndex];
-        clickedToolTip.ShowTooltip(equipName + ":\n" + equipmentDescriptions.ReturnValue(equipName));
+        clickedToolTip.ShowTooltip(equipName + ":\n" + equipmentDescriptions.ReturnAutoChessEquipmentDescription(equipName));
     }
     public void ViewEquipmentInInventory(AutoChessEquipmentToolTip clickedToolTip)
     {
         int indexOf = selectEquipList.GetSelected();
         if (indexOf < 0){return;}
         string equipName = allUniqueEquipment[indexOf];
-        clickedToolTip.ShowTooltip(equipName + ":\n" + equipmentDescriptions.ReturnValue(equipName));
+        clickedToolTip.ShowTooltip(equipName + ":\n" + equipmentDescriptions.ReturnAutoChessEquipmentDescription(equipName));
     }
     public void StopManagingEquipment()
     {
@@ -78,7 +80,7 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
             return;
         }
         SetCurrentActor(actor);
-        UpdateEquipment();
+        UpdateEquipmentSelectList();
         UpdateCurrentEquipment();
         selectEquipObject.SetActive(true);
         currentEquipObject.SetActive(true);
@@ -110,7 +112,7 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
         dataManager.UseEquipment(equipName);
         selectEquipList.ResetSelected();
         UpdateCurrentEquipment();
-        UpdateEquipment();
+        UpdateEquipmentSelectList();
     }
     public string CombineEquipment(string firstItem, string secondItem)
     {
@@ -255,7 +257,7 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
         },
         // Yanese Dagger
         {
-            "Hextech Gunblade", "Crown Guard", "Morellonomicon", "Archangel's Staff", "Rabadon's Deathcap", "Ionic Spark", "Guinsoo's Rageblade", "Jeweled Gauntlet", "Yan Emblem", "Jeweled Gauntlet", "Guinsoo's Rageblade", "Archangel's Staff", "Hextech Gunblade", "Tianshi Cauldron"
+            "Hextech Gunblade", "Crown Guard", "Morellonomicon", "Archangel's Staff", "Rabadon's Deathcap", "Ionic Spark", "Guinsoo's Rageblade", "Jeweled Gauntlet", "Yan Emblem", "Jeweled Gauntlet", "Guinsoo's Rageblade", "Archangel's Staff", "Hextech Gunblade", "Tianshi's Cauldron"
         }
     };
 }

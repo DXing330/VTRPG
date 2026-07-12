@@ -88,7 +88,20 @@ public class GeneralUtility : ScriptableObject
         }
         return currentPage;
     }
-
+    public List<string> GetCurrentPageStrings<T>(int currentPage, int pageLength, List<string> dataList)
+    {
+        List<string> strings = new List<string>();
+        if (dataList.Count <= 0)
+        {
+            return strings;
+        }
+        int start = currentPage * pageLength;
+        for (int i = start; i < Mathf.Min(start + pageLength, dataList.Count); i++)
+        {
+            strings.Add(dataList[i]);
+        }
+        return strings;
+    }
     public List<string> GetCurrentPageStrings<T>(int currentPage, List<T> pageLength, List<string> dataList)
     {
         List<string> strings = new List<string>();
@@ -103,22 +116,6 @@ public class GeneralUtility : ScriptableObject
         }
         return strings;
     }
-
-    public List<string> GetCurrentPageStrings(int currentPage, List<GameObject> pageLength, List<string> dataList)
-    {
-        List<string> strings = new List<string>();
-        if (dataList.Count <= 0)
-        {
-            return strings;
-        }
-        int start = currentPage * pageLength.Count;
-        for (int i = start; i < Mathf.Min(start + pageLength.Count, dataList.Count); i++)
-        {
-            strings.Add(dataList[i]);
-        }
-        return strings;
-    }
-
     public List<int> GetCurrentPageIndices(int currentPage, List<GameObject> pageLength, List<string> dataList)
     {
         List<int> indices = new List<int>();
@@ -129,7 +126,6 @@ public class GeneralUtility : ScriptableObject
         }
         return indices;
     }
-
     public (bool, int) DecrementBoolDuration(bool newBool, int boolDuration)
     {
         if (!newBool){return (newBool, boolDuration);}
