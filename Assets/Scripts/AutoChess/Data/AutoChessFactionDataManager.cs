@@ -8,6 +8,11 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AutoChessFactionDataManager", menuName = "ScriptableObjects/AutoChess/AutoChessFactionDataManager", order = 1)]
 public class AutoChessFactionDataManager : SavedData
 {
+    public AutoChessLogDataManager logData; // Track actor trait timing + stacks.
+    public void AddLog(string newLog)
+    {
+        logData.AddLog(newLog);
+    }
     public RNGUtility autoChessShopRNG;
     public string delimiter2;
     public List<string> mainFactions; // Require 3 field units to activate.
@@ -40,17 +45,23 @@ public class AutoChessFactionDataManager : SavedData
         return allFactionStacks[indexOf];
     }
     public List<string> GetAllFactionStacks(){return allFactionStacks;}
+    // This should only be called from a trait trigger during prep/battle.
     public void GainFactionStacks(string faction, int stackAmount)
     {
         if (faction.Length <= 0){return;}
         int indexOf = allFactions.IndexOf(faction);
+        int oldStacks = 0;
         if (indexOf < 0)
         {
             allFactions.Add(faction);
             allFactionStacks.Add(stackAmount.ToString());
-            return;
         }
-        allFactionStacks[indexOf] = (int.Parse(allFactionStacks[indexOf]) + stackAmount).ToString();
+        else
+        {
+            oldStacks = int.Parse(allFactionStacks[indexOf]);
+            allFactionStacks[indexOf] = (oldStacks + stackAmount).ToString();
+        }
+        AddLog(faction + ": +" + stackAmount + " (" + oldStacks + "->" + (oldStacks + stackAmount) + ")");
     }
     public List<string> activeFactions;
     public void SetActiveFactions(List<string> newFactions)
@@ -160,6 +171,7 @@ public class AutoChessFactionDataManager : SavedData
             return;
         }
     }
+    // TODO Change This An Actor? For Better Logging, Knowing Which Actor Caused Which Stack Gain.
     public void GainStacksFromTraitSwitch(AutoChessTrait trait, List<string> actorFactions, int amount = 1, List<string> frontFactions = null)
     {
         amount = Mathf.Max(amount, utility.SafeParseInt(trait.specifics));

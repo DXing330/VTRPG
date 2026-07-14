@@ -85,6 +85,7 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
         selectEquipObject.SetActive(true);
         currentEquipObject.SetActive(true);
     }
+    // This Is The Equip Equipment Function.
     public void SelectEquipment()
     {
         // Max Of 3 Equipment/Actor
@@ -94,6 +95,7 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
         int indexOf = selectEquipList.GetSelected();
         if (indexOf < 0){return;}
         string equipName = allUniqueEquipment[indexOf];
+        dataManager.AddLog("Equipped " + equipName + " to " + currentActor.GetName());
         // Check For Any Merges.
         // Only Need To Check The Previous Item, Since Any Other Items Would Have Already Been Combined.
         string latestEquip = currentActor.GetLatestEquipment();
@@ -103,6 +105,7 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
         {
             currentActor.RemoveLatestEquipment();
             currentActor.EquipEquipment(combinedEquip);
+            dataManager.AddLog(equipName + " combined with " + latestEquip + " to form " + combinedEquip);
         }
         else
         {

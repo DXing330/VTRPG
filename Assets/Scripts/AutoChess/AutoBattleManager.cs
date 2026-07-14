@@ -77,6 +77,7 @@ public class AutoBattleManager : MonoBehaviour
     public void StartBattle()
     {
         battleUI.StartBattle();
+        data.AddLog("Starting Battle");
         aegirRevives = 0;
         kjeragWindCD = -1;
         currentRound = 1;
@@ -268,13 +269,10 @@ public class AutoBattleManager : MonoBehaviour
         SpawnPhase();
         if (EndBattle() >= 0)
         {
+            data.AddLog("Battle Ended");
             map.combatLog.DebugAllLogs();
             // Lose Health Based On Castle Damage.
             data.LoseHealth(CastleHealthLoss());
-            // Gain Gold + Exp Based On Win/Lose/Etc.
-            data.GainExpAfterBattle();
-            data.GainGoldAfterBattle();
-            // TODO Gain Gold Based On Foresight/Marvel Stacks.
             // Increment Round.
             data.NewRound();
             // SAVE
@@ -373,55 +371,94 @@ public class AutoBattleManager : MonoBehaviour
         if (actor.AKHealer())
         {
             attackable.Add(actor.GetLocation());
-            // Find Lowest Health Ally In Range.
             List<TacticActor> allies = map.ReturnAlliesInTiles(actor, attackable);
-            int targetIndex = -1;
-            int targetHealth = 999999;
-            for (int i = 0; i < allies.Count; i++)
+            if (actor.AKAOE())
             {
-                if (allies[i].GetHealth() < targetHealth)
-                {
-                    targetHealth = allies[i].GetHealth();
-                    targetIndex = i;
-                }
-            }
-            if (targetIndex >= 0)
-            {
+                // AOE Actors Always Self Target With Skills.
                 if (skillReady)
                 {
-                    activeManager.GetTargetedTiles(allies[targetIndex].GetLocation());
+                    activeManager.GetTargetedTiles(actor.GetLocation());
                     ActivateSkill(actor.GetAutoSkill(), actor);
                     EndTurn(actor, startDirection);
                     return;
                 }
-                allies[targetIndex].Heal(actor.GetAttack());
+                // Else Heal All Allies In Range.
+                for (int i = 0; i < allies.Count; i++)
+                {
+                    allies[i].Heal(actor.GetAttack());
+                }
+            }
+            else
+            {
+                // Find Lowest Health Ally In Range.
+                int targetIndex = -1;
+                int targetHealth = 999999;
+                for (int i = 0; i < allies.Count; i++)
+                {
+                    if (allies[i].GetHealth() < targetHealth)
+                    {
+                        targetHealth = allies[i].GetHealth();
+                        targetIndex = i;
+                    }
+                }
+                if (targetIndex >= 0)
+                {
+                    if (skillReady)
+                    {
+                        activeManager.GetTargetedTiles(allies[targetIndex].GetLocation());
+                        ActivateSkill(actor.GetAutoSkill(), actor);
+                        EndTurn(actor, startDirection);
+                        return;
+                    }
+                    allies[targetIndex].Heal(actor.GetAttack());
+                }
             }
         }
         else
         {
             // Find The Closest Enemy In Range
             List<TacticActor> enemies = map.ReturnEnemiesInTiles(actor, attackable);
-            int enemyTargetIndex = -1;
-            int targetDistance = 999999;
-            for (int i = 0; i < enemies.Count; i++)
+            if (actor.AKAOE())
             {
-                if (map.DistanceBetweenActors(enemies[i], actor) < targetDistance)
-                {
-                    targetDistance = map.DistanceBetweenActors(enemies[i], actor);
-                    enemyTargetIndex = i;
-                }
-            }
-            if (enemyTargetIndex >= 0)
-            {
+                // AOE Actors Always Self Target With Skills.
                 if (skillReady)
                 {
-                    activeManager.GetTargetedTiles(enemies[enemyTargetIndex].GetLocation());
+                    activeManager.GetTargetedTiles(actor.GetLocation());
                     ActivateSkill(actor.GetAutoSkill(), actor);
                     EndTurn(actor, startDirection);
                     return;
                 }
-                ActorAttacksActor(actor, enemies[enemyTargetIndex]);
+                // Else Attack All Enemies In Range.
+                for (int i = 0; i < enemies.Count; i++)
+                {
+                    ActorAttacksActor(actor, enemies[i]);
+                }
             }
+            else
+            {
+                int enemyTargetIndex = -1;
+                int targetDistance = 999999;
+                for (int i = 0; i < enemies.Count; i++)
+                {
+                    if (map.DistanceBetweenActors(enemies[i], actor) < targetDistance)
+                    {
+                        targetDistance = map.DistanceBetweenActors(enemies[i], actor);
+                        enemyTargetIndex = i;
+                    }
+                }
+                if (enemyTargetIndex >= 0)
+                {
+                    if (skillReady)
+                    {
+                        activeManager.GetTargetedTiles(enemies[enemyTargetIndex].GetLocation());
+                        ActivateSkill(actor.GetAutoSkill(), actor);
+                        EndTurn(actor, startDirection);
+                        return;
+                    }
+                    ActorAttacksActor(actor, enemies[enemyTargetIndex]);
+                }
+            }
+            
         }
         EndTurn(actor, startDirection);
     }

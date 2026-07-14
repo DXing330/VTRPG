@@ -813,8 +813,16 @@ public class MapUtility : ScriptableObject
         {
             case "Circle":
                 return GetTilesInCircleShape(start, span, size);
+            case "CircleLobed":
+                List<int> circleLobed = GetTilesInCircleShape(start, span, size);
+                circleLobed.AddRange(GetTilesInLineDirection(start, direction, span + 1, size));
+                return circleLobed.Distinct().ToList();
             case "Beam":
                 return GetTilesInBeamRange(start, direction, 1, size, span);
+            case "BeamLobed":
+                List<int> beamLobed = GetTilesInBeamRange(start, direction, 1, size, span);
+                beamLobed.AddRange(GetTilesInLineDirection(start, direction, span + 1, size));
+                return beamLobed.Distinct().ToList();
             case "Line":
                 return GetTilesInLineDirection(start, direction, span, size);
 

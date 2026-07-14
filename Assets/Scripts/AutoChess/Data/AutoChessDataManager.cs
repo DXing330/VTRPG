@@ -10,6 +10,11 @@ public class AutoChessDataManager : SavedData
 {
     public List<SavedData> subDataManagers;
     public AutoChessFactionDataManager factionData;
+    public AutoChessLogDataManager logData; // Track Round / Gold / Exp / Etc.
+    public void AddLog(string newLog)
+    {
+        logData.AddLog(newLog);
+    }
     public void GainFactionStacks(string faction, int stackAmount)
     {
         factionData.GainFactionStacks(faction, stackAmount);
@@ -37,6 +42,7 @@ public class AutoChessDataManager : SavedData
             {
                 subDataManagers[i].LevelUp();
             }
+            AddLog("Leveled Up! (" + (level - 1) + "->" + level + ")");
             exp -= expToLevel;
         }
     }
@@ -53,6 +59,7 @@ public class AutoChessDataManager : SavedData
     public void GainExp(int amount)
     {
         exp += amount;
+        AddLog("Gained " + amount + " EXP");
         LevelUp();
     }
     public void GainExpAfterBattle()
@@ -68,13 +75,18 @@ public class AutoChessDataManager : SavedData
     public void GainGold(int amount)
     {
         gold += amount;
+        AddLog("+" + amount + " Gold");
     }
     public void GainGoldAfterBattle()
     {
         // Gain Interest.
-        gold += Mathf.Min(5, gold / 10);
+        int gain = 0;
+        gain += Mathf.Min(5, gold / 10);
         // Gain More Gold As The Rounds Go On.
-        gold += 6 + (round / 2);
+        gain += 6 + (round / 2);
+        gain += GetNextRoundGold();
+        SetNextRoundGold(0);
+        GainGold(gain);
     }
     public int nextRoundGold;
     public void GainNextRoundGold(int amount)
@@ -84,6 +96,41 @@ public class AutoChessDataManager : SavedData
     public void SetNextRoundGold(int amount)
     {
         nextRoundGold = amount;
+    }
+    public int startRoundForesightStacks;
+    public void SetForesightStacks(int newInfo){startRoundForesightStacks = newInfo;}
+    public int startRoundMarvelStacks;
+    public void SetMarvelStacks(int newInfo){startRoundMarvelStacks = newInfo;}
+    public int GetStartRoundStacksOfFaction(string factionName)
+    {
+        if (factionName == "Foresight"){return startRoundForesightStacks;}
+        else if (factionName == "Marvel"){return startRoundMarvelStacks;}
+        return 0;
+    }
+    public void SetStartRoundStacksOfFaction(string factionName, int amount)
+    {
+        if (factionName == "Foresight")
+        {
+            SetForesightStacks(amount);
+        }
+        else if (factionName == "Marvel")
+        {
+            SetMarvelStacks(amount);
+        }
+    }
+    public void GainGoldFromFaction(string faction = "Foresight", int breakpoint = 10, int gold = 2)
+    {
+        int newStacks = int.Parse(factionData.GetStacksOfFaction(faction));
+        int startStacks = GetStartRoundStacksOfFaction(faction);
+        int oldBreakpoints = startStacks / breakpoint;
+        int newBreakpoints = newStacks / breakpoint;
+        int crossed = newBreakpoints - oldBreakpoints;
+        if (crossed > 0)
+        {
+            GainGold(crossed * gold);
+            AddLog("Gained " + (crossed * gold) + " gold from " + faction + " faction stacks. (" + startStacks + "->" + newStacks + ")");
+        }
+        SetStartRoundStacksOfFaction(faction, newStacks);
     }
     public int GetNextRoundGold(){return nextRoundGold;}
     public int roundSpentGold;
@@ -97,6 +144,7 @@ public class AutoChessDataManager : SavedData
         if (amount > gold){return false;}
         roundSpentGold += amount;
         gold -= amount;
+        AddLog("Spent " + amount + " Gold. " + gold + " Remaining.");
         return true;
     }
     public int health;
@@ -108,6 +156,7 @@ public class AutoChessDataManager : SavedData
     public void LoseHealth(int amount)
     {
         health -= amount;
+        AddLog("Lost " + amount + " health. " + health + " Remaining.");
     }
     public int round;
     public int GetRound(){return round;}
@@ -118,10 +167,13 @@ public class AutoChessDataManager : SavedData
     public override void NewRound()
     {
         round++;
+        AddLog("--- Round " + round + " Begins ---");
+        GainGoldAfterBattle();
+        GainExpAfterBattle();
+        GainGoldFromFaction(); // Foresight.
+        GainGoldFromFaction("Marvel", 50, 10); // Marvel.
         roundGainedActors = 0;
         roundSpentGold = 0;
-        GainGold(GetNextRoundGold());
-        SetNextRoundGold(0);
         GainEquipmentDrops();
         for (int i = 0; i < subDataManagers.Count; i++)
         {
@@ -213,6 +265,7 @@ public class AutoChessDataManager : SavedData
     public void GainEquipment(string equipName)
     {
         if (equipName.Length <= 0){return;}
+        AddLog("Gained Equipment: " + equipName);
         equipment.Add(equipName);
     }
     public void ReclaimEquipmentFromActor(AutoActorRollUpData actor)
@@ -227,12 +280,21 @@ public class AutoChessDataManager : SavedData
     [ContextMenu("New Game")]
     public override void NewGame()
     {
+        // Reset Everything, Log First.
+        logData.NewGame();
+        AddLog("--- Round 1 Begins ---");
+        for (int i = 0; i < subDataManagers.Count; i++)
+        {
+            subDataManagers[i].NewGame();
+        }
         level = 1;
         exp = 0;
         gold = 10;
         health = 100;
         round = 1;
         nextRoundGold = 0;
+        startRoundForesightStacks = 0;
+        startRoundMarvelStacks = 0;
         roundSpentGold = 0;
         roundGainedActors = 0;
         benchActorData.Clear();
@@ -247,10 +309,6 @@ public class AutoChessDataManager : SavedData
             mapTerrain.Add("");
         }
         Save();
-        for (int i = 0; i < subDataManagers.Count; i++)
-        {
-            subDataManagers[i].NewGame();
-        }
     }
     public void SaveFromPrepManager(AutoChessPrepManager prepManager)
     {
@@ -277,6 +335,8 @@ public class AutoChessDataManager : SavedData
         allData += "Health=" + health + delimiter;
         allData += "Round=" + round + delimiter;
         allData += "NextRoundGold=" + nextRoundGold + delimiter;
+        allData += "Foresight=" + startRoundForesightStacks + delimiter;
+        allData += "Marvel=" + startRoundMarvelStacks + delimiter;
         allData += "RoundGold=" + roundSpentGold + delimiter;
         allData += "RoundActors=" + roundGainedActors + delimiter;
         allData += "BenchActors=" + String.Join(delimiter2, benchActorData) + delimiter;
@@ -289,6 +349,7 @@ public class AutoChessDataManager : SavedData
         {
             subDataManagers[i].Save();
         }
+        logData.Save();
     }
     public override void Load()
     {
@@ -311,6 +372,7 @@ public class AutoChessDataManager : SavedData
         {
             subDataManagers[i].Load();
         }
+        logData.Load();
     }
     public override void LoadStat(string data)
     {
@@ -339,6 +401,12 @@ public class AutoChessDataManager : SavedData
             return;
             case "NextRoundGold":
             SetNextRoundGold(int.Parse(value));
+            return;
+            case "Foresight":
+            SetForesightStacks(int.Parse(value));
+            return;
+            case "Marvel":
+            SetMarvelStacks(int.Parse(value));
             return;
             case "RoundGold":
             SetRoundGold(int.Parse(value));

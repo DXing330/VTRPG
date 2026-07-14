@@ -267,8 +267,9 @@ public class AutoActor : TacticActor
         autoChessAttackRangeShape =  statBlocks[13];
         SetPassiveSkills(statBlocks[11].Split(passiveDelimiter).ToList());
         SetPassiveLevels(statBlocks[12].Split(passiveDelimiter).ToList());
-        healer = int.Parse(statBlocks[14]);
+        akHealer = int.Parse(statBlocks[14]);
         baseRespawnTimer = int.Parse(statBlocks[15]);
+        akAOE = int.Parse(statBlocks[16]);
     }
     public void AutoChessEnemySetInitialStatsFromString(string newStats)
     {

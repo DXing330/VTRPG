@@ -15,7 +15,7 @@ public class ActorSubGameStats : ActorStats
         autoChessEquipment.Clear();
         ResetFactions();
         autoChessTrait = new AutoChessTrait();
-        healer = 0;
+        akHealer = 0;
         baseRespawnTimer = 99;
         currentRespawnTimer = 0;
         autoChessTemporaryTraits.Clear();
@@ -81,8 +81,10 @@ public class ActorSubGameStats : ActorStats
     public AutoChessTrait autoChessTrait = new();
     public string autoChessAttackRangeShape;
     public string GetAutoChessAttackRangeShape(){return autoChessAttackRangeShape;}
-    public int healer = 0;
-    public bool AKHealer(){return healer > 0;}
+    public int akHealer = 0;
+    public bool AKHealer(){return akHealer > 0;}
+    public int akAOE = 0;
+    public bool AKAOE(){return akAOE > 0;}
     public int baseRespawnTimer;
     public void ChangeRespawnTimer(int amount)
     {

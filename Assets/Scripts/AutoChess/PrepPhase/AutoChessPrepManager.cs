@@ -17,7 +17,6 @@ public class AutoChessPrepManager : ClickTileManager
     public void NewGame()
     {
         dataManager.NewGame();
-        shopManager.shopData.NewGame();
     }
     public AutoChessPrepUIManager UIManager;
     // Put The Equipment UI Reset Here For Now.
@@ -130,6 +129,7 @@ public class AutoChessPrepManager : ClickTileManager
         if (trait == null){return;}
         if (trait.timing == timing)
         {
+            dataManager.AddLog(actor.GetName() + " [" + timing + "]");
             ApplyActorTrait(actor, trait);
         }
     }
@@ -180,10 +180,12 @@ public class AutoChessPrepManager : ClickTileManager
             // Don't Unlimited Copy.
             case "CopyFront":
             if (copied || frontActor == null){break;}
+            dataManager.AddLog("Copied " + frontActor.GetName() + "'s trait.");
             ApplyActorTrait(actor, frontActor.trait, true);
             break;
             case "CopyBack":
             if (copied || backActor == null){break;}
+            dataManager.AddLog("Copied " + backActor.GetName() + "'s trait.");
             ApplyActorTrait(actor, backActor.trait, true);
             break;
             case "Gold":
@@ -237,6 +239,7 @@ public class AutoChessPrepManager : ClickTileManager
     public void ApplyStartBattleActorTraits()
     {
         ResetSelected();
+        dataManager.AddLog("-- Applying StartBattle Traits --");
         for (int i = 0; i < fieldSlots.Count; i++)
         {
             CheckTraitTiming(fieldSlots[i], "StartBattle");
@@ -299,6 +302,7 @@ public class AutoChessPrepManager : ClickTileManager
     // New Actors Go To The Bench.
     public void GainActor(AutoActorRollUpData newActor)
     {
+        dataManager.AddLog("Gained " + newActor.GetName());
         // Check For Merging To Level Up.
         if (GetLevelOneActorsWithName(newActor.GetName()) >= 2)
         {
@@ -334,6 +338,7 @@ public class AutoChessPrepManager : ClickTileManager
         }
         // Remove The Actor From The Shop.
         AutoActorRollUpData boughtActor = shopManager.GetSelectedActor();
+        dataManager.AddLog("Bought " + boughtActor.GetName());
         GainActor(boughtActor);
         shopManager.BuySelectedActor();
         Save();
@@ -344,6 +349,7 @@ public class AutoChessPrepManager : ClickTileManager
         // Determine The Actor.
         AutoActorRollUpData soldActor = ReturnSelectedActor();
         if (soldActor == null){return;}
+        dataManager.AddLog("Sold " + soldActor.GetName());
         CheckTraitTiming(soldActor, "OnSold");
         dataManager.ReclaimEquipmentFromActor(soldActor);
         shopManager.SellActor(soldActor);
@@ -454,6 +460,7 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public void MergeIntoLevelTwoActor(string newName)
     {
+        dataManager.AddLog("3 Level 1 [" + newName + "] Units Fused Into 1 Level 2 Unit");
         // Need To Make Sure Equipment Returns To Equipment Inventory.
         // Determine The Actor To Level Up.
         bool merged = false;

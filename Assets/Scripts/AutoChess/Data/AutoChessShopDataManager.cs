@@ -10,6 +10,11 @@ using UnityEngine;
 public class AutoChessShopDataManager : SavedData
 {
     public string delimiter2;
+    public AutoChessLogDataManager logData; // Shop State + Changes.
+    public void AddLog(string newLog)
+    {
+        logData.AddLog(newLog);
+    }
     public StatDatabase unitData;
     public StatDatabase unitRarity;
     public RNGUtility autoChessShopRNG;
@@ -158,6 +163,7 @@ public class AutoChessShopDataManager : SavedData
     public List<string> currentListing;
     public void GenerateCurrentListing()
     {
+        logData.AddLog("Generating New Shop Listing");
         for (int i = 0; i < currentListing.Count; i++)
         {
             AddToPool(currentListing[i]);
@@ -168,6 +174,7 @@ public class AutoChessShopDataManager : SavedData
         for (int i = 0; i < availableSlots; i++)
         {
             string newRoll = ReturnRandomActorFromPool(ReturnCurrentPoolOfRarity(DetermineRarity()));
+            logData.AddLog(newRoll + " Added To Shop");
             currentListing.Add(newRoll);
         }
     }
@@ -188,6 +195,7 @@ public class AutoChessShopDataManager : SavedData
     {
         if (frozenShop == 1)
         {
+            logData.AddLog("Shop Frozen Last Round");
             frozenShop = 0;
             return;
         }
