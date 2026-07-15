@@ -10,6 +10,12 @@ public class CombatLogLarge : MonoBehaviour
         UpdateAllLogs();
     }
     public GeneralUtility utility;
+    public GameObject thisObject;
+    public void ActivateCombatLogLarge()
+    {
+        thisObject.SetActive(true);
+        UpdateAllLogs();
+    }
     public CombatLog combatLog;
     public List<GameObject> logDisplayObjects;
     public void ResetPage()

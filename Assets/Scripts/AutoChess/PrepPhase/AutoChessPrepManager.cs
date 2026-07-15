@@ -589,7 +589,7 @@ public class AutoChessPrepManager : ClickTileManager
             AutoActorRollUpData newAutoActor = new AutoActorRollUpData();
             newAutoActor.LoadRollUpData(fieldSlots[selectedActorIndex].ReturnRollUpData());
             newAutoActor.SetLocation(clickedLocation);
-            newAutoActor.SetDirection(-1);
+            newAutoActor.SetDirection(1);
             fieldSlots.RemoveAt(selectedActorIndex);
             benchSlots.Add(newAutoActor);
             ResetSelected();
@@ -621,7 +621,6 @@ public class AutoChessPrepManager : ClickTileManager
         // Move From Bench To Map (Potentially Swap).
         else if (selectedActorLocation == 0)
         {
-            if (fieldSlots.Count >= GetMaxFieldSlots()){return;}
             // Check if any actor on the field is on the selected tile.
             AutoActorRollUpData currentfieldActor = GetFieldSlotActorOnTileNumber(tileNumber);
             if (currentfieldActor != null)
@@ -639,6 +638,7 @@ public class AutoChessPrepManager : ClickTileManager
             // Make A New Copy Of An Actor On The Bench.
             AutoActorRollUpData newAutoActor = new AutoActorRollUpData();
             newAutoActor.LoadRollUpData(benchSlots[selectedActorIndex].ReturnRollUpData());
+            newAutoActor.LoadBaseTrait(actorData);
             newAutoActor.SetLocation(tileNumber);
             newAutoActor.SetDirection(1);
             benchSlots.RemoveAt(selectedActorIndex);

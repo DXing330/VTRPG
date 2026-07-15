@@ -12,6 +12,8 @@ public class AutoChessBattleUIManager : MonoBehaviour
     public RectTransform mapRect;
     public Vector3 startBattleSize;
     public Vector3 endBattleSize;
+    // Show The Combat Log At The End Of Battle
+    public CombatLogLarge combatLog;
     public void StartBattle()
     {
         utility.DisableGameObjects(nonBattleUI);
@@ -24,5 +26,6 @@ public class AutoChessBattleUIManager : MonoBehaviour
         mapRect.localScale = endBattleSize;
         prepManager.UpdateAllUI();
         enemyDisplay.UpdateDisplay();
+        combatLog.ActivateCombatLogLarge();
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+// Both Tracks And Displays Combat Logs, Maybe Split Into Two Later.
 public class CombatLog : MonoBehaviour
 {
     protected void ResetLists()
@@ -14,6 +15,8 @@ public class CombatLog : MonoBehaviour
         currentLogs.Clear();
         detailKeys.Clear();
         detailedLogs.Clear();
+        round = 0;
+        turn = 0;
     }
     public void ForceStart()
     {
@@ -152,6 +155,8 @@ public class CombatLog : MonoBehaviour
         if (allLogs.Count <= 0)
         {
             allLogs.Add(newText);
+            combatRoundTracker.Add(round);
+            combatTurnTracker.Add(turn);
         }
         else if (allLogs[allLogs.Count - 1] == "")
         {
@@ -198,7 +203,7 @@ public class CombatLog : MonoBehaviour
     }
     public void ClickOnLog()
     {
-        string details = ReturnDetailedLog(round,turn,eventLogs.GetSelected());
+        string details = ReturnDetailedLog(round, turn, eventLogs.GetSelected());
         if (details.Length <= 1){return;}
         detailLogObject.SetActive(true);
         eventLog.text = details;

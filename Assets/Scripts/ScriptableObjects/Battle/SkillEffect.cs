@@ -591,6 +591,7 @@ public class SkillEffect : ScriptableObject
                 // Fire removes bleeds/freeze.
                 target.RemoveStatus("Bleed");
                 target.RemoveStatus("Frozen");
+                target.RemoveStatus("Cold");
                 damage = target.ApplyMagicResist(damage);
                 // Bonus Damage For Each Burn Stack, Penetrates Magic Resist.
                 damage += target.StatusStacks("Burn");
@@ -603,8 +604,9 @@ public class SkillEffect : ScriptableObject
                 damage = target.TakeEffectDamage(damage, "Water");
                 break;
             case "IceDamage":
-                // Ice removes bleeds.
+                // Ice removes bleeds/burns.
                 target.RemoveStatus("Bleed");
+                target.RemoveStatus("Burn");
                 // Freeze If Wet.
                 if (target.StatusExists("Wet"))
                 {
@@ -622,6 +624,8 @@ public class SkillEffect : ScriptableObject
                 damage = target.TakeEffectDamage(damage, "Earth");
                 break;
             case "LightDamage":
+                // Remove Poison.
+                target.RemoveStatus("Poison");
                 // Reveal invisibility.
                 target.RemoveInvisibility();
                 damage = target.ApplyMagicResist(damage);

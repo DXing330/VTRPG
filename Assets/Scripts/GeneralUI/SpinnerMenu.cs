@@ -5,7 +5,25 @@ using TMPro;
 
 public class SpinnerMenu : MonoBehaviour
 {
+    void Start()
+    {
+        if (selectableKeys != null)
+        {
+            List<string> allKeys = selectableKeys.GetAllKeys();
+            if (includeNone)
+            {
+                allKeys.Insert(0, "None");
+            }
+            SetSelectables(allKeys);
+        }
+        else
+        {
+            ResetSelectedIndex();
+        }
+    }
     public GeneralUtility utility;
+    public StatDatabase selectableKeys;
+    public bool includeNone = true;
     public List<string> selectables;
     public void SetSelectables(List<string> newInfo)
     {
@@ -31,6 +49,7 @@ public class SpinnerMenu : MonoBehaviour
     {
         SetSelectedIndex(0);
     }
+    public int GetSelectedIndex(){return index;}
     public void SetSelectedIndex(int newInfo)
     {
         index = newInfo;

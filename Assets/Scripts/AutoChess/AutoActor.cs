@@ -167,6 +167,13 @@ public class AutoActorRollUpData
         SetAttack(int.Parse(blocks[8]) + (2 * (newLevel - 1)));
         SetDefense(int.Parse(blocks[9]));
     }
+    public void LoadBaseTrait(StatDatabase autoActorData)
+    {
+        string data = autoActorData.ReturnValue(autoChessName);
+        string[] blocks = data.Split("|");
+        trait = new AutoChessTrait();
+        trait.LoadBaseTrait(blocks[1], blocks[2], blocks[3]);
+    }
     // Seat/Tile
     public int location;
     public int GetLocation(){return location;}
