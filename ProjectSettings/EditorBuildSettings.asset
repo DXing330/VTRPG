@@ -80,4 +80,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/AutoChess/AutoScene.unity
     guid: 15bedc0b77e56c546aa194beaafc0190
+  - enabled: 1
+    path: Assets/Scenes/AutoChess/AutoStart.unity
+    guid: 4bd25d6c1001da3419cc2e8c50d6a728
   m_configObjects: {}

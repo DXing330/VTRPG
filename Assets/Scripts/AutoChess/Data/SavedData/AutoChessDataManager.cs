@@ -276,7 +276,7 @@ public class AutoChessDataManager : SavedData
             GainEquipment(actorEquipment[i]);
         }
     }
-    // public string mode; // Normal/Hard/Hell/Endless?
+    public AutoChessSettingsDataManager settings;
     [ContextMenu("New Game")]
     public override void NewGame()
     {
@@ -303,9 +303,11 @@ public class AutoChessDataManager : SavedData
         mapTerrain.Clear(); // All Blank.
         equipment.Clear();
         GenerateStarterEquipment();
-        for (int i = 0; i < mapSize * mapSize; i++)
+        settings.Load();
+        AutoChessMapAsset map = settings.GetSelectedMap();
+        for (int i = 0; i < map.tiles.Length; i++)
         {
-            mapTiles.Add("Plains");
+            mapTiles.Add(map.tiles[i].ToString());
             mapTerrain.Add("");
         }
         Save();

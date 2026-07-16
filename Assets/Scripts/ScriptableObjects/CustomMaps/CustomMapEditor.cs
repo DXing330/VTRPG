@@ -73,7 +73,6 @@ public class CustomMapEditor : ClickTileManager
     }
     void Start()
     {
-        LoadAllMaps();
         UpdateCurrentTiles();
         UpdateMap();
     }
@@ -119,10 +118,6 @@ public class CustomMapEditor : ClickTileManager
     }
     public List<CustomMapAsset> customMaps;
     // TODO Select Map From A Select List Of Map Names.
-    void LoadAllMaps()
-    {
-        customMaps = Resources.LoadAll<CustomMapAsset>("Maps").ToList();
-    }
     public CustomMapAsset currentMap;
     public void LoadMap(CustomMapAsset map)
     {

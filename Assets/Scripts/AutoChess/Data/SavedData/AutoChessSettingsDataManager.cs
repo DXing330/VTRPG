@@ -11,7 +11,21 @@ public class AutoChessSettingsDataManager : SavedData
 {
     public int newGame = 1; // Start Always Do A New Game.
     public int difficultScaling; // Start With 1 - 10.
-    public string selectedMap; // TODO List<string> for mapData, fixed maps.
+    public List<AutoChessMapAsset> allMaps;
+    public AutoChessMapAsset GetSelectedMap()
+    {
+        return allMaps[selectedMap];
+    }
+    public int selectedMap;
+    public void ChangeMap(bool right)
+    {
+        int change = 1;
+        if (!right)
+        {
+            change = (allMaps.Count - 1);
+        }
+        selectedMap = (selectedMap + change) % allMaps.Count;
+    }
     public string selectedTactician; // TODO Various Effects?
     public override void NewGame()
     {
@@ -63,7 +77,7 @@ public class AutoChessSettingsDataManager : SavedData
             difficultScaling = int.Parse(value);
             return;
             case "Map":
-            selectedMap = value;
+            selectedMap = int.Parse(value);
             return;
             case "Tactician":
             selectedTactician = value;

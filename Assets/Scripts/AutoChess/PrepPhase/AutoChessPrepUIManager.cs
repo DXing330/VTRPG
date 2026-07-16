@@ -9,6 +9,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
     public AutoChessDataManager dataManager;
     public List<AutoChessBenchSlot> benchSlots;
     public List<MapTile> mapSlots;
+    public SpriteContainer tileSprites;
     public SpriteContainer masterSprites;
     public Sprite castleSprite;
     public GameObject actorDisplayObject;
@@ -79,7 +80,12 @@ public class AutoChessPrepUIManager : MonoBehaviour
     }
     public void UpdateMap(AutoChessPrepManager prepManager)
     {
-        // Reset.
+        // Display The Map Tiles.
+        for (int i = 0; i < dataManager.mapTiles.Count; i++)
+        {
+            mapSlots[i].UpdateLayerSprite(tileSprites.SpriteDictionary(dataManager.mapTiles[i]), 0);
+        }
+        // Reset Actors.
         for (int i = 0; i < mapSlots.Count; i++)
         {
             mapSlots[i].UpdateText();

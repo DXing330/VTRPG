@@ -121,7 +121,31 @@ public class ActorAI : ScriptableObject
             if (pathCost > currentActor.GetMoveRange())
             {
                 path.RemoveAt(0);
-                pathCost -= moveManager.MoveCostOfTile(fullPath[i]);
+                break;
+            }
+        }
+        return path;
+    }
+    // Used Only By AutoActors.
+    public List<int> FindSpecificTilePathToTile(TacticActor actor, BattleMap map, MoveCostManager moveManager, int tile, string specificTileType = "Plains")
+    {
+        int originalLocation = actor.GetLocation();
+        moveManager.GetSpecificTileMoveCosts(actor, map.battlingActors, specificTileType);
+        if (actor.PassThroughMoving())
+        {
+            tile = moveManager.GetBestReachableTileTowardTargetByMoveCost(actor, map, tile);
+        }
+        List<int> fullPath = moveManager.GetPrecomputedPath(originalLocation, tile);
+        List<int> path = new List<int>();
+        int pathCost = 0;
+        for (int i = fullPath.Count - 1; i >= 0; i--)
+        {
+            path.Insert(0, fullPath[i]);
+            pathCost += moveManager.MoveCostOfTile(fullPath[i]);
+            // If it's occupied/not a plains tile then stop.
+            if (pathCost > 1)
+            {
+                path.RemoveAt(0);
                 break;
             }
         }
@@ -146,7 +170,6 @@ public class ActorAI : ScriptableObject
             if (pathCost > actor.GetMoveRange())
             {
                 path.RemoveAt(0);
-                pathCost -= moveManager.MoveCostOfTile(fullPath[i]);
                 break;
             }
         }

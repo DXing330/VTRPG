@@ -70,6 +70,34 @@ public class MoveCostManager : ScriptableObject
     // Current move cost should only be used to initialize actor pathfinder move costs, after that always rely on actorpathfinder for distances.
     public List<int> currentMoveCosts;
     public string defaultMoveType = "Walking";
+    // Used for pathing through only specific tiles.
+    public void UpdateSpecificMoveCosts(TacticActor actor, List<TacticActor> actors, string specificTile)
+    {
+        currentMoveCosts.Clear();
+        for (int i = 0; i < mapInfo.Count; i++)
+        {
+            if (actor.PassThroughMoving())
+            {
+                currentMoveCosts.Add(1);
+                continue;
+            }
+            if (mapInfo[i] == specificTile)
+            {
+                currentMoveCosts.Add(1);
+            }
+            else
+            {
+                currentMoveCosts.Add(bigInt);
+            }
+        }
+        for (int i = 0; i < actors.Count; i++)
+        {
+            if (!actor.PassThroughMoving() || actors[i].GetTeam() != actor.GetTeam())
+            {
+                currentMoveCosts[actors[i].GetLocation()] = bigInt;
+            }
+        }
+    }
     public void UpdateDefaultMoveCosts()
     {
         currentMoveCosts.Clear();
@@ -178,6 +206,12 @@ public class MoveCostManager : ScriptableObject
     public void GetAllMoveCosts(TacticActor actor, List<TacticActor> actors)
     {
         UpdateCurrentMoveCosts(actor, actors);
+        pathCosts = actorPathfinder.FindPaths(actor.GetLocation(), currentMoveCosts, true, actor);
+    }
+    // Used By AutoChess Enemies Who Only Can Move Through Plains Tiles.
+    public void GetSpecificTileMoveCosts(TacticActor actor, List<TacticActor> actors, string specificTile = "Plains")
+    {
+        UpdateSpecificMoveCosts(actor, actors, specificTile);
         pathCosts = actorPathfinder.FindPaths(actor.GetLocation(), currentMoveCosts, true, actor);
     }
     public void GetMoveCostsToTarget(TacticActor actor, List<TacticActor> actors, int targetTile)

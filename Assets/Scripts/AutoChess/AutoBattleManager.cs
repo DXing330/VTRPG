@@ -286,9 +286,11 @@ public class AutoBattleManager : MonoBehaviour
     public List<int> enemyPath;
     public void EnemyTurn(TacticActor actor)
     {
+
         // If Stunned Then Stop.
         if (actor.StatusExists("Stun"))
         {
+            map.UpdateCombatLog(actor.GetPersonalName() + " is stunned");
             EndTurn(actor);
             return;
         }
@@ -306,6 +308,32 @@ public class AutoBattleManager : MonoBehaviour
         }
         // Priority 2: Attack Player Units
         List<TacticActor> enemies = map.ReturnEnemiesInTiles(actor, attackable);
+        // Priority 3: Path Toward Castle
+        enemyPath = actorAI.FindSpecificTilePathToTile(actor, map, moveManager, castleTile);
+        // Ranged Units Occasionally Move Instead Of Attacking Units If They Can Do Both.
+        if (actor.GetAttackRange() > 1 && enemies.Count > 0 && enemyPath.Count > 0 && map.GetActorOnTile(enemyPath[enemyPath.Count - 1]) == null)
+        {
+            int attackRoll = enemyData.autoChessEnemyRNG.SeedRange(0, actor.ReturnTotalRoundAttacks());
+            int moveRoll = enemyData.autoChessEnemyRNG.SeedRange(0, actor.ReturnTotalRoundMoves());
+            if (attackRoll <= moveRoll)
+            {
+                TacticActor targetedEnemy = enemies[enemyData.autoChessEnemyRNG.SeedRange(0, enemies.Count)];
+                // TODO Check For Skill Usage.
+                ActorAttacksActor(actor, targetedEnemy);
+            }
+            else
+            {
+                if (actor.StatusExists("Frozen"))
+                {
+                    map.UpdateCombatLog(actor.GetPersonalName() + " is frozen");
+                    EndTurn(actor);
+                    return;
+                }
+                map.MoveActorToTile(actor, enemyPath[enemyPath.Count - 1]);
+            }
+            EndTurn(actor);
+            return;
+        }
         if (enemies.Count > 0)
         {
             TacticActor targetedEnemy = enemies[enemyData.autoChessEnemyRNG.SeedRange(0, enemies.Count)];
@@ -315,19 +343,10 @@ public class AutoBattleManager : MonoBehaviour
         // Don't Move If Frozen.
         if (actor.StatusExists("Frozen"))
         {
+            map.UpdateCombatLog(actor.GetPersonalName() + " is frozen");
             EndTurn(actor);
             return;
         }
-        // Priority 3: Path Toward Castle
-        enemyPath = actorAI.FindPathToTile(actor, map, moveManager, castleTile);
-        if (enemyPath.Count > 0 && map.GetActorOnTile(enemyPath[enemyPath.Count - 1]) == null)
-        {
-            map.MoveActorToTile(actor, enemyPath[enemyPath.Count - 1]);
-            EndTurn(actor);
-            return;
-        }
-        // Priority 4: Path Toward Player Units
-        enemyPath = actorAI.FindPathToTarget(actor, map, moveManager);
         if (enemyPath.Count > 0 && map.GetActorOnTile(enemyPath[enemyPath.Count - 1]) == null)
         {
             map.MoveActorToTile(actor, enemyPath[enemyPath.Count - 1]);
@@ -473,9 +492,6 @@ public class AutoBattleManager : MonoBehaviour
         // Resurrect After Gaining Stacks.
         if (actor.Resurrect())
         {
-            // Can't Just Start Battle, The BS Stat Buffs Will Stack.
-            // effectManager.StartBattle(actor, map);
-            // Need To Do The Resilient Check.
             map.ResurrectActor(actor);
             ResilientCheckResurrectedAlly(actor);
             return;
