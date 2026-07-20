@@ -9,6 +9,7 @@ using UnityEngine;
 public class AutoChessDataManager : SavedData
 {
     public List<SavedData> subDataManagers;
+    public AutoChessTactician tactician;
     public AutoChessFactionDataManager factionData;
     public AutoChessLogDataManager logData; // Track Round / Gold / Exp / Etc.
     public void AddLog(string newLog)
@@ -143,10 +144,17 @@ public class AutoChessDataManager : SavedData
     {
         if (amount > gold){return false;}
         roundSpentGold += amount;
+        totalSpentGold += amount;
         gold -= amount;
         AddLog("Spent " + amount + " Gold. " + gold + " Remaining.");
         return true;
     }
+    public int totalSpentGold;
+    public void SetTotalGold(int amount)
+    {
+        totalSpentGold = amount;
+    }
+    public int GetTotalGold(){return totalSpentGold;}
     public int health;
     public int GetHealth(){return health;}
     public void SetHealth(int newInfo)
@@ -173,6 +181,7 @@ public class AutoChessDataManager : SavedData
         GainGoldFromFaction(); // Foresight.
         GainGoldFromFaction("Marvel", 50, 10); // Marvel.
         roundGainedActors = 0;
+        roundRerolls = 0;
         roundSpentGold = 0;
         GainEquipmentDrops();
         for (int i = 0; i < subDataManagers.Count; i++)
@@ -181,10 +190,26 @@ public class AutoChessDataManager : SavedData
         }
     }
     public List<string> benchActorData;
+    // Used By Tacticians.
+    public void AddActorToBench(string newActorData)
+    {
+        if (benchActorData.Count >= 10){return;}
+        benchActorData.Add(newActorData);
+    }
     public List<string> fieldActorData;
     public List<string> GetFieldActorData()
     {
         return fieldActorData;
+    }
+    public int roundRerolls;
+    public void SetRoundRerolls(int amount)
+    {
+        roundRerolls = amount;
+    }
+    public int GetRoundRerolls(){return roundRerolls;}
+    public void Reroll()
+    {
+        roundRerolls++;
     }
     public int roundGainedActors;
     public void SetRoundActors(int amount)
@@ -277,6 +302,16 @@ public class AutoChessDataManager : SavedData
         }
     }
     public AutoChessSettingsDataManager settings;
+    public int GetDifficultyScaling()
+    {
+        return settings.GetDifficulty() * round;
+    }
+    // For Now Have A Base 13 Rounds + 1 For Each Difficulty Level.
+    // After This Should Be The Boss Fight.
+    public bool FinalRound()
+    {
+        return (GetRound() > settings.GetTotalRounds());
+    }
     [ContextMenu("New Game")]
     public override void NewGame()
     {
@@ -296,6 +331,8 @@ public class AutoChessDataManager : SavedData
         startRoundForesightStacks = 0;
         startRoundMarvelStacks = 0;
         roundSpentGold = 0;
+        totalSpentGold = 0;
+        roundRerolls = 0;
         roundGainedActors = 0;
         benchActorData.Clear();
         fieldActorData.Clear();
@@ -310,6 +347,9 @@ public class AutoChessDataManager : SavedData
             mapTiles.Add(map.tiles[i].ToString());
             mapTerrain.Add("");
         }
+        // Check The Start Game Tactician Effects.
+        tactician.Load();
+        tactician.ApplyStartGameEffect();
         Save();
     }
     public void SaveFromPrepManager(AutoChessPrepManager prepManager)
@@ -340,6 +380,8 @@ public class AutoChessDataManager : SavedData
         allData += "Foresight=" + startRoundForesightStacks + delimiter;
         allData += "Marvel=" + startRoundMarvelStacks + delimiter;
         allData += "RoundGold=" + roundSpentGold + delimiter;
+        allData += "TotalGold=" + totalSpentGold + delimiter;
+        allData += "RoundRerolls=" + roundRerolls + delimiter;
         allData += "RoundActors=" + roundGainedActors + delimiter;
         allData += "BenchActors=" + String.Join(delimiter2, benchActorData) + delimiter;
         allData += "FieldActors=" + String.Join(delimiter2, fieldActorData) + delimiter;
@@ -412,6 +454,12 @@ public class AutoChessDataManager : SavedData
             return;
             case "RoundGold":
             SetRoundGold(int.Parse(value));
+            return;
+            case "TotalGold":
+            SetTotalGold(int.Parse(value));
+            return;
+            case "RoundRerolls":
+            SetRoundRerolls(int.Parse(value));
             return;
             case "RoundActors":
             SetRoundActors(int.Parse(value));

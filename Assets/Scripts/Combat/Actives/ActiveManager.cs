@@ -424,6 +424,15 @@ public class ActiveManager : MonoBehaviour
                     }
                 }
                 return;
+            case "AttackEnemies+Status":
+                if (targets.Count <= 0) { return; }
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    if (targets[i].GetTeam() == skillUser.GetTeam()){continue;}
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
+                    active.AffectActor(targets[i], "Status", specifics, power);
+                }
+                return;
             case "AttackAllEnemies":
                 targets = map.AllEnemies(skillUser);
                 if (targets.Count <= 0) { return; }
@@ -786,6 +795,34 @@ public class ActiveManager : MonoBehaviour
             case "Bloodletting":
                 active.AffectActor(skillUser, "Health%", specifics, 1);
                 active.AffectActor(skillUser, "Actions", power.ToString(), 1);
+                return;
+            case "OpForGun":
+                // TODO Run To Highest Defense Enemy + Attack, Push + Attack Any Enemies Inbetween Aside.
+                // For Now Just Fire A Laser At The Highest Defense Enemy.
+                // Get Highest Defense Enemy.
+                TacticActor opForGunTarget = map.FindEnemyByStat(skillUser, "Defense");
+                // Draw A Line.
+                List<int> opForGunTargetTiles = map.mapUtility.ShortestLineBetweenPoints(skillUser.GetLocation(), opForGunTarget.GetLocation(), map.mapSize);
+                opForGunTargetTiles.Add(opForGunTarget.GetLocation());
+                List<TacticActor> opForGunTargets = map.GetActorsOnTiles(opForGunTargetTiles);
+                // Target The Enemy And Anyone On That Line.
+                for (int i = 0; i < opForGunTargets.Count; i++)
+                {
+                    if (opForGunTargets[i].GetTeam() == skillUser.GetTeam()){continue;}
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, opForGunTargets[i], map);
+                }
+                return;
+            case "OpForArmor":
+                // Get The Highest Attack Enemy -> Attack + Stun Them + Adjacent Enemies.
+                TacticActor opForArmorTarget = map.FindEnemyByStat(skillUser, "Attack");
+                List<TacticActor> opForArmorTargetAdj = map.GetAdjacentAllies(opForArmorTarget);
+                attackManager.ActorAttacksActorWithAttackSpeed(skillUser, opForArmorTarget, map);
+                active.AffectActor(opForArmorTarget, "Status", "Stun", power);
+                for (int i = 0; i < opForArmorTargetAdj.Count; i++)
+                {
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, opForArmorTargetAdj[i], map);
+                    active.AffectActor(opForArmorTargetAdj[i], "Status", "Stun", power);
+                }
                 return;
         }
         // Covers status/mental state/amnesia/stat changes/etc.

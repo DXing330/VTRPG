@@ -340,7 +340,8 @@ public class ActorAI : ScriptableObject
             }
             return targetableTiles[Random.Range(0, targetableTiles.Count)];
         }
-        else if (active.GetEffect().Contains("Attack"))
+        // Attacking / Damaging Should Target The Target Or Enemies.
+        else if (active.GetEffect().Contains("Attack") || active.GetSkillType() == "Damage")
         {
             // Try to pick your target's tile.
             if (currentActor.GetTarget() != null && targetableTiles.Contains(currentActor.GetTarget().GetLocation()))

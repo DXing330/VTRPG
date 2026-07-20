@@ -86,6 +86,14 @@ public class AutoChessShopManager : MonoBehaviour
     {
         return shopActors[selectedIndex];
     }
+    public AutoActorRollUpData GetActorOfFaction(string faction)
+    {
+        return null;
+    }
+    public AutoActorRollUpData GetActorOfRarity(int rarity)
+    {
+        return null;
+    }
     public void BuySelectedActor()
     {
         shopActors.RemoveAt(selectedIndex);

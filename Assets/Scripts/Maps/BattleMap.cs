@@ -810,6 +810,47 @@ public class BattleMap : MapManager
         }
         return actors;
     }
+    public TacticActor FindEnemyByStat(TacticActor actor, string stat = "Health", bool highest = true)
+    {
+        List<TacticActor> actors = AllEnemies(actor);
+        if (actors.Count <= 0){return null;}
+        int index = -1;
+        int statAmount = -1;
+        if (!highest)
+        {
+            statAmount = int.MaxValue;
+        }
+        for (int i = 0; i < actors.Count; i++)
+        {
+            int actorStat = 0;
+            switch (stat)
+            {
+                default:
+                actorStat = actors[i].GetHealth();
+                break;
+                case "Attack":
+                actorStat = actors[i].GetAttack();
+                break;
+                case "Defense":
+                actorStat = actors[i].GetDefense();
+                break;
+                case "Energy":
+                actorStat = actors[i].GetEnergy();
+                break;
+            }
+            if (actorStat > statAmount && highest)
+            {
+                index = i;
+                statAmount = actorStat;
+            }
+            else if (actorStat < statAmount && !highest)
+            {
+                index = i;
+                statAmount = actorStat;
+            }
+        }
+        return actors[index];
+    }
     public List<TacticActor> AllActorsBySpecies(string speciesName)
     {
         return battleMapUtility.AllActorsBySpecies(speciesName, this);

@@ -69,6 +69,8 @@ public class ActiveDetailViewerSwitch : ScriptableObject
                 return "Attack all enemies " + ASD(s) + " time(s) with " + APD(p) + "% damage.";
             case "AttackEnemies":
                 return "Attack targeted enemies " + ASD(s) + " time(s) with " + APD(p) + "% damage.";
+            case "AttackEnemies+Status":
+                return "Attack targeted enemies and inflict " + ASD(s) + " for " + APD(p,e) + " turns.";
             case "ElementalAttack":
                 return "Attack the target(s) with " + ASD(s) + " energy for " + APD(p) + "% damage.";
             // The specifics will determine the direction anyway.

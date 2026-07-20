@@ -278,7 +278,7 @@ public class AutoActor : TacticActor
         baseRespawnTimer = int.Parse(statBlocks[15]);
         akAOE = int.Parse(statBlocks[16]);
     }
-    public void AutoChessEnemySetInitialStatsFromString(string newStats)
+    public void AutoChessEnemySetInitialStatsFromString(string newStats, int difficultyScaling = 0)
     {
         // Initialize Regular Stats.
         baseCrit = 0;
@@ -292,10 +292,19 @@ public class AutoActor : TacticActor
         autoSkill = statBlocks[0];
         SetBaseEnergy(int.Parse(statBlocks[1]));
         SetCurrentEnergy(int.Parse(statBlocks[2]));
-        SetBaseHealth(int.Parse(statBlocks[3]));
-        SetCurrentHealth(int.Parse(statBlocks[3]));
-        SetBaseAttack(int.Parse(statBlocks[4]));
-        SetBaseDefense(int.Parse(statBlocks[5]));
+        int health = int.Parse(statBlocks[3]);
+        int attack = int.Parse(statBlocks[4]);
+        int defense = int.Parse(statBlocks[5]);
+        if (difficultyScaling > 0)
+        {
+            health += (health * difficultyScaling) / 100;
+            attack += (attack * difficultyScaling) / 100;
+            defense += (defense * difficultyScaling) / 100;
+        }
+        SetBaseHealth(health);
+        SetCurrentHealth(health);
+        SetBaseAttack(attack);
+        SetBaseDefense(defense);
         SetAttackRange(int.Parse(statBlocks[6]));
         SetPassiveSkills(statBlocks[7].Split(passiveDelimiter).ToList());
         SetPassiveLevels(statBlocks[8].Split(passiveDelimiter).ToList());

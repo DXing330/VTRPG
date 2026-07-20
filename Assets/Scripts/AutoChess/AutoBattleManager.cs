@@ -62,8 +62,11 @@ public class AutoBattleManager : MonoBehaviour
         return spawnTiles;
     }
     public List<string> enemyPool;
+    // Key Ints
+    private const int SKILLUSEDALREADY = -2;
     // Faction Specific Stuff.
     public int aegirRevives = 0;
+    public int generalRevives = 0;
     public int kjeragWindCD = -1;
     public void ResilientCheckResurrectedAlly(TacticActor actor)
     {
@@ -79,6 +82,7 @@ public class AutoBattleManager : MonoBehaviour
         battleUI.StartBattle();
         data.AddLog("Starting Battle");
         aegirRevives = 0;
+        generalRevives = 0;
         kjeragWindCD = -1;
         currentRound = 1;
         actorMaker.ResetID();
@@ -195,7 +199,7 @@ public class AutoBattleManager : MonoBehaviour
     }
     public void SpawnEnemy(string enemyName, int enemyLocation)
     {
-        AutoActor newActor = actorMaker.CreateEnemyActor(enemyName, enemyLocation);
+        AutoActor newActor = actorMaker.CreateEnemyAutoActor(enemyName, enemyLocation, data.GetDifficultyScaling());
         allAutoActors.Add(newActor);
         effectManager.StartBattle(newActor, map);
         map.AddActorToBattle(newActor);
@@ -236,6 +240,13 @@ public class AutoBattleManager : MonoBehaviour
         actor.StartTurn();
         actor.UpdateEnergy(1);
         effectManager.StartTurn(actor, map);
+        // If Stunned Then Stop.
+        if (actor.StatusExists("Stun"))
+        {
+            map.UpdateCombatLog(actor.GetPersonalName() + " is stunned");
+            EndTurn(actor);
+            return;
+        }
         // In AutoBattle Mode Skills Are Managed Through Cooldowns.
         // Split Between Player Turn And Enemy Turn.
         if (actor.GetTeam() == 0)
@@ -286,16 +297,17 @@ public class AutoBattleManager : MonoBehaviour
     public List<int> enemyPath;
     public void EnemyTurn(TacticActor actor)
     {
-
-        // If Stunned Then Stop.
-        if (actor.StatusExists("Stun"))
+        // Move/Attack/Skill.
+        List<int> attackable = map.mapUtility.GetTilesInCircleShape(actor.GetLocation(), actor.GetAttackRange(), map.mapSize);
+        // Priority 0: Activate Skill
+        int targetTile = PrepareSkill(actor);
+        bool skillReady = targetTile >= 0;
+        // Skill Was Used.
+        if (targetTile == SKILLUSEDALREADY)
         {
-            map.UpdateCombatLog(actor.GetPersonalName() + " is stunned");
             EndTurn(actor);
             return;
         }
-        // Move/Attack/Skill.
-        List<int> attackable = map.mapUtility.GetTilesInCircleShape(actor.GetLocation(), actor.GetAttackRange(), map.mapSize);
         // Priority 1: Attack Castle
         int castleTile = CastleTile();
         if (attackable.Contains(castleTile))
@@ -318,7 +330,12 @@ public class AutoBattleManager : MonoBehaviour
             if (attackRoll <= moveRoll)
             {
                 TacticActor targetedEnemy = enemies[enemyData.autoChessEnemyRNG.SeedRange(0, enemies.Count)];
-                // TODO Check For Skill Usage.
+                // Use Attack Skill If Available.
+                if (skillReady)
+                {
+                    UsePreparedSkill(actor, targetTile);
+                    return;
+                }
                 ActorAttacksActor(actor, targetedEnemy);
             }
             else
@@ -337,7 +354,12 @@ public class AutoBattleManager : MonoBehaviour
         if (enemies.Count > 0)
         {
             TacticActor targetedEnemy = enemies[enemyData.autoChessEnemyRNG.SeedRange(0, enemies.Count)];
-            // TODO Check For Skill Usage.
+            // Use Attack Skill If Available.
+            if (skillReady)
+            {
+                UsePreparedSkill(actor, targetTile);
+                return;
+            }
             ActorAttacksActor(actor, targetedEnemy);
         }
         // Don't Move If Frozen.
@@ -365,26 +387,48 @@ public class AutoBattleManager : MonoBehaviour
         List<int> rangeTiles = map.mapUtility.GetAutoActorAttackTilesByShapeSpan(selectedTile, rangeType, range, map.mapSize, location);
         return rangeTiles;
     }
+    public int PrepareSkill(TacticActor actor)
+    {
+        if (actor.GetEnergy() < actor.GetBaseEnergy())
+        {
+            return -1;
+        }
+        int targetTile = -1;
+        activeManager.SetSkillFromName(actor.GetAutoSkill(), actor);
+        // Use skill immediately if self is target location.
+        targetTile = actorAI.ChooseSkillTargetLocation(actor, map);
+        if (targetTile == actor.GetLocation())
+        {
+            activeManager.GetTargetedTiles(actor.GetLocation());
+            ActivateSkill(actor.GetAutoSkill(), actor);
+            return SKILLUSEDALREADY;
+        }
+        // Either -2 = skill used, -1 = no skill ready, >= 0 = skill ready
+        return targetTile;
+    }
+    public void UsePreparedSkill(TacticActor actor, int targetTile, int direction = -1)
+    {
+        activeManager.GetTargetedTiles(targetTile);
+        ActivateSkill(actor.GetAutoSkill(), actor);
+        if (direction < 0)
+        {
+            direction = actor.GetDirection();
+        }
+        EndTurn(actor, direction);
+    }
     public void PlayerTurn(TacticActor actor)
     {
         // Make Sure The Direction Never Changes.
         int startDirection = actor.GetDirection();
         // Attack/Skill.
-        bool skillReady = (actor.GetEnergy() >= actor.GetBaseEnergy());
-        int targetTile = -1;
-        if (skillReady)
+        int targetTile = PrepareSkill(actor);
+        // Skill Was Used.
+        if (targetTile == SKILLUSEDALREADY)
         {
-            activeManager.SetSkillFromName(actor.GetAutoSkill(), actor);
-            // Use skill immediately if self is target location.
-            targetTile = actorAI.ChooseSkillTargetLocation(actor, map);
-            if (targetTile == actor.GetLocation())
-            {
-                activeManager.GetTargetedTiles(actor.GetLocation());
-                ActivateSkill(actor.GetAutoSkill(), actor);
-                EndTurn(actor, startDirection);
-                return;
-            }
+            EndTurn(actor, startDirection);
+            return;
         }
+        bool skillReady = targetTile >= 0;
         List<int> attackable = GetPlayerActorAttackRangeTiles(actor);
         // Healer Vs Normal.
         if (actor.AKHealer())
@@ -393,12 +437,9 @@ public class AutoBattleManager : MonoBehaviour
             List<TacticActor> allies = map.ReturnAlliesInTiles(actor, attackable);
             if (actor.AKAOE())
             {
-                // AOE Actors Always Self Target With Skills.
                 if (skillReady)
                 {
-                    activeManager.GetTargetedTiles(actor.GetLocation());
-                    ActivateSkill(actor.GetAutoSkill(), actor);
-                    EndTurn(actor, startDirection);
+                    UsePreparedSkill(actor, targetTile, startDirection);
                     return;
                 }
                 // Else Heal All Allies In Range.
@@ -424,9 +465,7 @@ public class AutoBattleManager : MonoBehaviour
                 {
                     if (skillReady)
                     {
-                        activeManager.GetTargetedTiles(allies[targetIndex].GetLocation());
-                        ActivateSkill(actor.GetAutoSkill(), actor);
-                        EndTurn(actor, startDirection);
+                        UsePreparedSkill(actor, targetTile, startDirection);
                         return;
                     }
                     allies[targetIndex].Heal(actor.GetAttack());
@@ -439,12 +478,9 @@ public class AutoBattleManager : MonoBehaviour
             List<TacticActor> enemies = map.ReturnEnemiesInTiles(actor, attackable);
             if (actor.AKAOE())
             {
-                // AOE Actors Always Self Target With Skills.
                 if (skillReady)
                 {
-                    activeManager.GetTargetedTiles(actor.GetLocation());
-                    ActivateSkill(actor.GetAutoSkill(), actor);
-                    EndTurn(actor, startDirection);
+                    UsePreparedSkill(actor, targetTile, startDirection);
                     return;
                 }
                 // Else Attack All Enemies In Range.
@@ -469,9 +505,7 @@ public class AutoBattleManager : MonoBehaviour
                 {
                     if (skillReady)
                     {
-                        activeManager.GetTargetedTiles(enemies[enemyTargetIndex].GetLocation());
-                        ActivateSkill(actor.GetAutoSkill(), actor);
-                        EndTurn(actor, startDirection);
+                        UsePreparedSkill(actor, targetTile, startDirection);
                         return;
                     }
                     ActorAttacksActor(actor, enemies[enemyTargetIndex]);

@@ -8,7 +8,9 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AutoChessEnemyDataManager", menuName = "ScriptableObjects/AutoChess/AutoChessEnemyDataManager", order = 1)]
 public class AutoChessEnemyDataManager : SavedData
 {
+    public AutoChessSettingsDataManager settings;
     public string delimiter2;
+    public StatDatabase bossData;
     public StatDatabase enemyData;
     public StatDatabase enemyGroups;
     public StatDatabase enemyDifficulty;
@@ -69,12 +71,12 @@ public class AutoChessEnemyDataManager : SavedData
     public void GenerateNextRoundEnemies()
     {
         nextRoundEnemies.Clear();
-        int normalCount = autoChessEnemyRNG.SeedRange(1 + round * 2, 1 + round * 3);
+        int normalCount = autoChessEnemyRNG.SeedRange(1 + round * 2, 1 + round * 4);
         int eliteCount = 0;
         // First few round have no elites.
         if (round > 5)
         {
-            eliteCount = autoChessEnemyRNG.SeedRange(0, round);
+            eliteCount = autoChessEnemyRNG.SeedRange(round / 2, round * 2);
         }
         // Determine The Group Being Fought.
         string group = availableEnemyGroups[autoChessEnemyRNG.SeedRange(0, availableEnemyGroups.Count)];
@@ -83,6 +85,19 @@ public class AutoChessEnemyDataManager : SavedData
         List<string> enemyDiff = GetDifficultyOfEnemies(enemiesOfGroup);
         nextRoundEnemies.AddRange(GenerateEnemiesOfDifficulty(enemiesOfGroup, enemyDiff, normalCount));
         nextRoundEnemies.AddRange(GenerateEnemiesOfDifficulty(enemiesOfGroup, enemyDiff, eliteCount, false));
+        // At The End Add Bosses.
+        if (round >= settings.GetTotalRounds())
+        {
+            int bossCount = autoChessEnemyRNG.SeedRange(3, round / 2);
+            List<string> allBosses = bossData.GetAllKeys();
+            string boss = allBosses[autoChessEnemyRNG.SeedRange(0, allBosses.Count)];
+            for (int i = 0; i < bossCount; i++)
+            {
+                nextRoundEnemies.Add(boss);
+            }
+        }
+        // Shuffle The Enemies?
+        autoChessEnemyRNG.ShuffleList(nextRoundEnemies);
     }
     public override void NewGame()
     {

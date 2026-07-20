@@ -171,6 +171,14 @@ public class AutoChessFactionDataManager : SavedData
             return;
         }
     }
+    public void GainActiveStacks(List<string> actorFactions, int amount = 2)
+    {
+        for (int i = 0; i < actorFactions.Count; i++)
+        {
+            if (!activeFactions.Contains(actorFactions[i])){continue;}
+            GainFactionStacks(actorFactions[i], amount);
+        }
+    }
     // TODO Change This An Actor? For Better Logging, Knowing Which Actor Caused Which Stack Gain.
     public void GainStacksFromTraitSwitch(AutoChessTrait trait, List<string> actorFactions, int amount = 1, List<string> frontFactions = null)
     {
@@ -185,30 +193,14 @@ public class AutoChessFactionDataManager : SavedData
             }
             break;
             case "SelfActive":
-            for (int i = 0; i < actorFactions.Count; i++)
-            {
-                if (!activeFactions.Contains(actorFactions[i])){continue;}
-                GainFactionStacks(actorFactions[i], amount);
-            }
+            GainActiveStacks(actorFactions, amount);
             break;
             case "FrontActive":
-            for (int i = 0; i < frontFactions.Count; i++)
-            {
-                if (!activeFactions.Contains(frontFactions[i])){continue;}
-                GainFactionStacks(frontFactions[i], amount);
-            }
+            GainActiveStacks(frontFactions, amount);
             break;
             case "SelfAndFrontActive":
-            for (int i = 0; i < frontFactions.Count; i++)
-            {
-                if (!activeFactions.Contains(frontFactions[i])){continue;}
-                GainFactionStacks(frontFactions[i], amount);
-            }
-            for (int i = 0; i < actorFactions.Count; i++)
-            {
-                if (!activeFactions.Contains(actorFactions[i])){continue;}
-                GainFactionStacks(actorFactions[i], amount);
-            }
+            GainActiveStacks(actorFactions, amount);
+            GainActiveStacks(frontFactions, amount);
             break;
             case "RandomActive":
             if (activeFactions.Count <= 0){return;}

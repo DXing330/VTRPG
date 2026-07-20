@@ -10,7 +10,22 @@ using UnityEngine;
 public class AutoChessSettingsDataManager : SavedData
 {
     public int newGame = 1; // Start Always Do A New Game.
-    public int difficultScaling; // Start With 1 - 10.
+    public int difficultyScaling = 0; // Start With 0 - 10.
+    public int GetDifficulty(){return difficultyScaling;}
+    public int GetTotalRounds()
+    {
+        return GetDifficulty() + 13;
+    }
+    public int maxDifficulty = 11;
+    public void ChangeDifficulty(bool right)
+    {
+        int change = 1;
+        if (!right)
+        {
+            change = (maxDifficulty - 1);
+        }
+        difficultyScaling = (difficultyScaling + change) % maxDifficulty;
+    }
     public List<AutoChessMapAsset> allMaps;
     public AutoChessMapAsset GetSelectedMap()
     {
@@ -26,7 +41,28 @@ public class AutoChessSettingsDataManager : SavedData
         }
         selectedMap = (selectedMap + change) % allMaps.Count;
     }
+    public StatDatabase tacticianDatabase;
+    public AutoChessTactician tactician;
     public string selectedTactician; // TODO Various Effects?
+    public string GetTactician(){return selectedTactician;}
+    public string GetTacticianEffect()
+    {
+        string[] tacticianData = tacticianDatabase.ReturnValue(selectedTactician).Split("|");
+        if (tacticianData.Length < 2){return "";}
+        return tacticianData[1];
+    }
+    public void ChangeTactician(bool right)
+    {
+        List<string> allTacticians = tacticianDatabase.GetAllKeys();
+        int indexOf = allTacticians.IndexOf(selectedTactician);
+        int change = 1;
+        if (!right)
+        {
+            change = (allTacticians.Count - 1);
+        }
+        indexOf = (indexOf + change) % allTacticians.Count;
+        selectedTactician = allTacticians[indexOf];
+    }
     public override void NewGame()
     {
         newGame = 1;
@@ -37,10 +73,12 @@ public class AutoChessSettingsDataManager : SavedData
         dataPath = Application.persistentDataPath + "/" + filename;
         allData = "";
         allData += "NewGame=" + newGame + delimiter;
-        allData += "Difficulty=" + difficultScaling + delimiter;
+        allData += "Difficulty=" + difficultyScaling + delimiter;
         allData += "Map=" + selectedMap + delimiter;
         allData += "Tactician=" + selectedTactician + delimiter;
         File.WriteAllText(dataPath, allData);
+        tactician.SetTactician(selectedTactician);
+        tactician.Save();
     }
     public override void Load()
     {
@@ -74,7 +112,7 @@ public class AutoChessSettingsDataManager : SavedData
             newGame = int.Parse(value);
             return;
             case "Difficulty":
-            difficultScaling = int.Parse(value);
+            difficultyScaling = int.Parse(value);
             return;
             case "Map":
             selectedMap = int.Parse(value);

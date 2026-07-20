@@ -51,12 +51,12 @@ public class AutoChessActorMaker : ActorMaker
         AddAutoChessEquipmentToActor(rollUpActor, newActor);
         return newActor;
     }
-    public AutoActor CreateEnemyActor(string actorName, int actorLocation)
+    public AutoActor CreateEnemyAutoActor(string actorName, int actorLocation, int difficultyScaling = 0)
     {
         AutoActor newActor = new AutoActor();
         string actorStats = enemyData.ReturnValue(actorName);
         newActor.SetPersonalName(actorName);
-        newActor.AutoChessEnemySetInitialStatsFromString(actorStats);
+        newActor.AutoChessEnemySetInitialStatsFromString(actorStats, difficultyScaling);
         passiveOrganizer.OrganizeActorPassives(newActor);
         newActor.SetSpriteName(actorName);
         newActor.SetLocation(actorLocation);

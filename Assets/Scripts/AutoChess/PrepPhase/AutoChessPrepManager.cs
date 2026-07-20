@@ -9,6 +9,7 @@ using UnityEngine;
 public class AutoChessPrepManager : ClickTileManager
 {
     public AutoChessDataManager dataManager;
+    public AutoChessTactician tactician;
     public void Save()
     {
         dataManager.SaveFromPrepManager(this);
@@ -204,7 +205,6 @@ public class AutoChessPrepManager : ClickTileManager
                 string randomGainedAegir = randomAegirUnits[shopManager.shopData.autoChessShopRNG.SeedRange(0, randomAegirUnits.Count)];
                 AutoActorRollUpData gainedAegir = new AutoActorRollUpData();
                 gainedAegir.SetName(randomGainedAegir);
-                gainedAegir.LoadBaseStats(actorData);
                 GainActor(gainedAegir);
                 shopManager.RemoveFromPool(randomGainedAegir);
             }
@@ -215,7 +215,6 @@ public class AutoChessPrepManager : ClickTileManager
                 string gainedUnitName = trait.specifics;
                 AutoActorRollUpData gainedUnit = new AutoActorRollUpData();
                 gainedUnit.SetName(gainedUnitName);
-                gainedUnit.LoadBaseStats(actorData);
                 GainActor(gainedUnit);
                 shopManager.RemoveFromPool(gainedUnitName);
             }
@@ -225,16 +224,17 @@ public class AutoChessPrepManager : ClickTileManager
             if (faction == ""){break;}
             for (int i = 0; i < Mathf.Max(1, intSpecifics); i++)
             {
-                // Generate A Random Actor Of That Type.
-                // This Will Remove It From The Pool.
-                string newActorName = shopManager.shopData.ReturnRandomActorFromFaction(faction);
-                AutoActorRollUpData gainedActor = new AutoActorRollUpData();
-                gainedActor.SetName(newActorName);
-                gainedActor.LoadBaseStats(actorData);
-                GainActor(gainedActor);
+                GainActorOfFaction(faction);
             }
             break;
         }
+    }
+    public void StartBattle()
+    {
+        ApplyStartBattleActorTraits();
+        // Check The Tactician Effect.
+        tactician.Load();
+        tactician.ApplyEndRoundEffect(this);
     }
     public void ApplyStartBattleActorTraits()
     {
@@ -275,6 +275,7 @@ public class AutoChessPrepManager : ClickTileManager
         shopManager.Select(index);
         UIManager.UpdateActorDisplay(shopManager.GetSelectedActor());
     }
+    // TODO Add A Tactician Passive Timing Here.
     public void RerollShop()
     {
         if (!dataManager.SpendGold(1))
@@ -282,6 +283,7 @@ public class AutoChessPrepManager : ClickTileManager
             return;
         }
         shopManager.Reroll();
+        dataManager.Reroll();
         UpdateAllUI();
     }
     protected int expCost = 4;
@@ -298,6 +300,17 @@ public class AutoChessPrepManager : ClickTileManager
     public void FreezeShop()
     {
         shopManager.FreezeShop();
+    }
+    // This Will Remove It From The Pool.
+    // Generate A Random Actor Of That Faction.
+    public void GainActorOfFaction(string faction)
+    {
+        int newSlot = AvailableBenchSlot();
+        if (newSlot < 0){return;}
+        string newActorName = shopManager.shopData.ReturnRandomActorFromFaction(faction);
+        AutoActorRollUpData gainedActor = new AutoActorRollUpData();
+        gainedActor.SetName(newActorName);
+        GainActor(gainedActor);
     }
     // New Actors Go To The Bench.
     public void GainActor(AutoActorRollUpData newActor)

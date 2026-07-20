@@ -86,4 +86,14 @@ public class RNGUtility : SavedData
         ulong r = NextUInt64();
         return min + (int)(r % (ulong)(max - min));
     }
+    public void ShuffleList<T>(List<T> newList)
+    {
+        for (int i = newList.Count - 1; i > 0; i--)
+        {
+            int j = SeedRange(0, i + 1);
+            T temp = newList[i];
+            newList[i] = newList[j];
+            newList[j] = temp;
+        }
+    }
 }
