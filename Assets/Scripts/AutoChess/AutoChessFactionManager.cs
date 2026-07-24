@@ -16,6 +16,7 @@ public class AutoChessFactionManager : MonoBehaviour
         factionDisplay.UpdateFactionDisplay(activeFactions, allFactionsWithUnits);
     }
     public List<string> activeFactions;
+    protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kjerag", "Laterano", "Sargon", "Victoria", "Yan"};
     public bool FactionActive(string factionName)
     {
         int indexOf = allFactionsWithUnits.IndexOf(factionName);
@@ -24,6 +25,12 @@ public class AutoChessFactionManager : MonoBehaviour
             return false;
         }
         int activeCount = allFactionCounts[indexOf];
+        // Add A Harmony Bool And Check.
+        bool harmony = allFactionsWithUnits.Contains("Harmony");
+        if (autoChessMainFactions.Contains(factionName) && harmony)
+        {
+            activeCount++;
+        }
         if (activeCount > 2){return true;}
         else if (activeCount == 2 && !factionData.MainFaction(factionName)){return true;}
         return false;

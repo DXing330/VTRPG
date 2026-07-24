@@ -1064,9 +1064,9 @@ public class PassiveSkill : SkillEffect
             case "Type":
                 return conditionSpecifics == damageType;
             case "Damage<":
-                return int.Parse(conditionSpecifics) < damageAmount;
+                return damageAmount < int.Parse(conditionSpecifics);
             case "Damage>":
-                return int.Parse(conditionSpecifics) > damageAmount;
+                return damageAmount > int.Parse(conditionSpecifics);
         }
         return true;
     }

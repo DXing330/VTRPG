@@ -198,6 +198,17 @@ public class AutoChessTactician : SavedData
             pithUnit.LoadBaseStats(unitData);
             dataManager.AddActorToBench(pithUnit.ReturnRollUpData());
             break;
+            case "YOU":
+            AutoActorRollUpData playerUnit = new AutoActorRollUpData();
+            playerUnit.SetName("Player");
+            playerUnit.LoadBaseStats(unitData);
+            dataManager.AddActorToBench(playerUnit.ReturnRollUpData());
+            AutoActorRollUpData familiarUnit = new AutoActorRollUpData();
+            familiarUnit.SetName("Familiar");
+            familiarUnit.SetLocation(1);
+            familiarUnit.LoadBaseStats(unitData);
+            dataManager.AddActorToBench(familiarUnit.ReturnRollUpData());
+            break;
         }
     }
     // Amiya, Ermengarde, Eunectes

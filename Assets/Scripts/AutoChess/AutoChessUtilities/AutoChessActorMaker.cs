@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class AutoChessActorMaker : ActorMaker
 {
+    public PartyData permanentPartyData;
     public StatDatabase actorData;
     public StatDatabase enemyData;
     public StatDatabase equipmentData;
@@ -25,10 +26,20 @@ public class AutoChessActorMaker : ActorMaker
     public AutoActor CreateActor(AutoActorRollUpData rollUpActor, int location = -1, int direction = -1)
     {
         AutoActor newActor = new AutoActor();
-        string actorStats = actorData.ReturnValue(rollUpActor.GetName());
-        newActor.SetPersonalName(rollUpActor.GetName());
-        newActor.SetSpriteName(rollUpActor.GetName());
+        string actorName = rollUpActor.GetName();
+        string actorStats = actorData.ReturnValue(actorName);
+        newActor.SetPersonalName(actorName);
+        newActor.SetSpriteName(actorName);
         newActor.AutoChessSetInitialStatsFromString(actorStats, rollUpActor.GetLevel());
+        if (actorName == "Familiar" || actorName == "Player")
+        {
+            permanentPartyData.Load();
+            // Load The Stats From The Main Game.
+            string mainGameStats = permanentPartyData.GetStatFromName(actorName);
+            string equipmentString = permanentPartyData.GetEquipmentFromName(actorName);
+            newActor.SetInitialStatsFromString(mainGameStats);
+            ApplyEquipmentToActor(newActor, equipmentString);
+        }
         passiveOrganizer.OrganizeActorPassives(newActor);
         if (location < 0)
         {

@@ -206,6 +206,22 @@ public class MapTile : MonoBehaviour
         if (direction < 0) { return; }
         directionObjects[direction].SetActive(true);
     }
+    public void ActivateLayerSprite(int layer)
+    {
+        if (layer < 0 || layer > layers.Count)
+        {
+            return;
+        }
+        layerObjects[layer].SetActive(true);
+    }
+    public Image GetLayerSprite(int layer)
+    {
+        if (layer < 0 || layer > layers.Count)
+        {
+            return null;
+        }
+        return layers[layer];
+    }
     public void UpdateLayerSprite(Sprite newSprite, int layer = 0)
     {
         if (layer < 0 || layer > layers.Count) { return; }

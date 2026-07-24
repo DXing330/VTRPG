@@ -158,7 +158,9 @@ public class PassiveDetailViewer : MonoBehaviour
         passiveDescription.Clear();
         for (int i = 0; i < level; i++)
         {
-            passiveNames.Add(passiveNameLevels.GetMultiKeyValue(passiveGroupName, (i+1).ToString()));
+            string multiKeyValue = passiveNameLevels.GetMultiKeyValue(passiveGroupName, (i+1).ToString());
+            if (multiKeyValue == ""){continue;}
+            passiveNames.Add(multiKeyValue);
             passiveInfo.Add(allPassives.ReturnValue(passiveNames[i]));
             passiveDescription.Add(ReturnPassiveDetails(passiveInfo[i]));
         }

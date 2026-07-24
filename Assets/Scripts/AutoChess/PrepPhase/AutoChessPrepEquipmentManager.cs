@@ -9,6 +9,7 @@ using TMPro;
 public class AutoChessPrepEquipmentManager : MonoBehaviour
 {
     public AutoChessDataManager dataManager;
+    public AutoChessEquipmentDisplay equipmentDisplay;
     public GeneralUtility utility;
     public List<string> allUniqueEquipment;
     public List<int> uniqueEquipmentQuantity;
@@ -28,6 +29,7 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
     public SpriteContainer masterSprites;
     public List<GameObject> currentEquipBGObjects;
     public List<GameObject> currentEquipObjects;
+    public List<AutoChessEquipmentToolTip> currentEquipToolTips;
     public List<Image> currentEquipImages;
     public AutoActorRollUpData currentActor;
     public void UpdateCurrentEquipment()
@@ -39,6 +41,7 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
         {
             currentEquipBGObjects[i].SetActive(true);
             currentEquipObjects[i].SetActive(true);
+            currentEquipToolTips[i].SetEquipName(equipNames[i]);
             masterSprites.ApplyToImage(currentEquipImages[i], equipNames[i]);
         }
     }
@@ -116,6 +119,7 @@ public class AutoChessPrepEquipmentManager : MonoBehaviour
         selectEquipList.ResetSelected();
         UpdateCurrentEquipment();
         UpdateEquipmentSelectList();
+        equipmentDisplay.UpdateDisplay();
     }
     public string CombineEquipment(string firstItem, string secondItem)
     {

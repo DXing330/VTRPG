@@ -254,7 +254,7 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "Guard":
                 return " protect adjacent allies from attacks for " + specifics + " turns";
             case "GuardRange":
-                return " increase the distance from which you can protected allies from attacks to up to " + specifics + " tiles.";
+                return " increase the distance you protect allies from attacks to up to " + specifics + " tiles.";
             case "MoveForwardRandom":
                 return " move to a random forward tile";
             case "MoveBackwardRandom":
@@ -333,7 +333,7 @@ public class PassiveDetailViewerSwitch : ScriptableObject
     protected string AdjustSpecificsText(string specifics)
     {
         string adjustedSpecifics = specifics;
-        string targetString = "you";
+        string targetString = "self";
         string multiplier = "";
         if (specifics.Contains("ScalingEquals"))
         {
@@ -439,7 +439,7 @@ public class PassiveDetailViewerSwitch : ScriptableObject
     public string PassiveConditionText(string condition, string specifics)
     {
         // Consolidate A/D conditions into one.
-        string conTarget = "you";
+        string conTarget = "self";
         string comparedTarget = "";
         if (condition.EndsWith("A"))
         {
@@ -628,17 +628,17 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "Team":
                 if (specifics == "Same")
                 {
-                    return " if you are on the same team";
+                    return " if on the same team";
                 }
-                return " if you are not on the same team";
+                return " if not on the same team";
             case "IntDirection<>":
                 return " if not attacking" + RelativeDirectionDescriptions(specifics);
             case "IntDirection":
                 return " if attacking" + RelativeDirectionDescriptions(specifics);
             case "Element":
-                return " if " + conTarget + "'s element is " + specifics + " element";
+                return " if " + conTarget + " is " + specifics + " element";
             case "Element<>":
-                return " if " + conTarget + "'s element is not " + specifics + " element";
+                return " if " + conTarget + " is not " + specifics + " element";
             case "Species":
                 return " if " + conTarget + "'s species is " + specifics;
             case "Species<>":

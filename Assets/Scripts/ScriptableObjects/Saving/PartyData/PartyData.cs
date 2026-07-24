@@ -347,8 +347,15 @@ public class PartyData : SavedData
         dataPath = Application.persistentDataPath + "/" + filename;
         if (File.Exists(dataPath)) { allData = File.ReadAllText(dataPath); }
         else { allData = newGameData; }
-        if (allData.Contains(delimiter)) { dataList = allData.Split(delimiter).ToList(); }
-        else { return; }
+        if (allData.Contains(delimiter))
+        {
+            dataList = allData.Split(delimiter).ToList();
+        }
+        else
+        {
+            NewGame();
+            return;
+        }
         for (int i = 0; i < dataList.Count; i++)
         {
             LoadStat(dataList[i]);
@@ -386,6 +393,22 @@ public class PartyData : SavedData
     public List<string> GetStats(string joiner = "|")
     {
         return partyStats;
+    }
+    public int GetIndexFromName(string name)
+    {
+        return partyNames.IndexOf(name);
+    }
+    public string GetStatFromName(string name)
+    {
+        int indexOf = GetIndexFromName(name);
+        if (indexOf < 0){return "";}
+        return partyStats[indexOf];
+    }
+    public string GetEquipmentFromName(string name)
+    {
+        int indexOf = GetIndexFromName(name);
+        if (indexOf < 0){return "";}
+        return partyEquipment[indexOf];
     }
     public List<string> GetEquipmentStats()
     {

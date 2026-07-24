@@ -231,20 +231,27 @@ public class StatDatabase : ScriptableObject
     {
         return new List<string>(values);
     }
-    public List<string> GetFilteredValues(List<string> filters)
+    // Filters Values By Keys Containing Filters.
+    public List<string> GetFilteredValues(string filter)
     {
         List<string> filtered = new List<string>();
         for (int i = 0; i < keys.Count; i++)
         {
-            for (int j = 0; j < filters.Count; j++)
+            if (keys[i].Contains(filter))
             {
-                if (keys[i].Contains(filters[j]))
-                {
-                    filtered.Add(values[i]);
-                    break;
-                }
+                filtered.Add(values[i]);
             }
         }
+        return filtered;
+    }
+    public List<string> GetFilteredValues(List<string> filters)
+    {
+        List<string> filtered = new List<string>();
+        for (int i = 0; i < filters.Count; i++)
+        {
+            filtered.AddRange(GetFilteredValues(filters[i]));
+        }
+        // Distinct?
         return filtered;
     }
     public virtual string ReturnValue(string key)

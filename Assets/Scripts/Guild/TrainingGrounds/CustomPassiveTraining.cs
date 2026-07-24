@@ -102,6 +102,7 @@ public class CustomPassiveTraining : MonoBehaviour
     public SelectList effectSelect;
     public string selectedEffect; // Also tracks the target being effected and the effect specifics.
     public string factionName; // Affects bonus conditions.
+    public bool allFactionsTesting = false;
     public void SetFactionName(string newInfo)
     {
         factionName = newInfo;
@@ -148,7 +149,15 @@ public class CustomPassiveTraining : MonoBehaviour
     {
         string allPossible = passiveConditions.ReturnValue(selectedTiming);
         List<string> possibleList = allPossible.Split("|").ToList();
-        if (factionName != "")
+        if (allFactionsTesting)
+        {
+            List<string> allFactionTimings = factionConditions.GetFilteredValues(selectedTiming);
+            for (int i = 0; i < allFactionTimings.Count; i++)
+            {
+                possibleList.AddRange(allFactionTimings[i].Split("|").ToList());
+            }
+        }
+        else if (factionName != "")
         {
             possibleList.AddRange(factionConditions.ReturnValue(factionName + "-" + selectedTiming).Split("|").ToList());
         }

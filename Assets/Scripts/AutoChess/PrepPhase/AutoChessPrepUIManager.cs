@@ -85,12 +85,13 @@ public class AutoChessPrepUIManager : MonoBehaviour
         {
             mapSlots[i].UpdateLayerSprite(tileSprites.SpriteDictionary(dataManager.mapTiles[i]), 0);
         }
-        // Reset Actors.
         for (int i = 0; i < mapSlots.Count; i++)
         {
             mapSlots[i].UpdateText();
             mapSlots[i].ResetDirectionArrows();
             mapSlots[i].ResetHighlight();
+            // Reset Actors.
+            mapSlots[i].ResetLayerSprite(2);
             // Reset Any Terrain Changes From The Battle.
             mapSlots[i].ResetLayerSprite(3);
             mapSlots[i].ResetAutoChessEquipment();
@@ -99,7 +100,10 @@ public class AutoChessPrepUIManager : MonoBehaviour
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
             int location = prepManager.fieldSlots[i].GetLocation();
-            mapSlots[location].UpdateText(prepManager.fieldSlots[i].GetBaseStatString());
+            string name = prepManager.fieldSlots[i].GetName();
+            //mapSlots[location].UpdateText(prepManager.fieldSlots[i].GetBaseStatString());
+            mapSlots[location].ActivateLayerSprite(2);
+            masterSprites.ApplyToImage(mapSlots[location].GetLayerSprite(2), name);
             mapSlots[location].ActivateDirectionArrow(prepManager.fieldSlots[i].GetDirection());
             List<string> equipNames = prepManager.fieldSlots[i].GetEquipmentNames();
             for (int j = 0; j < equipNames.Count; j++)

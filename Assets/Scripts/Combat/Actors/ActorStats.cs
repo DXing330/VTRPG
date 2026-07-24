@@ -102,6 +102,21 @@ public class ActorStats : ActorInitialStats
         basicString += "StatusDurations=" + String.Join(",", statusDurations) + "|";
         return basicString;
     }
+    public string ReturnBasicStatString()
+    {
+        string stats = "";
+        if (GetTempHealth() > 0)
+        {
+            stats += ("HP:" + GetHealth()+"("+GetTempHealth()+")");
+        }
+        else
+        {
+            stats += ("HP:" + GetHealth().ToString());
+        }
+        stats += (" ATK:" + GetAttack().ToString());
+        stats += (" DEF:" + GetDefense().ToString());
+        return stats;
+    }
     public List<string> ReturnStatsWithNames()
     {
         List<string> stats = new List<string>();

@@ -62,8 +62,10 @@ public class AutoBattleManager : MonoBehaviour
         return spawnTiles;
     }
     public List<string> enemyPool;
-    // Key Ints
+    // Key Constants
     private const int SKILLUSEDALREADY = -2;
+    private List<string> WEATHERS = new List<string>{"Sunny", "Rainy", "Windy", "None"};
+    private List<string> TIMES = new List<string>{"Day", "Day", "Night"};
     // Faction Specific Stuff.
     public int aegirRevives = 0;
     public int generalRevives = 0;
@@ -92,6 +94,9 @@ public class AutoBattleManager : MonoBehaviour
         // Load The Tiles/Terrain From The DataManager.
         map.SetMapInfo(data.GetMapTiles());
         map.SetTerrainEffectTiles(data.GetMapTerrain());
+        // Generate A Random Weather And Time.
+        map.SetWeather(WEATHERS[enemyData.autoChessEnemyRNG.SeedRange(0, WEATHERS.Count)]);
+        map.SetTime(TIMES[enemyData.autoChessEnemyRNG.SeedRange(0, TIMES.Count)]);
         // Make Actors For Each Player Unit.
         List<string> fieldActors = data.GetFieldActorData();
         for (int i = 0; i < fieldActors.Count; i++)
@@ -207,8 +212,10 @@ public class AutoBattleManager : MonoBehaviour
     public List<TacticActor> roundActors;
     public void StartRound()
     {
+        map.NextRound();
         // Clean The Map/List Of Dead Actors.
         map.RemoveActorsFromBattle();
+        map.SetRound(currentRound);
         // TODO Do The Kjerag Passive Thing.
         // Only Iterate Through The List Length At The Start, Thus Ignoring Newly Summoned Actors.
         roundActors = new List<TacticActor>(map.battlingActors);
@@ -240,6 +247,8 @@ public class AutoBattleManager : MonoBehaviour
         actor.StartTurn();
         actor.UpdateEnergy(1);
         effectManager.StartTurn(actor, map);
+        // Show Start Stats.
+        map.UpdateCombatLog("StartTurn Stats - " + actor.ReturnBasicStatString());
         // If Stunned Then Stop.
         if (actor.StatusExists("Stun"))
         {
@@ -269,9 +278,10 @@ public class AutoBattleManager : MonoBehaviour
         {
             actor.SetDirection(setDirection);
         }
-        // Apply EndTurn Effects.
         actor.EndTurn();
         effectManager.EndTurn(actor, map);
+        // Show End Stats.
+        map.UpdateCombatLog("EndTurn Stats - " + actor.ReturnBasicStatString());
         map.UpdateMap();
     }
     public void EndRound()
@@ -389,7 +399,7 @@ public class AutoBattleManager : MonoBehaviour
     }
     public int PrepareSkill(TacticActor actor)
     {
-        if (actor.GetEnergy() < actor.GetBaseEnergy())
+        if (actor.GetEnergy() < actor.GetBaseEnergy() || actor.GetBaseEnergy() <= 0 || actor.GetAutoSkill() == "")
         {
             return -1;
         }

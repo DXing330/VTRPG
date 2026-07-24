@@ -21,7 +21,7 @@ public class SceneTracker : SavedData
         Save();
     }
     public string GetCurrentScene(){return currentScene;}
-
+    [ContextMenu("New Game")]
     public override void NewGame()
     {
         previousScene = "Hub";
@@ -29,7 +29,6 @@ public class SceneTracker : SavedData
         Save();
         Load();
     }
-
     public override void Save()
     {
         dataPath = Application.persistentDataPath+"/"+filename;
@@ -38,7 +37,6 @@ public class SceneTracker : SavedData
         allData += "CurrentScene=" + currentScene + delimiter;
         File.WriteAllText(dataPath, allData);
     }
-
     public override void Load()
     {
         dataPath = Application.persistentDataPath+"/"+filename;
@@ -55,7 +53,6 @@ public class SceneTracker : SavedData
             LoadStat(dataList[i]);
         }
     }
-
     public override void LoadStat(string data)
     {
         string[] blocks = data.Split("=");

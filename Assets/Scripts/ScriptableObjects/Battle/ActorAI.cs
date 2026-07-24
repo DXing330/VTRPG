@@ -131,10 +131,6 @@ public class ActorAI : ScriptableObject
     {
         int originalLocation = actor.GetLocation();
         moveManager.GetSpecificTileMoveCosts(actor, map.battlingActors, specificTileType);
-        if (actor.PassThroughMoving())
-        {
-            tile = moveManager.GetBestReachableTileTowardTargetByMoveCost(actor, map, tile);
-        }
         List<int> fullPath = moveManager.GetPrecomputedPath(originalLocation, tile);
         List<int> path = new List<int>();
         int pathCost = 0;

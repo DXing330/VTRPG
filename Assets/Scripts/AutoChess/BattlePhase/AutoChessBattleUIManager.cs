@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+// Later Add Another Helper For Meta End Game Stuff.
 public class AutoChessBattleUIManager : MonoBehaviour
 {
     public AutoChessPrepManager prepManager;
@@ -32,6 +33,22 @@ public class AutoChessBattleUIManager : MonoBehaviour
         CheckEndGame();
         combatLog.ActivateCombatLogLarge();
     }
+    // If Too Much, Move These To A Separate Helper Later.
+    public Inventory inventory;
+    public void WinGameReward()
+    {
+        int round = prepManager.dataManager.GetRound();
+        inventory.Load();
+        inventory.GainGold(round * 2);
+        inventory.Save();
+    }
+    public void LoseGameReward()
+    {
+        int round = prepManager.dataManager.GetRound();
+        inventory.Load();
+        inventory.GainGold(round / 2);
+        inventory.Save();
+    }
     public void CheckEndGame()
     {
         endGameUIObject.SetActive(false);
@@ -42,12 +59,14 @@ public class AutoChessBattleUIManager : MonoBehaviour
             endGameUIObject.SetActive(true);
             endGameText.text = "Defeat...";
             endGameText.color = Color.red;
+            LoseGameReward();
         }
         if (finalRound)
         {
             endGameUIObject.SetActive(true);
             endGameText.text = "Victory!";
             endGameText.color = Color.green;
+            WinGameReward();
         }
     }
 }

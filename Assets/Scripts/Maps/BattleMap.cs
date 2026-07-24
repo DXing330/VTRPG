@@ -99,6 +99,10 @@ public class BattleMap : MapManager
     public void SetRound(int newInfo)
     {
         battleRound = newInfo;
+        if (combatLog != null)
+        {
+            combatLog.SetRound(battleRound);
+        }
     }
     public int GetRound()
     {

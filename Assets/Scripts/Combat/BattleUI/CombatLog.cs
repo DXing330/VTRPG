@@ -22,10 +22,10 @@ public class CombatLog : MonoBehaviour
     {
         ResetLists();
     }
-    public BattleManager battleManager;
     public GeneralUtility utility;
     // Change rounds.
     public int round;
+    // Changing The Display.
     public void ChangeRound(bool increase = true)
     {
         turn = 0;
@@ -42,6 +42,19 @@ public class CombatLog : MonoBehaviour
         }
         UpdateLog();
     }
+    public void SetRound(int newRound)
+    {
+        if (newRound > round)
+        {
+            turn = 0;
+            round = newRound;
+        }
+    }
+    public void IncreaseRound()
+    {
+        round++;
+        turn = 0;
+    }
     public int turn;
     public int DetermineTurnsInRound()
     {
@@ -55,6 +68,7 @@ public class CombatLog : MonoBehaviour
         }
         return maxTurn;
     }
+    // Changing The Display.
     public void ChangeTurn(bool increase = true)
     {
         // Need to determine the max number of turns in the current round.
@@ -132,20 +146,7 @@ public class CombatLog : MonoBehaviour
     }
     public void AddNewLog()
     {
-        if (battleManager != null)
-        {
-            round = battleManager.GetRoundNumber();
-            if (round == GetLatestRound())
-            {
-                turn = GetLatestTurn() + 1;
-            }
-            else{turn = 0;}
-        }
-        else
-        {
-            round = 0;
-            turn++;
-        }
+        turn++;
         combatRoundTracker.Add(round);
         combatTurnTracker.Add(turn);
         allLogs.Add("");

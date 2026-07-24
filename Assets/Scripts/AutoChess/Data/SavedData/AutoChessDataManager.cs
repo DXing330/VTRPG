@@ -251,8 +251,10 @@ public class AutoChessDataManager : SavedData
     {
         // Formula Based On Round #.
         // 1 2 3 4 5 6 7 8 9 0 1 2 3 4 - Round
-        // 1 1 2 2 2 3 3 1 1 1 2 2 2 3 - Quantity
+        // 1 0 2 0 2 0 3 0 1 0 2 0 2 0 - Quantity
         // 1 1 1 1 1 1 1 4 4 4 4 4 4 4 - Rarity
+        // Skip Even Rounds, We're Getting Too Much Equipment.
+        if (round % 2 == 0){return;}
         int quantity = 1 + ((round % 8) / 3);
         // Rounds (1-7) -> Rarity 1, 7+ -> Rarity 4. 
         int rarity = 1;

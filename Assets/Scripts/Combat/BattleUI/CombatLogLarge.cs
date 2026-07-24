@@ -66,7 +66,7 @@ public class CombatLogLarge : MonoBehaviour
     public int page;
     public void ChangePage(bool right = true)
     {
-        page = utility.ChangePage(page, right, changePageObjects, fullLogs);
+        page = utility.ChangePage(page, right, logDisplayObjects, fullLogs);
         if (page < 0){page = 0;}
         UpdatePage();
     }
