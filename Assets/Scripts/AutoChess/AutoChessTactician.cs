@@ -198,7 +198,7 @@ public class AutoChessTactician : SavedData
             pithUnit.LoadBaseStats(unitData);
             dataManager.AddActorToBench(pithUnit.ReturnRollUpData());
             break;
-            case "YOU":
+            case "Euden":
             AutoActorRollUpData playerUnit = new AutoActorRollUpData();
             playerUnit.SetName("Player");
             playerUnit.LoadBaseStats(unitData);

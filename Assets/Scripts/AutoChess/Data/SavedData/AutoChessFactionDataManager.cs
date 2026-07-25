@@ -108,7 +108,7 @@ public class AutoChessFactionDataManager : SavedData
     public int GetCountOfFaction(string factionName)
     {
         int indexOf = activeFactions.IndexOf(factionName);
-        if (indexOf <= 0){return 0;}
+        if (indexOf < 0){return 0;}
         return activeFactionCount[indexOf];
     }
     public override void NewGame()

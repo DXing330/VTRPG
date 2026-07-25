@@ -15,17 +15,22 @@ public class AutoChessBattleMap : BattleMap
     }
     // Update Actors With Text, Not Images For Now.
     // Also Show The Castle Health?
+    public SpriteContainer masterSprites;
     protected void UpdateAutoChessActors()
     {
         // Reset All Text.
         for (int i = 0; i < mapTiles.Count; i++)
         {
-            mapTiles[i].UpdateText();
+            mapTiles[i].ResetLayerSprite(2);
+            mapTiles[i].ResetDirectionArrows();
         }
         for (int i = 0; i < battlingActors.Count; i++)
         {
             if (battlingActors[i].GetInvisible()){continue;}
-            mapTiles[battlingActors[i].GetLocation()].UpdateText(battlingActors[i].GetPersonalName() + "\n" + battlingActors[i].GetHealth() + "/" + battlingActors[i].GetBaseHealth());
+            int location = battlingActors[i].GetLocation();
+            mapTiles[location].ActivateLayerSprite(2);
+            masterSprites.ApplyToImage(mapTiles[location].GetLayerSprite(2), battlingActors[i].GetSpriteName());
+            mapTiles[location].ActivateDirectionArrow(battlingActors[i].GetDirection());
         }
     }
 }

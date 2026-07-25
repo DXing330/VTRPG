@@ -9,9 +9,12 @@ public class AutoBattleManager : MonoBehaviour
     public AutoChessBattleUIManager battleUI;
     public AutoChessDataManager data;
     public AutoChessFactionManager factionManager;
+    public void GainFactionStacks(string faction, int stackAmount)
+    {
+        factionManager.GainFactionStacks(faction, stackAmount);
+    }
     public void TriggerTrait(TacticActor actor, string timing, TacticActor otherActor = null)
     {
-        // TODO Update The Combat Log To Show Stack Gain.
         AutoChessTrait trait = actor.autoChessTrait;
         if (trait.timing == timing)
         {
@@ -67,9 +70,30 @@ public class AutoBattleManager : MonoBehaviour
     private List<string> WEATHERS = new List<string>{"Sunny", "Rainy", "Windy", "None"};
     private List<string> TIMES = new List<string>{"Day", "Day", "Night"};
     // Faction Specific Stuff.
+    public AutoChessAegirManager aegirManager;
     public int aegirRevives = 0;
     public int generalRevives = 0;
     public int kjeragWindCD = -1;
+    public void CheckDefeatedAllies()
+    {
+        for (int i = 0; i < map.battlingActors.Count; i++)
+        {
+            if (map.battlingActors[i].GetTeam() != 0 || map.battlingActors[i].GetHealth() > 0){continue;}
+            if (aegirRevives > 0 && map.battlingActors[i].AutoChessFaction("Aegir"))
+            {
+                aegirRevives--;
+                map.ResurrectActor(map.battlingActors[i]);
+                Debug.Log("Aegir Revive Used On " + map.battlingActors[i].GetSpriteName());
+                continue;
+            }
+            if (generalRevives > 0)
+            {
+                generalRevives--;
+                map.ResurrectActor(map.battlingActors[i]);
+                continue;
+            }
+        }
+    }
     public void ResilientCheckResurrectedAlly(TacticActor actor)
     {
         if (actor.PassiveExists("AKResilient"))
@@ -113,23 +137,8 @@ public class AutoBattleManager : MonoBehaviour
             actorMaker.ApplyAutoChessEquipmentEffects(allAutoActors[i], allAutoActors);
             actorMaker.ReorganizeActorPassives(allAutoActors[i]);
         }
-        // Track special faction effects here: Aegir/Yan/Kjerag
-        if (factionManager.factionData.GetCountOfFaction("Kjerag") > 5)
-        {
-            kjeragWindCD = (Mathf.Max(1, 6 / Mathf.Max(1, (int.Parse(factionManager.factionData.GetStacksOfFaction("Kjerag")) / 100))));
-        }
-        if (factionManager.factionData.GetCountOfFaction("Yan") > 5)
-        {
-            // TODO: Summon The Mega Dragon
-        }
-        // TODO Do The Aegir Thing
-        if (factionManager.factionData.FactionActive("Aegir"))
-        {
-            if (factionManager.factionData.GetCountOfFaction("Aegir") >= 5)
-            {
-                aegirRevives = 3;
-            }
-        }
+        map.InitializeCombatLog();
+        map.InitializeDamageTracker();
         // Add The Actors To The Map.
         for (int i = 0; i < allAutoActors.Count; i++)
         {
@@ -137,8 +146,23 @@ public class AutoBattleManager : MonoBehaviour
             effectManager.StartBattle(allAutoActors[i], map);
             map.AddActorToBattle(allAutoActors[i]);
         }
-        map.InitializeCombatLog();
-        map.InitializeDamageTracker();
+        // Track special faction effects here: Aegir/Yan/Kjerag
+        if (factionManager.factionData.GetCountOfFaction("Kjerag") >= 5)
+        {
+            kjeragWindCD = (Mathf.Max(1, 6 / Mathf.Max(1, (int.Parse(factionManager.factionData.GetStacksOfFaction("Kjerag")) / 100))));
+        }
+        if (factionManager.factionData.GetCountOfFaction("Yan") > 5)
+        {
+            // TODO: Summon The Mega Dragon
+        }
+        if (factionManager.factionData.FactionActive("Aegir"))
+        {
+            aegirManager.ApplyAegirFactionEffect(map.battlingActors, map, this);
+            if (factionManager.factionData.GetCountOfFaction("Aegir") >= 5)
+            {
+                aegirRevives = 3;
+            }
+        }
         // Make The Castle.
         map.AddBuilding("Castle", CastleTile());
         map.SetBuildingHealthAndDefense(CastleTile(), 300, 5);
@@ -175,7 +199,6 @@ public class AutoBattleManager : MonoBehaviour
         for (int i = 0; i < defeatedActors.Count; i++)
         {
             if (defeatedActors[i].GetTeam() != 0){continue;}
-            Debug.Log(defeatedActors[i].currentRespawnTimer + "/" + defeatedActors[i].baseRespawnTimer);
             if (defeatedActors[i].ReadyToRespawn())
             {
                 // Check If The Tile Is Open.
@@ -213,6 +236,8 @@ public class AutoBattleManager : MonoBehaviour
     public void StartRound()
     {
         map.NextRound();
+        // Check Revives Before Removing Actors Just In Case.
+        CheckDefeatedAllies();
         // Clean The Map/List Of Dead Actors.
         map.RemoveActorsFromBattle();
         map.SetRound(currentRound);
@@ -242,7 +267,8 @@ public class AutoBattleManager : MonoBehaviour
         if (actor.GetHealth() <= 0)
         {
             DeathActives(actor);
-            return;
+            // If They Revived Then Keep Going.
+            if (actor.GetHealth() <= 0){return;}
         }
         actor.StartTurn();
         actor.UpdateEnergy(1);
@@ -533,6 +559,20 @@ public class AutoBattleManager : MonoBehaviour
             actor.ResetRespawnTimer();
             TriggerTrait(actor, "OnDeath");
         }
+        // Check On Revives.
+        if (aegirRevives > 0 && actor.AutoChessFaction("Aegir"))
+        {
+            aegirRevives--;
+            map.ResurrectActor(actor);
+            Debug.Log("Aegir Revive Used On " + actor.GetSpriteName());
+            return;
+        }
+        if (generalRevives > 0)
+        {
+            generalRevives--;
+            map.ResurrectActor(actor);
+            return;
+        }
         // Resurrect After Gaining Stacks.
         if (actor.Resurrect())
         {
@@ -540,6 +580,7 @@ public class AutoBattleManager : MonoBehaviour
             ResilientCheckResurrectedAlly(actor);
             return;
         }
+        // Only Enemies Have Death Actives.
         List<string> deathActives = new List<string>(actor.GetDeathActives());
         // Only Trigger Death Actives Once For Enemies.
         actor.DisableDeathActives();

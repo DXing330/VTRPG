@@ -148,6 +148,7 @@ public class AutoChessFactionManager : MonoBehaviour
     public void GainFactionStacks(string faction, int stackAmount)
     {
         factionData.GainFactionStacks(faction, stackAmount);
+        UpdateFactionDisplay();
     }
     public RNGUtility autoChessShopRNG;
     // Assuming That Timing Is Already Checked.

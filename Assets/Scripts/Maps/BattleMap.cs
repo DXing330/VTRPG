@@ -1979,6 +1979,14 @@ public class BattleMap : MapManager
         }
         return all;
     }
+    public TacticActor GetActorInFrontActor(TacticActor actor)
+    {
+        int location = actor.GetLocation();
+        int direction = actor.GetDirection();
+        int target = mapUtility.PointInDirection(location, direction, mapSize);
+        if (target < 0){return null;}
+        return GetActorOnTile(target);
+    }
     public TacticActor GetActorBehindActor(TacticActor actor)
     {
         int location = actor.GetLocation();
