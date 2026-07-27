@@ -37,7 +37,11 @@ public class SceneMover : MonoBehaviour
     public PartyData permanentParty;
     public PartyData mainParty;
     public PartyData tempParty;
-
+    public string newGameScene;
+    public void NewGame()
+    {
+        LoadScene(newGameScene);
+    }
     public void StartGame()
     {
         sceneTracker.Load();
@@ -102,7 +106,6 @@ public class SceneMover : MonoBehaviour
             StartCoroutine(LoadAsyncScene(sceneName));
         }
     }
-
     public void ReturnToHub()
     {
         sceneTracker.SetPreviousScene(SceneManager.GetActiveScene().name);
@@ -119,7 +122,6 @@ public class SceneMover : MonoBehaviour
             StartCoroutine(LoadAsyncScene(hubSceneName));
         }
     }
-
     // Only called when first entering the dungeon from another scene.
     public void MoveToDungeon()
     {
@@ -187,14 +189,12 @@ public class SceneMover : MonoBehaviour
             StartCoroutine(LoadAsyncScene(battleSceneName));
         }
     }
-
     // Only used in the dungeon rewards scene
     public void ReturnFromDungeonRewards()
     {
         sceneTracker.SetPreviousScene(dungeonState.GetPreviousScene());
         LoadScene(dungeonState.GetPreviousScene());
     }
-
     public void ReturnFromDungeon(bool clear = true)
     {
         if (clear)
@@ -223,7 +223,6 @@ public class SceneMover : MonoBehaviour
             }
         }
     }
-
     public void ReturnFromBattle(int loss = 0)
     {
         // Reset the spawn patterns after battle, not before.
@@ -273,7 +272,6 @@ public class SceneMover : MonoBehaviour
             StartCoroutine(LoadAsyncScene(sceneTracker.GetPreviousScene()));
         }
     }
-
     IEnumerator LoadAsyncScene(string sceneName)
     {
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
@@ -282,7 +280,6 @@ public class SceneMover : MonoBehaviour
             yield return null;
         }
     }
-
     IEnumerator LoadingScreenMoveScene(string sceneName)
     {
         for (int i = 0; i < 2; i++)

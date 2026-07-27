@@ -515,6 +515,10 @@ public class ActiveSkill : SkillEffect
     {
         return GetMatchingString(GetAllSpecifics(), index, "");
     }
+    public string GetPowerStringAt(int index)
+    {
+        return GetMatchingString(GetAllPowerStrings(), index);
+    }
     public int GetPowerAt(int index)
     {
         return utility.SafeParseInt(GetMatchingString(GetAllPowerStrings(), index, "1"), 1);

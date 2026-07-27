@@ -224,11 +224,11 @@ public class BattleMapUtility : ScriptableObject
                         if (GetActorOnTile(map, tile) == null)
                         {
                             // Move the displaced into that tile.
-                            map.MoveActorToTile(displaced, tile);
+                            map.MoveActorToTile(displaced, tile, true);
                         }
                         else
                         {
-                            map.MoveActorToTile(displaced, furthestTile);
+                            map.MoveActorToTile(displaced, furthestTile, true);
                         }
                     }
                 }
@@ -281,7 +281,7 @@ public class BattleMapUtility : ScriptableObject
             // Tiles are passable if no one is occupying them.
             if (GetActorOnTile(map, nextTile) == null)
             {
-                map.MoveActorToTile(actor, nextTile);
+                map.MoveActorToTile(actor, nextTile, true);
             }
             else if (GetActorOnTile(map, nextTile) != null)
             {

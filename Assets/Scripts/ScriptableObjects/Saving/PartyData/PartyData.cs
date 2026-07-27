@@ -314,6 +314,15 @@ public class PartyData : SavedData
         partyEquipment.Clear();
         partyEquipmentIDs.Clear();
     }
+    public void Copy(PartyData copiedParty)
+    {
+        copiedParty.Load();
+        partyNames = new List<string>(copiedParty.partyNames);
+        partyIDs = new List<string>(copiedParty.partyIDs);
+        partyStats = new List<string>(copiedParty.partyStats);
+        partyEquipment = new List<string>(copiedParty.partyEquipment);
+        partyEquipmentIDs = new List<string>(copiedParty.partyEquipmentIDs);
+    }
     public override void Save()
     {
         partyNames = utility.RemoveEmptyListItems(partyNames);

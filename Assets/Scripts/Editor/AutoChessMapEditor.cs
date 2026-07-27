@@ -10,31 +10,58 @@ public class AutoChessMapEditor : Editor
     public override void OnInspectorGUI()
     {
         AutoChessMapAsset map = (AutoChessMapAsset)target;
+        DrawDefaultInspector();
         GUILayout.Space(10);
         GUILayout.Label("Tile Painter", EditorStyles.boldLabel);
         // Select which tile to paint.
         selectedTile = (StartingMapTile)EditorGUILayout.EnumPopup("Current Tile", selectedTile);
         GUILayout.Space(10);
         // Make sure the array exists.
-        if (map.tiles == null || map.tiles.Length != 49)
+        int size = map.gridSize * map.gridSize;
+        if (map.tiles == null)
         {
-            map.tiles = new StartingMapTile[49];
+            map.tiles = new StartingMapTile[size];
         }
-        // Draw the 7x7 grid.
-        for (int y = 0; y < 7; y++)
+        // Top row (column buttons)
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Space(25); // Space for row buttons
+        for (int x = 0; x < map.gridSize; x++)
+        {
+            if (GUILayout.Button("↓", GUILayout.Width(40), GUILayout.Height(20)))
+            {
+                Undo.RecordObject(map, "Paint Column");
+                for (int y = 0; y < map.gridSize; y++)
+                {
+                    map.tiles[y * map.gridSize + x] = selectedTile;
+                }
+                EditorUtility.SetDirty(map);
+            }
+        }
+        EditorGUILayout.EndHorizontal();
+        // Grid
+        for (int y = 0; y < map.gridSize; y++)
         {
             EditorGUILayout.BeginHorizontal();
-            for (int x = 0; x < 7; x++)
+            // Row button
+            if (GUILayout.Button("→", GUILayout.Width(20), GUILayout.Height(40)))
             {
-                int index = y * 7 + x;
+                Undo.RecordObject(map, "Paint Row");
+                for (int x = 0; x < map.gridSize; x++)
+                {
+                    map.tiles[y * map.gridSize + x] = selectedTile;
+                }
+                EditorUtility.SetDirty(map);
+            }
+            // Tiles
+            for (int x = 0; x < map.gridSize; x++)
+            {
+                int index = y * map.gridSize + x;
                 GUI.backgroundColor = GetColor(map.tiles[index]);
                 if (GUILayout.Button(GetLabel(map.tiles[index]), GUILayout.Width(40), GUILayout.Height(40)))
                 {
                     Undo.RecordObject(map, "Paint Tile");
                     map.tiles[index] = selectedTile;
                     EditorUtility.SetDirty(map);
-                    AssetDatabase.SaveAssets();
-                    Repaint();
                 }
             }
             EditorGUILayout.EndHorizontal();
@@ -69,6 +96,8 @@ public class AutoChessMapEditor : Editor
                 return "W";
             case StartingMapTile.Mountain:
                 return "M";
+            case StartingMapTile.Pit:
+                return " ";
             default:
                 return "?";
         }

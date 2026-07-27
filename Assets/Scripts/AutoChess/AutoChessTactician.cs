@@ -80,14 +80,24 @@ public class AutoChessTactician : SavedData
     public void ApplyRerollEffect(AutoChessShopDataManager shopData)
     {
         if (tacticianTiming != "Reroll"){return;}
+        int roundRerollCount = dataManager.GetRoundRerolls();
         switch (tacticianName)
         {
             case "DuYaoye":
-            break;
+            if (roundRerollCount > 0){return;}
+            AddLog();
+            shopData.ModifyCurrentList(0, "Faction", "Yan");
+            return;
             case "Orchid":
-            break;
+            if (roundRerollCount > 1){return;}
+            AddLog();
+            shopData.ModifyCurrentList(1, "Copy", "0");
+            return;
             case "Pepe":
-            break;
+            if (roundRerollCount > 0){return;}
+            AddLog();
+            shopData.ModifyCurrentList(0, "Faction", "Sargon");
+            return;
         }
     }
     // Kirara, Paganini

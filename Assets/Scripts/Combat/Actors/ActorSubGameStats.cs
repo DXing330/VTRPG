@@ -26,6 +26,19 @@ public class ActorSubGameStats : ActorStats
     public int GetAutoChessLevel(){return autoChessLevel;}
     public List<AutoChessEquipment> autoChessEquipment = new();
     public List<AutoChessEquipment> GetAutoChessEquipment(){return autoChessEquipment;}
+    public List<string> GetAutoChessEquipmentNames()
+    {
+        List<string> names = new List<string>();
+        for (int i = 0; i < autoChessEquipment.Count; i++)
+        {
+            string name = autoChessEquipment[i].GetName();
+            if (name.Length > 1)
+            {
+                names.Add(name);
+            }
+        }
+        return names;
+    }
     protected int autoChessMaxEquipCount = 3;
     public bool AutoChessMaxEquipCount(){return (autoChessEquipment.Count >= autoChessMaxEquipCount);}
     public void AddAutoChessEquipment(AutoChessEquipment newEquip)
@@ -79,7 +92,7 @@ public class ActorSubGameStats : ActorStats
         }
     }
     public AutoChessTrait autoChessTrait = new();
-    public string autoChessAttackRangeShape;
+    public string autoChessAttackRangeShape = "Circle";
     public string GetAutoChessAttackRangeShape(){return autoChessAttackRangeShape;}
     public int akHealer = 0;
     public bool AKHealer(){return akHealer > 0;}

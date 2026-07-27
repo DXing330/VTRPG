@@ -8,6 +8,7 @@ using UnityEngine;
 // Main Manager For AutoChess, Since Prep Phase Is Almost All Player Actions.
 public class AutoChessPrepManager : ClickTileManager
 {
+    public bool PVP = false;
     public AutoChessDataManager dataManager;
     public AutoChessTactician tactician;
     public void Save()
@@ -205,8 +206,10 @@ public class AutoChessPrepManager : ClickTileManager
                 string randomGainedAegir = randomAegirUnits[shopManager.shopData.autoChessShopRNG.SeedRange(0, randomAegirUnits.Count)];
                 AutoActorRollUpData gainedAegir = new AutoActorRollUpData();
                 gainedAegir.SetName(randomGainedAegir);
-                GainActor(gainedAegir);
-                shopManager.RemoveFromPool(randomGainedAegir);
+                if (shopManager.RemoveFromPool(randomGainedAegir))
+                {
+                    GainActor(gainedAegir);
+                }
             }
             break;
             case "Unit":
@@ -215,8 +218,10 @@ public class AutoChessPrepManager : ClickTileManager
                 string gainedUnitName = trait.specifics;
                 AutoActorRollUpData gainedUnit = new AutoActorRollUpData();
                 gainedUnit.SetName(gainedUnitName);
-                GainActor(gainedUnit);
-                shopManager.RemoveFromPool(gainedUnitName);
+                if (shopManager.RemoveFromPool(gainedUnitName))
+                {
+                    GainActor(gainedUnit);
+                }
             }
             break;
             case "HighestActiveUnit":
@@ -233,8 +238,11 @@ public class AutoChessPrepManager : ClickTileManager
     {
         ApplyStartBattleActorTraits();
         // Check The Tactician Effect.
-        tactician.Load();
-        tactician.ApplyEndRoundEffect(this);
+        if (tactician != null)
+        {
+            tactician.Load();
+            tactician.ApplyEndRoundEffect(this);
+        }
     }
     public void ApplyStartBattleActorTraits()
     {

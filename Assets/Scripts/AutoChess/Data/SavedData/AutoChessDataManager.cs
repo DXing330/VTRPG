@@ -308,8 +308,12 @@ public class AutoChessDataManager : SavedData
     {
         return settings.GetDifficulty() * round;
     }
-    // For Now Have A Base 13 Rounds + 1 For Each Difficulty Level.
     // After This Should Be The Boss Fight.
+    public bool LastBattle()
+    {
+        return (GetRound() >= settings.GetTotalRounds());
+    }
+    // For Now Have A Base 13 Rounds + 1 For Each Difficulty Level.
     public bool FinalRound()
     {
         return (GetRound() > settings.GetTotalRounds());
@@ -350,8 +354,11 @@ public class AutoChessDataManager : SavedData
             mapTerrain.Add("");
         }
         // Check The Start Game Tactician Effects.
-        tactician.Load();
-        tactician.ApplyStartGameEffect();
+        if (tactician != null)
+        {
+            tactician.Load();
+            tactician.ApplyStartGameEffect();
+        }
         Save();
     }
     public void SaveFromPrepManager(AutoChessPrepManager prepManager)

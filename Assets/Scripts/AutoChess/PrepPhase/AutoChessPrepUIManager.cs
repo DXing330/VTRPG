@@ -11,6 +11,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
     public List<MapTile> mapSlots;
     public SpriteContainer tileSprites;
     public SpriteContainer masterSprites;
+    public bool PVP = false;
     public Sprite castleSprite;
     public GameObject actorDisplayObject;
     public AutoActorDisplay actorDisplay;
@@ -61,7 +62,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
         for (int i = 0; i < prepManager.benchSlots.Count; i++)
         {
             int benchIndex = prepManager.benchSlots[i].GetLocation();
-            benchSlots[benchIndex].UpdateBenchSlot(prepManager.benchSlots[i].GetBaseStatString());
+            benchSlots[benchIndex].UpdateBenchSlot(prepManager.benchSlots[i]);
         }
         UpdateMap(prepManager);
         roundText.text = dataManager.GetRound().ToString();
@@ -89,6 +90,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
         {
             mapSlots[i].UpdateText();
             mapSlots[i].ResetDirectionArrows();
+            mapSlots[i].ResetHealthBar();
             mapSlots[i].ResetHighlight();
             // Reset Actors.
             mapSlots[i].ResetLayerSprite(2);
@@ -113,10 +115,16 @@ public class AutoChessPrepUIManager : MonoBehaviour
                 masterSprites.ApplyToImage(mapSlots[location].GetEquipSlotImage(j), equipNames[j]);
             }
         }
-        int castleTile = prepManager.GetCastleTile();
-        mapSlots[castleTile].UpdateLayerSprite(castleSprite, 1);
-        HighlightEnemySpawnZone(prepManager);
-        List<int> spawnTiles = prepManager.GetSpawnTiles();
+        if (!PVP)
+        {
+            int castleTile = prepManager.GetCastleTile();
+            mapSlots[castleTile].UpdateLayerSprite(castleSprite, 1);
+            HighlightEnemySpawnZone(prepManager);
+        }
+        else
+        {
+            
+        }
     }
     public void HighlightEnemySpawnZone(AutoChessPrepManager prepManager)
     {

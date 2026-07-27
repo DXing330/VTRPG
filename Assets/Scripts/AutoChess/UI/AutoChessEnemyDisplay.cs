@@ -36,7 +36,7 @@ public class AutoChessEnemyDisplay : MonoBehaviour
         {
             CountEnemy(allEnemies[i]);
         }
-        for (int i = 0; i < enemies.Count; i++)
+        for (int i = 0; i < Mathf.Min(enemies.Count, enemySlots.Count); i++)
         {
             enemySlots[i].UpdateSlot(enemies[i], enemyCount[i]);
         }

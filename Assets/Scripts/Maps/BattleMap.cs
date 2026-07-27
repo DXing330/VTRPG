@@ -52,6 +52,21 @@ public class BattleMap : MapManager
     public ActiveManager activeManager;
     public MapPatternLocations mapPatterns;
     public StatusDetailViewer detailViewer;
+    public void EnsureUniqueActorToTile(TacticActor actor)
+    {
+        List<TacticActor> overlappingActors = new List<TacticActor>();
+        int location = actor.GetLocation();
+        for (int i = 0; i < battlingActors.Count; i++)
+        {
+            if (battlingActors[i] == actor || battlingActors[i].GetLocation() != location){continue;}
+            overlappingActors.Add(battlingActors[i]);
+        }
+        for (int i = 0; i < overlappingActors.Count; i++)
+        {
+            int newLocation = GetClosestEmptyTile(overlappingActors[i]);
+            MoveActorToTile(overlappingActors[i], newLocation, true);
+        }
+    }
     public void ActorStartsTurn(TacticActor actor)
     {
         ApplyWeatherStartEffect(actor);
@@ -59,6 +74,8 @@ public class BattleMap : MapManager
         ApplyBuildingStartEffect(actor);
         ApplyTerrainStartEffect(actor);
         ApplyAuraEffects(actor, "Start");
+        // Ensure Each Actor Is On A Unique Tile, If Needed And Possible.
+        EnsureUniqueActorToTile(actor);
     }
     public void ActorEndsTurn(TacticActor actor)
     {
@@ -622,7 +639,7 @@ public class BattleMap : MapManager
             int akRaidTile = battleMapUtility.AKRaidMove(actor, this);
             if (akRaidTile >= 0)
             {
-                MoveActorToTile(actor, akRaidTile);
+                MoveActorToTile(actor, akRaidTile, true);
             }
             // Else return, don't try to move if there's no valid target.
             return;
@@ -630,7 +647,7 @@ public class BattleMap : MapManager
         int rTile = mapUtility.PointInDirection(actor.GetLocation(), direction, mapSize);
         if (GetActorOnTile(rTile) == null)
         {
-            MoveActorToTile(actor, rTile);
+            MoveActorToTile(actor, rTile, true);
         }
     }
     public void SwitchActorLocations(TacticActor actor1, TacticActor actor2)
@@ -818,7 +835,7 @@ public class BattleMap : MapManager
     {
         List<TacticActor> actors = AllEnemies(actor);
         if (actors.Count <= 0){return null;}
-        int index = -1;
+        int index = 0;
         int statAmount = -1;
         if (!highest)
         {
@@ -2122,9 +2139,12 @@ public class BattleMap : MapManager
         battleMapUtility.MoveThroughSkill(mover, tile, this);
     }
     // ALL Movement Should Go Through Here.
-    public void MoveActorToTile(TacticActor actor, int tile)
+    public void MoveActorToTile(TacticActor actor, int tile, bool forced = false)
     {
-        actor.SetDirection(mapUtility.DirectionBetweenLocations(actor.GetLocation(), tile, mapSize));
+        if (!forced)
+        {
+            actor.SetDirection(mapUtility.DirectionBetweenLocations(actor.GetLocation(), tile, mapSize));
+        }
         actor.SetLocation(tile);
         ApplyMovePassiveEffects(actor, tile);
         UpdateMap();

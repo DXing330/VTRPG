@@ -15,7 +15,6 @@ public class EffectManager : ScriptableObject
     // Condition is a bad name, since passives have conditions to activate.
     public Condition status;
     public StatDatabase statusData;
-
     public void StartBattle(TacticActor actor, BattleMap map)
     {
         passive.ApplyStartBattlePassives(actor, map);

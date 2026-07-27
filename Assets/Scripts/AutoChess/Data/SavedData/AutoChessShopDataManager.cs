@@ -15,6 +15,7 @@ public class AutoChessShopDataManager : SavedData
     {
         logData.AddLog(newLog);
     }
+    public AutoChessTactician tactician;
     public StatDatabase unitData;
     public StatDatabase unitRarity;
     public RNGUtility autoChessShopRNG;
@@ -88,13 +89,14 @@ public class AutoChessShopDataManager : SavedData
     // Rebuilt During New Game.
     // All Actors Either Exist In The Bench/Pool/Listing.
     public List<string> currentPool;
-    public void RemoveFromPool(string newData)
+    public bool RemoveFromPool(string newData)
     {
         int indexOf = currentPool.IndexOf(newData);
-        if (indexOf < 0){return;}
+        if (indexOf < 0){return false;}
         currentPool.RemoveAt(indexOf);
         currentPoolRarity.RemoveAt(indexOf);
         currentPoolFactions.RemoveAt(indexOf);
+        return true;
     }
     // When Selling/Rerolling.
     public void AddToPool(string newData, int level = 1)
@@ -161,6 +163,35 @@ public class AutoChessShopDataManager : SavedData
         return actorName;
     }
     public List<string> currentListing;
+    public void ModifyCurrentList(int index, string effect, string specifics)
+    {
+        string original = currentListing[index];
+        AddToPool(currentListing[index]);
+        currentListing.RemoveAt(index);
+        string newRoll = original;
+        switch (effect)
+        {
+            case "Faction":
+            newRoll = ReturnRandomActorFromFaction(specifics);
+            break;
+            case "Copy":
+            string copy = currentListing[int.Parse(specifics)];
+            if (RemoveFromPool(copy))
+            {
+                newRoll = copy;
+            }
+            break;
+        }
+        if (newRoll != original)
+        {
+            logData.AddLog(newRoll + " Added To Shop Listing");
+        }
+        else
+        {
+            logData.AddLog("Unable To Find Replacement");
+        }
+        currentListing.Insert(index, newRoll);
+    }
     public void GenerateCurrentListing()
     {
         logData.AddLog("Generating New Shop Listing");
@@ -176,6 +207,10 @@ public class AutoChessShopDataManager : SavedData
             string newRoll = ReturnRandomActorFromPool(ReturnCurrentPoolOfRarity(DetermineRarity()));
             logData.AddLog(newRoll + " Added To Shop");
             currentListing.Add(newRoll);
+        }
+        if (tactician != null)
+        {
+            tactician.ApplyRerollEffect(this);
         }
     }
     public List<string> GetCurrentListing(){return currentListing;}

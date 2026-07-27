@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class AutoChessMapDisplay : MapManager
 {
+    public bool PVP = false;
     public int GetCastleTile()
     {
         int column = 0; // Left Side.
@@ -20,7 +21,9 @@ public class AutoChessMapDisplay : MapManager
             mapInfo.Add(newMap.tiles[i].ToString());
         }
         UpdateMap();
-        // Add The Castle?
-        mapTiles[GetCastleTile()].UpdateText("Castle");
+        if (!PVP)
+        {
+            mapTiles[GetCastleTile()].UpdateText("Castle");
+        }
     }
 }

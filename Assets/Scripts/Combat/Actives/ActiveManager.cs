@@ -29,7 +29,7 @@ public class ActiveManager : MonoBehaviour
         List<string> effects = magicSpell.GetAllEffects();
         for (int i = 0; i < effects.Count; i++)
         {
-            ApplyActiveEffects(targets, effects[i], magicSpell.GetSpecificsAt(i), magicSpell.GetPowerAt(i), magicSpell.GetSelectedTile(), true);
+            ApplyActiveEffects(targets, effects[i], magicSpell.GetSpecificsAt(i), magicSpell.GetPowerStringAt(i), magicSpell.GetSelectedTile(), true);
         }
     }
     public ActiveSkill active;
@@ -130,10 +130,10 @@ public class ActiveManager : MonoBehaviour
         }
         return map.mapUtility.GetTilesByShapeSpan(startTile, shape, range, map.mapSize, skillUser.GetLocation());
     }
-    protected void ApplyActiveEffects(List<TacticActor> targets, string effect, string specifics, int power, int selectedTile = -1, bool spellCast = false)
+    protected void ApplyActiveEffects(List<TacticActor> targets, string effect, string specifics, string powerString, int selectedTile = -1, bool spellCast = false)
     {
         int targetTile = -1;
-        string powerString = power.ToString();
+        int power = utility.SafeParseInt(powerString, 1);
         // There are some effects that naturally target a specific group of actors.
         if (effect.Contains("AllSpritesEquals"))
         {
@@ -857,7 +857,7 @@ public class ActiveManager : MonoBehaviour
         List<string> effects = active.GetAllEffects();
         for (int i = 0; i < effects.Count; i++)
         {
-            ApplyActiveEffects(targets, effects[i], active.GetSpecificsAt(i), active.GetPowerAt(i), active.GetSelectedTile());
+            ApplyActiveEffects(targets, effects[i], active.GetSpecificsAt(i), active.GetPowerStringAt(i), active.GetSelectedTile());
         }
         passive.ApplyAfterSkillPassives(skillUser, targets, map, active, temp);
         map.ApplyAuraEffects(skillUser, "Skill");

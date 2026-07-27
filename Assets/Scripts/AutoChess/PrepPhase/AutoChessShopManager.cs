@@ -5,9 +5,9 @@ using UnityEngine;
 public class AutoChessShopManager : MonoBehaviour
 {
     public AutoChessShopDataManager shopData;
-    public void RemoveFromPool(string actorName)
+    public bool RemoveFromPool(string actorName)
     {
-        shopData.RemoveFromPool(actorName);
+        return shopData.RemoveFromPool(actorName);
     }
     public AutoChessShopDisplay UI;
     public StatDatabase actorData;

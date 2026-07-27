@@ -77,8 +77,11 @@ public class AutoChessSettingsDataManager : SavedData
         allData += "Map=" + selectedMap + delimiter;
         allData += "Tactician=" + selectedTactician + delimiter;
         File.WriteAllText(dataPath, allData);
-        tactician.SetTactician(selectedTactician);
-        tactician.Save();
+        if (tactician != null)
+        {
+            tactician.SetTactician(selectedTactician);
+            tactician.Save();
+        }
     }
     public override void Load()
     {

@@ -34,7 +34,7 @@ public class ActiveDetailViewerSwitch : ScriptableObject
         List<string> effects = activeSkill.GetAllEffects();
         for (int i = 0; i < effects.Count; i++)
         {
-            activeDescription += AED(effects[i], activeSkill.GetSpecificsAt(i), activeSkill.GetPowerAt(i).ToString());
+            activeDescription += AED(effects[i], activeSkill.GetSpecificsAt(i), activeSkill.GetPowerStringAt(i));
             if (i < effects.Count - 1)
             {
                 activeDescription += "\n";

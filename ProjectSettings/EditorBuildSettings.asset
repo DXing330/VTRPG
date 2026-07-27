@@ -35,15 +35,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Hiring.unity
     guid: a148008320739a64a86dd590e3ef7984
-  - enabled: 0
-    path: Assets/Scenes/MageTower.unity
-    guid: f3a13cf6e491aa945a4d1589f735b18d
-  - enabled: 0
-    path: Assets/Scenes/Market.unity
-    guid: dde7a8be122336e4886f6f59065ca249
-  - enabled: 0
-    path: Assets/Scenes/RequestBoard.unity
-    guid: 9a2aaecae942e28499ca5bd689311f7c
   - enabled: 1
     path: Assets/Scenes/MainScenes/Storage.unity
     guid: c3e4b73663dc03f429f84ac7b8d00054
@@ -51,20 +42,11 @@ EditorBuildSettings:
     path: Assets/Scenes/MainScenes/TrainingGrounds.unity
     guid: 34ec3d98ee791b44c87cec939e88b179
   - enabled: 1
-    path: Assets/Scenes/_EditorDebugScenes/ManualBattleSimulator.unity
-    guid: 3ee00250de6e9734ab99681a5fa2b126
-  - enabled: 1
-    path: Assets/Scenes/_EditorDebugScenes/MapEditor.unity
-    guid: c7766102859c18b42bcdf1290d7f0778
-  - enabled: 1
     path: Assets/Scenes/RogueLikeScenes/StSMap.unity
     guid: 309210a694c2c304cabc23f1e5d66ec0
   - enabled: 1
     path: Assets/Scenes/RogueLikeScenes/StSBattle.unity
     guid: 261aa1ca6501a2443993bc1524c9eb36
-  - enabled: 1
-    path: Assets/Scenes/_EditorDebugScenes/BattleEditor.unity
-    guid: 338a60c2e3ce03e4a95704a7c185f92d
   - enabled: 1
     path: Assets/Scenes/RogueLikeScenes/StSBattleReward.unity
     guid: 2614a09bd9b0a234eb9cf5be8c86f2a2
@@ -83,4 +65,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/AutoChess/AutoStart.unity
     guid: 4bd25d6c1001da3419cc2e8c50d6a728
+  - enabled: 1
+    path: Assets/Scenes/AutoChess/PvP/PVPAutoScene.unity
+    guid: f22b200579056614abfb5e29ea0929b5
+  - enabled: 1
+    path: Assets/Scenes/AutoChess/PvP/PVPAutoStart.unity
+    guid: b8fb7783ce630804caaecf95a881fb47
   m_configObjects: {}

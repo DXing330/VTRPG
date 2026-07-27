@@ -148,6 +148,20 @@ public class MapTile : MonoBehaviour
         // Anything besides blank is a border.
         return borderDetails[direction] != "";
     }
+    public GameObject healthBarObject;
+    public void ResetHealthBar()
+    {
+        healthBarObject.SetActive(false);
+    }
+    public RectTransform healthBar;
+    public void UpdateHealthBar(int currentHealth, int maxHealth)
+    {
+        healthBarObject.SetActive(true);
+        float percent = Mathf.Clamp01((float)currentHealth / maxHealth);
+        Vector3 scale = healthBar.localScale;
+        scale.x = percent;
+        healthBar.localScale = scale;
+    }
     public TMP_Text tileText;
     public GameObject textObject;
     public void UpdateText(string newText = "")

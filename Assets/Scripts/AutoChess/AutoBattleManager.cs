@@ -83,7 +83,6 @@ public class AutoBattleManager : MonoBehaviour
             {
                 aegirRevives--;
                 map.ResurrectActor(map.battlingActors[i]);
-                Debug.Log("Aegir Revive Used On " + map.battlingActors[i].GetSpriteName());
                 continue;
             }
             if (generalRevives > 0)
@@ -125,6 +124,7 @@ public class AutoBattleManager : MonoBehaviour
         List<string> fieldActors = data.GetFieldActorData();
         for (int i = 0; i < fieldActors.Count; i++)
         {
+            if (fieldActors[i].Length <= 0){continue;}
             AutoActor newActor = actorMaker.CreateActor(fieldActors[i]);
             // Track The Actors.
             allAutoActors.Add(newActor);
@@ -165,7 +165,13 @@ public class AutoBattleManager : MonoBehaviour
         }
         // Make The Castle.
         map.AddBuilding("Castle", CastleTile());
-        map.SetBuildingHealthAndDefense(CastleTile(), 300, 5);
+        int castleHealth = 300;
+        // If Last Round Then Castle Is All Health.
+        if (data.LastBattle())
+        {
+            castleHealth = data.GetHealth() * 30;
+        }
+        map.SetBuildingHealthAndDefense(CastleTile(), castleHealth, 5);
         // Update The MoveCostManager From The Map.
         moveManager.UpdateInfoFromBattleMap(map);
         // Spawn The First Wave Of Enemies.
@@ -274,7 +280,6 @@ public class AutoBattleManager : MonoBehaviour
         actor.UpdateEnergy(1);
         effectManager.StartTurn(actor, map);
         // Show Start Stats.
-        map.UpdateCombatLog("StartTurn Stats - " + actor.ReturnBasicStatString());
         // If Stunned Then Stop.
         if (actor.StatusExists("Stun"))
         {
@@ -306,8 +311,6 @@ public class AutoBattleManager : MonoBehaviour
         }
         actor.EndTurn();
         effectManager.EndTurn(actor, map);
-        // Show End Stats.
-        map.UpdateCombatLog("EndTurn Stats - " + actor.ReturnBasicStatString());
         map.UpdateMap();
     }
     public void EndRound()
@@ -351,6 +354,8 @@ public class AutoBattleManager : MonoBehaviour
             map.UpdateCombatLog(actor.GetPersonalName() + " attacks the castle");
             actor.UpdateRoundAttackTracker();
             map.DamageTileBuilding(castleTile, actor, actor.GetAttack());
+            // Castle Will Do Some Reflect Damage.
+            actor.UpdateHealth(map.GetBuildingDefenseOnLocation(castleTile));
             EndTurn(actor);
             return;
         }
@@ -564,7 +569,6 @@ public class AutoBattleManager : MonoBehaviour
         {
             aegirRevives--;
             map.ResurrectActor(actor);
-            Debug.Log("Aegir Revive Used On " + actor.GetSpriteName());
             return;
         }
         if (generalRevives > 0)
