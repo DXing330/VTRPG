@@ -20,6 +20,10 @@ public class AutoChessShopDataManager : SavedData
     public StatDatabase unitRarity;
     public RNGUtility autoChessShopRNG;
     public int shopLevel;
+    public int GetShopLevel()
+    {
+        return shopLevel;
+    }
     public override void LevelUp()
     {
         shopLevel++;
@@ -42,28 +46,32 @@ public class AutoChessShopDataManager : SavedData
     // 10-15-25-25-15-10
     readonly int[,] rarityWeights =
     {
-        { 80, 20,  0,  0,  0,  0}, // Level 1
-        { 60, 30, 10,  0,  0,  0}, // Level 2
-        { 40, 30, 20, 10,  0,  0}, // Level 3
-        { 30, 25, 25, 15,  5,  0}, // Level 4
-        { 20, 20, 25, 20, 10,  5}, // Level 5
-        { 10, 15, 25, 25, 15, 10}  // Level 6
+        { 100, 0,  0,  0,  0,  0}, // Level 1
+        { 70, 30,  0,  0,  0,  0}, // Level 2
+        { 50, 30, 20,  0,  0,  0}, // Level 3
+        { 30, 30, 20, 20,  0,  0}, // Level 4
+        { 20, 30, 20, 20, 10,  0}, // Level 5
+        { 20, 20, 25, 20, 10,  5}, // Level 6
+        { 10, 15, 25, 25, 15, 10}, // Level 7
+        {  5,  5, 25, 30, 20, 15}, // Level 8
+        {  5,  5, 20, 25, 25, 20}, // Level 9
+        {  5,  5, 15, 20, 30, 25}  // Level 10
     };
     [ContextMenu("Test Rarity Distribution")]
     public void TestRarityDistribution()
     {
-        for (int j = 1; j < 7; j++)
+        for (int j = 1; j <= rarityWeights.GetLength(0); j++)
         {
             shopLevel = j;
             int rolls = 100000;
-            int[] counts = new int[6];
+            int[] counts = new int[rarityWeights.GetLength(1)];
             for (int i = 0; i < rolls; i++)
             {
                 int rarity = DetermineRarity();
                 counts[rarity - 1]++;
             }
             Debug.Log("Shop Level: " + shopLevel);
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < rarityWeights.GetLength(1); i++)
             {
                 float percent = counts[i] * 100f / rolls;
                 Debug.Log("Rarity " + (i + 1) + ": " + percent + "%");
@@ -73,10 +81,10 @@ public class AutoChessShopDataManager : SavedData
     }
     protected int DetermineRarity()
     {
-        int levelIndex = Mathf.Clamp(shopLevel - 1, 0, 5);
+        int levelIndex = Mathf.Clamp(GetShopLevel() - 1, 0, rarityWeights.GetLength(0) - 1);
         int roll = autoChessShopRNG.SeedRange(0, 100);
         int cumulative = 0;
-        for (int rarity = 0; rarity < 6; rarity++)
+        for (int rarity = 0; rarity < rarityWeights.GetLength(1); rarity++)
         {
             cumulative += rarityWeights[levelIndex, rarity];
             if (roll < cumulative)
@@ -142,7 +150,7 @@ public class AutoChessShopDataManager : SavedData
         for (int i = 0; i < currentPoolFactions.Count; i++)
         {
             // Can't Get Higher Rarity Than Shop Level.
-            if (int.Parse(currentPoolRarity[i]) > shopLevel){continue;}
+            if (int.Parse(currentPoolRarity[i]) > GetShopLevel()){continue;}
             string[] factionBlocks = currentPoolFactions[i].Split(",");
             if (!factionBlocks.Contains(faction)){continue;}
             pool.Add(currentPool[i]);
@@ -153,12 +161,42 @@ public class AutoChessShopDataManager : SavedData
     {
         return ReturnRandomActorFromPool(ReturnCurrentPoolOfFaction(faction));
     }
+    public string ReturnRandomActorFromFactionAndRarity(string faction, int rarity)
+    {
+        List<string> factionPool = ReturnCurrentPoolOfFaction(faction);
+        for (int i = factionPool.Count - 1; i >= 0; i--)
+        {
+            if (int.Parse(unitRarity.ReturnValue(factionPool[i])) < rarity)
+            {
+                factionPool.RemoveAt(i);
+            }
+        }
+        return ReturnRandomActorFromPool(factionPool);
+    }
+    public string ReturnRandomActor()
+    {
+        List<string> randomPool = new List<string>(currentPool);
+        for (int i = currentPool.Count - 1; i >= 0; i--)
+        {
+            if (int.Parse(currentPoolRarity[i]) > GetShopLevel())
+            {
+                randomPool.RemoveAt(i);
+            }
+        }
+        return ReturnRandomActorFromPool(randomPool);
+    }
     // Consumes The Actor From The Listing Automatically.
     public string ReturnRandomActorFromPool(List<string> pool)
     {
-        if (pool.Count <= 0){return currentPool[0];}
+        string actorName = currentPool[0];
+        if (pool.Count <= 0)
+        {
+            logData.AddLog("Empty Pool - Using Default Value");
+            RemoveFromPool(actorName);
+            return actorName;
+        }
         int roll = autoChessShopRNG.SeedRange(0, pool.Count);
-        string actorName = pool[roll];
+        actorName = pool[roll];
         RemoveFromPool(actorName);
         return actorName;
     }
@@ -192,7 +230,7 @@ public class AutoChessShopDataManager : SavedData
         }
         currentListing.Insert(index, newRoll);
     }
-    public void GenerateCurrentListing()
+    public void GenerateCurrentListing(bool reroll = false)
     {
         logData.AddLog("Generating New Shop Listing");
         for (int i = 0; i < currentListing.Count; i++)
@@ -201,14 +239,14 @@ public class AutoChessShopDataManager : SavedData
         }
         currentListing.Clear();
         // Determine How Many Slots Are Available.
-        int availableSlots = 3 + shopLevel / 2;
+        int availableSlots = Mathf.Min(6, 3 + GetShopLevel() / 3);
         for (int i = 0; i < availableSlots; i++)
         {
             string newRoll = ReturnRandomActorFromPool(ReturnCurrentPoolOfRarity(DetermineRarity()));
             logData.AddLog(newRoll + " Added To Shop");
             currentListing.Add(newRoll);
         }
-        if (tactician != null)
+        if (tactician != null && reroll)
         {
             tactician.ApplyRerollEffect(this);
         }
@@ -247,18 +285,18 @@ public class AutoChessShopDataManager : SavedData
         List<string> allNames = unitData.GetAllKeys();
         for (int i = 0; i < allNames.Count; i++)
         {
-            // 4, 6, 8, 10, 12, 14 of each unit.
+            // 6, 12, 18, 24, 30, 36 of each unit.
             int rarity = int.Parse(unitRarity.ReturnValue(allNames[i]));
             string[] dataBlocks = unitData.ReturnValue(allNames[i]).Split("|");
-            for (int j = 0; j < 16 - 2 * rarity; j++)
+            for (int j = 0; j < 42 - 6 * rarity; j++)
             {
                 currentPool.Add(allNames[i]);
                 currentPoolRarity.Add(rarity.ToString());
                 currentPoolFactions.Add(dataBlocks[0]);
             }
         }
-        GenerateCurrentListing();
         autoChessShopRNG.NewGame();
+        GenerateCurrentListing();
         Save();
     }
     public override void Save()

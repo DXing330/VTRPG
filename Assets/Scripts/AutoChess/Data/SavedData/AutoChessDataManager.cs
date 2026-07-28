@@ -23,7 +23,7 @@ public class AutoChessDataManager : SavedData
     public List<string> GetAllFactions(){return factionData.GetAllFactions();}
     public List<string> GetAllFactionStacks(){return factionData.GetAllFactionStacks();}
     public string delimiter2;
-    protected int maxLevel = 6;
+    protected int maxLevel = 10;
     public bool MaxLevel(){return level >= maxLevel;}
     public int level;
     public int GetLevel(){return level;}
@@ -55,7 +55,7 @@ public class AutoChessDataManager : SavedData
     }
     public int ExpToLevelUp()
     {
-        return (2) * (level + 1) * (level + 1);
+        return (level + 1) * (level + 1);
     }
     public void GainExp(int amount)
     {
@@ -154,7 +154,7 @@ public class AutoChessDataManager : SavedData
     {
         totalSpentGold = amount;
     }
-    public int GetTotalGold(){return totalSpentGold;}
+    public int GetTotalGoldSpent(){return totalSpentGold;}
     public int health;
     public int GetHealth(){return health;}
     public void SetHealth(int newInfo)
@@ -331,7 +331,7 @@ public class AutoChessDataManager : SavedData
         level = 1;
         exp = 0;
         gold = 10;
-        health = 100;
+        health = 60;
         round = 1;
         nextRoundGold = 0;
         startRoundForesightStacks = 0;

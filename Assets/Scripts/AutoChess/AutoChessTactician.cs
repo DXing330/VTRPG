@@ -84,12 +84,11 @@ public class AutoChessTactician : SavedData
         switch (tacticianName)
         {
             case "DuYaoye":
-            if (roundRerollCount > 0){return;}
+            if (roundRerollCount > 1){return;}
             AddLog();
             shopData.ModifyCurrentList(0, "Faction", "Yan");
             return;
             case "Orchid":
-            if (roundRerollCount > 1){return;}
             AddLog();
             shopData.ModifyCurrentList(1, "Copy", "0");
             return;
@@ -97,18 +96,37 @@ public class AutoChessTactician : SavedData
             if (roundRerollCount > 0){return;}
             AddLog();
             shopData.ModifyCurrentList(0, "Faction", "Sargon");
+            shopData.ModifyCurrentList(1, "Faction", "Sargon");
             return;
         }
     }
     // Kirara, Paganini
-    public void ApplySpendGoldEffect()
+    public void ApplySpendGoldEffect(AutoChessPrepManager prepManager, int amount)
     {
         if (tacticianTiming != "SpendGold"){return;}
+        int afterSpendGold = dataManager.GetTotalGoldSpent();
+        int beforeSpendGold = afterSpendGold - amount;
         switch (tacticianName)
         {
             case "Kirara":
+            int beforeStacks = beforeSpendGold / 20;
+            int afterStacks = afterSpendGold / 20;
+            int difference = afterStacks - beforeStacks;
+            if (difference > 0)
+            {
+                for (int i = 0; i < difference; i++)
+                {
+                    AddLog();
+                    prepManager.GainRandomActor();
+                }
+            }
             break;
             case "Paganini":
+            if (beforeSpendGold < 60 && afterSpendGold >= 60)
+            {
+                AddLog();
+                prepManager.GainActorOfFactionAndRarity("Laterano", 4, 2);
+            }
             break;
         }
     }
@@ -199,8 +217,11 @@ public class AutoChessTactician : SavedData
         switch (tacticianName)
         {
             case "Goliath":
+            int newHealth = dataManager.GetHealth() * 150 / 100;
+            dataManager.SetHealth(newHealth);
             break;
             case "Malkiewicz":
+            dataManager.GainEquipment("Commercial Packaging Plan");
             break;
             case "Pith":
             AutoActorRollUpData pithUnit = new AutoActorRollUpData();
@@ -222,7 +243,7 @@ public class AutoChessTactician : SavedData
         }
     }
     // Amiya, Ermengarde, Eunectes
-    public void ApplyStartBattleEffect(List<TacticActor> allies)
+    public void ApplyStartBattleEffect(AutoBattleManager battleManager, List<TacticActor> allies)
     {
         if (tacticianTiming != "StartBattle"){return;}
         switch (tacticianName)

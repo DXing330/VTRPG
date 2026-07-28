@@ -60,7 +60,7 @@ public class AutoChessShopManager : MonoBehaviour
     public void Reroll()
     {
         ResetSelected();
-        shopData.GenerateCurrentListing();
+        shopData.GenerateCurrentListing(true);
         UpdateAutoChessShopUI();
     }
     public int GetFrozen(){return shopData.frozenShop;}

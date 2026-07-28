@@ -13,6 +13,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
     public SpriteContainer masterSprites;
     public bool PVP = false;
     public Sprite castleSprite;
+    public Color spawnZoneColor;
     public GameObject actorDisplayObject;
     public AutoActorDisplay actorDisplay;
     public AutoChessEquipmentDisplay equipDisplay;
@@ -98,7 +99,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
             mapSlots[i].ResetLayerSprite(3);
             mapSlots[i].ResetAutoChessEquipment();
         }
-        // Display The Actors (As Text For Now).
+        // Display The Actors.
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
             int location = prepManager.fieldSlots[i].GetLocation();
@@ -131,8 +132,16 @@ public class AutoChessPrepUIManager : MonoBehaviour
         List<int> spawnTiles = prepManager.GetSpawnTiles();
         for (int i = 0; i < spawnTiles.Count; i++)
         {
-            mapSlots[spawnTiles[i]].HighlightTile(Color.red);
+            mapSlots[spawnTiles[i]].HighlightTile(spawnZoneColor);
+            // Show Bonus Slots
+            if (i < prepManager.bonusSlots.Count)
+            {
+                string name = prepManager.bonusSlots[i].GetName();
+                mapSlots[spawnTiles[i]].ActivateLayerSprite(2);
+                masterSprites.ApplyToImage(mapSlots[spawnTiles[i]].GetLayerSprite(2), name);
+            }
         }
+
     }
     public void HighlightSelectedAttackRange(AutoChessPrepManager prepManager, AutoActorRollUpData actor)
     {
