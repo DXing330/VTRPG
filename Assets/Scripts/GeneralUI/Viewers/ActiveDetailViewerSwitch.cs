@@ -86,6 +86,8 @@ public class ActiveDetailViewerSwitch : ScriptableObject
                     return "Move the target(s) sideways with " + APD(p) + " additional force.";
                 }
                 return ASD(s) + " the target(s) with " + APD(p) + " additional force.";
+            case "Grab":
+                return "Grab the " + APD(p) + " " + ASD(s) + " and place them on the forward tile.";
             case "Teleport":
                 return "Move to the targeted tile.";
             case "TeleportTarget":

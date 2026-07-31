@@ -8,6 +8,8 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AutoChessDataManager", menuName = "ScriptableObjects/AutoChess/AutoChessDataManager", order = 1)]
 public class AutoChessDataManager : SavedData
 {
+    public bool playerData = false;
+    public bool PlayerData(){return playerData;}
     public List<SavedData> subDataManagers;
     public AutoChessTactician tactician;
     public AutoChessFactionDataManager factionData;
@@ -39,10 +41,6 @@ public class AutoChessDataManager : SavedData
         if (exp >= expToLevel)
         {
             level++;
-            for (int i = 0; i < subDataManagers.Count; i++)
-            {
-                subDataManagers[i].LevelUp();
-            }
             AddLog("Leveled Up! (" + (level - 1) + "->" + level + ")");
             exp -= expToLevel;
         }
@@ -86,6 +84,11 @@ public class AutoChessDataManager : SavedData
         // Gain More Gold As The Rounds Go On.
         gain += 6 + (round / 2);
         gain += GetNextRoundGold();
+        // Gain Gold For Win/Loss Streaks.
+        if (streak > 2)
+        {
+            gain += Mathf.Min(5, streak);
+        }
         SetNextRoundGold(0);
         GainGold(gain);
     }
@@ -172,10 +175,52 @@ public class AutoChessDataManager : SavedData
     {
         round = newInfo;
     }
-    public override void NewRound()
+    // 0 = Win, 1 = Loss
+    public int lastRoundResult;
+    public void SetLastRoundResult(int result)
+    {
+        lastRoundResult = result;
+    }
+    public int streak;
+    public void SetStreak(int newStreak)
+    {
+        streak = newStreak;
+    }
+    public int GetWinStreak()
+    {
+        if (lastRoundResult == 1){return 0;}
+        return streak;
+    }
+    public int GetLossStreak()
+    {
+        if (lastRoundResult == 0){return 0;}
+        return streak;
+    }
+    public void UpdateLastRoundResult(int result)
+    {
+        if (result < 0)
+        {
+            streak = 0;
+            return;
+        }
+        if (result == lastRoundResult)
+        {
+            streak++;
+        }
+        else
+        {
+            streak = 0;
+            lastRoundResult = result;
+        }
+    }
+    public void NewRound(int result = -1)
     {
         round++;
         AddLog("--- Round " + round + " Begins ---");
+        if (result >= 0)
+        {
+            UpdateLastRoundResult(result);
+        }
         GainGoldAfterBattle();
         GainExpAfterBattle();
         GainGoldFromFaction(); // Foresight.
@@ -183,6 +228,7 @@ public class AutoChessDataManager : SavedData
         roundGainedActors = 0;
         roundRerolls = 0;
         roundSpentGold = 0;
+        roundSoldActors = 0;
         GainEquipmentDrops();
         for (int i = 0; i < subDataManagers.Count; i++)
         {
@@ -190,6 +236,10 @@ public class AutoChessDataManager : SavedData
         }
     }
     public List<string> benchActorData;
+    public List<string> GetBenchActorData()
+    {
+        return benchActorData;
+    }
     // Used By Tacticians.
     public void AddActorToBench(string newActorData)
     {
@@ -221,13 +271,23 @@ public class AutoChessDataManager : SavedData
     {
         roundGainedActors++;
     }
+    public int roundSoldActors;
+    public void SetRoundSold(int amount)
+    {
+        roundSoldActors = amount;
+    }
+    public int GetRoundSold(){return roundSoldActors;}
+    public void SellActor()
+    {
+        roundSoldActors++;
+    }
     public int mapSize = 7;
     public List<string> mapTiles;
     public List<string> GetMapTiles(){return mapTiles;}
     public List<string> mapTerrain;
     public List<string> GetMapTerrain(){return mapTerrain;}
     public StatDatabase equipmentRarity;
-    public RNGUtility shopRNG;
+    public RNGUtility RNG;
     // Get 2 Random Equipment At The Start Of The Game.
     public List<string> GenerateEquipmentOfRarity(int rarity = 1, int quantity = 1)
     {
@@ -235,7 +295,7 @@ public class AutoChessDataManager : SavedData
         List<string> generatedEquipment = new List<string>();
         for (int i = 0; i < Mathf.Max(1, quantity); i++)
         {
-            generatedEquipment.Add(equipmentOfRarity[shopRNG.SeedRange(0, equipmentOfRarity.Count)]);
+            generatedEquipment.Add(equipmentOfRarity[RNG.SeedRange(0, equipmentOfRarity.Count)]);
         }
         return generatedEquipment;
     }
@@ -333,6 +393,8 @@ public class AutoChessDataManager : SavedData
         gold = 10;
         health = 60;
         round = 1;
+        lastRoundResult = 0;
+        streak = 0;
         nextRoundGold = 0;
         startRoundForesightStacks = 0;
         startRoundMarvelStacks = 0;
@@ -340,6 +402,7 @@ public class AutoChessDataManager : SavedData
         totalSpentGold = 0;
         roundRerolls = 0;
         roundGainedActors = 0;
+        roundSoldActors = 0;
         benchActorData.Clear();
         fieldActorData.Clear();
         mapTiles.Clear(); // All Plains.
@@ -385,6 +448,8 @@ public class AutoChessDataManager : SavedData
         allData += "Gold=" + gold + delimiter;
         allData += "Health=" + health + delimiter;
         allData += "Round=" + round + delimiter;
+        allData += "LastRoundResult=" + lastRoundResult + delimiter;
+        allData += "Streak=" + streak + delimiter;
         allData += "NextRoundGold=" + nextRoundGold + delimiter;
         allData += "Foresight=" + startRoundForesightStacks + delimiter;
         allData += "Marvel=" + startRoundMarvelStacks + delimiter;
@@ -392,6 +457,7 @@ public class AutoChessDataManager : SavedData
         allData += "TotalGold=" + totalSpentGold + delimiter;
         allData += "RoundRerolls=" + roundRerolls + delimiter;
         allData += "RoundActors=" + roundGainedActors + delimiter;
+        allData += "RoundSold=" + roundSoldActors + delimiter;
         allData += "BenchActors=" + String.Join(delimiter2, benchActorData) + delimiter;
         allData += "FieldActors=" + String.Join(delimiter2, fieldActorData) + delimiter;
         allData += "MapTiles=" + String.Join(delimiter2, mapTiles) + delimiter;
@@ -452,6 +518,12 @@ public class AutoChessDataManager : SavedData
             case "Round":
             SetRound(int.Parse(value));
             return;
+            case "LastRoundResult":
+            SetLastRoundResult(int.Parse(value));
+            return;
+            case "Streak":
+            SetStreak(int.Parse(value));
+            return;
             case "NextRoundGold":
             SetNextRoundGold(int.Parse(value));
             return;
@@ -472,6 +544,9 @@ public class AutoChessDataManager : SavedData
             return;
             case "RoundActors":
             SetRoundActors(int.Parse(value));
+            return;
+            case "RoundSold":
+            SetRoundSold(int.Parse(value));
             return;
             case "BenchActors":
             benchActorData = value.Split(delimiter2).ToList();

@@ -8,11 +8,18 @@ using UnityEngine;
 // In charge of managing stacks/determining active factions/assist managing faction effects/assist with trait stacking.
 public class AutoChessFactionManager : MonoBehaviour
 {
-    public AutoChessPrepManager prepManager;
+    public AutoChessDataManager dataManager;
     public AutoChessFactionDataManager factionData;
+    public void SetDataManager(AutoChessDataManager newData)
+    {
+        dataManager = newData;
+        factionData = newData.factionData;
+        factionData.logData = dataManager.logData;
+    }
     public AutoChessFactionDisplay factionDisplay;
     public void UpdateFactionDisplay()
     {
+        if (factionDisplay == null){return;}
         factionDisplay.UpdateFactionDisplay(activeFactions, allFactionsWithUnits);
     }
     public List<string> activeFactions;
@@ -72,15 +79,20 @@ public class AutoChessFactionManager : MonoBehaviour
     public List<string> ReturnAllUnitsOfFaction(string factionName)
     {
         List<string> unitNames = new List<string>();
-        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        List<string> fieldActors = dataManager.GetFieldActorData();
+        AutoActorRollUpData actorRollUp = new AutoActorRollUpData();
+        for (int i = 0; i < fieldActors.Count; i++)
         {
-            if (unitNames.Contains(prepManager.fieldSlots[i].GetName())){continue;}
-            List<string> factions = prepManager.fieldSlots[i].GetFactions();
+            if (fieldActors[i].Length <= 0){continue;}
+            actorRollUp.LoadRollUpData(fieldActors[i]);
+            if (unitNames.Contains(actorRollUp.GetName())){continue;}
+            List<string> factions = actorRollUp.GetFactions();
             if (factions.Contains(factionName))
             {
-                unitNames.Add(prepManager.fieldSlots[i].GetName());
+                unitNames.Add(actorRollUp.GetName());
             }
         }
+        // TODO Include The Bench Slots For Econ Units.
         return unitNames;
     }
     // TODO We Can Hard Check For Emblems First.
@@ -110,27 +122,34 @@ public class AutoChessFactionManager : MonoBehaviour
         activeFactionCounts.Clear();
         allFactionsWithUnits.Clear();
         allFactionCounts.Clear();
-        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        AutoActorRollUpData actorRollUp = new AutoActorRollUpData();
+        List<string> fieldActors = dataManager.GetFieldActorData();
+        for (int i = 0; i < fieldActors.Count; i++)
         {
-            if (uniqueUnitNames.Contains(prepManager.fieldSlots[i].GetName())){continue;}
-            List<string> factions = prepManager.fieldSlots[i].GetFactions();
+            if (fieldActors[i].Length <= 0){continue;}
+            actorRollUp.LoadRollUpData(fieldActors[i]);
+            if (uniqueUnitNames.Contains(actorRollUp.GetName())){continue;}
+            List<string> factions = actorRollUp.GetFactions();
             for (int j = 0; j < factions.Count; j++)
             {
                 UpdateFactionCount(factions[j]);
             }
-            uniqueUnitNames.Add(prepManager.fieldSlots[i].GetName());
+            uniqueUnitNames.Add(actorRollUp.GetName());
         }
+        List<string> benchActors = dataManager.GetBenchActorData();
         // Check Econ Factions On Bench.
-        for (int i = 0; i < prepManager.benchSlots.Count; i++)
+        for (int i = 0; i < benchActors.Count; i++)
         {
-            if (uniqueUnitNames.Contains(prepManager.benchSlots[i].GetName())){continue;}
-            List<string> factions = prepManager.benchSlots[i].GetFactions();
+            if (benchActors[i].Length <= 0){continue;}
+            actorRollUp.LoadRollUpData(benchActors[i]);
+            if (uniqueUnitNames.Contains(actorRollUp.GetName())){continue;}
+            List<string> factions = actorRollUp.GetFactions();
             for (int j = 0; j < factions.Count; j++)
             {
                 if (!factionData.EconFaction(factions[j])){continue;}
                 UpdateFactionCount(factions[j]);
             }
-            uniqueUnitNames.Add(prepManager.benchSlots[i].GetName());
+            uniqueUnitNames.Add(actorRollUp.GetName());
         }
         // Check If The Factions Should Be Active.
         for (int i = 0; i < allFactionsWithUnits.Count; i++)

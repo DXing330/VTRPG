@@ -24,18 +24,18 @@ public class AutoChessShopDataManager : SavedData
     {
         return shopLevel;
     }
-    public override void LevelUp()
+    public void SetShopLevel(int newData)
     {
-        shopLevel++;
+        shopLevel = newData;
+    }
+    public void SetShopLevel(string newData)
+    {
+        shopLevel = utility.SafeParseInt(newData, 1);
     }
     public int frozenShop = 0;
     public void FreezeShop()
     {
         frozenShop = (frozenShop + 1) % 2;
-    }
-    public void SetShopLevel(string newData)
-    {
-        shopLevel = utility.SafeParseInt(newData, 1);
     }
     // Weights Determined By Formula.
     // 80-20-0-0-0-0
@@ -263,6 +263,33 @@ public class AutoChessShopDataManager : SavedData
     public void RemoveFromListing(int index)
     {
         currentListing.RemoveAt(index);
+    }
+    public List<string> PVPCurrentListing;
+    // Only Used By AI During Their Prep Phase.
+    public List<string> GetPVPCurrentListing()
+    {
+        return PVPCurrentListing;
+    }
+    public void RemoveFromPVPListing(int index)
+    {
+        PVPCurrentListing.RemoveAt(index);
+    }
+    public void GeneratePVPCurrentListing(bool reroll = false)
+    {
+        logData.AddLog("Generating New Shop Listing");
+        for (int i = 0; i < PVPCurrentListing.Count; i++)
+        {
+            AddToPool(PVPCurrentListing[i]);
+        }
+        PVPCurrentListing.Clear();
+        // Determine How Many Slots Are Available.
+        int availableSlots = Mathf.Min(6, 3 + GetShopLevel() / 3);
+        for (int i = 0; i < availableSlots; i++)
+        {
+            string newRoll = ReturnRandomActorFromPool(ReturnCurrentPoolOfRarity(DetermineRarity()));
+            logData.AddLog(newRoll + " Added To Shop");
+            PVPCurrentListing.Add(newRoll);
+        }
     }
     public override void NewRound()
     {

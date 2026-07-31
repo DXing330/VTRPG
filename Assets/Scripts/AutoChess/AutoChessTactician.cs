@@ -19,7 +19,7 @@ public class AutoChessTactician : SavedData
     }
     public AutoChessFactionDataManager factionData;
     public StatDatabase tacticianDatabase;
-    public RNGUtility shopRNG;
+    public RNGUtility RNG;
     public string tacticianName;
     public string tacticianTiming;
     public string tacticianDescription;
@@ -76,7 +76,7 @@ public class AutoChessTactician : SavedData
             return;
         }
     }
-    // DuYaoye, Orchid, Pepe
+    // DONE
     public void ApplyRerollEffect(AutoChessShopDataManager shopData)
     {
         if (tacticianTiming != "Reroll"){return;}
@@ -87,6 +87,7 @@ public class AutoChessTactician : SavedData
             if (roundRerollCount > 1){return;}
             AddLog();
             shopData.ModifyCurrentList(0, "Faction", "Yan");
+            shopData.ModifyCurrentList(1, "Faction", "Yan");
             return;
             case "Orchid":
             AddLog();
@@ -97,10 +98,11 @@ public class AutoChessTactician : SavedData
             AddLog();
             shopData.ModifyCurrentList(0, "Faction", "Sargon");
             shopData.ModifyCurrentList(1, "Faction", "Sargon");
+            shopData.ModifyCurrentList(2, "Faction", "Sargon");
             return;
         }
     }
-    // Kirara, Paganini
+    // DONE
     public void ApplySpendGoldEffect(AutoChessPrepManager prepManager, int amount)
     {
         if (tacticianTiming != "SpendGold"){return;}
@@ -130,7 +132,7 @@ public class AutoChessTactician : SavedData
             break;
         }
     }
-    // Warfarin, Justin, Harold, Quintus, Yu, DamaztiIsomorph
+    // DONE
     public void ApplyEndRoundEffect(AutoChessPrepManager prepManager = null)
     {
         if (tacticianTiming != "EndRound"){return;}
@@ -143,7 +145,7 @@ public class AutoChessTactician : SavedData
             case "Justin":
             if ((round - 1) % 3 != 0){return;}
             AddLog();
-            dataManager.GainGold(shopRNG.SeedRange(1, 6));
+            dataManager.GainGold(RNG.SeedRange(1, 6));
             break;
             case "Harold":
             if (round < 4 || round % 2 != 0){return;}
@@ -186,7 +188,7 @@ public class AutoChessTactician : SavedData
         // TODO, Get A List Of The Field Actors, Shuffle, Iterate Through Rarity 1-6, Gain Stacks For The First One Found Of Each Rarity.
         // The DataManager Knows The Most Up To Date Field Actor List.
         List<string> fieldActors = new List<string>(dataManager.GetFieldActorData());
-        shopRNG.ShuffleList(fieldActors);
+        RNG.ShuffleList(fieldActors);
         List<AutoActorRollUpData> fieldActorData = new List<AutoActorRollUpData>();
         for (int i = 0; i < fieldActors.Count; i++)
         {
@@ -210,7 +212,7 @@ public class AutoChessTactician : SavedData
             }
         }
     }
-    // Goliath, Malkiewicz
+    // DONE
     public void ApplyStartGameEffect()
     {
         if (tacticianTiming != "StartGame"){return;}
@@ -249,10 +251,24 @@ public class AutoChessTactician : SavedData
         switch (tacticianName)
         {
             case "Amiya":
+            int activeFactionCount = factionData.GetActiveFactions().Count;
+            if (activeFactionCount < 2){return;}
+            AddLog();
+            int bonusStats = Mathf.Max(50, 15 * (activeFactionCount - 1) + (5 * activeFactionCount / 4));
+            for (int i = 0; i < allies.Count; i++)
+            {
+                allies[i].UpdateBaseAttack(allies[i].GetBaseAttack() * 50 / 100);
+                allies[i].UpdateBaseHealth(allies[i].GetBaseHealth() * 50 / 100);
+                allies[i].UpdateHealth(allies[i].GetBaseHealth() * 50 / 100);
+            }
             break;
             case "Ermengarde":
+            AddLog();
+            battleManager.generalRevives = 2;
             break;
             case "Eunectes":
+            AddLog();
+            battleManager.turretActive = 1;
             break;
         }
     }

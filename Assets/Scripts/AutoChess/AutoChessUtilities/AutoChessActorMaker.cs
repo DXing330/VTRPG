@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class AutoChessActorMaker : ActorMaker
 {
+    public MapUtility mapUtility;
     public PartyData permanentPartyData;
     public StatDatabase actorData;
     public StatDatabase enemyData;
@@ -16,6 +17,21 @@ public class AutoChessActorMaker : ActorMaker
         int returnedID = currentID;
         currentID++;
         return returnedID;
+    }
+    public AutoActor CreateActorOnTeam(string actorRollUpData, int team)
+    {
+        AutoActorRollUpData newActor = new AutoActorRollUpData();
+        newActor.LoadRollUpData(actorRollUpData);
+        AutoActor newAutoActor = CreateActor(newActor);
+        newAutoActor.SetTeam(team);
+        // Flip The Right Team.
+        if (team != 0)
+        {
+            int location = newAutoActor.GetLocation();
+            location = mapUtility.HorizontalReflectTile(location, mapSize);
+            newAutoActor.SetLocation(location);
+        }
+        return newAutoActor;
     }
     public AutoActor CreateActor(string actorRollUpData, int location = -1, int direction = -1)
     {

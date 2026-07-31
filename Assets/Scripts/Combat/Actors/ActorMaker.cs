@@ -21,7 +21,6 @@ public class ActorMaker : MonoBehaviour
     public MapPatternLocations mapPatterns;
     public int mapSize;
     public void SetMapSize(int newSize) { mapSize = newSize; }
-
     [ContextMenu("New Actor")]
     public TacticActor CreateActor()
     {

@@ -8,12 +8,13 @@ public class AutoBattleManager : MonoBehaviour
     public GeneralUtility utility;
     public AutoChessBattleUIManager battleUI;
     public AutoChessDataManager data;
+    public AutoChessTactician tactician;
     public AutoChessFactionManager factionManager;
     public void GainFactionStacks(string faction, int stackAmount)
     {
         factionManager.GainFactionStacks(faction, stackAmount);
     }
-    public void TriggerTrait(TacticActor actor, string timing, TacticActor otherActor = null)
+    public virtual void TriggerTrait(TacticActor actor, string timing, TacticActor otherActor = null)
     {
         AutoChessTrait trait = actor.autoChessTrait;
         if (trait.timing == timing)
@@ -31,15 +32,23 @@ public class AutoBattleManager : MonoBehaviour
     }
     public AutoChessEnemyDataManager enemyData;
     public BattleMap map;
-    public int CastleTile()
+    protected int castleTile;
+    public void GetCastleTile()
     {
-        return map.mapUtility.ReturnTileNumberFromRowCol(map.mapSize / 2, 0, map.mapSize);
+        castleTile = map.mapUtility.ReturnTileNumberFromRowCol(map.mapSize / 2, 0, map.mapSize);
     }
     public int CastleHealthLoss()
     {
-        int finalCastleHealth = map.GetBuildingHealthOnLocation(CastleTile());
+        int finalCastleHealth = map.GetBuildingHealthOnLocation(castleTile);
         // Max Loss
-        if (finalCastleHealth <= 0){return 10;}
+        if (finalCastleHealth <= 0)
+        {
+            if (data.LastBattle())
+            {
+                return 999;
+            }
+            return 10;
+        }
         // 300 -> 0
         // 299-270 -> 1
         // 0 -> 10
@@ -55,22 +64,29 @@ public class AutoBattleManager : MonoBehaviour
     public MoveCostManager moveManager;
     public ActorAI actorAI;
     public List<AutoActor> allAutoActors = new();
-    public List<int> GetSpawnTiles()
+    protected List<int> spawnTiles;
+    protected void GenerateSpawnTiles()
     {
-        List<int> spawnTiles = new List<int>();
+        spawnTiles = new List<int>();
         for (int i = 0; i < map.mapSize; i++)
         {
             spawnTiles.Add(map.mapUtility.ReturnTileNumberFromRowCol(i, map.mapSize - 1, map.mapSize));
         }
+    }
+    public List<int> GetSpawnTiles()
+    {
         return spawnTiles;
     }
     public List<string> enemyPool;
     // Key Constants
-    private const int SKILLUSEDALREADY = -2;
-    private List<string> WEATHERS = new List<string>{"Sunny", "Rainy", "Windy", "None"};
-    private List<string> TIMES = new List<string>{"Day", "Day", "Night"};
+    protected const int SKILLUSEDALREADY = -2;
+    protected List<string> WEATHERS = new List<string>{"Sunny", "Rainy", "Windy", "None"};
+    protected List<string> TIMES = new List<string>{"Day", "Day", "Night"};
     // Faction Specific Stuff.
     public AutoChessAegirManager aegirManager;
+    public int yanDragon = 0;
+    public int yanDragonAttack = 0;
+    public int turretActive = 0;
     public int aegirRevives = 0;
     public int generalRevives = 0;
     public int kjeragWindCD = -1;
@@ -102,10 +118,15 @@ public class AutoBattleManager : MonoBehaviour
         }
     }
     public int currentRound = 1;
-    public void StartBattle()
+    public virtual void StartBattle()
     {
         battleUI.StartBattle();
+        GenerateSpawnTiles();
+        GetCastleTile();
         data.AddLog("Starting Battle");
+        turretActive = 0;
+        yanDragon = 0;
+        yanDragonAttack = 0;
         aegirRevives = 0;
         generalRevives = 0;
         kjeragWindCD = -1;
@@ -146,32 +167,47 @@ public class AutoBattleManager : MonoBehaviour
             effectManager.StartBattle(allAutoActors[i], map);
             map.AddActorToBattle(allAutoActors[i]);
         }
+        // Tactician Effects.
+        if (tactician != null)
+        {
+            tactician.Load();
+            tactician.ApplyStartBattleEffect(this, map.battlingActors);
+        }
         // Track special faction effects here: Aegir/Yan/Kjerag
-        if (factionManager.factionData.GetCountOfFaction("Kjerag") >= 5)
+        if (factionManager.factionData.GetCountOfFaction("Kjerag") > 5)
         {
             kjeragWindCD = (Mathf.Max(1, 6 / Mathf.Max(1, (int.Parse(factionManager.factionData.GetStacksOfFaction("Kjerag")) / 100))));
         }
         if (factionManager.factionData.GetCountOfFaction("Yan") > 5)
         {
-            // TODO: Summon The Mega Dragon
+            yanDragon = 1;
+            int totalYanAttack = 0;
+            for (int i = 0; i < allAutoActors.Count; i++)
+            {
+                if (allAutoActors[i].AutoChessFaction("Yan"))
+                {
+                    totalYanAttack += allAutoActors[i].GetBaseAttack();
+                }
+            }
+            yanDragonAttack = totalYanAttack * 30 / 100;
         }
         if (factionManager.factionData.FactionActive("Aegir"))
         {
             aegirManager.ApplyAegirFactionEffect(map.battlingActors, map, this);
             if (factionManager.factionData.GetCountOfFaction("Aegir") >= 5)
             {
-                aegirRevives = 3;
+                aegirRevives = 2;
             }
         }
         // Make The Castle.
-        map.AddBuilding("Castle", CastleTile());
+        map.AddBuilding("Castle", castleTile);
         int castleHealth = 300;
         // If Last Round Then Castle Is All Health.
         if (data.LastBattle())
         {
             castleHealth = data.GetHealth() * 30;
         }
-        map.SetBuildingHealthAndDefense(CastleTile(), castleHealth, 5);
+        map.SetBuildingHealthAndDefense(castleTile, castleHealth, 5);
         // Update The MoveCostManager From The Map.
         moveManager.UpdateInfoFromBattleMap(map);
         // Spawn The First Wave Of Enemies.
@@ -181,7 +217,7 @@ public class AutoBattleManager : MonoBehaviour
         StartRound();
     }
     // Only If No Enemies Alive + EnemyPool Empty OR Castle Destroyed
-    public int EndBattle()
+    public virtual int EndBattle()
     {
         // Loss
         if (!map.BuildingExists("Castle") || currentRound > 999){return 1;}
@@ -239,7 +275,7 @@ public class AutoBattleManager : MonoBehaviour
         map.AddActorToBattle(newActor);
     }
     public List<TacticActor> roundActors;
-    public void StartRound()
+    public virtual void StartRound()
     {
         map.NextRound();
         // Check Revives Before Removing Actors Just In Case.
@@ -250,6 +286,15 @@ public class AutoBattleManager : MonoBehaviour
         // TODO Do The Kjerag Passive Thing.
         // Only Iterate Through The List Length At The Start, Thus Ignoring Newly Summoned Actors.
         roundActors = new List<TacticActor>(map.battlingActors);
+        // TODO Do The Turret + Yan Dragon Thing.
+        if (turretActive == 1)
+        {
+
+        }
+        if (yanDragon == 1)
+        {
+
+        }
         // Make The List Of Round Actors From The Map Battling Actors.
         StartCoroutine(BattleLoop(roundActors));
     }
@@ -265,7 +310,7 @@ public class AutoBattleManager : MonoBehaviour
         EndRound();
     }
     public int currentTurnIndex = 0;
-    public void ActorStartTurn(TacticActor actor)
+    public virtual void ActorStartTurn(TacticActor actor)
     {
         map.AddNewCombatLog();
         map.UpdateCombatLog(actor.GetPersonalName() + "'s Turn");
@@ -313,18 +358,19 @@ public class AutoBattleManager : MonoBehaviour
         effectManager.EndTurn(actor, map);
         map.UpdateMap();
     }
-    public void EndRound()
+    public virtual void EndRound()
     {
         // Spawn Next Wave.
         SpawnPhase();
-        if (EndBattle() >= 0)
+        int endBattleResult = EndBattle();
+        if (endBattleResult >= 0)
         {
             data.AddLog("Battle Ended");
             map.combatLog.DebugAllLogs();
             // Lose Health Based On Castle Damage.
             data.LoseHealth(CastleHealthLoss());
             // Increment Round.
-            data.NewRound();
+            data.NewRound(endBattleResult);
             // SAVE
             data.Save();
             battleUI.EndBattle();
@@ -348,7 +394,6 @@ public class AutoBattleManager : MonoBehaviour
             return;
         }
         // Priority 1: Attack Castle
-        int castleTile = CastleTile();
         if (attackable.Contains(castleTile))
         {
             map.UpdateCombatLog(actor.GetPersonalName() + " attacks the castle");
@@ -418,7 +463,7 @@ public class AutoBattleManager : MonoBehaviour
         }
         EndTurn(actor);
     }
-    public List<int> GetPlayerActorAttackRangeTiles(TacticActor actor)
+    public virtual List<int> GetPlayerActorAttackRangeTiles(TacticActor actor)
     {
         int range = actor.GetAttackRange();
         string rangeType = actor.GetAutoChessAttackRangeShape();
@@ -447,6 +492,7 @@ public class AutoBattleManager : MonoBehaviour
         // Either -2 = skill used, -1 = no skill ready, >= 0 = skill ready
         return targetTile;
     }
+    // Ends The Turn
     public void UsePreparedSkill(TacticActor actor, int targetTile, int direction = -1)
     {
         activeManager.GetTargetedTiles(targetTile);
@@ -532,31 +578,21 @@ public class AutoBattleManager : MonoBehaviour
             }
             else
             {
-                int enemyTargetIndex = -1;
-                int targetDistance = 999999;
-                for (int i = 0; i < enemies.Count; i++)
-                {
-                    if (map.DistanceBetweenActors(enemies[i], actor) < targetDistance)
-                    {
-                        targetDistance = map.DistanceBetweenActors(enemies[i], actor);
-                        enemyTargetIndex = i;
-                    }
-                }
-                if (enemyTargetIndex >= 0)
+                TacticActor target = map.GetClosestActor(actor, enemies);
+                if (target == null)
                 {
                     if (skillReady)
                     {
                         UsePreparedSkill(actor, targetTile, startDirection);
                         return;
                     }
-                    ActorAttacksActor(actor, enemies[enemyTargetIndex]);
+                    ActorAttacksActor(actor, target);
                 }
             }
-            
         }
         EndTurn(actor, startDirection);
     }
-    public void DeathActives(TacticActor actor)
+    public virtual void DeathActives(TacticActor actor)
     {
         if (actor.GetHealth() > 0){return;}
         if (actor.GetTeam() == 0)
@@ -596,7 +632,7 @@ public class AutoBattleManager : MonoBehaviour
             ActivateSkill(deathActives[i], actor);
         }
     }
-    public void ActivateSkill(string skillName, TacticActor actor = null)
+    public virtual void ActivateSkill(string skillName, TacticActor actor = null)
     {
         if (actor == null){return;}
         // Check Traits For Both You And The Actor Behind You.
@@ -619,7 +655,7 @@ public class AutoBattleManager : MonoBehaviour
         actor.SetCurrentEnergy(0);
         map.UpdateMap();
     }
-    protected void ActorAttacksActor(TacticActor attacker, TacticActor defender)
+    protected virtual void ActorAttacksActor(TacticActor attacker, TacticActor defender)
     {
         if (attacker.GetTeam() == 0)
         {

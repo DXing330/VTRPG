@@ -14,6 +14,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
     public bool PVP = false;
     public Sprite castleSprite;
     public Color spawnZoneColor;
+    public Color attackZoneColor;
     public GameObject actorDisplayObject;
     public AutoActorDisplay actorDisplay;
     public AutoChessEquipmentDisplay equipDisplay;
@@ -156,7 +157,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
         rangeTiles = prepManager.mapUtility.GetAutoActorAttackTilesByShapeSpan(selectedTile, rangeType, int.Parse(range), prepManager.mapSize, location);
         for (int i = 0; i < rangeTiles.Count; i++)
         {
-            mapSlots[rangeTiles[i]].HighlightTile(Color.blue);
+            mapSlots[rangeTiles[i]].HighlightTile(attackZoneColor);
         }
     }
 }

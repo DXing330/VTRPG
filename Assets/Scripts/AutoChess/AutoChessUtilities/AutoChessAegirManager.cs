@@ -10,7 +10,7 @@ public class AutoChessAegirManager : MonoBehaviour
     public List<TacticActor> consumingActors;
     protected BattleMap map;
     protected AutoBattleManager manager;
-    public void ApplyAegirFactionEffect(List<TacticActor> allActors, BattleMap newMap, AutoBattleManager newManager)
+    public void ApplyAegirFactionEffect(List<TacticActor> allActors, BattleMap newMap, AutoBattleManager newManager, int team = 0)
     {
         aegirActors.Clear();
         consumedActors.Clear();
@@ -20,6 +20,7 @@ public class AutoChessAegirManager : MonoBehaviour
         // Get The Aegir Actors.
         for (int i = 0; i < allActors.Count; i++)
         {
+            if (allActors[i].GetTeam() != team){continue;}
             if (allActors[i].AutoChessFaction("Aegir"))
             {
                 aegirActors.Add(allActors[i]);
@@ -29,7 +30,8 @@ public class AutoChessAegirManager : MonoBehaviour
         for (int i = 0; i < aegirActors.Count; i++)
         {
             TacticActor consumed = map.GetActorInFrontActor(aegirActors[i]);
-            if (consumed != null)
+            // Only Consume Allies
+            if (consumed != null && consumed.GetTeam() == team)
             {
                 consumedActors.Add(consumed);
                 consumingActors.Add(aegirActors[i]);

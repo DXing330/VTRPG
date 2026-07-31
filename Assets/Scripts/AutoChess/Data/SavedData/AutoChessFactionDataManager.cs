@@ -13,7 +13,7 @@ public class AutoChessFactionDataManager : SavedData
     {
         logData.AddLog(newLog);
     }
-    public RNGUtility autoChessShopRNG;
+    public RNGUtility RNG;
     public string delimiter2;
     public List<string> mainFactions; // Require 3 field units to activate.
     public bool MainFaction(string factionName)
@@ -204,7 +204,7 @@ public class AutoChessFactionDataManager : SavedData
             break;
             case "RandomActive":
             if (activeFactions.Count <= 0){return;}
-            string randomFaction = activeFactions[autoChessShopRNG.SeedRange(0, activeFactions.Count)];
+            string randomFaction = activeFactions[RNG.SeedRange(0, activeFactions.Count)];
             GainFactionStacks(randomFaction, amount);
             break;
             case "HighestActive":

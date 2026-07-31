@@ -17,9 +17,13 @@ public class AutoChessShopManager : MonoBehaviour
         return blocks[0];
     }
     public StatDatabase actorCost;
+    public int ReturnActorCost(string actorName)
+    {
+        return int.Parse(actorCost.ReturnValue(actorName));
+    }
     public int ReturnActorCost(AutoActorRollUpData actor)
     {
-        return int.Parse(actorCost.ReturnValue(actor.GetName()));
+        return ReturnActorCost(actor.GetName());
     }
     public StatDatabase actorRarity;
     public int ReturnActorRarity(AutoActorRollUpData actor)
@@ -43,6 +47,19 @@ public class AutoChessShopManager : MonoBehaviour
     {
         shopActors = new List<AutoActorRollUpData>();
         List<string> currentListing = shopData.GetCurrentListing();
+        for (int i = 0; i < currentListing.Count; i++)
+        {
+            if (currentListing[i].Length <= 0){continue;}
+            AutoActorRollUpData newActor = new AutoActorRollUpData();
+            newActor.SetName(currentListing[i]);
+            newActor.LoadBaseStats(actorData);
+            shopActors.Add(newActor);
+        }
+    }
+    public void PVPRefreshData()
+    {
+        shopActors = new List<AutoActorRollUpData>();
+        List<string> currentListing = shopData.GetPVPCurrentListing();
         for (int i = 0; i < currentListing.Count; i++)
         {
             if (currentListing[i].Length <= 0){continue;}
@@ -93,6 +110,13 @@ public class AutoChessShopManager : MonoBehaviour
     public AutoActorRollUpData GetActorOfRarity(int rarity)
     {
         return null;
+    }
+    public void PVPBuySelectedActor()
+    {
+        shopActors.RemoveAt(selectedIndex);
+        shopData.RemoveFromPVPListing(selectedIndex);
+        ResetSelected();
+        PVPRefreshData();
     }
     public void BuySelectedActor()
     {

@@ -831,9 +831,46 @@ public class BattleMap : MapManager
         }
         return actors;
     }
-    public TacticActor FindEnemyByStat(TacticActor actor, string stat = "Health", bool highest = true)
+    public TacticActor FindActorByTargetSpecifics(TacticActor finder, string target, string specifics)
     {
-        List<TacticActor> actors = AllEnemies(actor);
+        List<TacticActor> targets = new List<TacticActor>();
+        if (target == "Ally")
+        {
+            targets = AllAllies(finder);
+            targets.Remove(finder);
+        }
+        else if (target == "Enemy")
+        {
+            targets = AllEnemies(finder);
+        }
+        else if (target == "ALL")
+        {
+            targets = battlingActors;
+            targets.Remove(finder);
+        }
+        if (targets.Count <= 0){return null;}
+        if (specifics == "Furthest")
+        {
+            return GetFurthestActor(finder, targets);
+        }
+        else if (specifics == "Closest")
+        {
+            return GetClosestActor(finder, targets);
+        }
+        else if (specifics.StartsWith("Highest"))
+        {
+            string highestStat = specifics.Replace("Highest", "");
+            return FindActorByStat(targets, highestStat, true);
+        }
+        else if (specifics.StartsWith("Lowest"))
+        {
+            string lowestStat = specifics.Replace("Lowest", "");
+            return FindActorByStat(targets, lowestStat, false);
+        }
+        return null;
+    }
+    public TacticActor FindActorByStat(List<TacticActor> actors, string stat = "Health", bool highest = true)
+    {
         if (actors.Count <= 0){return null;}
         int index = 0;
         int statAmount = -1;
@@ -871,6 +908,11 @@ public class BattleMap : MapManager
             }
         }
         return actors[index];
+    }
+    public TacticActor FindEnemyByStat(TacticActor actor, string stat = "Health", bool highest = true)
+    {
+        List<TacticActor> actors = AllEnemies(actor);
+        return FindActorByStat(actors, stat, highest);
     }
     public List<TacticActor> AllActorsBySpecies(string speciesName)
     {
@@ -1426,7 +1468,6 @@ public class BattleMap : MapManager
     }
     public List<string> highlightedTiles;
     public ColorDictionary colorDictionary;
-
     protected virtual void GetActorTiles()
     {
         if (emptyList == null || emptyList.Count < mapSize * mapSize) { InitializeEmptyList(); }
@@ -1843,20 +1884,42 @@ public class BattleMap : MapManager
         }
         return mapUtility.StraightLineBetweenPoints(actor1.GetLocation(), actor2.GetLocation(), mapSize);
     }
-    public TacticActor GetClosestEnemy(TacticActor actor)
+    public TacticActor GetFurthestActor(TacticActor actor, List<TacticActor> otherActors)
     {
-        List<TacticActor> enemies = AllEnemies(actor);
-        int index = -1;
-        int distance = mapSize * 2;
-        for (int i = 0; i < enemies.Count; i++)
+        if (otherActors.Count <= 0){return null;}
+        int index = 0;
+        int distance = 0;
+        for (int i = 0; i < otherActors.Count; i++)
         {
-            if (DistanceBetweenActors(actor, enemies[i]) < distance)
+            if (otherActors[i] == actor){continue;}
+            if (DistanceBetweenActors(actor, otherActors[i]) > distance)
             {
-                distance = DistanceBetweenActors(actor, enemies[i]);
+                distance = DistanceBetweenActors(actor, otherActors[i]);
                 index = i;
             }
         }
-        return enemies[index];
+        return otherActors[index];
+    }
+    public TacticActor GetClosestActor(TacticActor actor, List<TacticActor> otherActors)
+    {
+        if (otherActors.Count <= 0){return null;}
+        int index = 0;
+        int distance = mapSize * 2;
+        for (int i = 0; i < otherActors.Count; i++)
+        {
+            if (otherActors[i] == actor){continue;}
+            if (DistanceBetweenActors(actor, otherActors[i]) < distance)
+            {
+                distance = DistanceBetweenActors(actor, otherActors[i]);
+                index = i;
+            }
+        }
+        return otherActors[index];
+    }
+    public TacticActor GetClosestEnemy(TacticActor actor)
+    {
+        List<TacticActor> enemies = AllEnemies(actor);
+        return GetClosestActor(actor, enemies);
     }
     public int GetClosestEmptyTile(TacticActor actor)
     {
@@ -1931,6 +1994,19 @@ public class BattleMap : MapManager
         }
         return false;
     }
+    // Used By AutoBattle Healers
+    public List<TacticActor> ReturnHurtAlliesInTiles(TacticActor actor, List<int> tiles)
+    {
+        List<TacticActor> actors = ReturnAlliesInTiles(actor, tiles);
+        for (int i = actors.Count - 1; i >= 0; i--)
+        {
+            if (actors[i].GetHealth() >= actors[i].GetBaseHealth())
+            {
+                actors.RemoveAt(i);
+            }
+        }
+        return actors;
+    }
     public List<TacticActor> ReturnAlliesInTiles(TacticActor actor, List<int> tiles)
     {
         int team = actor.GetTeam();
@@ -2004,6 +2080,7 @@ public class BattleMap : MapManager
         if (target < 0){return null;}
         return GetActorOnTile(target);
     }
+    // From The Actors POV
     public TacticActor GetActorBehindActor(TacticActor actor)
     {
         int location = actor.GetLocation();
@@ -2011,6 +2088,30 @@ public class BattleMap : MapManager
         int target = mapUtility.PointInDirection(location, direction, mapSize);
         if (target < 0){return null;}
         return GetActorOnTile(target);
+    }
+    // Less Strict For PVP
+    public List<TacticActor> GetActorsBehindActor(TacticActor actor)
+    {
+        int location = actor.GetLocation();
+        int direction1 = (actor.GetDirection() + 3) % 6;
+        int direction2 = (actor.GetDirection() + 2) % 6;
+        int direction3 = (actor.GetDirection() + 4) % 6;
+        int target1 = mapUtility.PointInDirection(location, direction1, mapSize);
+        int target2 = mapUtility.PointInDirection(location, direction2, mapSize);
+        int target3 = mapUtility.PointInDirection(location, direction3, mapSize);
+        List<int> targets = new List<int>();
+        targets.Add(target1);
+        targets.Add(target2);
+        targets.Add(target3);
+        List<TacticActor> behindActors = new List<TacticActor>();
+        for (int i = 0; i < targets.Count; i++)
+        {
+            if (targets[i] < 0){continue;}
+            TacticActor targetActor = GetActorOnTile(targets[i]);
+            if (targetActor == null){continue;}
+            behindActors.Add(targetActor);
+        }
+        return behindActors;
     }
     // The tankiest adjacent/closest guarding ally will take the hit for you.
     public TacticActor GetGuardingAlly(TacticActor target, TacticActor attacker)
@@ -2085,6 +2186,15 @@ public class BattleMap : MapManager
         return all;
     }
     // MOVEMENT UTILITIES.
+    public void GrabSkill(TacticActor grabber, string target, string specifics)
+    {
+        int targetTile = mapUtility.PointInDirection(grabber.GetLocation(), grabber.GetDirection(), mapSize);
+        if (targetTile < 0) return;
+        if (GetActorOnTile(targetTile) != null){return;}
+        TacticActor targetActor = FindActorByTargetSpecifics(grabber, target, specifics);
+        if (targetActor == null){return;}
+        MoveActorToTile(targetActor, targetTile, true);
+    }
     public void DisplaceSkill(TacticActor displacer, List<int> targetedTiles, string displaceType, int force)
     {
         battleMapUtility.DisplaceSkill(displacer, targetedTiles, displaceType, force, this);
@@ -2246,7 +2356,6 @@ public class BattleMap : MapManager
             passiveEffect.AffectActor(actor, data[4], data[5]);
         }
     }
-
     protected void ApplyInteractableEffect(TacticActor actor, int tileNumber)
     {
         List<Interactable> triggered = GetInteractablesOnTile(tileNumber);

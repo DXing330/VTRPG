@@ -8,7 +8,6 @@ public class MapUtility : ScriptableObject
 {
     public GeneralUtility utility;
     public bool flatTop = true;
-
     public int DistanceBetweenTiles(int tileOne, int tileTwo, int size)
     {
         if (tileOne < 0 || tileTwo < 0)
@@ -17,7 +16,6 @@ public class MapUtility : ScriptableObject
         }
         return (Mathf.Abs(GetHexQ(tileOne, size) - GetHexQ(tileTwo, size)) + Mathf.Abs(GetHexR(tileOne, size) - GetHexR(tileTwo, size)) + Mathf.Abs(GetHexS(tileOne, size) - GetHexS(tileTwo, size))) / 2;
     }
-
     public int ReturnClosestTile(int start, List<int> tiles, int size)
     {
         int tile = start;
@@ -33,7 +31,6 @@ public class MapUtility : ScriptableObject
         }
         return tile;
     }
-
     public bool BorderTile(int tile, int size)
     {
         int col = GetColumn(tile, size);
@@ -41,17 +38,14 @@ public class MapUtility : ScriptableObject
         if (col == 0 || col == size - 1 || row == 0 || row == size -1){return true;}
         return false;
     }
-
     public int HorizontalDistanceBetweenTiles(int tileOne, int tileTwo, int size)
     {
         return GetColumn(tileTwo, size) - GetColumn(tileOne, size);
     }
-
     public int VerticalDistanceBetweenTiles(int tileOne, int tileTwo, int size)
     {
         return GetRow(tileTwo, size) - GetRow(tileOne, size);
     }
-
     public int ReturnTileNumberFromRowCol(int row, int col, int size)
     {
         // Out of bounds.
@@ -297,7 +291,15 @@ public class MapUtility : ScriptableObject
         }
         return tiles;
     }
-
+    public List<int> GetTilesInColumn(int column, int size)
+    {
+        List<int> tiles = new List<int>();
+        for (int i = 0; i < size; i++)
+        {
+            tiles.Add(ReturnTileNumberFromRowCol(i, column, size));
+        }
+        return tiles;
+    }
     public List<int> GetTilesInColumn(int location, int span, int size)
     {
         List<int> tiles = new List<int>();
@@ -316,12 +318,9 @@ public class MapUtility : ScriptableObject
                 cols.RemoveAt(i);
             }
         }
-        for (int i = 0; i < size; i++)
+        for (int j = 0; j < cols.Count; j++)
         {
-            for (int j = 0; j < cols.Count; j++)
-            {
-                tiles.Add(ReturnTileNumberFromRowCol(i, cols[j], size));
-            }
+            tiles.AddRange(GetTilesInColumn(cols[j], size));
         }
         return tiles;
     }
@@ -806,6 +805,15 @@ public class MapUtility : ScriptableObject
         tiles.Add(selected);
         return tiles;
     }
+    public List<int> GetPVPAutoActorAttackTilesByShapeSpan(int selected, string shape, int span, int size, int start)
+    {
+        // Range Ignore Direction For These In PVP.
+        if (span == 1 && (shape == "Tile" || shape == "Cone"))
+        {
+            return GetAutoActorAttackTilesByShapeSpan(selected, "Circle", span, size, start);
+        }
+        return GetAutoActorAttackTilesByShapeSpan(selected, shape, span, size, start);
+    }
     public List<int> GetAutoActorAttackTilesByShapeSpan(int selected, string shape, int span, int size, int start)
     {
         int direction = DirectionBetweenLocations(start, selected, size);
@@ -818,8 +826,8 @@ public class MapUtility : ScriptableObject
                 circleLobed.AddRange(GetTilesInLineDirection(start, direction, span + 1, size));
                 return circleLobed.Distinct().ToList();
             case "Oval":
-                List<int> oval = GetTilesInCircleShape(start, span, size);
-                oval.AddRange(GetTilesInBeamRange(start, direction, 1, size, span + 1));
+                List<int> oval = GetTilesInCircleShape(start, span - 1, size);
+                oval.AddRange(GetTilesInBeamRange(start, direction, 1, size, span));
                 return oval.Distinct().ToList();
             case "Beam":
                 return GetTilesInBeamRange(start, direction, 1, size, span);
@@ -919,5 +927,23 @@ public class MapUtility : ScriptableObject
     protected int CountTilesInWallSpan(int span)
     {
         return (span * 4) + 1;
+    }
+    public int HorizontalReflectTile(int tileNumber, int mapSize)
+    {
+        int column = GetColumn(tileNumber, mapSize);
+        int mid = mapSize / 2;
+        // Reflect Across Middle.
+        int distance = column - mid;
+        int newColumn = (mid - distance);
+        return ReturnTileNumberFromRowCol(GetRow(tileNumber, mapSize), newColumn, mapSize);
+    }
+    public int VerticalReflectTile(int tileNumber, int mapSize)
+    {
+        int row = GetRow(tileNumber, mapSize);
+        int mid = mapSize / 2;
+        // Reflect Across Middle.
+        int distance = row - mid;
+        int newRow = (mid - distance);
+        return ReturnTileNumberFromRowCol(newRow, GetColumn(tileNumber, mapSize), mapSize);
     }
 }

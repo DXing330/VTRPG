@@ -548,6 +548,9 @@ public class ActiveManager : MonoBehaviour
             case "Displace":
                 map.DisplaceSkill(skillUser, targetedTiles, specifics, power);
                 return;
+            case "Grab":
+                map.GrabSkill(skillUser, specifics, powerString);
+                return;
             case "TerrainEffect":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {

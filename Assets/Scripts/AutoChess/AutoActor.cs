@@ -106,7 +106,7 @@ public class AutoActorRollUpData
     public int GetLevel(){return autoChessLevel;}
     public void SetLevel(int newData){autoChessLevel = newData;}
     public List<string> factions;
-    public List<string> GetFactions(){return factions;}
+    public List<string> GetFactions(){return new List<string>(factions);}
     public void SetFactions(List<string> newFactions){factions = newFactions;}
     public int health;
     public int GetHealth(){return health;}
@@ -128,6 +128,10 @@ public class AutoActorRollUpData
         return baseStatString;
     }
     public List<string> equipmentNames = new List<string>();
+    public bool EquipmentExists(string equipName)
+    {
+        return equipmentNames.Contains(equipName);
+    }
     public List<string> GetEquipmentNames()
     {
         for (int i = equipmentNames.Count - 1; i >= 0; i--)
