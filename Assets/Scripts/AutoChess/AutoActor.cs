@@ -9,12 +9,12 @@ public enum AutoChessFaction
 {
     None,
     // Core alliances
-    Laterano,
-    Yan,
-    Kjerag,
-    Aegir,
-    Sargon,
-    Victoria,
+    Laterano, // Light
+    Yan, // Fire
+    Kjerag, // Ice
+    Aegir, // Water
+    Sargon, // Earth
+    Victoria, // Lightning
     // Additional alliances
     Precision,
     Agile,
@@ -270,12 +270,21 @@ public class AutoActor : TacticActor
         autoSkill = statBlocks[4];
         SetBaseEnergy(int.Parse(statBlocks[5]));
         SetCurrentEnergy(int.Parse(statBlocks[6]));
-        SetBaseHealth(int.Parse(statBlocks[7]) + (10 * (level - 1)));
-        SetCurrentHealth(int.Parse(statBlocks[7]) + (10 * (level - 1)));
-        SetBaseAttack(int.Parse(statBlocks[8]) + (2 * (level - 1)));
+        SetBaseHealth(int.Parse(statBlocks[7]));
+        SetCurrentHealth(int.Parse(statBlocks[7]));
+        SetBaseAttack(int.Parse(statBlocks[8]));
         SetBaseDefense(int.Parse(statBlocks[9]));
+        // Should Scale Based On Base Stats.
+        if (level > 1)
+        {
+            int scaling = (level - 1) * 3;
+            UpdateBaseHealth(GetBaseHealth() * scaling / 10, false);
+            SetCurrentHealth(GetBaseHealth());
+            UpdateBaseAttack(GetBaseAttack() * scaling / 10);
+            UpdateBaseDefense(GetBaseDefense() * scaling / 10);
+        }
         SetAttackRange(int.Parse(statBlocks[10]));
-        autoChessAttackRangeShape =  statBlocks[13];
+        autoChessAttackRangeShape = statBlocks[13];
         SetPassiveSkills(statBlocks[11].Split(passiveDelimiter).ToList());
         SetPassiveLevels(statBlocks[12].Split(passiveDelimiter).ToList());
         akHealer = int.Parse(statBlocks[14]);

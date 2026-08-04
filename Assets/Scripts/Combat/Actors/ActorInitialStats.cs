@@ -712,6 +712,34 @@ public class ActorInitialStats : ActorPassives
             }
         }
     }
+    // 1. Replace Permanent -> No Merge Needed, 2. Replace Regular -> Should Only Be One -> No Merge Needed
+    public bool ReplaceStatus(string replaced, string replacer, bool merge = false)
+    {
+        bool replacedStatus = false;
+        int firstIndex = -1;
+        for (int i = 0; i < statuses.Count; i++)
+        {
+            if (statuses[i] == replaced)
+            {
+                statuses[i] = replacer;
+                replacedStatus = true;
+                if (firstIndex < 0){firstIndex = i;}
+            }
+        }
+        if (!replacedStatus){return replacedStatus;}
+        if (!merge){return replacedStatus;}
+        // Should Happen Once, Since The Only Way For Dupe Nonpermanents To Happen Should Be This Method, Since AddStatus AutoMerges, Do All Just To Be Safe.
+        for (int i = statuses.Count - 1; i >= 0; i--)
+        {
+            if (statuses[i] == replacer && i != firstIndex)
+            {
+                statusDurations[firstIndex] += statusDurations[i];
+                statuses.RemoveAt(i);
+                statusDurations.RemoveAt(i);
+            }
+        }
+        return replacedStatus;
+    }
     public string curseStatName = "Curses";
     public void AddCurse(string newInfo)
     {

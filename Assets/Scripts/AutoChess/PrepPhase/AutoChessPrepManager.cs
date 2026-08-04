@@ -16,6 +16,7 @@ public class AutoChessPrepManager : ClickTileManager
         dataManager = newDataManager;
         dataManager.Load();
         factionManager.SetDataManager(dataManager);
+        tactician = dataManager.tactician;
         shopManager.shopData.logData = dataManager.logData;
         shopManager.shopData.SetShopLevel(dataManager.GetLevel());
         LoadSlots();
@@ -317,6 +318,12 @@ public class AutoChessPrepManager : ClickTileManager
         shopManager.Select(index);
         UIManager.UpdateActorDisplay(shopManager.GetSelectedActor());
     }
+    public void PVPRerollShop()
+    {
+        if (!SpendGold(1)){return;}
+        shopManager.PVPReroll();
+        dataManager.Reroll();
+    }
     public void RerollShop()
     {
         if (!SpendGold(1)){return;}
@@ -407,7 +414,6 @@ public class AutoChessPrepManager : ClickTileManager
         dataManager.AddLog("Bought " + boughtActor.GetName());
         GainActor(boughtActor);
         shopManager.PVPBuySelectedActor();
-        SaveToDataManager();
     }
     public void BuySelectedActor()
     {
@@ -446,28 +452,35 @@ public class AutoChessPrepManager : ClickTileManager
             }
         }
     }
-    public void SellSelectedActor()
+    public void FastSellSelectedActor(AutoActorRollUpData soldActor)
     {
-        // Determine The Actor.
-        AutoActorRollUpData soldActor = ReturnSelectedActor();
         if (soldActor == null){return;}
         dataManager.AddLog("Sold " + soldActor.GetName());
         CheckTraitTiming(soldActor, "OnSold");
         dataManager.ReclaimEquipmentFromActor(soldActor);
         dataManager.SellActor();
         shopManager.SellActor(soldActor);
-        if (selectedActorLocation == 0)
+        if (benchSlots.Contains(soldActor))
         {
-            benchSlots.RemoveAt(selectedActorIndex);
+            benchSlots.Remove(soldActor);
         }
-        else if (selectedActorLocation == 1)
+        else if (fieldSlots.Contains(soldActor))
         {
-            fieldSlots.RemoveAt(selectedActorIndex);
+            fieldSlots.Remove(soldActor);
         }
         ResetSelected();
         dataManager.GainGold(1);
         CommercialPackagingPlan();
         UpdateBonusSlots();
+    }
+    public void FastSellSelectedActor()
+    {
+        AutoActorRollUpData soldActor = ReturnSelectedActor();
+        FastSellSelectedActor(soldActor);
+    }
+    public void SellSelectedActor()
+    {
+        FastSellSelectedActor();
         SaveToDataManager();
         UpdateAllUI();
     }

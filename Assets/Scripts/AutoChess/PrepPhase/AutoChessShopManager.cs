@@ -74,6 +74,10 @@ public class AutoChessShopManager : MonoBehaviour
         RefreshData();
         UI.UpdateAutoChessShopUI(this);
     }
+    public void PVPReroll()
+    {
+        shopData.GeneratePVPCurrentListing(true);
+    }
     public void Reroll()
     {
         ResetSelected();

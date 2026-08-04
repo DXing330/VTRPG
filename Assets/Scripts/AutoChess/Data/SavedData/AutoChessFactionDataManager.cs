@@ -29,14 +29,17 @@ public class AutoChessFactionDataManager : SavedData
     public void SetAllFactions(List<string> newFactions)
     {
         utility.RemoveEmptyListItems(newFactions);
-        allFactions = newFactions;
+        allFactions = new List<string>(newFactions);
     }
-    public List<string> GetAllFactions(){return allFactions;}
+    public List<string> GetAllFactions()
+    {
+        return new List<string>(allFactions);
+    }
     public List<string> allFactionStacks;
     public void SetAllFactionStacks(List<string> newFactions)
     {
         utility.RemoveEmptyListItems(newFactions);
-        allFactionStacks = newFactions;
+        allFactionStacks = new List<string>(newFactions);
     }
     public string GetStacksOfFaction(string factionName)
     {
@@ -44,7 +47,10 @@ public class AutoChessFactionDataManager : SavedData
         if (indexOf < 0){return "0";}
         return allFactionStacks[indexOf];
     }
-    public List<string> GetAllFactionStacks(){return allFactionStacks;}
+    public List<string> GetAllFactionStacks()
+    {
+        return new List<string>(allFactionStacks);
+    }
     // This should only be called from a trait trigger during prep/battle.
     public void GainFactionStacks(string faction, int stackAmount)
     {
@@ -67,9 +73,24 @@ public class AutoChessFactionDataManager : SavedData
     public void SetActiveFactions(List<string> newFactions)
     {
         utility.RemoveEmptyListItems(newFactions);
-        activeFactions = newFactions;
+        activeFactions = new List<string>(newFactions);
     }
-    public List<string> GetActiveFactions(){return activeFactions;}
+    public List<string> GetNonEconActiveFactions()
+    {
+        List<string> allActiveFactions = GetActiveFactions();
+        for (int i = allActiveFactions.Count - 1; i >= 0; i--)
+        {
+            if (EconFaction(allActiveFactions[i]))
+            {
+                allActiveFactions.RemoveAt(i);
+            }
+        }
+        return allActiveFactions;
+    }
+    public List<string> GetActiveFactions()
+    {
+        return new List<string>(activeFactions);
+    }
     public bool FactionActive(string factionName)
     {
         return activeFactions.Contains(factionName);
@@ -93,9 +114,12 @@ public class AutoChessFactionDataManager : SavedData
     public List<int> activeFactionCount;
     public void SetActiveFactionCount(List<int> newFactions)
     {
-        activeFactionCount = newFactions;
+        activeFactionCount = new List<int>(newFactions);
     }
-    public List<int> GetActiveFactionCount(){return activeFactionCount;}
+    public List<int> GetActiveFactionCount()
+    {
+        return new List<int>(activeFactionCount);
+    }
     public List<int> GetActiveFactionStacks()
     {
         List<int> stacks = new List<int>();

@@ -166,6 +166,8 @@ public class AutoChessDataManager : SavedData
     }
     public void LoseHealth(int amount)
     {
+        // Track How Much Health You Had When Losing.
+        if (health <= 0){return;}
         health -= amount;
         AddLog("Lost " + amount + " health. " + health + " Remaining.");
     }
@@ -215,6 +217,8 @@ public class AutoChessDataManager : SavedData
     }
     public void NewRound(int result = -1)
     {
+        // Track The Round # Of Loss.
+        if (health <= 0){return;}
         round++;
         AddLog("--- Round " + round + " Begins ---");
         if (result >= 0)
@@ -250,6 +254,18 @@ public class AutoChessDataManager : SavedData
     public List<string> GetFieldActorData()
     {
         return fieldActorData;
+    }
+    public List<string> GetFieldActorNames()
+    {
+        AutoActorRollUpData actor = new AutoActorRollUpData();
+        List<string> actorNames = new List<string>();
+        for (int i = 0; i < fieldActorData.Count; i++)
+        {
+            if (fieldActorData[i].Length <= 0){continue;}
+            actor.LoadRollUpData(fieldActorData[i]);
+            actorNames.Add(actor.GetName());
+        }
+        return actorNames;
     }
     public int roundRerolls;
     public void SetRoundRerolls(int amount)
@@ -391,7 +407,7 @@ public class AutoChessDataManager : SavedData
         level = 1;
         exp = 0;
         gold = 10;
-        health = 60;
+        health = 100;
         round = 1;
         lastRoundResult = 0;
         streak = 0;
@@ -424,7 +440,7 @@ public class AutoChessDataManager : SavedData
         }
         Save();
     }
-    public void SaveFromPrepManager(AutoChessPrepManager prepManager)
+    public void SaveFromPrepManager(AutoChessPrepManager prepManager, bool save = true)
     {
         // Copy The Data From The PrepManager.
         benchActorData.Clear();
@@ -437,7 +453,10 @@ public class AutoChessDataManager : SavedData
         {
             fieldActorData.Add(prepManager.fieldSlots[i].ReturnRollUpData());
         }
-        Save();
+        if (save)
+        {
+            Save();
+        }
     }
     public override void Save()
     {

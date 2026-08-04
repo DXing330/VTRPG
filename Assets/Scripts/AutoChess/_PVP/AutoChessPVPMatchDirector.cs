@@ -5,8 +5,8 @@ using UnityEngine;
 // In charge of handling gameplay loop: player prep phase -> finish -> ai prep -> start battle -> finish AI battles -> watch player battle -> prep phase
 public class AutoChessPVPMatchDirector : MonoBehaviour
 {
-    bool matchOver = false;
-    int roundCount = 0;
+    public bool matchOver = false;
+    public int roundCount = 0;
     public AutoChessPVPDataManager allPlayers;
     public AutoChessDataManager GetPlayerTeam()
     {
@@ -59,7 +59,7 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     {
         allPlayers.fullAI = true;
         allPlayers.Load();
-        AIPrepPhase();
+        AIPrepPhase(true);
     }
     [ContextMenu("Test AI Full Run")]
     public void TestAIFullRun()
@@ -71,21 +71,27 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         allPlayers.Load();
         while (!matchOver && roundCount < 30)
         {
-            AIPrepPhase();
+            AIPrepPhase(true);
         }
     }
     // Do Prep For All AI -> Move Into Battle.
-    public void AIPrepPhase()
+    public void AIPrepPhase(bool fullAI = false)
     {
         List<AutoChessDataManager> allTeams = allPlayers.GetAllTeams();
         for (int i = 0; i < allTeams.Count; i++)
         {
             if (allTeams[i].PlayerData() || allTeams[i].GetHealth() <= 0){continue;}
+            var entry = GenomeProvider.Get(allTeams[i]);
+            if (entry != null) AIManager.genome = entry.genome;
+            else
+            {
+                AIManager.DefaultGenome();
+            }
             AIManager.AIPrepPhase(allTeams[i]);
         }
-        PrepareBattleLists();
+        PrepareBattleLists(fullAI);
     }
-    public void PrepareBattleLists()
+    public void PrepareBattleLists(bool fullAI = false)
     {
         roundLeftTeams.Clear();
         roundRightTeams.Clear();
@@ -116,7 +122,25 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
                 roundRightTeams.Add(allTeams[i]);
             }
         }
-        StartCoroutine(RunAllBattles());
+        if (!fullAI)
+        {
+            StartCoroutine(RunAllBattles());
+        }
+        else
+        {
+            AutoRunAllBattles();
+        }
+    }
+    public void AutoRunAllBattles()
+    {
+        roundCount++;
+        for (int i = 0; i < roundLeftTeams.Count; i++)
+        {
+            battleManager.SetTeams(roundLeftTeams[i], roundRightTeams[i]);
+            battleManager.SetInstantBattle();
+            battleManager.StartBattle();
+        }
+        CheckMatchOver();
     }
     public IEnumerator RunAllBattles()
     {

@@ -915,21 +915,21 @@ public class PassiveSkill : SkillEffect
         return true;
     }
     // Need to know about the actor, might have other actors to check as well. Might need to know about the tile.
-    public bool CheckBattleConditions(string condition, string conditionSpecifics, TacticActor target, TacticActor attacker, BattleMap map)
+    public bool CheckBattleConditions(string condition, string conditionSpecifics, TacticActor target, TacticActor attacker, BattleMap map, string damageType = "Physical")
     {
         string[] conditions = condition.Split(",");
         string[] specifics = conditionSpecifics.Split(",");
         if (conditions.Length != specifics.Length) { return false; }
         for (int i = 0; i < conditions.Length; i++)
         {
-            if (!CheckBattleCondition(conditions[i], specifics[i], target, attacker, map))
+            if (!CheckBattleCondition(conditions[i], specifics[i], target, attacker, map, damageType))
             {
                 return false;
             }
         }
         return true;
     }
-    public bool CheckBattleCondition(string condition, string conditionSpecifics, TacticActor target, TacticActor attacker, BattleMap map)
+    public bool CheckBattleCondition(string condition, string conditionSpecifics, TacticActor target, TacticActor attacker, BattleMap map, string damageType = "Physical")
     {
         if (condition == ""){return true;}
         TacticActor checkedActor = target;
@@ -948,6 +948,10 @@ public class PassiveSkill : SkillEffect
         }
         switch (condition)
         {
+            case "AttackDamageType":
+                return damageType == conditionSpecifics;
+            case "AttackDamageType<>":
+                return damageType != conditionSpecifics;
             case "AdjacentEnemyCount>":
                 return map.GetAdjacentEnemies(checkedActor).Count > int.Parse(conditionSpecifics);
             case "AdjacentEnemyCount<":

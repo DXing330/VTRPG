@@ -8,6 +8,7 @@ using UnityEngine;
 // In charge of managing stacks/determining active factions/assist managing faction effects/assist with trait stacking.
 public class AutoChessFactionManager : MonoBehaviour
 {
+    public bool fast = false;
     public AutoChessDataManager dataManager;
     public AutoChessFactionDataManager factionData;
     public void SetDataManager(AutoChessDataManager newData)
@@ -19,7 +20,7 @@ public class AutoChessFactionManager : MonoBehaviour
     public AutoChessFactionDisplay factionDisplay;
     public void UpdateFactionDisplay()
     {
-        if (factionDisplay == null){return;}
+        if (factionDisplay == null || fast){return;}
         factionDisplay.UpdateFactionDisplay(activeFactions, allFactionsWithUnits);
     }
     public List<string> activeFactions;

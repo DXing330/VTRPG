@@ -231,6 +231,19 @@ public class StatDatabase : ScriptableObject
     {
         return new List<string>(values);
     }
+    // Filters Values By Keys Equalling Filters.
+    public List<string> GetStrictFilteredValues(string filter)
+    {
+        List<string> filtered = new List<string>();
+        for (int i = 0; i < keys.Count; i++)
+        {
+            if (keys[i] == filter)
+            {
+                filtered.Add(values[i]);
+            }
+        }
+        return filtered;
+    }
     // Filters Values By Keys Containing Filters.
     public List<string> GetFilteredValues(string filter)
     {

@@ -135,15 +135,25 @@ public class BattleMapUtility : ScriptableObject
     {
         // Get All Enemies.
         List<TacticActor> enemies = map.AllEnemies(actor);
-        // Determine The Direction Of The Tile To Be Redeployed To, Relative To The Enemy.
-        int oppDirection = (actor.GetDirection() + 3) % 6;
+        int index = -1;
+        int minDefense = 999;
+        // Picked Lowest Defense Enemy.
         for (int i = 0; i < enemies.Count; i++)
         {
-            // Check For Each Enemy If The Tile In That Direction Is Available.
-            int redeployTile = mapUtility.PointInDirection(enemies[i].GetLocation(), oppDirection, map.mapSize);
-            if (GetActorOnTile(map, redeployTile) == null)
+            if (enemies[i].GetDefense() < minDefense)
             {
-                return redeployTile;
+                minDefense = enemies[i].GetDefense();
+                index = i;
+            }
+        }
+        if (index < 0){return -1;}
+        List<int> adjacentTiles = mapUtility.AdjacentTiles(enemies[index].GetLocation(), map.mapSize);
+        // Get The First EmptyAdjacentTile.
+        for (int i = 0; i < adjacentTiles.Count; i++)
+        {
+            if (GetActorOnTile(map, adjacentTiles[i]) == null)
+            {
+                return adjacentTiles[i];
             }
         }
         return -1;

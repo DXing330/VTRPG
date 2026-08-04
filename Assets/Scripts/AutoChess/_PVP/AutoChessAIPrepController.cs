@@ -6,6 +6,11 @@ public class AutoChessAIPrepController : MonoBehaviour
 {
     // Load In Genome To Make Choices.
     public AutoChessPVPGenome genome;
+    public void DefaultGenome()
+    {
+        genome = new AutoChessPVPGenome();
+        genome.ResetToDefault();
+    }
     public AutoChessPrepManager prepManager;
     public AutoChessFactionManager factionManager;
     public AutoChessShopManager shopManager;
@@ -22,15 +27,9 @@ public class AutoChessAIPrepController : MonoBehaviour
         EconomyAction(dataManager);
         AcquireLoop(dataManager);
         AutoPlaceFieldUnits(dataManager);
-        // Apply Trait Effects.
-        prepManager.StartBattle();
         prepManager.SaveToDataManager();
+        prepManager.StartBattle();
     }
-    // --- PLACEMENT ---
-    const float SWAP_THRESHOLD = 2.5f;
-    const float IDEAL_TANK_RATIO = 0.3f;
-    const float IDEAL_DPS_RATIO = 0.5f;
-    const float IDEAL_SUPPORT_RATIO = 0.2f;
     // ============================================================
     // 1. ECONOMY
     // ============================================================
@@ -43,18 +42,30 @@ public class AutoChessAIPrepController : MonoBehaviour
         int lossStreak = dataManager.GetLossStreak();
         float levelScore = genome.GetByName("W_ECON_LEVEL_TIMING") * LevelUrgency(dataManager);
         float saveScore = genome.GetByName("W_ECON_INTEREST") * (Mathf.Min(gold / 10, 5));
-        float hpScore = genome.GetByName("W_ECON_HP_URGENCY") * (100 - hp);
+        float hpUrgencyScore = genome.GetByName("W_ECON_HP_URGENCY") * (100 - hp);
         float rerollScore = genome.GetByName("W_ECON_REROLL") * ShopQualityScore();
         float winStreakScore = genome.GetByName("W_ECON_STREAK_WIN") * (Mathf.Min(winStreak, 5));
         float lossStreakScore = genome.GetByName("W_ECON_STREAK_LOSS") * (Mathf.Min(lossStreak, 5));
+        // If Losing And High HP Then Keep Saving To Lose More For Econ.
+        if (lossStreakScore > hpUrgencyScore && lossStreakScore > 0f)
+        {
+            saveScore += (lossStreakScore - hpUrgencyScore);
+        }
+        // If Winning Then Level More.
+        if (winStreakScore > 0f)
+        {
+            levelScore += winStreakScore;
+        }
         // Priority: Level up if urgent and affordable, else reroll if shop is weak and gold is high, else save
         if (!dataManager.MaxLevel() && gold >= 4 && levelScore > saveScore && levelScore > rerollScore)
         {
             prepManager.BuyExp();
+            EconomyAction(dataManager);
         }
         else if (gold >= 1 && rerollScore > saveScore && rerollScore > levelScore)
         {
-            prepManager.RerollShop();
+            prepManager.PVPRerollShop();
+            EconomyAction(dataManager);
         }
         // Else Save Money -> Do Nothing.
     }
@@ -98,10 +109,7 @@ public class AutoChessAIPrepController : MonoBehaviour
                 if (shopActor == null) continue;
                 float score = BuyScore(shopActor);
                 int cost = shopManager.SelectedCost();
-                if (dataManager.GetGold() < 20)
-                {
-                    score += genome.GetByName("W_BUY_ECON_STRETCH") * ((float)cost / Mathf.Max(1, dataManager.GetGold()));
-                }
+                score += genome.GetByName("W_BUY_ECON_STRETCH") * ((float)cost / Mathf.Max(1, dataManager.GetGold()));
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -117,10 +125,8 @@ public class AutoChessAIPrepController : MonoBehaviour
                 int worstIndex = FindWorstBenchUnit();
                 if (worstIndex < 0) break;
                 float worstKeep = KeepScore(prepManager.benchSlots[worstIndex]);
-                if (bestScore <= worstKeep + 0.5f) break; // margin threshold
-                prepManager.selectedActorLocation = 0;
-                prepManager.selectedActorIndex = worstIndex;
-                prepManager.SellSelectedActor();
+                if (bestScore <= worstKeep + genome.GetByName("W_SELL_MARGIN")){break;} // margin threshold
+                prepManager.FastSellSelectedActor(prepManager.benchSlots[worstIndex]);
             }
             if (dataManager.GetGold() >= buyCost)
             {
@@ -143,6 +149,11 @@ public class AutoChessAIPrepController : MonoBehaviour
         score += genome.GetByName("W_BUY_SYNERGY") * SynergyValue(unit.GetFactions());
         score += genome.GetByName("W_BUY_DUPLICATE") * DuplicateValue(name);
         score += genome.GetByName("W_BUY_ROLE_FIT") * RoleNeedScore(role);
+        List<string> factions = unit.GetFactions();
+        for (int i = 0; i < factions.Count; i++)
+        {
+            score += EvaluateFaction(factions[i]);
+        }
         return score;
     }
     float KeepScore(AutoActorRollUpData unit)
@@ -156,7 +167,12 @@ public class AutoChessAIPrepController : MonoBehaviour
         score += genome.GetByName("W_KEEP_TIER") * tier;
         score += genome.GetByName("W_KEEP_SYNERGY") * SynergyValue(unit.GetFactions());
         score += genome.GetByName("W_KEEP_DUPLICATE") * DuplicatePotential(name);
-        score += genome.GetByName("W_KEEP_STAR_LEVEL") * star * 5;
+        score += genome.GetByName("W_KEEP_STAR_LEVEL") * star;
+        List<string> factions = unit.GetFactions();
+        for (int i = 0; i < factions.Count; i++)
+        {
+            score += EvaluateFaction(factions[i]);
+        }
         return score;
     }
     int FindWorstBenchUnit()
@@ -213,11 +229,11 @@ public class AutoChessAIPrepController : MonoBehaviour
     {
         List<AutoActorRollUpData> allBench = prepManager.benchSlots;
         List<AutoActorRollUpData> allField = prepManager.fieldSlots;
-        // Don't Swap Infinitely With A Bad Genome.
-        if (totalSwaps > allBench.Count + allField.Count){return;}
+        // Don't Swap Infinitely, Pass Through Thrice At Most.
+        if (totalSwaps > 2){return;}
         int benchIndex = -1;
         int fieldIndex = -1;
-        float bestSwapValue = 0f;
+        float bestSwapValue = float.MinValue;
         for (int i = 0; i < allBench.Count; i++)
         {
             for (int j = 0; j < allField.Count; j++)
@@ -231,7 +247,7 @@ public class AutoChessAIPrepController : MonoBehaviour
                 }
             }
         }
-        if (bestSwapValue >= SWAP_THRESHOLD)
+        if (bestSwapValue >= genome.GetByName("W_PLACE_SWAP_THRESH") && benchIndex >= 0 && fieldIndex >= 0)
         {
             int benchLocation = allBench[benchIndex].GetLocation();
             allBench[benchIndex].SetLocation(FindBestTileForRole(allBench[benchIndex]));
@@ -275,7 +291,6 @@ public class AutoChessAIPrepController : MonoBehaviour
             int colB = prepManager.mapUtility.GetColumn(b.GetLocation(), 9);
             return colB.CompareTo(colA);
         });
-        prepManager.SaveToDataManager();
     }
     protected List<int> pitTiles = new List<int>();
     void GetPitTiles()
@@ -432,35 +447,70 @@ public class AutoChessAIPrepController : MonoBehaviour
             }
             if (hitsThreshold)
             {
-                totalSynergy += 3.0f;
+                totalSynergy += genome.GetByName("W_SYN_HIT");
                 continue;
             }
             if (maintainsActive)
             {
-                totalSynergy += 1.5f;
+                totalSynergy += genome.GetByName("W_SYN_MAINTAIN");
                 continue;
             }
             if (oneAway)
             {
-                totalSynergy += 0.5f;
+                totalSynergy += genome.GetByName("W_SYN_ONEAWAY");
                 continue;
             }
         }
         return totalSynergy;
     }
+    string GetFactionType(string faction)
+    {
+        if (factionManager.factionData.MainFaction(faction)){return "Main";}
+        if (factionManager.factionData.EconFaction(faction)){return "Econ";}
+        return "Side";
+    }
+    // Tracks How Valuable A Faction Is.
+    float EvaluateFaction(string faction)
+    {
+        float score = 0;
+        int count = factionManager.factionData.GetCountOfFaction(faction);
+        // All Factions Require At Least 2 Units To Be Active.
+        int commitment = Mathf.Max(0, count - 2);
+        int stacks = int.Parse(factionManager.factionData.GetStacksOfFaction(faction));
+        // Divide By 10 For Now To Decrease The Value Of Stacks.
+        stacks /= 10;
+        switch(GetFactionType(faction))
+        {
+            case "Main":
+                score += commitment * genome.GetByName("W_FACTION_MAIN");
+                score += stacks * genome.GetByName("W_FACTION_STACKS");
+                break;
+            case "Econ":
+                score += commitment * genome.GetByName("W_FACTION_ECON");
+                score += stacks * genome.GetByName("W_FACTION_STACKS");
+                break;
+            case "Side":
+                score += commitment * genome.GetByName("W_FACTION_SIDE");
+                score += stacks * genome.GetByName("W_FACTION_STACKS");
+                break;
+        }
+        return score;
+    }
     float DuplicateValue(string name)
     {
         int count = prepManager.GetLevelOneActorsWithName(name);
-        if (count >= 2) return 8f;  // Buying this triggers a merge to level 2
-        if (count == 1) return 2f;  // One step closer to merge
+        if (count >= 2) return genome.GetByName("W_DUP_MERGE");
+        if (count == 1) return genome.GetByName("W_DUP_CLOSE");
         return 0f;
     }
+    // Only Called For Units You Already Own.
     float DuplicatePotential(string name)
     {
         int count = prepManager.GetLevelOneActorsWithName(name);
-        if (count == 1) return 5f;   // Could become level 2
-        if (count >= 2) return 0f;   // Already enough copies on bench/field
-        return -3f;                   // Already have level 2 or no copies
+        // You Have 2 Of The Same Unit.
+        if (count == 2) return genome.GetByName("W_DUP_POTENTIAL");
+        // You Have 1 Of The Same Unit.
+        return genome.GetByName("W_DUP_NONE");
     }
     float RoleNeedScore(int role)
     {
@@ -470,9 +520,9 @@ public class AutoChessAIPrepController : MonoBehaviour
         foreach (var u in prepManager.fieldSlots) if (GetUnitRole(u.GetName()) == role) roleCount++;
         float idealRatio = role switch
         {
-            0 => IDEAL_TANK_RATIO,
-            1 => IDEAL_DPS_RATIO,
-            _ => IDEAL_SUPPORT_RATIO
+            0 => genome.GetByName("W_ROLE_TANK_RATIO"),
+            1 => genome.GetByName("W_ROLE_DPS_RATIO"),
+            _ => genome.GetByName("W_ROLE_SUPPORT_RATIO")
         };
         int idealCount = Mathf.RoundToInt(totalUnits * idealRatio);
         return Mathf.Max(0, idealCount - roleCount);

@@ -18,6 +18,15 @@ public class AutoChessActorMaker : ActorMaker
         currentID++;
         return returnedID;
     }
+    public AutoActor CreateActorByName(string actorName, int team, int location)
+    {
+        AutoActorRollUpData newActor = new AutoActorRollUpData();
+        newActor.SetName(actorName);
+        newActor.LoadBaseStats(actorData);
+        AutoActor newAutoActor = CreateActor(newActor);
+        newAutoActor.SetTeam(team);
+        return newAutoActor;
+    }
     public AutoActor CreateActorOnTeam(string actorRollUpData, int team)
     {
         AutoActorRollUpData newActor = new AutoActorRollUpData();

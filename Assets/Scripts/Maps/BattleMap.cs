@@ -89,21 +89,15 @@ public class BattleMap : MapManager
     public TerrainPassivesList weatherPassives;
     public void ApplyWeatherStartEffect(TacticActor actor)
     {
-        string[] data = weatherPassives.ReturnStartPassive(weather).Split("|");
-        if (data.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, data[1], data[2], this))
-        {
-            passiveEffect.AffectActor(actor, data[4], data[5]);
-        }
+        List<string> weatherP = weatherPassives.ReturnStartPassive(weather);
+        weatherP.AddRange(weatherPassives.ReturnStartPassive(time));
+        ApplyPassiveEffects(weatherP, actor);
     }
     public void ApplyWeatherEndEffect(TacticActor actor)
     {
-        string[] data = weatherPassives.ReturnEndPassive(weather).Split("|");
-        if (data.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, data[1], data[2], this))
-        {
-            passiveEffect.AffectActor(actor, data[4], data[5]);
-        }
+        List<string> weatherP = weatherPassives.ReturnEndPassive(weather);
+        weatherP.AddRange(weatherPassives.ReturnEndPassive(time));
+        ApplyPassiveEffects(weatherP, actor);
     }
     public WeatherFilter weatherFilter;
     public void SetWeather(string newInfo)
@@ -170,52 +164,32 @@ public class BattleMap : MapManager
         damageTracker.UpdateDamageStat(dealer, taker, damage);
     }
     public TerrainPassivesList terrainPassives;
-    public string ReturnTerrainStartPassive(TacticActor actor)
+    public List<string> ReturnTerrainStartPassive(TacticActor actor)
     {
         string terrainType = mapInfo[actor.GetLocation()];
-        if (terrainPassives.TerrainPassivesExist(terrainType))
-        {
-            return terrainPassives.ReturnStartPassive(terrainType);
-        }
-        return "";
+        return terrainPassives.ReturnStartPassive(terrainType);
     }
-    public string ReturnTerrainEndPassive(TacticActor actor)
+    public List<string> ReturnTerrainEndPassive(TacticActor actor)
     {
         string terrainType = mapInfo[actor.GetLocation()];
-        if (terrainPassives.TerrainPassivesExist(terrainType))
-        {
-            return terrainPassives.ReturnEndPassive(terrainType);
-        }
-        return "";
+        return terrainPassives.ReturnEndPassive(terrainType);
     }
     public void ApplyTileStartEffect(TacticActor actor)
     {
         string terrainType = mapInfo[actor.GetLocation()];
-        string[] data = terrainPassives.ReturnStartPassive(terrainType).Split("|");
-        if (data.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, data[1], data[2], this))
-        {
-            passiveEffect.AffectActor(actor, data[4], data[5]);
-        }
+        List<string> tilePassives = terrainPassives.ReturnStartPassive(terrainType);
+        ApplyPassiveEffects(tilePassives, actor);
     }
     public void ApplyTileEndEffect(TacticActor actor)
     {
         string terrainType = mapInfo[actor.GetLocation()];
-        string[] data = terrainPassives.ReturnEndPassive(terrainType).Split("|");
-        if (data.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, data[1], data[2], this))
-        {
-            passiveEffect.AffectActor(actor, data[4], data[5]);
-        }
+        List<string> tilePassives = terrainPassives.ReturnEndPassive(terrainType);
+        ApplyPassiveEffects(tilePassives, actor);
     }
-    public string ReturnTileMovingPassive(TacticActor actor)
+    public List<string> ReturnTileMovingPassive(TacticActor actor)
     {
         string terrainType = mapInfo[actor.GetLocation()];
-        if (terrainPassives.TerrainPassivesExist(terrainType))
-        {
-            return terrainPassives.ReturnMovingPassive(terrainType);
-        }
-        return "";
+        return terrainPassives.ReturnMovingPassive(terrainType);
     }
     public TerrainPassivesList buildingEffectData;
     public StatDatabase buildingStats;
@@ -304,38 +278,19 @@ public class BattleMap : MapManager
         UpdateMoveCostManager();
         UpdateMap();
     }
-    protected void ApplyBuildingMovingEffect(TacticActor actor, int tileNumber)
-    {
-        string building = GetBuildingOnTile(actor.GetLocation());
-        if (building.Length < 1) { return; }
-        string[] buildingEffect = buildingEffectData.ReturnMovingPassive(building).Split("|");
-        if (buildingEffect.Length < 6){return;}
-        if (passiveEffect.CheckMovingCondition(actor, buildingEffect[1], buildingEffect[2], tileNumber, this))
-        {
-            passiveEffect.AffectActor(actor, buildingEffect[4], buildingEffect[5]);
-        }
-    }
     public void ApplyBuildingStartEffect(TacticActor actor)
     {
         string building = GetBuildingOnTile(actor.GetLocation());
         if (building.Length < 1) { return; }
-        string[] buildingEffect = buildingEffectData.ReturnStartPassive(building).Split("|");
-        if (buildingEffect.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, buildingEffect[1], buildingEffect[2], this))
-        {
-            passiveEffect.AffectActor(actor, buildingEffect[4], buildingEffect[5]);
-        }
+        List<string> buildingP = buildingEffectData.ReturnStartPassive(building);
+        ApplyPassiveEffects(buildingP, actor);
     }
     public void ApplyBuildingEndEffect(TacticActor actor)
     {
         string building = GetBuildingOnTile(actor.GetLocation());
         if (building.Length < 1) { return; }
-        string[] buildingEffect = buildingEffectData.ReturnEndPassive(building).Split("|");
-        if (buildingEffect.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, buildingEffect[1], buildingEffect[2], this))
-        {
-            passiveEffect.AffectActor(actor, buildingEffect[4], buildingEffect[5]);
-        }
+        List<string> buildingP = buildingEffectData.ReturnEndPassive(building);
+        ApplyPassiveEffects(buildingP, actor);
     }
     public TerrainPassivesList borderEffectData;
     protected void ApplyBorderMovingEffect(TacticActor actor, int tileNumber)
@@ -345,35 +300,23 @@ public class BattleMap : MapManager
         string border = mapTiles[tileNumber].GetBorderInDirection(incomingDirection);
         if (border.Length < 1) { return; }
         // Apply The Effect.
-        string[] effectDetails = borderEffectData.ReturnMovingPassive(border).Split("|");
-        if (effectDetails.Length < 6){return;}
-        if (passiveEffect.CheckMovingCondition(actor, effectDetails[1], effectDetails[2], tileNumber, this))
-        {
-            passiveEffect.AffectActor(actor, effectDetails[4], effectDetails[5]);
-        }
+        List<string> borderP = borderEffectData.ReturnMovingPassive(border);
+        ApplyMovingPassiveEffects(borderP, actor, tileNumber);
     }
     public TerrainPassivesList terrainEffectData;
     public void ApplyTerrainStartEffect(TacticActor actor)
     {
         string terrainEffect = terrainEffectTiles[actor.GetLocation()];
         if (terrainEffect.Length < 1) { return; }
-        string[] tMovingEffect = terrainEffectData.ReturnStartPassive(terrainEffect).Split("|");
-        if (tMovingEffect.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, tMovingEffect[1], tMovingEffect[2], this))
-        {
-            passiveEffect.AffectActor(actor, tMovingEffect[4], tMovingEffect[5]);
-        }
+        List<string> tEffectP = terrainEffectData.ReturnStartPassive(terrainEffect);
+        ApplyPassiveEffects(tEffectP, actor);
     }
     public void ApplyEndTerrainEffect(TacticActor actor)
     {
         string terrainEffect = terrainEffectTiles[actor.GetLocation()];
         if (terrainEffect.Length < 1) { return; }
-        string[] tMovingEffect = terrainEffectData.ReturnEndPassive(terrainEffect).Split("|");
-        if (tMovingEffect.Length < 6){return;}
-        if (passiveEffect.CheckStartEndConditions(actor, tMovingEffect[1], tMovingEffect[2], this))
-        {
-            passiveEffect.AffectActor(actor, tMovingEffect[4], tMovingEffect[5]);
-        }
+        List<string> tEffectP = terrainEffectData.ReturnEndPassive(terrainEffect);
+        ApplyPassiveEffects(tEffectP, actor);
     }
     public StatDatabase terrainWeatherInteractions;
     public StatDatabase terrainTileInteractions;
@@ -403,6 +346,30 @@ public class BattleMap : MapManager
         }
     }
     public PassiveSkill passiveEffect;
+    public void ApplyMovingPassiveEffects(List<string> passives, TacticActor actor, int tileNumber)
+    {
+        for (int i = 0; i < passives.Count; i++)
+        {
+            string[] data = passives[i].Split("|");
+            if (data.Length < 6){return;}
+            if (passiveEffect.CheckMovingCondition(actor, data[1], data[2], tileNumber, this))
+            {
+                passiveEffect.AffectActor(actor, data[4], data[5]);
+            }
+        }
+    }
+    public void ApplyPassiveEffects(List<string> passives, TacticActor actor)
+    {
+        for (int i = 0; i < passives.Count; i++)
+        {
+            string[] data = passives[i].Split("|");
+            if (data.Length < 6){return;}
+            if (passiveEffect.CheckStartEndConditions(actor, data[1], data[2], this))
+            {
+                passiveEffect.AffectActor(actor, data[4], data[5]);
+            }
+        }
+    }
     public List<TacticActor> ReturnEndOfBattleActors()
     {
         List<TacticActor> endOfB = new List<TacticActor>();
@@ -645,7 +612,7 @@ public class BattleMap : MapManager
             return;
         }
         int rTile = mapUtility.PointInDirection(actor.GetLocation(), direction, mapSize);
-        if (GetActorOnTile(rTile) == null)
+        if (GetActorOnTile(rTile) == null && rTile >= 0)
         {
             MoveActorToTile(actor, rTile, true);
         }
@@ -733,6 +700,66 @@ public class BattleMap : MapManager
         }
         return RandomStartingTile(pattern);
     }
+    // 0 - North, 1 - East, 2 = South, 3- West
+    public int EmptyStartingTileByEdge(int edge = 0)
+    {
+        int column = 0;
+        int row = 0;
+        int tile = 0;
+        switch (edge)
+        {
+            case 1:
+            column = mapSize - 1;
+            break;
+            case 2:
+            row = mapSize - 1;
+            break;
+            default:
+            break;
+        }
+        for (int i = 0; i < mapSize * mapSize; i++)
+        {
+            tile = mapUtility.ReturnTileNumberFromRowCol(row, column, mapSize);
+            if (GetActorOnTile(tile) == null){return tile;}
+            switch (edge)
+            {
+                case 0:
+                column++;
+                if (column >= mapSize)
+                {
+                    row++;
+                    column = 0;
+                }
+                break;
+                case 1:
+                row++;
+                if (row >= mapSize)
+                {
+                    row = 0;
+                    column--;
+                }
+                break;
+                case 2:
+                column++;
+                if (column >= mapSize)
+                {
+                    row--;
+                    column = 0;
+                }
+                break;
+                case 3:
+                default:
+                row++;
+                if (row >= mapSize)
+                {
+                    row = 0;
+                    column++;
+                }
+                break;
+            }
+        }
+        return -1;
+    }
     // Needs to be updated based on the spawning pattern.
     protected bool ValidRandomStartingTile(string pattern, int tileNumber)
     {
@@ -809,15 +836,7 @@ public class BattleMap : MapManager
     }
     public List<TacticActor> AllAllies(TacticActor actor)
     {
-        List<TacticActor> actors = new List<TacticActor>();
-        for (int i = 0; i < battlingActors.Count; i++)
-        {
-            if (battlingActors[i].GetTeam() == actor.GetTeam())
-            {
-                actors.Add(battlingActors[i]);
-            }
-        }
-        return actors;
+        return AllTeamMembers(actor.GetTeam());
     }
     public List<TacticActor> AllEnemies(TacticActor actor)
     {
@@ -2249,14 +2268,20 @@ public class BattleMap : MapManager
         battleMapUtility.MoveThroughSkill(mover, tile, this);
     }
     // ALL Movement Should Go Through Here.
-    public void MoveActorToTile(TacticActor actor, int tile, bool forced = false)
+    public void AIMoveActorToTile(TacticActor actor, int tile, bool forced = false)
     {
+        // Extra safety check, since you can never be too safe?
+        if (tile < 0){return;}
         if (!forced)
         {
             actor.SetDirection(mapUtility.DirectionBetweenLocations(actor.GetLocation(), tile, mapSize));
         }
         actor.SetLocation(tile);
         ApplyMovePassiveEffects(actor, tile);
+    }
+    public void MoveActorToTile(TacticActor actor, int tile, bool forced = false)
+    {
+        AIMoveActorToTile(actor, tile, forced);
         UpdateMap();
     }
     public void ApplyMovePassiveEffects(TacticActor actor, int location)
@@ -2334,27 +2359,23 @@ public class BattleMap : MapManager
     }
     protected void ApplyTileMovingEffect(TacticActor actor, int tileNumber)
     {
-        string tileEffect = ReturnTileMovingPassive(actor);
-        if (tileEffect.Length < 1) { return; }
-        string[] data = tileEffect.Split("|");
-        if (data.Length < 6){return;}
-        if (passiveEffect.CheckMovingCondition(actor, data[1], data[2], tileNumber, this))
-        {
-            passiveEffect.AffectActor(actor, data[4], data[5]);
-        }
+        List<string> movingPassives = ReturnTileMovingPassive(actor);
+        ApplyMovingPassiveEffects(movingPassives, actor, tileNumber);
     }
     protected void ApplyTerrainMovingEffect(TacticActor actor, int tileNumber)
     {
         // Get the terrain info.
         string terrainEffect = terrainEffectTiles[tileNumber];
         if (terrainEffect.Length < 1) { return; }
-        // Apply the terrain effect.
-        string[] data = terrainEffectData.ReturnMovingPassive(terrainEffect).Split("|");
-        if (data.Length < 6){return;}
-        if (passiveEffect.CheckMovingCondition(actor, data[1], data[2], tileNumber, this))
-        {
-            passiveEffect.AffectActor(actor, data[4], data[5]);
-        }
+        List<string> movingPassives = terrainEffectData.ReturnMovingPassive(terrainEffect);
+        ApplyMovingPassiveEffects(movingPassives, actor, tileNumber);
+    }
+    protected void ApplyBuildingMovingEffect(TacticActor actor, int tileNumber)
+    {
+        string building = GetBuildingOnTile(actor.GetLocation());
+        if (building.Length < 1) { return; }
+        List<string> movingPassives = buildingEffectData.ReturnMovingPassive(building);
+        ApplyMovingPassiveEffects(movingPassives, actor, tileNumber);
     }
     protected void ApplyInteractableEffect(TacticActor actor, int tileNumber)
     {

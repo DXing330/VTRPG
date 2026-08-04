@@ -196,6 +196,7 @@ public class AutoChessTactician : SavedData
             newFieldActor.LoadRollUpData(fieldActors[i]);
             fieldActorData.Add(newFieldActor);
         }
+        if (fieldActorData.Count <= 0){return;}
         // Iterate Through The Rarities 1-6 And Gain Stacks Of The First One Found.
         for (int i = 1; i < 7; i++)
         {

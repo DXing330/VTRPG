@@ -639,6 +639,10 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " if " + conTarget + " is " + specifics + " element";
             case "Element<>":
                 return " if " + conTarget + " is not " + specifics + " element";
+            case "AttackDamageType":
+                return " if the attack deals " + specifics + " damage.";
+            case "AttackDamageType<>":
+                return " if the attack does not deal " + specifics + " damage.";
             case "Species":
                 return " if " + conTarget + "'s species is " + specifics;
             case "Species<>":

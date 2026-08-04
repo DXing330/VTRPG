@@ -51,6 +51,15 @@ public class AutoChessPVPBattleManager : AutoBattleManager
     public int aegirRevives2 = 0;
     public int generalRevives2 = 0;
     public int kjeragWindCD2 = -1;
+    public void ApplyKjeragWind(TacticActor actor)
+    {
+        bool replaced = actor.ReplaceStatus("Cold", "Frozen", true);
+        replaced = actor.ReplaceStatus("Wet", "Frozen", true) || replaced;
+        if (!replaced)
+        {
+            actor.AddStatus("Cold", 3);
+        }
+    }
     public void CheckDefeatedActors(int team = 0)
     {
         for (int i = 0; i < map.battlingActors.Count; i++)
@@ -177,9 +186,8 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         for (int i = 0; i < fieldActors.Count; i++)
         {
             if (fieldActors[i].Length <= 0){continue;}
-            AutoActor newActor = actorMaker.CreateActorOnTeam(fieldActors[i], 0);
             // Track The Actors.
-            leftTeamActors.Add(newActor);
+            leftTeamActors.Add(actorMaker.CreateActorOnTeam(fieldActors[i], 0));
         }
         factionEffectManager.ApplyFactionEffects(leftTeamActors, leftTeam.factionData.GetActiveFactions(), leftTeam.factionData.GetActiveFactionCount(), leftTeam.factionData.GetActiveFactionStacks());
         for (int i = 0; i < leftTeamActors.Count; i++)
@@ -196,9 +204,8 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         for (int i = 0; i < fieldActors.Count; i++)
         {
             if (fieldActors[i].Length <= 0){continue;}
-            AutoActor newActor = actorMaker.CreateActorOnTeam(fieldActors[i], 1);
             // Track The Actors.
-            rightTeamActors.Add(newActor);
+            rightTeamActors.Add(actorMaker.CreateActorOnTeam(fieldActors[i], 1));
         }
         factionEffectManager.ApplyFactionEffects(rightTeamActors, rightTeam.factionData.GetActiveFactions(), rightTeam.factionData.GetActiveFactionCount(), rightTeam.factionData.GetActiveFactionStacks());
         for (int i = 0; i < rightTeamActors.Count; i++)
@@ -244,6 +251,12 @@ public class AutoChessPVPBattleManager : AutoBattleManager
                 }
             }
             yanDragonAttack = totalYanAttack * 30 / 100;
+            // TODO Determine Location, Probably Open Backline Spot.
+            int dragonLocation = map.EmptyStartingTileByEdge(3);
+            AutoActor yanDragonActor = actorMaker.CreateActorByName("YanDragon", 0, dragonLocation);
+            yanDragonActor.SetBaseAttack(yanDragonAttack);
+            actorMaker.ReorganizeActorPassives(yanDragonActor);
+            map.AddActorToBattle(yanDragonActor);
         }
         if (leftTeam.factionData.FactionActive("Aegir"))
         {
@@ -270,6 +283,11 @@ public class AutoChessPVPBattleManager : AutoBattleManager
                 }
             }
             yanDragonAttack2 = totalYanAttack * 30 / 100;
+            int dragonLocation2 = map.EmptyStartingTileByEdge(1);
+            AutoActor yanDragonActor2 = actorMaker.CreateActorByName("YanDragon", 1, dragonLocation2);
+            yanDragonActor2.SetBaseAttack(yanDragonAttack2);
+            actorMaker.ReorganizeActorPassives(yanDragonActor2);
+            map.AddActorToBattle(yanDragonActor2);
         }
         if (rightTeam.factionData.FactionActive("Aegir"))
         {
@@ -290,6 +308,22 @@ public class AutoChessPVPBattleManager : AutoBattleManager
     public override void StartRound()
     {
         map.NextRound();
+        if (kjeragWindCD > 0 && currentRound % kjeragWindCD == 0)
+        {
+            List<TacticActor> team1 = map.AllTeamMembers(1);
+            for (int i = 0; i < team1.Count; i++)
+            {
+                ApplyKjeragWind(team1[i]);
+            }
+        }
+        if (kjeragWindCD2 > 0 && currentRound % kjeragWindCD2 == 0)
+        {
+            List<TacticActor> team0 = map.AllTeamMembers(0);
+            for (int i = 0; i < team0.Count; i++)
+            {
+                ApplyKjeragWind(team0[i]);
+            }
+        }
         CheckDefeatedActors();
         CheckDefeatedActors(1);
         map.RemoveActorsFromBattle();
@@ -353,10 +387,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             EndTurn(actor);
             return;
         }
-        List<int> path = actorAI.FindPathToTarget(actor, map, moveManager);
+        List<int> path = actorAI.FastFindPathToTarget(actor, map, moveManager);
         if (path.Count > 0 && map.GetActorOnTile(path[path.Count - 1]) == null)
         {
-            map.MoveActorToTile(actor, path[path.Count - 1]);
+            map.AIMoveActorToTile(actor, path[path.Count - 1]);
         }
         EndTurn(actor);
     }
@@ -441,7 +475,7 @@ public class AutoChessPVPBattleManager : AutoBattleManager
     {
         int winningTeam = -1;
         // 2 Means Tie.
-        if (currentRound > 99){return 2;}
+        if (currentRound > 30){return 2;}
         List<TacticActor> actors = map.battlingActors;
         List<int> teams = new List<int>();
         for (int i = 0; i < actors.Count; i++)
@@ -467,7 +501,6 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         int endBattleResult = EndBattle();
         if (endBattleResult >= 0)
         {
-            // TODO Handle Damage To Losing Team
             // 2 = TIE
             if (endBattleResult == 2)
             {
@@ -481,13 +514,13 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             else if (endBattleResult == 0)
             {
                 leftTeam.NewRound(0);
-                rightTeam.LoseHealth(rightTeam.GetRound());
+                rightTeam.LoseHealth(rightTeam.GetRound() + leftTeam.GetLevel());
                 rightTeam.NewRound(1);
             }
             // 1 = Right Wins
             else if (endBattleResult == 1)
             {
-                leftTeam.LoseHealth(leftTeam.GetRound());
+                leftTeam.LoseHealth(leftTeam.GetRound() + rightTeam.GetLevel());
                 leftTeam.NewRound(1);
                 rightTeam.NewRound(0);
             }

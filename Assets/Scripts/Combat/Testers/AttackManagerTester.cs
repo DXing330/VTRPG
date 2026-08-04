@@ -195,13 +195,13 @@ public class AttackManagerTester : MonoBehaviour
         InitializeMap();
         // Set up the guard if you want.
         // Show all the passives that are taking effect.
-        attackManager.ActorAttacksActorWithAttackSpeed(dummyAttacker, dummyDefender, map);
+        attackManager.ActorAttacksActorWithAttackSpeed(dummyAttacker, dummyDefender, map, dummyAttacker.GetBasicAttackMultiplier(), dummyAttacker.GetBasicAttackDamageType());
         map.combatLog.DebugLatestDetailsLog();
     }
     [ContextMenu("Test Attack WO Reseting")]
     public void TestAttackWOReset()
     {
-        attackManager.ActorAttacksActorWithAttackSpeed(dummyAttacker, dummyDefender, map);
+        attackManager.ActorAttacksActorWithAttackSpeed(dummyAttacker, dummyDefender, map, dummyAttacker.GetBasicAttackMultiplier(), dummyAttacker.GetBasicAttackDamageType());
         map.combatLog.DebugLatestDetailsLog();
     }
     // Active Testing.

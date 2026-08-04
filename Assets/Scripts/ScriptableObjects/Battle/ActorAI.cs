@@ -171,6 +171,22 @@ public class ActorAI : ScriptableObject
         }
         return path;
     }
+    // For Use By AI Without Complex Pathfinding Only If No Actors In Attack Range.
+    public List<int> FastFindPathToTarget(TacticActor currentActor, BattleMap map, MoveCostManager moveManager)
+    {
+        if (currentActor.GetTarget() == null || currentActor.GetTarget().GetHealth() <= 0)
+        {
+            currentActor.SetTarget(FastGetClosestEnemy(currentActor, map));
+        }
+        if (currentActor.GetTarget() == null)
+        {
+            return new List<int>();
+        }
+        int direction = map.DirectionBetweenActors(currentActor, currentActor.GetTarget());
+        List<int> path = new List<int>();
+        path.Add(map.mapUtility.PointInDirection(currentActor.GetLocation(), direction, map.mapSize));
+        return path;
+    }
     public List<int> FindPathToTarget(TacticActor currentActor, BattleMap map, MoveCostManager moveManager)
     {
         int originalLocation = currentActor.GetLocation();
@@ -220,6 +236,11 @@ public class ActorAI : ScriptableObject
         }
         return path;
     }
+    // Purely By Distance.
+    public TacticActor FastGetClosestEnemy(TacticActor currentActor, BattleMap map)
+    {
+        return map.GetClosestEnemy(currentActor);
+    }
     public TacticActor GetClosestEnemy(List<TacticActor> battlingActors, TacticActor currentActor, MoveCostManager moveManager, bool rage = false)
     {
         List<TacticActor> enemies = new List<TacticActor>();
@@ -250,9 +271,9 @@ public class ActorAI : ScriptableObject
         if (enemies.Count <= 0) { return null; }
         int distance = 9999;
         List<int> possibleIndices = new List<int>();
+        moveManager.GetAllMoveCosts(currentActor, battlingActors);
         for (int i = 0; i < enemies.Count; i++)
         {
-            moveManager.GetAllMoveCosts(currentActor, battlingActors);
             List<int> path = moveManager.GetPrecomputedPath(currentActor.GetLocation(), enemies[i].GetLocation(), true);
             // Unable to find a path means skip.
             if (path.Count <= 0){continue;}

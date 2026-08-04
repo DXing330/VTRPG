@@ -4,8 +4,10 @@ using UnityEngine;
 
 public class AutoChessBattleMap : BattleMap
 {
+    public bool fast = false;
     public override void UpdateMap()
     {
+        if (fast){return;}
         BaseUpdateMap();
         GetActorTiles();
         ResetHighlights();

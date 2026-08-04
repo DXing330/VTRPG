@@ -11,7 +11,6 @@ public class TerrainPassivesList : StatDatabase
 {
     public string delimiterTwo;
     public string passiveDelimiter = "+";
-
     public override void Initialize()
     {
         if (inputKeysAndValues)
@@ -26,80 +25,29 @@ public class TerrainPassivesList : StatDatabase
             #endif
         }
     }
-
-    public bool TerrainPassivesExist(string key)
+    public List<string> ReturnPassivesByTypeTiming(string type, string timing)
     {
-        int indexOf = keys.IndexOf(key);
-        return indexOf >= 0;
+        string key = type + timing;
+        return GetStrictFilteredValues(key);
     }
-
-    protected List<string> ReturnSpecificPassives(string key, int index)
+    public List<string> ReturnAttackingPassive(string key)
     {
-        string[] values = ReturnValue(key).Split(delimiterTwo);
-        if (index < 0 || index >= values.Length)
-        {
-            return new List<string>();
-        }
-        return values[index].Split(passiveDelimiter).ToList();
+        return ReturnPassivesByTypeTiming(key, "Attack");
     }
-
-    protected string ReturnSpecificPassive(string key, int index)
+    public List<string> ReturnDefendingPassive(string key)
     {
-        string[] values = ReturnValue(key).Split(delimiterTwo);
-        if (index < 0 || index >= values.Length)
-        {
-            return "";
-        }
-        return values[index];
+        return ReturnPassivesByTypeTiming(key, "Defend");
     }
-
-    public string ReturnAttackingPassive(string key)
+    public List<string> ReturnMovingPassive(string key)
     {
-        return ReturnSpecificPassive(key, 0);
+        return ReturnPassivesByTypeTiming(key, "Moving");
     }
-
-    public string ReturnDefendingPassive(string key)
+    public List<string> ReturnStartPassive(string key)
     {
-        return ReturnSpecificPassive(key, 1);
+        return ReturnPassivesByTypeTiming(key, "Start");
     }
-
-    public string ReturnMovingPassive(string key)
+    public List<string> ReturnEndPassive(string key)
     {
-        return ReturnSpecificPassive(key, 2);
-    }
-
-    public string ReturnStartPassive(string key)
-    {
-        return ReturnSpecificPassive(key, 3);
-    }
-
-    public string ReturnEndPassive(string key)
-    {
-        return ReturnSpecificPassive(key, 4);
-    }
-
-    public List<string> ReturnAttackingPassives(string key)
-    {
-        return ReturnSpecificPassives(key, 0);
-    }
-
-    public List<string> ReturnDefendingPassives(string key)
-    {
-        return ReturnSpecificPassives(key, 1);
-    }
-
-    public List<string> ReturnMovingPassives(string key)
-    {
-        return ReturnSpecificPassives(key, 2);
-    }
-
-    public List<string> ReturnStartPassives(string key)
-    {
-        return ReturnSpecificPassives(key, 3);
-    }
-
-    public List<string> ReturnEndPassives(string key)
-    {
-        return ReturnSpecificPassives(key, 4);
+        return ReturnPassivesByTypeTiming(key, "End");
     }
 }
