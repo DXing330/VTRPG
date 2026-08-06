@@ -22,16 +22,69 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     void Awake()
     {
         string[] args = System.Environment.GetCommandLineArgs();
-        Debug.Log("ARGS: " + string.Join(" | ", args));
         for (int i = 0; i < args.Length; i++)
         {
-            Debug.Log($"Arg[{i}]: {args[i]}");
-            if (args[i] == "--train") autoStartTraining = true;
-            if (args[i] == "--gens" && i + 1 < args.Length)
-                int.TryParse(args[i + 1], out targetGenerations);
-            if (args[i] == "--quit") quitWhenDone = true;
+            switch (args[i])
+            {
+                case "--train":
+                    autoStartTraining = true;
+                    break;
+                case "--gens":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out targetGenerations);
+                    break;
+                case "--pop":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out populationSize);
+                    break;
+                case "--matches":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out matchesPerGenome);
+                    break;
+                case "--pod":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out podSize);
+                    break;
+                case "--elite":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out elites);
+                    break;
+                case "--cull":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out cullCount);
+                    break;
+                case "--mutRate":
+                    if (i + 1 < args.Length)
+                        float.TryParse(args[++i], out mutationRate);
+                    break;
+                case "--mutStrength":
+                    if (i + 1 < args.Length)
+                        float.TryParse(args[++i], out mutationStrength);
+                    break;
+                case "--keep":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out generationsToKeep);
+                    break;
+                case "--quit":
+                    quitWhenDone = true;
+                    break;
+            }
         }
-        Debug.Log($"Parsed: autoStart={autoStartTraining}, gens={targetGenerations}, quit={quitWhenDone}");
+
+        Debug.Log(
+            $"Training Config: " +
+            $"autoStart={autoStartTraining}, " +
+            $"gens={targetGenerations}, " +
+            $"pop={populationSize}, " +
+            $"matches={matchesPerGenome}, " +
+            $"pod={podSize}, " +
+            $"elite={elites}, " +
+            $"cull={cullCount}, " +
+            $"mutRate={mutationRate}, " +
+            $"mutStrength={mutationStrength}, " +
+            $"keep={generationsToKeep}, " +
+            $"quit={quitWhenDone}"
+        );
     }
     [Header("References")]
     public AutoChessPVPSavedGenomeDataManager database;
@@ -52,7 +105,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         }
         if (autoStartTraining)
         {
-            Debug.Log($"Auto-starting training for {targetGenerations} generations...");
             StartCoroutine(RunTrainingLoop());
         }
     }
@@ -60,14 +112,14 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     public AutoChessAIPrepController aiController;
     [Header("Evolution Settings")]
     public int populationSize = 40;
-    public int matchesPerGenome = 3;
+    public int matchesPerGenome = 6;
     public int podSize = 8;
     public int elites = 4;
     public int cullCount = 8;
     public float mutationRate = 0.15f;
     public float mutationStrength = 1f;
     [Header("State")]
-    public int generationsToKeep = 5;
+    public int generationsToKeep = 100;
     public int currentGeneration = 0;
     public bool isTraining = false;
     public int matchesCompletedThisGen = 0;
@@ -78,10 +130,8 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     {
         try
         {
-            Debug.Log("Start() entered");
             if (database == null)
             {
-                Debug.Log("Database null, trying Resources.Load...");
                 database = Resources.Load<AutoChessPVPSavedGenomeDataManager>("SavedGenomes");
             }
             if (database == null)
@@ -89,7 +139,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                 Debug.LogError("FATAL: database is still null after Resources.Load!");
                 return;
             }
-            Debug.Log("Database found, calling LoadDB...");
             LoadDB();
             Debug.Log("LoadDB finished.");
         }
@@ -128,6 +177,15 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                 entry.wins = 0;
                 entry.matchesPlayed = 0;
                 entry.avgPlacement = 0;
+                entry.avgRoundsSurvived = 0;
+                entry.avgFinalGold = 0;
+                entry.avgFinalLevel = 0;
+                entry.avgGoldSpent = 0;
+                entry.teamHistory.Clear();
+                entry.benchHistory.Clear();
+                entry.factionHistory.Clear();
+                entry.stackHistory.Clear();
+                entry.equipmentHistory.Clear();
             }
             yield return RunGenerationPods();
             if (!isTraining) break;
@@ -218,6 +276,9 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             bool won = placement == 1;
             int rounds = ranked[i].GetRound();
             float hp = ranked[i].GetHealth();
+            float finalGold = ranked[i].GetGold();
+            float finalLevel = ranked[i].GetLevel();
+            float goldSpent = ranked[i].GetTotalGoldSpent();
             float placementScore = placement switch
             {
                 1 => 30f, 2 => 25f, 3 => 20f, 4 => 15f,
@@ -230,19 +291,21 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                 matchFitness += 30f;
                 matchFitness += hp * 0.5f;
             }
-            // Store The Teams For Good Ones.
-            if (placement <= 3)
-            {
-                entry.lastTeam = String.Join(",", ranked[i].GetFieldActorNames());
-                entry.lastFactions = String.Join(",", ranked[i].factionData.GetActiveFactions());
-                entry.lastStacks = String.Join(",", ranked[i].factionData.GetActiveFactionStacks());
-            }
+            // Store The Teams.
+            entry.teamHistory.Add(String.Join(",", ranked[i].GetFieldActorNames()));
+            entry.benchHistory.Add(String.Join(",", ranked[i].GetBenchActorNames()));
+            entry.factionHistory.Add(String.Join(",", ranked[i].factionData.GetActiveFactions()));
+            entry.stackHistory.Add(String.Join(",", ranked[i].factionData.GetActiveFactionStacks()));
+            entry.equipmentHistory.Add(String.Join(",", ranked[i].GetFieldActorEquipment()));
             entry.matchesPlayed++;
             entry.fitness += matchFitness;
             entry.avgPlacement = ((entry.avgPlacement * (entry.matchesPlayed - 1)) + placement) / entry.matchesPlayed;
+            entry.avgRoundsSurvived = ((entry.avgRoundsSurvived * (entry.matchesPlayed - 1)) + rounds) / entry.matchesPlayed;
+            entry.avgFinalGold = ((entry.avgFinalGold * (entry.matchesPlayed - 1)) + finalGold) / entry.matchesPlayed;
+            entry.avgFinalLevel = ((entry.avgFinalLevel * (entry.matchesPlayed - 1)) + finalLevel) / entry.matchesPlayed;
+            entry.avgGoldSpent = ((entry.avgGoldSpent * (entry.matchesPlayed - 1)) + goldSpent) / entry.matchesPlayed;
             if (won) entry.wins++;
         }
-        Debug.Log($"Pod {podIndex} complete. Rounds: {director.roundCount}");
     }
     float FactionFitnessBonus(AutoChessDataManager team)
     {
@@ -264,27 +327,14 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         int minGen = currentGeneration - generationsToKeep;
         if (minGen < 0) return;
         int removed = database.entries.RemoveAll(e => e.generation < minGen && e.tag != "champion");
-        if (removed > 0)
-            Debug.Log($"Pruned {removed} genomes older than gen {minGen}. DB size: {database.entries.Count}");
     }
     void PersistChampion()
     {
         if (champion == null) return;
         database.entries.RemoveAll(e => e.tag == "champion");
-        var entry = new GenomeEntry
-        {
-            id = System.Guid.NewGuid().ToString(),
-            tag = "champion",
-            generation = championGeneration,
-            fitness = champion.fitness,
-            wins = champion.wins,
-            matchesPlayed = champion.matchesPlayed,
-            avgPlacement = champion.avgPlacement,
-            genome = champion.genome?.Copy(),
-            championTeam = champion.championTeam,
-            championFactions = champion.championFactions,
-            championStacks = champion.championStacks
-        };
+        var entry = champion.Clone();
+        entry.tag = "champion";
+        entry.generation = championGeneration;
         database.entries.Add(entry);
     }
     void RestoreChampion()
@@ -292,20 +342,8 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         var saved = database.entries.FirstOrDefault(e => e.tag == "champion");
         if (saved != null)
         {
-            champion = new GenomeEntry
-            {
-                id = System.Guid.NewGuid().ToString(),
-                tag = saved.tag,
-                generation = saved.generation,
-                fitness = saved.fitness,
-                wins = saved.wins,
-                matchesPlayed = saved.matchesPlayed,
-                avgPlacement = saved.avgPlacement,
-                genome = saved.genome?.Copy(),
-                championTeam = saved.championTeam,
-                championFactions = saved.championFactions,
-                championStacks = saved.championStacks
-            };
+            champion = saved.Clone();
+            champion.id = System.Guid.NewGuid().ToString();
             championGeneration = champion.generation;
             Debug.Log($"Restored champion from generation {championGeneration}");
         }
@@ -321,13 +359,11 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         {
             mutationRate = Mathf.Max(0.05f, mutationRate * 0.95f);
             mutationStrength = Mathf.Max(0.3f, mutationStrength * 0.95f);
-            Debug.Log($"Converged (var={variance:F1}). Mutation: {mutationRate:F2} / {mutationStrength:F2}");
         }
         else if (relativeVariance > 0.40f) // > 40% of mean, still exploring, stay aggressive
         {
             mutationRate = Mathf.Min(0.25f, mutationRate * 1.05f);
             mutationStrength = Mathf.Min(1.5f, mutationStrength * 1.05f);
-            Debug.Log($"Diverse (var={variance:F1}). Mutation: {mutationRate:F2} / {mutationStrength:F2}");
         }
     }
     void BreedNextGeneration()
@@ -335,6 +371,14 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         int nextGen = currentGeneration + 1;
         string nextTag = $"gen{nextGen}";
         var ranked = currentGenPool.OrderByDescending(e => e.matchesPlayed > 0 ? e.fitness / e.matchesPlayed : 0f).ToList();
+        // Add the champion to the pool
+        var championClone = champion?.Clone();
+        if(championClone != null)
+        {
+            championClone.tag = nextTag;
+            championClone.generation = nextGen;
+            database.entries.Add(championClone);
+        }
         // Elitism
         for (int i = 0; i < elites && i < ranked.Count; i++)
         {
@@ -365,7 +409,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             }
         }
         float topAvg = ranked[0].matchesPlayed > 0 ? ranked[0].fitness / ranked[0].matchesPlayed : 0f;
-        Debug.Log($"Gen {nextGen} ready. Top avg fitness: {topAvg:F1}, matches: {ranked[0].matchesPlayed}");
     }
     void UpdateChampion()
     {
@@ -374,45 +417,32 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         float bestAvg = best.matchesPlayed > 0 ? best.fitness / best.matchesPlayed : 0f;
         if (champion == null)
         {
-            champion = new GenomeEntry
-            {
-                id = System.Guid.NewGuid().ToString(),
-                tag = "champion",
-                generation = currentGeneration,
-                fitness = best.fitness,
-                wins = best.wins,
-                matchesPlayed = best.matchesPlayed,
-                avgPlacement = best.avgPlacement,
-                genome = best.genome?.Copy(),
-                championTeam = best.lastTeam,
-                championFactions = best.lastFactions,
-                championStacks = best.lastStacks,
-            };
+            champion = best.Clone();
+            champion.id = System.Guid.NewGuid().ToString();
+            champion.tag = "champion";
+            champion.generation = currentGeneration;
+            champion.championTeam = best.teamHistory.Count > 0 ? best.teamHistory[^1] : "";
+            champion.championBench = best.benchHistory.Count > 0 ? best.benchHistory[^1] : "";
+            champion.championFactions = best.factionHistory.Count > 0 ? best.factionHistory[^1] : "";
+            champion.championStacks = best.stackHistory.Count > 0 ? best.stackHistory[^1] : "";
+            champion.championEquipment = best.equipmentHistory.Count > 0 ? best.equipmentHistory[^1] : "";
             return;
         }
         float champAvg = champion.matchesPlayed > 0 ? champion.fitness / champion.matchesPlayed : 0f;
         Debug.Log($"Benchmark: Gen {currentGeneration} best {bestAvg:F1} vs Champion (gen {championGeneration}) {champAvg:F1}");
         if (bestAvg > champAvg * 1.02f) // must beat by 2% to dethrone
         {
-            champion = new GenomeEntry
-            {
-                id = System.Guid.NewGuid().ToString(),
-                tag = "champion",
-                generation = currentGeneration,
-                fitness = best.fitness,
-                wins = best.wins,
-                matchesPlayed = best.matchesPlayed,
-                avgPlacement = best.avgPlacement,
-                genome = best.genome?.Copy(),
-                championTeam = best.lastTeam,
-                championFactions = best.lastFactions,
-                championStacks = best.lastStacks
-            };
+            champion = best.Clone();
+            champion.id = System.Guid.NewGuid().ToString();
+            champion.tag = "champion";
+            champion.generation = currentGeneration;
+            champion.championTeam = best.teamHistory.Count > 0 ? best.teamHistory[^1] : "";
+            champion.championBench = best.benchHistory.Count > 0 ? best.benchHistory[^1] : "";
+            champion.championFactions = best.factionHistory.Count > 0 ? best.factionHistory[^1] : "";
+            champion.championStacks = best.stackHistory.Count > 0 ? best.stackHistory[^1] : "";
+            champion.championEquipment = best.equipmentHistory.Count > 0 ? best.equipmentHistory[^1] : "";
             championGeneration = currentGeneration;
             Debug.Log($"New champion! Gen {currentGeneration}: {bestAvg:F1}");
-            Debug.Log("Champion's Team: " + champion.championTeam);
-            Debug.Log("Champion's Factions: " + champion.championFactions);
-            Debug.Log("Champion's Stacks: " + champion.championStacks);
         }
     }
     GenomeEntry TournamentSelect(List<GenomeEntry> pool, int size)

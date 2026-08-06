@@ -15,12 +15,20 @@ public class GenomeEntry
     public int wins;
     public int matchesPlayed;
     public float avgPlacement;
-    public string lastTeam;
-    public string lastFactions;
-    public string lastStacks;
+    public float avgRoundsSurvived;
+    public float avgFinalGold;
+    public float avgFinalLevel;
+    public float avgGoldSpent;
+    public List<string> teamHistory = new();
+    public List<string> benchHistory = new();
+    public List<string> factionHistory = new();
+    public List<string> stackHistory = new();
+    public List<string> equipmentHistory = new();
     public string championTeam;
+    public string championBench;
     public string championFactions;
     public string championStacks;
+    public string championEquipment;
     public AutoChessPVPGenome genome;
     public float WinRate => matchesPlayed > 0 ? (float)wins / matchesPlayed : 0f;
     public GenomeEntry Clone()
@@ -33,6 +41,21 @@ public class GenomeEntry
             fitness = fitness,
             wins = wins,
             matchesPlayed = matchesPlayed,
+            avgPlacement = avgPlacement,
+            avgRoundsSurvived = avgRoundsSurvived,
+            avgFinalGold = avgFinalGold,
+            avgFinalLevel = avgFinalLevel,
+            avgGoldSpent = avgGoldSpent,
+            teamHistory = teamHistory != null ? new List<string>(teamHistory) : new List<string>(),
+            benchHistory = benchHistory != null ? new List<string>(benchHistory) : new List<string>(),
+            factionHistory = factionHistory != null ? new List<string>(factionHistory) : new List<string>(),
+            stackHistory = stackHistory != null ? new List<string>(stackHistory) : new List<string>(),
+            equipmentHistory = equipmentHistory != null ? new List<string>(equipmentHistory) : new List<string>(),
+            championTeam = championTeam,
+            championBench = championBench,
+            championFactions = championFactions,
+            championStacks = championStacks,
+            championEquipment = championEquipment,
             genome = genome?.Copy()
         };
     }

@@ -151,18 +151,18 @@ public class AutoBattleManager : MonoBehaviour
             allAutoActors.Add(newActor);
         }
         // Apply Faction Effects.
-        factionEffectManager.ApplyFactionEffects(allAutoActors, factionManager.factionData.GetActiveFactions(), factionManager.factionData.GetActiveFactionCount(), factionManager.factionData.GetActiveFactionStacks());
         // Apply Equipment Effects.
         for (int i = 0; i < allAutoActors.Count; i++)
         {
             actorMaker.ApplyAutoChessEquipmentEffects(allAutoActors[i], allAutoActors);
-            actorMaker.ReorganizeActorPassives(allAutoActors[i]);
         }
+        factionEffectManager.ApplyFactionEffects(allAutoActors, factionManager.factionData);
         map.InitializeCombatLog();
         map.InitializeDamageTracker();
         // Add The Actors To The Map.
         for (int i = 0; i < allAutoActors.Count; i++)
         {
+            actorMaker.ReorganizeActorPassives(allAutoActors[i]);
             // Apply Start Battle Effects.
             effectManager.StartBattle(allAutoActors[i], map);
             map.AddActorToBattle(allAutoActors[i]);

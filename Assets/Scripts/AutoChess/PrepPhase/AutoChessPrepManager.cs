@@ -162,6 +162,14 @@ public class AutoChessPrepManager : ClickTileManager
         if (trait.timing == timing)
         {
             dataManager.AddLog(actor.GetName() + " [" + timing + "]");
+            if (timing == "OnPurchase" && factionManager.FactionActive("Investor"))
+            {
+                ApplyActorTrait(actor, trait);
+                if (factionManager.GetStacksOfFaction("Investor") >= 70)
+                {
+                    ApplyActorTrait(actor, trait);
+                }
+            }
             ApplyActorTrait(actor, trait);
         }
     }
@@ -409,6 +417,10 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public void PVPBuySelectedActor(int cost)
     {
+        if (factionManager.FactionActive("Foresight") && factionManager.GetStacksOfFaction("Foresight") >= 100)
+        {
+            cost--;
+        }
         if (!SpendGold(cost)){return;}
         AutoActorRollUpData boughtActor = shopManager.GetSelectedActor();
         dataManager.AddLog("Bought " + boughtActor.GetName());
@@ -562,6 +574,15 @@ public class AutoChessPrepManager : ClickTileManager
         benchSlots.Remove(benchActor);
     }
     public List<AutoActorRollUpData> fieldSlots;
+    public List<string> GetAllFieldEquipment()
+    {
+        List<string> allEquipment = new List<string>();
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            allEquipment.AddRange(fieldSlots[i].GetEquipmentNames());
+        }
+        return allEquipment;
+    }
     public void MoveFromFieldToBench(AutoActorRollUpData fieldActor)
     {
         if (!fieldSlots.Contains(fieldActor)){return;}
@@ -579,8 +600,14 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public int GetMaxFieldSlots()
     {
-        // TODO Check Special Equipment.
         int fieldSlotEquipCount = 0;
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            if (fieldSlots[i].EquipmentExists("HR File"))
+            {
+                fieldSlotEquipCount++;
+            }
+        }
         int bonusSlots = Mathf.Min(2, fieldSlotEquipCount);
         return 3 + bonusSlots +(dataManager.GetLevel() / 2);
     }

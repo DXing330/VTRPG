@@ -106,6 +106,7 @@ public class AutoActorRollUpData
     public int GetLevel(){return autoChessLevel;}
     public void SetLevel(int newData){autoChessLevel = newData;}
     public List<string> factions;
+    public List<string> RAWGetFactions(){return factions;}
     public List<string> GetFactions(){return new List<string>(factions);}
     public void SetFactions(List<string> newFactions){factions = newFactions;}
     public int health;
@@ -117,6 +118,9 @@ public class AutoActorRollUpData
     public int defense;
     public int GetDefense(){return defense;}
     public void SetDefense(int newData){defense = newData;}
+    public int resist; // Magic Resist.
+    public int GetResist(){return resist;}
+    public void SetResist(int newData){resist = newData;}
     public string GetBaseStatString()
     {
         string baseStatString = GetName();
@@ -128,6 +132,18 @@ public class AutoActorRollUpData
         return baseStatString;
     }
     public List<string> equipmentNames = new List<string>();
+    public List<string> GetEmblems()
+    {
+        List<string> emblems = new List<string>();
+        for (int i = 0; i < equipmentNames.Count; i++)
+        {
+            if (equipmentNames[i].Contains(" Emblem"))
+            {
+                emblems.Add(equipmentNames[i].Replace(" Emblem", ""));
+            }
+        }
+        return emblems;
+    }
     public bool EquipmentExists(string equipName)
     {
         return equipmentNames.Contains(equipName);
@@ -148,6 +164,17 @@ public class AutoActorRollUpData
         if (equipmentNames.Count <= 0){return;}
         equipmentNames.RemoveAt(equipmentNames.Count - 1);
     }
+    public int GetOpenEquipmentSlots()
+    {
+        for (int i = equipmentNames.Count - 1; i >= 0; i--)
+        {
+            if (equipmentNames[i].Length <= 0)
+            {
+                equipmentNames.RemoveAt(i);
+            }
+        }
+        return 3 - equipmentNames.Count;
+    }
     public void EquipEquipment(string equipName)
     {
         equipmentNames.Add(equipName);
@@ -159,6 +186,7 @@ public class AutoActorRollUpData
     }
     // Need The Trait Since Some Traits Activate During Prep Phase.
     public AutoChessTrait trait;
+    public AutoChessTrait GetTrait(){return trait;}
     public void LoadBaseStats(StatDatabase autoActorData, int newLevel = 1)
     {
         SetLevel(newLevel);
@@ -170,6 +198,7 @@ public class AutoActorRollUpData
         SetHealth(int.Parse(blocks[7]) + (10 * (newLevel - 1)));
         SetAttack(int.Parse(blocks[8]) + (2 * (newLevel - 1)));
         SetDefense(int.Parse(blocks[9]));
+        SetResist(int.Parse(blocks[10]));
     }
     public void LoadBaseTrait(StatDatabase autoActorData)
     {
@@ -194,6 +223,7 @@ public class AutoActorRollUpData
         data += "Health" + equals + health + delimiter;
         data += "Attack" + equals + attack + delimiter;
         data += "Defense" + equals + defense + delimiter;
+        data += "Resist" + equals + resist + delimiter;
         data += "Equipment" + equals + String.Join(equipDelimiter, equipmentNames) + delimiter;
         data += "Location" + equals + location + delimiter;
         data += "Direction" + equals + direction + delimiter;
@@ -235,6 +265,9 @@ public class AutoActorRollUpData
             case "Defense":
             SetDefense(int.Parse(value));
             return;
+            case "Resist":
+            SetResist(int.Parse(value));
+            return;
             case "Equipment":
             equipmentNames = new List<string>(value.Split(equipDelimiter).ToList());
             return;
@@ -251,6 +284,7 @@ public class AutoActorRollUpData
 [System.Serializable]
 public class AutoActor : TacticActor
 {
+    public int GetLevel(){return autoChessLevel;}
     public void AutoChessSetInitialStatsFromString(string newStats, int level = 1)
     {
         // Initialize Regular Stats.
@@ -260,6 +294,7 @@ public class AutoActor : TacticActor
         baseDodge = 0;
         ResetEquipment();
         ResetPassives();
+        autoChessLevel = level;
         // Deal With AutoChess Stats
         autoChessTrait = new AutoChessTrait();
         autoChessEquipment.Clear();
@@ -274,6 +309,7 @@ public class AutoActor : TacticActor
         SetCurrentHealth(int.Parse(statBlocks[7]));
         SetBaseAttack(int.Parse(statBlocks[8]));
         SetBaseDefense(int.Parse(statBlocks[9]));
+        SetBaseMagicResist(int.Parse(statBlocks[10]));
         // Should Scale Based On Base Stats.
         if (level > 1)
         {
@@ -283,13 +319,13 @@ public class AutoActor : TacticActor
             UpdateBaseAttack(GetBaseAttack() * scaling / 10);
             UpdateBaseDefense(GetBaseDefense() * scaling / 10);
         }
-        SetAttackRange(int.Parse(statBlocks[10]));
-        autoChessAttackRangeShape = statBlocks[13];
-        SetPassiveSkills(statBlocks[11].Split(passiveDelimiter).ToList());
-        SetPassiveLevels(statBlocks[12].Split(passiveDelimiter).ToList());
-        akHealer = int.Parse(statBlocks[14]);
-        baseRespawnTimer = int.Parse(statBlocks[15]);
-        akAOE = int.Parse(statBlocks[16]);
+        SetAttackRange(int.Parse(statBlocks[11]));
+        autoChessAttackRangeShape = statBlocks[14];
+        SetPassiveSkills(statBlocks[12].Split(passiveDelimiter).ToList());
+        SetPassiveLevels(statBlocks[13].Split(passiveDelimiter).ToList());
+        akHealer = int.Parse(statBlocks[15]);
+        baseRespawnTimer = int.Parse(statBlocks[16]);
+        akAOE = int.Parse(statBlocks[17]);
     }
     public void AutoChessEnemySetInitialStatsFromString(string newStats, int difficultyScaling = 0)
     {
@@ -308,6 +344,7 @@ public class AutoActor : TacticActor
         int health = int.Parse(statBlocks[3]);
         int attack = int.Parse(statBlocks[4]);
         int defense = int.Parse(statBlocks[5]);
+        int resist = int.Parse(statBlocks[6]);
         if (difficultyScaling > 0)
         {
             health += (health * difficultyScaling) / 100;
@@ -318,10 +355,11 @@ public class AutoActor : TacticActor
         SetCurrentHealth(health);
         SetBaseAttack(attack);
         SetBaseDefense(defense);
-        SetAttackRange(int.Parse(statBlocks[6]));
-        SetPassiveSkills(statBlocks[7].Split(passiveDelimiter).ToList());
-        SetPassiveLevels(statBlocks[8].Split(passiveDelimiter).ToList());
-        SetMoveType(statBlocks[9]);
+        SetBaseMagicResist(resist);
+        SetAttackRange(int.Parse(statBlocks[7]));
+        SetPassiveSkills(statBlocks[8].Split(passiveDelimiter).ToList());
+        SetPassiveLevels(statBlocks[9].Split(passiveDelimiter).ToList());
+        SetMoveType(statBlocks[10]);
     }
     public override int GetMaxMoveRange()
     {

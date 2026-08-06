@@ -61,6 +61,18 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         allPlayers.Load();
         AIPrepPhase(true);
     }
+    protected float totalAIPrepTime;
+    protected float totalBattleTime;
+    protected float totalOtherTime;
+    public int testRunCount = 6;
+    [ContextMenu("Test Multiple AI Full Run")]
+    public void TestMultipleAIFullRun()
+    {
+        for (int i = 0; i < testRunCount; i++)
+        {
+            TestAIFullRun();
+        }
+    }
     [ContextMenu("Test AI Full Run")]
     public void TestAIFullRun()
     {
@@ -69,10 +81,35 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         allPlayers.fullAI = true;
         allPlayers.NewGameAllDataManagers();
         allPlayers.Load();
+        totalAIPrepTime = 0f;
+        totalBattleTime = 0f;
+        totalOtherTime = 0f;
         while (!matchOver && roundCount < 30)
         {
-            AIPrepPhase(true);
+            TimedAIPrepPhase();
         }
+        Debug.Log("Rounds: " + roundCount +
+            "\nAI Prep: " + totalAIPrepTime +
+            "\nBattle: " + totalBattleTime);
+    }
+    public void TimedAIPrepPhase()
+    {
+        float start = Time.realtimeSinceStartup;
+        List<AutoChessDataManager> allTeams = allPlayers.GetAllTeams();
+        for (int i = 0; i < allTeams.Count; i++)
+        {
+            if (allTeams[i].PlayerData() || allTeams[i].GetHealth() <= 0){continue;}
+            var entry = GenomeProvider.Get(allTeams[i]);
+            if (entry != null) AIManager.genome = entry.genome;
+            else
+            {
+                AIManager.DefaultGenome();
+            }
+            AIManager.AIPrepPhase(allTeams[i]);
+        }
+        totalAIPrepTime += Time.realtimeSinceStartup - start;
+        PrepareBattleLists();
+        TimedAutoRunAllBattles();
     }
     // Do Prep For All AI -> Move Into Battle.
     public void AIPrepPhase(bool fullAI = false)
@@ -89,9 +126,17 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
             }
             AIManager.AIPrepPhase(allTeams[i]);
         }
-        PrepareBattleLists(fullAI);
+        PrepareBattleLists();
+        if (!fullAI)
+        {
+            StartCoroutine(RunAllBattles());
+        }
+        else
+        {
+            AutoRunAllBattles();
+        }
     }
-    public void PrepareBattleLists(bool fullAI = false)
+    public void PrepareBattleLists()
     {
         roundLeftTeams.Clear();
         roundRightTeams.Clear();
@@ -122,14 +167,19 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
                 roundRightTeams.Add(allTeams[i]);
             }
         }
-        if (!fullAI)
+    }
+    protected void TimedAutoRunAllBattles()
+    {
+        roundCount++;
+        float start = Time.realtimeSinceStartup;
+        for (int i = 0; i < roundLeftTeams.Count; i++)
         {
-            StartCoroutine(RunAllBattles());
+            battleManager.SetTeams(roundLeftTeams[i], roundRightTeams[i]);
+            battleManager.SetInstantBattle();
+            battleManager.StartBattle();
         }
-        else
-        {
-            AutoRunAllBattles();
-        }
+        totalBattleTime += Time.realtimeSinceStartup - start;
+        CheckMatchOver();
     }
     public void AutoRunAllBattles()
     {

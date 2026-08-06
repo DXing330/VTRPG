@@ -189,14 +189,15 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             // Track The Actors.
             leftTeamActors.Add(actorMaker.CreateActorOnTeam(fieldActors[i], 0));
         }
-        factionEffectManager.ApplyFactionEffects(leftTeamActors, leftTeam.factionData.GetActiveFactions(), leftTeam.factionData.GetActiveFactionCount(), leftTeam.factionData.GetActiveFactionStacks());
+        // Equipment can grant factions so do that first.
         for (int i = 0; i < leftTeamActors.Count; i++)
         {
             actorMaker.ApplyAutoChessEquipmentEffects(leftTeamActors[i], leftTeamActors);
-            actorMaker.ReorganizeActorPassives(leftTeamActors[i]);
         }
+        factionEffectManager.ApplyFactionEffects(leftTeamActors, leftTeam.factionData);
         for (int i = 0; i < leftTeamActors.Count; i++)
         {
+            actorMaker.ReorganizeActorPassives(leftTeamActors[i]);
             // Apply Start Battle Effects.
             effectManager.StartBattle(leftTeamActors[i], map);
         }
@@ -207,14 +208,14 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             // Track The Actors.
             rightTeamActors.Add(actorMaker.CreateActorOnTeam(fieldActors[i], 1));
         }
-        factionEffectManager.ApplyFactionEffects(rightTeamActors, rightTeam.factionData.GetActiveFactions(), rightTeam.factionData.GetActiveFactionCount(), rightTeam.factionData.GetActiveFactionStacks());
         for (int i = 0; i < rightTeamActors.Count; i++)
         {
             actorMaker.ApplyAutoChessEquipmentEffects(rightTeamActors[i], rightTeamActors);
-            actorMaker.ReorganizeActorPassives(rightTeamActors[i]);
         }
+        factionEffectManager.ApplyFactionEffects(rightTeamActors, rightTeam.factionData);
         for (int i = 0; i < rightTeamActors.Count; i++)
         {
+            actorMaker.ReorganizeActorPassives(rightTeamActors[i]);
             // Apply Start Battle Effects.
             effectManager.StartBattle(rightTeamActors[i], map);
         }
@@ -543,7 +544,7 @@ public class AutoChessPVPBattleManager : AutoBattleManager
                 TriggerTrait(behindActors[i], "OnForwardAttack", attacker);
             }
         }
-        map.UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName());
+        //map.UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName());
         // Show Attack Speed Rolls In The combatLog?
         attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
         if (defender.GetHealth() <= 0)
@@ -569,9 +570,9 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             TriggerTrait(actor, "FirstSkill");
         }
         // Don't Bother With Costs In AutoMode.
-        map.UpdateCombatLog(actor.GetPersonalName() + " uses " + skillName);
-        activeManager.ActivateSkill(false);
+        //map.UpdateCombatLog(actor.GetPersonalName() + " uses " + skillName);
         actor.SetCurrentEnergy(0);
+        activeManager.ActivateSkill(false);
         map.UpdateMap();
     }
 }

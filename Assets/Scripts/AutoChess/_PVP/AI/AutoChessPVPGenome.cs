@@ -5,7 +5,7 @@ using UnityEngine;
 [System.Serializable]
 public class AutoChessPVPGenome
 {
-    public float[] genes = new float[35];
+    public float[] genes = new float[44];
     // --- Name lookup (static readonly, not const) ---
     public static readonly List<string> GeneNames = new List<string>()
     {
@@ -43,7 +43,16 @@ public class AutoChessPVPGenome
         "W_FACTION_SIDE",
         "W_FACTION_COMMITMENT",
         "W_FACTION_STACKS",
-        "W_FACTION_PIVOT_COST"
+        "W_UNIT_STACK_GENERATION",
+        "W_UNIT_STACK_SCALING",
+        "W_UNIT_CYCLE",
+        "W_UNIT_CYCLE_SCALING",
+        "W_ITEM_SAVE",
+        "W_ITEM_DPS_NEED",
+        "W_ITEM_DPS_MATCH",
+        "W_ITEM_TANK_NEED",
+        "W_ITEM_TANK_MATCH",
+        "W_ITEM_VALUE"
     };
     // --- Defaults aligned to the indices above ---
     public static readonly float[] Defaults = new float[]
@@ -82,12 +91,26 @@ public class AutoChessPVPGenome
         1.0f,   // 31 W_FACTION_SIDE
         2.5f,   // 32 W_FACTION_COMMITMENT
         0.5f,   // 33 W_FACTION_STACKS
-        2.0f    // 34 W_FACTION_PIVOT_COST
+        0.5f,   // 34 W_UNIT_STACK_GENERATION
+        0.5f,   // 35 W_UNIT_STACK_SCALING
+        0.5f,   // 36 W_UNIT_CYCLE
+        0.5f,   // 37 W_UNIT_CYCLE_SCALING
+        1.0f,   // 38 W_ITEM_SAVE
+        1.0f,   // 39 W_ITEM_DPS_NEED
+        1.0f,   // 40 W_ITEM_DPS_MATCH
+        1.0f,   // 41 W_ITEM_TANK_NEED
+        1.0f,   // 42 W_ITEM_TANK_MATCH
+        1.0f    // 43 W_ITEM_VALUE
     };
     public float this[int index] => genes[index];
     public float GetByName(string name)
     {
         int idx = GeneNames.IndexOf(name);
+        if (idx < 0)
+        {
+            Debug.LogError($"Genome gene '{name}' does not exist.");
+            return 0f;
+        }
         return idx >= 0 ? genes[idx] : 0f;
     }
     public void SetByName(string name, float value)

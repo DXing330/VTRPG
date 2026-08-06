@@ -36,10 +36,34 @@ public class AutoChessFactionDataManager : SavedData
         return new List<string>(allFactions);
     }
     public List<string> allFactionStacks;
+    public string HighestStackFaction()
+    {
+        int index = -1;
+        int stacks = 0;
+        for (int i = 0; i < allFactionStacks.Count; i++)
+        {
+            if (int.Parse(allFactionStacks[i]) > stacks)
+            {
+                stacks = int.Parse(allFactionStacks[i]);
+                index = i;
+            }
+        }
+        if (index < 0){return "";}
+        return allFactions[index];
+    }
     public void SetAllFactionStacks(List<string> newFactions)
     {
         utility.RemoveEmptyListItems(newFactions);
         allFactionStacks = new List<string>(newFactions);
+    }
+    public int GetMainFactionStacks()
+    {
+        int count = 0;
+        for (int i = 0; i < mainFactions.Count; i++)
+        {
+            count += int.Parse(GetStacksOfFaction(mainFactions[i]));
+        }
+        return count;
     }
     public string GetStacksOfFaction(string factionName)
     {
@@ -54,7 +78,7 @@ public class AutoChessFactionDataManager : SavedData
     // This should only be called from a trait trigger during prep/battle.
     public void GainFactionStacks(string faction, int stackAmount)
     {
-        if (faction.Length <= 0){return;}
+        if (faction.Length <= 0 || faction == "Harmony" || faction == "Assist"){return;}
         int indexOf = allFactions.IndexOf(faction);
         int oldStacks = 0;
         if (indexOf < 0)

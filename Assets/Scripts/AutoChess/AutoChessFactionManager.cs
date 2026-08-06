@@ -43,6 +43,10 @@ public class AutoChessFactionManager : MonoBehaviour
         else if (activeCount == 2 && !factionData.MainFaction(factionName)){return true;}
         return false;
     }
+    public int GetStacksOfFaction(string factionName)
+    {
+        return int.Parse(factionData.GetStacksOfFaction(factionName));
+    }
     public string HighestStackActiveFaction()
     {
         UpdateActiveFactions();
@@ -51,7 +55,7 @@ public class AutoChessFactionManager : MonoBehaviour
         int index = -1;
         for (int i = 0; i < activeFactions.Count; i++)
         {
-            int stacks = int.Parse(factionData.GetStacksOfFaction(activeFactions[i]));
+            int stacks = GetStacksOfFaction(activeFactions[i]);
             if (stacks > stackCount)
             {
                 stackCount = stacks;
@@ -59,6 +63,10 @@ public class AutoChessFactionManager : MonoBehaviour
             }
         }
         return activeFactions[index];
+    }
+    public string HighestStackFaction()
+    {
+        return factionData.HighestStackFaction();
     }
     public string HighestUnitCountFaction()
     {
@@ -88,16 +96,28 @@ public class AutoChessFactionManager : MonoBehaviour
             actorRollUp.LoadRollUpData(fieldActors[i]);
             if (unitNames.Contains(actorRollUp.GetName())){continue;}
             List<string> factions = actorRollUp.GetFactions();
+            factions.AddRange(actorRollUp.GetEmblems());
+            factions = factions.Distinct().ToList();
             if (factions.Contains(factionName))
             {
                 unitNames.Add(actorRollUp.GetName());
             }
         }
-        // TODO Include The Bench Slots For Econ Units.
+        if (!factionData.EconFaction(factionName)){return unitNames;}
+        List<string> benchActors = dataManager.GetBenchActorData();
+        for (int i = 0; i < benchActors.Count; i++)
+        {
+            if (benchActors[i].Length <= 0){continue;}
+            actorRollUp.LoadRollUpData(benchActors[i]);
+            if (unitNames.Contains(actorRollUp.GetName())){continue;}
+            List<string> factions = actorRollUp.GetFactions();
+            if (factions.Contains(factionName))
+            {
+                unitNames.Add(actorRollUp.GetName());
+            }
+        }
         return unitNames;
     }
-    // TODO We Can Hard Check For Emblems First.
-    public List<string> uniqueEmblems;
     public List<string> uniqueUnitNames;
     // Factions Based On Field.
     public List<string> allFactionsWithUnits;
@@ -118,7 +138,6 @@ public class AutoChessFactionManager : MonoBehaviour
     {
         // Refresh.
         uniqueUnitNames.Clear();
-        uniqueEmblems.Clear();
         activeFactions.Clear();
         activeFactionCounts.Clear();
         allFactionsWithUnits.Clear();
@@ -131,6 +150,9 @@ public class AutoChessFactionManager : MonoBehaviour
             actorRollUp.LoadRollUpData(fieldActors[i]);
             if (uniqueUnitNames.Contains(actorRollUp.GetName())){continue;}
             List<string> factions = actorRollUp.GetFactions();
+            // Check Emblems Here.
+            factions.AddRange(actorRollUp.GetEmblems());
+            factions = factions.Distinct().ToList();
             for (int j = 0; j < factions.Count; j++)
             {
                 UpdateFactionCount(factions[j]);

@@ -9,6 +9,7 @@ public class AutoChessActorMaker : ActorMaker
     public StatDatabase actorData;
     public StatDatabase enemyData;
     public StatDatabase equipmentData;
+    public StatDatabase autoChessEquipmentRarity;
     public SkillEffect skillEffect;
     public int currentID;
     public void ResetID(){currentID = 0;}
@@ -121,7 +122,6 @@ public class AutoChessActorMaker : ActorMaker
     }
     protected void ApplyAutoChessEquipmentEffect(AutoActor actor, List<AutoActor> allActors, AutoChessEquipment equipment)
     {
-        if (equipment.GetTiming() != "Battle"){return;}
         if (equipment.GetTarget() == "Custom")
         {
             ApplyCustomAutoChessEquipmentEffect(actor, allActors, equipment);
@@ -132,6 +132,7 @@ public class AutoChessActorMaker : ActorMaker
             actor.AddFaction(equipment.GetSpecifics());
             return;
         }
+        if (equipment.GetTiming() != "Battle"){return;}
         string[] effects = equipment.GetEffect().Split(",");
         string[] specifics = equipment.GetSpecifics().Split(",");
         for (int i = 0; i < effects.Length; i++)
@@ -160,6 +161,15 @@ public class AutoChessActorMaker : ActorMaker
             case "Thief's Gloves":
             if (actor.AutoChessMaxEquipCount()){return;}
             // Generate Up To Two Random Equipment.
+            for (int i = 0; i < 2; i++)
+            {
+                if (actor.AutoChessMaxEquipCount()){return;}
+                AutoChessEquipment newEquipment = new AutoChessEquipment();
+                string equipmentName = autoChessEquipmentRarity.ReturnRandomKeyBasedOnIntValue(4);
+                newEquipment.LoadAutoChessEquipStats(equipmentName, equipmentData.ReturnValue(equipmentName));
+                actor.AddAutoChessEquipment(newEquipment);
+                ApplyAutoChessEquipmentEffect(actor, allActors, newEquipment);
+            }
             break;
         }
     }

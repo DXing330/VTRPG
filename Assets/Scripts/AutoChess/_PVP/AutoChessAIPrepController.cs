@@ -13,6 +13,30 @@ public class AutoChessAIPrepController : MonoBehaviour
     }
     public AutoChessPrepManager prepManager;
     public AutoChessFactionManager factionManager;
+    Dictionary<string, float> stackCache = new();
+    float GetStacks(string factionName)
+    {
+        if(stackCache.TryGetValue(factionName, out float value))
+        {
+            return value;
+        }
+        return 0f;
+    }
+    void BuildStackCache()
+    {
+        stackCache.Clear();
+        foreach (string faction in factionManager.factionData.GetAllFactions())
+        {
+            stackCache[faction] = int.Parse(factionManager.factionData.GetStacksOfFaction(faction));
+        }
+    }
+    Dictionary<AutoActorRollUpData, float> keepCache = new();
+    Dictionary<AutoActorRollUpData, float> buyCache = new();
+    void ClearScoreCaches()
+    {
+        keepCache.Clear();
+        buyCache.Clear();
+    }
     public AutoChessShopManager shopManager;
     public StatDatabase unitRoles;
     public StatDatabase unitRarity;
@@ -24,9 +48,12 @@ public class AutoChessAIPrepController : MonoBehaviour
         GetPitTiles();
         shopManager.shopData.GeneratePVPCurrentListing();
         shopManager.PVPRefreshData();
+        BuildStackCache();
+        ClearScoreCaches();
         EconomyAction(dataManager);
         AcquireLoop(dataManager);
         AutoPlaceFieldUnits(dataManager);
+        AutoPlaceEquipment(dataManager);
         prepManager.SaveToDataManager();
         prepManager.StartBattle();
     }
@@ -127,10 +154,12 @@ public class AutoChessAIPrepController : MonoBehaviour
                 float worstKeep = KeepScore(prepManager.benchSlots[worstIndex]);
                 if (bestScore <= worstKeep + genome.GetByName("W_SELL_MARGIN")){break;} // margin threshold
                 prepManager.FastSellSelectedActor(prepManager.benchSlots[worstIndex]);
+                ClearScoreCaches();
             }
             if (dataManager.GetGold() >= buyCost)
             {
                 prepManager.PVPBuySelectedActor(buyCost);
+                ClearScoreCaches();
                 actionTaken = true;
             }
         }
@@ -138,6 +167,10 @@ public class AutoChessAIPrepController : MonoBehaviour
     float BuyScore(AutoActorRollUpData unit)
     {
         if (unit == null){return -999f;}
+        if (buyCache.TryGetValue(unit, out float cached))
+        {
+            return cached;
+        }
         string name = unit.GetName();
         int tier = GetUnitTier(name);
         int cost = GetUnitCost(name);
@@ -149,16 +182,25 @@ public class AutoChessAIPrepController : MonoBehaviour
         score += genome.GetByName("W_BUY_SYNERGY") * SynergyValue(unit.GetFactions());
         score += genome.GetByName("W_BUY_DUPLICATE") * DuplicateValue(name);
         score += genome.GetByName("W_BUY_ROLE_FIT") * RoleNeedScore(role);
+        score += genome.GetByName("W_UNIT_STACK_GENERATION") * StackGainValue(unit);
+        score += genome.GetByName("W_UNIT_STACK_SCALING") * StackScalingValue(unit);
+        score += genome.GetByName("W_UNIT_CYCLE") * CycleValue(unit);
+        score += genome.GetByName("W_UNIT_CYCLE_SCALING") * CycleScalingValue(unit);
         List<string> factions = unit.GetFactions();
         for (int i = 0; i < factions.Count; i++)
         {
             score += EvaluateFaction(factions[i]);
         }
+        buyCache[unit] = score;
         return score;
     }
     float KeepScore(AutoActorRollUpData unit)
     {
         if (unit == null){return -999f;}
+        if (keepCache.TryGetValue(unit, out float cached))
+        {
+            return cached;
+        }
         string name = unit.GetName();
         int tier = GetUnitTier(name);
         int role = GetUnitRole(name);
@@ -168,11 +210,16 @@ public class AutoChessAIPrepController : MonoBehaviour
         score += genome.GetByName("W_KEEP_SYNERGY") * SynergyValue(unit.GetFactions());
         score += genome.GetByName("W_KEEP_DUPLICATE") * DuplicatePotential(name);
         score += genome.GetByName("W_KEEP_STAR_LEVEL") * star;
+        score += genome.GetByName("W_UNIT_STACK_GENERATION") * StackGainValue(unit, false);
+        score += genome.GetByName("W_UNIT_STACK_SCALING") * StackScalingValue(unit);
+        score += genome.GetByName("W_UNIT_CYCLE") * CycleValue(unit, false);
+        score += genome.GetByName("W_UNIT_CYCLE_SCALING") * CycleScalingValue(unit);
         List<string> factions = unit.GetFactions();
         for (int i = 0; i < factions.Count; i++)
         {
             score += EvaluateFaction(factions[i]);
         }
+        keepCache[unit] = score;
         return score;
     }
     int FindWorstBenchUnit()
@@ -255,6 +302,7 @@ public class AutoChessAIPrepController : MonoBehaviour
             allField[fieldIndex].SetLocation(benchLocation);
             prepManager.MoveFromBenchToField(allBench[benchIndex]);
             prepManager.MoveFromFieldToBench(allField[fieldIndex]);
+            ClearScoreCaches();
             // Good Swap Means Try Again.
             CheckAllSwaps(totalSwaps + 1);
         }
@@ -352,42 +400,273 @@ public class AutoChessAIPrepController : MonoBehaviour
     float FindActiveFactionDifferences(AutoActorRollUpData benchUnit, AutoActorRollUpData fieldUnit)
     {
         float totalDifference = 0f;
-        List<string> benchFactions = new List<string>(benchUnit.GetFactions());
-        List<string> fieldFactions = new List<string>(fieldUnit.GetFactions());
-        List<string> overlappingFactions = new List<string>();
-        for (int i = 0; i < benchFactions.Count; i++)
+        List<string> benchFactions = benchUnit.RAWGetFactions();
+        List<string> fieldFactions = fieldUnit.RAWGetFactions();
+        // Factions lost by removing the field unit.
+        for (int i = 0; i < fieldFactions.Count; i++)
         {
-            if (fieldFactions.Contains(benchFactions[i]))
+            string fieldFaction = fieldFactions[i];
+            bool shared = false;
+            for (int j = 0; j < benchFactions.Count; j++)
             {
-                overlappingFactions.Add(benchFactions[i]);
+                if (benchFactions[j] == fieldFaction)
+                {
+                    shared = true;
+                    break;
+                }
+            }
+            if (!shared)
+            {
+                totalDifference -= SynergyLossIfRemoved(fieldFaction);
             }
         }
-        for (int i = 0; i < overlappingFactions.Count; i++)
+        // Factions gained by adding the bench unit.
+        for (int i = 0; i < benchFactions.Count; i++)
         {
-            benchFactions.Remove(overlappingFactions[i]);
-            fieldFactions.Remove(overlappingFactions[i]);
+            string benchFaction = benchFactions[i];
+            bool shared = false;
+            for (int j = 0; j < fieldFactions.Count; j++)
+            {
+                if (fieldFactions[j] == benchFaction)
+                {
+                    shared = true;
+                    break;
+                }
+            }
+            if (!shared)
+            {
+                totalDifference += SynergyValue(benchFaction);
+            }
         }
-        // Check Any Losses And Gains.
-        totalDifference -= SynergyLossIfRemoved(fieldFactions);
-        totalDifference += SynergyValue(benchFactions);
         return totalDifference;
     }
-    float SynergyLossIfRemoved(List<string> removedFactions)
+    float SynergyLossIfRemoved(string removedFaction)
     {
         float loss = 0;
-        for (int i = 0; i < removedFactions.Count; i++)
+        if (removedFaction == "Harmony")
         {
-            int currentCount = factionManager.factionData.GetCountOfFaction(removedFactions[i]);
-            int[] thresholds = GetThresholds(removedFactions[i]);
-            foreach (var t in thresholds)
+            for (int i = 0; i < mainFactions.Count; i++)
             {
-                if (currentCount >= t && (currentCount - 1) < t)
-                {
-                    loss += 3.0f; // Would break this threshold
-                }
+                loss += SynergyLossIfRemoved(mainFactions[i]);
+            }
+            return loss;
+        }
+        int currentCount = factionManager.factionData.GetCountOfFaction(removedFaction);
+        int[] thresholds = GetThresholds(removedFaction);
+        foreach (var t in thresholds)
+        {
+            if (currentCount >= t && (currentCount - 1) < t)
+            {
+                loss += genome.GetByName("W_SYN_HIT");
             }
         }
         return loss;
+    }
+    // ============================================================
+    // 4. EQUIPMENT PLACEMENT
+    // ============================================================
+    public StatDatabase itemTypeData;
+    List<string> GetAvailableComponents()
+    {
+        List<string> components = new();
+        List<string> equipment = prepManager.dataManager.GetEquipment();
+        for(int i = 0; i < equipment.Count; i++)
+        {
+            if(IsComponent(equipment[i]))
+            {
+                components.Add(equipment[i]);
+            }
+        }
+        return components;
+    }
+    List<string> GetAvailableCombinedItems(AutoChessDataManager dataManager)
+    {
+        List<string> combined = new();
+        List<string> equipment = dataManager.GetEquipment();
+        for(int i = 0; i < equipment.Count; i++)
+        {
+            if(!IsComponent(equipment[i]))
+            {
+                combined.Add(equipment[i]);
+            }
+        }
+        return combined;
+    }
+    bool EquipItemToUnit(string itemName, bool exists = true)
+    {
+        string itemType = itemTypeData.ReturnValue(itemName);
+        // For DPS pick highest rarity/attack.
+        if (itemType == "DPS")
+        {
+            int dpsIndex = -1;
+            int maxAttack = -1;
+            for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+            {
+                if (unitRoles.ReturnValue(prepManager.fieldSlots[i].GetName()) == "DPS" && prepManager.fieldSlots[i].GetOpenEquipmentSlots() > 0 && prepManager.fieldSlots[i].GetAttack() > maxAttack)
+                {
+                    maxAttack = prepManager.fieldSlots[i].GetAttack();
+                    dpsIndex = i;
+                }
+            }
+            if (dpsIndex >= 0)
+            {
+                prepManager.fieldSlots[dpsIndex].EquipEquipment(itemName);
+                if (exists)
+                {
+                    prepManager.dataManager.UseEquipment(itemName);
+                }
+                return true;
+            }
+        }
+        // For Tank pick highest rarity/health.
+        else if (itemType == "Tank")
+        {
+            int tankIndex = -1;
+            int maxHealth = -1;
+            for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+            {
+                if (unitRoles.ReturnValue(prepManager.fieldSlots[i].GetName()) == "Tank" && prepManager.fieldSlots[i].GetOpenEquipmentSlots() > 0 && prepManager.fieldSlots[i].GetHealth() > maxHealth)
+                {
+                    maxHealth = prepManager.fieldSlots[i].GetHealth();
+                    tankIndex = i;
+                }
+            }
+            if (tankIndex >= 0)
+            {
+                prepManager.fieldSlots[tankIndex].EquipEquipment(itemName);
+                if (exists)
+                {
+                    prepManager.dataManager.UseEquipment(itemName);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+    void AutoPlaceEquipment(AutoChessDataManager dataManager)
+    {
+        // Heuristic Approach.
+        // 1. Find regular equipment.
+        List<string> combined = GetAvailableCombinedItems(dataManager);
+        // 2. Equip vs Save
+        for (int i = 0; i < combined.Count; i++)
+        {
+            float itemValue = ItemValue(combined[i]);
+            if (itemValue > 0)
+            {
+                EquipItemToUnit(combined[i]);
+            }
+        }
+        // 1. Find possible combinations
+        List<string> components = GetAvailableComponents();
+        List<ItemCombination> combinations = new();
+        for(int i = 0; i < components.Count; i++)
+        {
+            for(int j = i + 1; j < components.Count; j++)
+            {
+                string result = CombineEquipment(components[i], components[j]);
+                if(!string.IsNullOrEmpty(result))
+                {
+                    float combinedValue = ItemValue(result);
+                    combinedValue -= genome.GetByName("W_ITEM_SAVE") * GetComponentFutureValue(components[i]);
+                    combinedValue -= genome.GetByName("W_ITEM_SAVE") * GetComponentFutureValue(components[j]);
+                    ItemCombination newCombination = new(result, components[i] + "|" + components[j], combinedValue);
+                    combinations.Add(newCombination);
+                }
+            }
+        }
+        // 2. TODO Rank combinations
+        combinations.Sort((a, b) => a.value.CompareTo(b.value));
+        for (int i = combinations.Count - 1; i >= 0; i--)
+        {
+            // Check If The Components Still Exist.
+            if (!prepManager.dataManager.EquipmentComponentsExists(combinations[i].components)){continue;}
+            float combinedValue = combinations[i].value;
+            // Check If Equip.
+            if (combinedValue > 0)
+            {
+                if (EquipItemToUnit(combinations[i].combinationName, false))
+                {
+                    // Remove The Components If Equipped.
+                    prepManager.dataManager.RemoveComponents(combinations[i].components);
+                }
+            }
+        }
+    }
+    // If lots of items of that type (dps/tank/supp) then value goes down.
+    float NeedDPSItem(List<string> fieldedItems)
+    {
+        float dpsItemCount = 0f;
+        for (int i = 0; i < fieldedItems.Count; i++)
+        {
+            if (itemTypeData.ReturnValue(fieldedItems[i]) == "DPS")
+            {
+                dpsItemCount += 1f;
+            }
+        }
+        return 1f / (1f + dpsItemCount);
+    }
+    float NeedTankItem(List<string> fieldedItems)
+    {
+        float tankItemCount = 0f;
+        for (int i = 0; i < fieldedItems.Count; i++)
+        {
+            if (itemTypeData.ReturnValue(fieldedItems[i]) == "Tank")
+            {
+                tankItemCount += 1f;
+            }
+        }
+        return 1f / (1f + tankItemCount);
+    }
+    // Check Open Item Slots On Units.
+    float DPSMatch()
+    {
+        float openDPSitems = 0f;
+        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        {
+            if (unitRoles.ReturnValue(prepManager.fieldSlots[i].GetName()) == "DPS")
+            {
+                openDPSitems += prepManager.fieldSlots[i].GetOpenEquipmentSlots();
+            }
+        }
+        return Mathf.Clamp01(openDPSitems / 3f);
+    }
+    float TankMatch()
+    {
+        float openTankitems = 0f;
+        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        {
+            if (unitRoles.ReturnValue(prepManager.fieldSlots[i].GetName()) == "Tank")
+            {
+                openTankitems += prepManager.fieldSlots[i].GetOpenEquipmentSlots();
+            }
+        }
+        return Mathf.Clamp01(openTankitems / 3f);
+    }
+    public AutoChessItemValueDatabase itemValueDatabase;
+    float ItemTrainingScore(string itemName)
+    {
+        return genome.GetByName("W_ITEM_VALUE") * itemValueDatabase.GetItemTrainingScore(itemName);
+    }
+    // Determines The Current Value Of An Item.
+    float ItemValue(string itemName)
+    {
+        List<string> fieldItems = prepManager.GetAllFieldEquipment();
+        string itemType = itemTypeData.ReturnValue(itemName);
+        // If already exists then value goes down.
+        float value = 0f;
+        value += ItemTrainingScore(itemName);
+        if(itemType == "DPS")
+        {
+            value += genome.GetByName("W_ITEM_DPS_NEED") * NeedDPSItem(fieldItems);
+            value += genome.GetByName("W_ITEM_DPS_MATCH") * DPSMatch();
+        }
+        if(itemType == "Tank")
+        {
+            value += genome.GetByName("W_ITEM_TANK_NEED") * NeedTankItem(fieldItems);
+            value += genome.GetByName("W_ITEM_TANK_MATCH") * TankMatch();
+        }
+        return value;
     }
     // ============================================================
     // HELPERS — Wire these to your database
@@ -406,6 +685,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         switch (role)
         {
             default:
+            case "DPS":
             return 1; // Default DPS
             case "Tank":
             return 0;
@@ -415,7 +695,7 @@ public class AutoChessAIPrepController : MonoBehaviour
     }
     float GetPower(AutoActorRollUpData unit)
     {
-        return (unit.GetLevel() * 10f) + (unit.GetHealth() / 10) + (unit.GetAttack() / 5) + (unit.GetDefense() / 3);
+        return (unit.GetLevel() * 10f) + (unit.GetHealth() / 10) + (unit.GetAttack() / 5) + (unit.GetDefense() / 3) + (unit.GetResist() / 10);
     }
     int[] GetThresholds(string factionName)
     {
@@ -424,61 +704,204 @@ public class AutoChessAIPrepController : MonoBehaviour
         string[] parts = val.Split('|');
         return System.Array.ConvertAll(parts, int.Parse);
     }
+    float SynergyValue(string faction)
+    {
+        if (faction == "Harmony")
+        {
+            return SynergyValue(mainFactions);
+        }
+        if (string.IsNullOrEmpty(faction)){return 0f;}
+        int currentCount = factionManager.factionData.GetCountOfFaction(faction);
+        int newCount = currentCount + 1;
+        int[] thresholds = GetThresholds(faction);
+        bool hitsThreshold = false;
+        bool maintainsActive = false;
+        bool oneAway = false;
+        for (int i = 0; i < thresholds.Length; i++)
+        {
+            int t = thresholds[i];
+            if (currentCount < t && newCount >= t) hitsThreshold = true;
+            if (currentCount >= t) maintainsActive = true;
+            if (currentCount == t - 1) oneAway = true;
+        }
+        if (hitsThreshold)
+        {
+            return genome.GetByName("W_SYN_HIT");
+        }
+        if (maintainsActive)
+        {
+            return genome.GetByName("W_SYN_MAINTAIN");
+        }
+        if (oneAway)
+        {
+            return genome.GetByName("W_SYN_ONEAWAY");
+        }
+        return 0f;
+    }
     float SynergyValue(List<string> factions)
     {
         if (factions == null || factions.Count == 0){return 0f;}
-        float totalSynergy = 0f;
-        for (int j = 0; j < factions.Count; j++)
+        if (factions.Contains("Harmony"))
         {
-            string targetFaction = factions[j];
-            if (string.IsNullOrEmpty(targetFaction)){continue;}
-            int currentCount = factionManager.factionData.GetCountOfFaction(targetFaction);
-            int newCount = currentCount + 1;
-            int[] thresholds = GetThresholds(targetFaction);
-            bool hitsThreshold = false;
-            bool maintainsActive = false;
-            bool oneAway = false;
-            for (int i = 0; i < thresholds.Length; i++)
-            {
-                int t = thresholds[i];
-                if (currentCount < t && newCount >= t) hitsThreshold = true;
-                if (currentCount >= t) maintainsActive = true;
-                if (currentCount == t - 1) oneAway = true;
-            }
-            if (hitsThreshold)
-            {
-                totalSynergy += genome.GetByName("W_SYN_HIT");
-                continue;
-            }
-            if (maintainsActive)
-            {
-                totalSynergy += genome.GetByName("W_SYN_MAINTAIN");
-                continue;
-            }
-            if (oneAway)
-            {
-                totalSynergy += genome.GetByName("W_SYN_ONEAWAY");
-                continue;
-            }
+            return SynergyValue(mainFactions);
+        }
+        float totalSynergy = 0f;
+        for (int i = 0; i < factions.Count; i++)
+        {
+            totalSynergy += SynergyValue(factions[i]);
         }
         return totalSynergy;
     }
+    float StackScalingValue(AutoActorRollUpData unit)
+    {
+        AutoChessTrait trait = unit.GetTrait();
+        if (trait == null || trait.timing != "DuringBattle"){return 0f;}
+        if (!trait.specifics.Contains("Scaling")){return 0f;}
+        float value = 0f;
+        string[] parts = trait.specifics.Split("Scaling");
+        if (parts.Length < 2){return 0f;}
+        string[] factions = parts[1].Split("AND");
+        foreach (string faction in factions)
+        {
+            if (faction == "Main")
+            {
+                value += EvaluateMainFactionScaling();
+            }
+            else
+            {
+                value += EvaluateFaction(faction);
+            }
+        }
+        return value;
+    }
+    float StackGainValue(AutoActorRollUpData unit, bool isBuying = true)
+    {
+        float value = 0f;
+        AutoChessTrait trait = unit.GetTrait();
+        if (trait == null || trait.timing == "None"){return value;}
+        float stackAmount = GetTraitStackAmount(trait);
+        string effect = trait.effect;
+        List<string> factions = new List<string>();
+        // Directly Help Self.
+        switch(trait.effect)
+        {
+            // Consider Self.
+            case "Self":
+            case "SelfActive":
+                factions.AddRange(unit.GetFactions());
+                break;
+            // Can Fit Into Any Team.
+            case "HighestActive":
+            case "RandomActive":
+            case "SelfAndBackActive":
+            case "SelfAndFrontActive":
+            case "SelfAndFrontLineActive":
+            case "CopyFront":
+            case "CopyBack":
+                string target = factionManager.HighestStackActiveFaction();
+                if (target == "")
+                {
+                    target = factionManager.HighestStackFaction();
+                }
+                factions.Add(target);
+                break;
+        }
+        foreach(string faction in factions)
+        {
+            float factionValue = EvaluateFaction(faction);
+            float lifetime = GetStackLifetime(trait, isBuying);
+            value += stackAmount * lifetime * factionValue;
+        }
+        value = Mathf.Min(value, 100f);
+        return value;
+    }
+    float GetTraitStackAmount(AutoChessTrait trait)
+    {
+        if (float.TryParse(trait.specifics, out float amount))
+        {
+            return amount;
+        }
+        return 1f;
+    }
+    float GetStackLifetime(AutoChessTrait trait, bool isBuying)
+    {
+        int roundsLeft = Mathf.Min(20, prepManager.dataManager.GetHealth() / (Mathf.Max(1, prepManager.dataManager.GetRound())));
+        switch(trait.timing)
+        {
+            case "OnPurchase":
+                return isBuying ? 1f : 0f;
+            case "OnForwardSkill":
+            case "FirstSkill":
+            case "StartBattle":
+                return roundsLeft;
+            case "OnForwardAttack":
+            case "OnSkill":
+                return roundsLeft * 2f;
+            case "OnAttack":
+                return roundsLeft * 4f;
+            case "OnKill":
+                return roundsLeft * 0.5f;
+        }
+        return 0f;
+    }
     string GetFactionType(string faction)
     {
+        if (faction == "Harmony"){return "Main";}
         if (factionManager.factionData.MainFaction(faction)){return "Main";}
         if (factionManager.factionData.EconFaction(faction)){return "Econ";}
         return "Side";
     }
+    float CycleValue(AutoActorRollUpData unit, bool isBuying = true)
+    {
+        AutoChessTrait trait = unit.GetTrait();
+        if (trait == null) return 0f;
+        switch (trait.timing)
+        {
+            case "OnPurchase":
+                return isBuying ? 1f : 0f;
+            case "OnSold":
+                return 1f;
+            default:
+                return 0f;
+        }
+    }
+    float CycleScalingValue(AutoActorRollUpData unit)
+    {
+        AutoChessTrait trait = unit.GetTrait();
+        if (trait == null) return 0f;
+        string s = trait.specifics;
+        if (s.Contains("UnitsBoughtMultiBy"))
+            return 1f;
+        if (s.Contains("GoldSpentMultiBy"))
+            return 1f;
+        if (s.Contains("BenchSizeMultiBy1"))
+            return 1f;
+        return 0f;
+    }
+    protected List<string> mainFactions = new List<string>(){"Yan", "Sargon", "Kjerag", "Aegir", "Victoria", "Laterano"};
+    float EvaluateMainFactionScaling()
+    {
+        float score = 0f;
+        for (int i = 0; i < mainFactions.Count; i++)
+        {
+            score += EvaluateFaction(mainFactions[i]);
+        }
+        return score;
+    }
     // Tracks How Valuable A Faction Is.
     float EvaluateFaction(string faction)
     {
+        if (faction == "Harmony")
+        {
+            return EvaluateMainFactionScaling();
+        }
         float score = 0;
         int count = factionManager.factionData.GetCountOfFaction(faction);
         // All Factions Require At Least 2 Units To Be Active.
         int commitment = Mathf.Max(0, count - 2);
-        int stacks = int.Parse(factionManager.factionData.GetStacksOfFaction(faction));
+        float stacks = GetStacks(faction);
         // Divide By 10 For Now To Decrease The Value Of Stacks.
-        stacks /= 10;
+        stacks /= 10f;
         switch(GetFactionType(faction))
         {
             case "Main":
@@ -527,4 +950,34 @@ public class AutoChessAIPrepController : MonoBehaviour
         int idealCount = Mathf.RoundToInt(totalUnits * idealRatio);
         return Mathf.Max(0, idealCount - roleCount);
     }
+    // DB Copied From Equip Manager For Convenience
+    public string CombineEquipment(string firstItem, string secondItem)
+    {
+        return itemValueDatabase.CombineEquipment(firstItem, secondItem);
+    }
+    float GetComponentFutureValue(string component)
+    {
+        return itemValueDatabase.GetComponentValue(component);
+    }
+    bool IsComponent(string itemName)
+    {
+        return itemOrder.Contains(itemName);
+    }
+    protected List<string> itemOrder = new()
+    {
+        "Aegirian Blade",
+        "Protection Drone",
+        "Goliath Helmet",
+        "Quick Combat Rations",
+        "Laser Sight",
+        "Tough Launcher",
+        "Minature Accelerator",
+        "Raid Grenade",
+        "Damazti Isomorph",
+        "Kjeragi Nevermeltice",
+        "Lateran Clip",
+        "Sargonian Teaspresso",
+        "Victorian Hammer",
+        "Yanese Dagger"
+    };
 }

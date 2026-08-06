@@ -250,6 +250,18 @@ public class AutoChessDataManager : SavedData
         if (benchActorData.Count >= 10){return;}
         benchActorData.Add(newActorData);
     }
+    public List<string> GetBenchActorNames()
+    {
+        AutoActorRollUpData actor = new AutoActorRollUpData();
+        List<string> actorNames = new List<string>();
+        for (int i = 0; i < benchActorData.Count; i++)
+        {
+            if (benchActorData[i].Length <= 0){continue;}
+            actor.LoadRollUpData(benchActorData[i]);
+            actorNames.Add(actor.GetName());
+        }
+        return actorNames;
+    }
     public List<string> fieldActorData;
     public List<string> GetFieldActorData()
     {
@@ -266,6 +278,18 @@ public class AutoChessDataManager : SavedData
             actorNames.Add(actor.GetName());
         }
         return actorNames;
+    }
+    public List<string> GetFieldActorEquipment()
+    {
+        AutoActorRollUpData actor = new AutoActorRollUpData();
+        List<string> actorEquipment = new List<string>();
+        for (int i = 0; i < fieldActorData.Count; i++)
+        {
+            if (fieldActorData[i].Length <= 0){continue;}
+            actor.LoadRollUpData(fieldActorData[i]);
+            actorEquipment.Add(String.Join("|", actor.GetEquipmentNames()));
+        }
+        return actorEquipment;
     }
     public int roundRerolls;
     public void SetRoundRerolls(int amount)
@@ -345,6 +369,24 @@ public class AutoChessDataManager : SavedData
         }
     }
     public List<string> equipment;
+    // Used By AI.
+    public bool EquipmentComponentsExists(string componentsJoined)
+    {
+        string[] components = componentsJoined.Split("|");
+        for (int i = 0; i < components.Length; i++)
+        {
+            if (!equipment.Contains(components[i])){return false;}
+        }
+        return true;
+    }
+    public void RemoveComponents(string componentsJoined)
+    {
+        string[] components = componentsJoined.Split("|");
+        for (int i = 0; i < components.Length; i++)
+        {
+            UseEquipment(components[i]);
+        }
+    }
     public List<string> GetEquipment()
     {
         for (int i = equipment.Count - 1; i >= 0; i--)
@@ -440,7 +482,7 @@ public class AutoChessDataManager : SavedData
         }
         Save();
     }
-    public void SaveFromPrepManager(AutoChessPrepManager prepManager, bool save = true)
+    public void SaveFromPrepManager(AutoChessPrepManager prepManager)
     {
         // Copy The Data From The PrepManager.
         benchActorData.Clear();
@@ -452,10 +494,6 @@ public class AutoChessDataManager : SavedData
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
             fieldActorData.Add(prepManager.fieldSlots[i].ReturnRollUpData());
-        }
-        if (save)
-        {
-            Save();
         }
     }
     public override void Save()
