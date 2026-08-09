@@ -151,6 +151,15 @@ public class ActiveManager : MonoBehaviour
             active.AffectActors(targets, specifics, powerString, 1);
             return;
         }
+        if (effect.Contains("AutoTargetEquals"))
+        {
+            string[] autoTargetDetails = effect.Split("Equals");
+            if (autoTargetDetails.Length < 3){return;}
+            List<TacticActor> autoTargets = new List<TacticActor>();
+            autoTargets.Add(map.FindActorByTargetSpecifics(skillUser, autoTargetDetails[1], autoTargetDetails[2]));
+            ApplyActiveEffects(autoTargets, specifics, powerString, "1", selectedTile, spellCast);
+            return;
+        }
         switch (effect)
         {
             case "TriggerSkill":
@@ -551,6 +560,9 @@ public class ActiveManager : MonoBehaviour
             case "Grab":
                 map.GrabSkill(skillUser, specifics, powerString);
                 return;
+            case "DashTo":
+                map.DashToSkill(skillUser, specifics, powerString);
+                return;
             case "TerrainEffect":
                 for (int i = 0; i < targetedTiles.Count; i++)
                 {
@@ -921,109 +933,4 @@ public class ActiveManager : MonoBehaviour
     {
         return magicSpell.Activatable(skillUser, map);
     }
-    /*protected void ResolveTriggeredSkill(string triggerData)
-    {
-        if (triggeredSkillDepth >= triggeredSkillDepthLimit || triggeredSkillDepth >= triggeredSkillStackDepthLimit)
-        {
-            if (triggeredSkillResolver != null)
-            {
-                triggeredSkillResolver.AddDebugMessage("TriggeredSkill stopped"
-                    + " | Depth=" + triggeredSkillDepth
-                    + " | DepthLimit=" + triggeredSkillDepthLimit
-                    + " | StackDepthLimit=" + triggeredSkillStackDepthLimit
-                    + " | TriggerData=" + triggerData);
-            }
-            return;
-        }
-        ActiveManagerState savedState = SaveState();
-        if (triggeredSkillResolver == null)
-        {
-            triggeredSkillResolver = GetComponent<TriggeredSkillResolver>();
-            if (triggeredSkillResolver == null)
-            {
-                triggeredSkillResolver = gameObject.AddComponent<TriggeredSkillResolver>();
-            }
-        }
-        TriggeredSkillResolver.TriggeredSkillCast triggeredCast;
-        triggeredSkillDepth++;
-        try
-        {
-            bool resolved = triggeredSkillResolver.TryResolve(triggerData, skillUser, this, out triggeredCast);
-            if (resolved)
-            {
-                LogTriggeredSkillLoadedDetails("Resolved");
-                active.SetSelectedTile(triggeredCast.selectedTile);
-                targetedTiles = new List<int>(triggeredCast.targetedTiles);
-                triggeredSkillEnergyBeforeCast = skillUser.GetEnergy();
-                triggeredSkillActionsBeforeCast = skillUser.GetActions();
-                ActivateSkillInternal(true, false);
-                LogTriggeredSkillLoadedDetails("AfterCast");
-            }
-        }
-        finally
-        {
-            triggeredSkillDepth--;
-            RestoreState(savedState);
-        }
-    }
-    protected void LogTriggeredSkillLoadedDetails(string label)
-    {
-        if (triggeredSkillResolver == null){return;}
-        triggeredSkillResolver.AddDebugMessage("TriggeredSkill " + label
-            + " | Skill=" + active.GetSkillName()
-            + " | Effect=" + active.GetEffect()
-            + " | Specifics=" + active.GetSpecifics()
-            + " | Power=" + active.GetPowerString()
-            + " | ScalingField=" + active.GetScalingSpecifics()
-            + " | EnergyCost=" + active.GetEnergyCost(skillUser, map)
-            + " | ActionCost=" + active.GetActionCost(skillUser, map)
-            + " | Energy=" + skillUser.GetEnergy()
-            + " | Actions=" + skillUser.GetActions());
-        if (label == "AfterCast")
-        {
-            triggeredSkillResolver.AddDebugMessage("TriggeredSkill CostDelta"
-                + " | Energy=" + triggeredSkillEnergyBeforeCast + "->" + skillUser.GetEnergy()
-                + " | Actions=" + triggeredSkillActionsBeforeCast + "->" + skillUser.GetActions());
-        }
-    }
-    protected ActiveManagerState SaveState()
-    {
-        ActiveManagerState state = new ActiveManagerState();
-        state.skillUser = skillUser;
-        state.skillInfo = new List<string>();
-        state.skillInfo.Add(active.GetSkillName());
-        state.skillInfo.Add(active.GetSkillType());
-        state.skillInfo.Add(active.energyCost);
-        state.skillInfo.Add(active.actionCost);
-        state.skillInfo.Add(active.range);
-        state.skillInfo.Add(active.GetRangeShape());
-        state.skillInfo.Add(active.GetShape());
-        state.skillInfo.Add(active.span);
-        state.skillInfo.Add(active.GetEffect());
-        state.skillInfo.Add(active.GetSpecifics());
-        state.skillInfo.Add(active.GetPowerString());
-        state.skillInfo.Add(active.GetScalingSpecifics());
-        state.selectedTile = active.GetSelectedTile();
-        state.targetableTiles = targetableTiles == null ? new List<int>() : new List<int>(targetableTiles);
-        state.targetedTiles = targetedTiles == null ? new List<int>() : new List<int>(targetedTiles);
-        return state;
-    }
-    protected void RestoreState(ActiveManagerState state)
-    {
-        skillUser = state.skillUser;
-        active.skillInfoList = new List<string>(state.skillInfo);
-        active.LoadSkill(active.skillInfoList);
-        active.RefreshSkillInfo();
-        active.SetSelectedTile(state.selectedTile);
-        targetableTiles = new List<int>(state.targetableTiles);
-        targetedTiles = new List<int>(state.targetedTiles);
-    }
-    protected class ActiveManagerState
-    {
-        public TacticActor skillUser;
-        public List<string> skillInfo;
-        public int selectedTile;
-        public List<int> targetableTiles;
-        public List<int> targetedTiles;
-    }*/
 }

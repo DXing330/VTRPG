@@ -329,13 +329,18 @@ public class AutoChessDataManager : SavedData
     public StatDatabase equipmentRarity;
     public RNGUtility RNG;
     // Get 2 Random Equipment At The Start Of The Game.
+    protected string GenerateEquipmentOfRarity(int rarity = 1)
+    {
+        List<string> equipmentOfRarity = equipmentRarity.GetKeysFilteringByValues(rarity.ToString());
+        return equipmentOfRarity[RNG.SeedRange(0, equipmentOfRarity.Count)];
+    }
     public List<string> GenerateEquipmentOfRarity(int rarity = 1, int quantity = 1)
     {
         List<string> equipmentOfRarity = equipmentRarity.GetKeysFilteringByValues(rarity.ToString());
         List<string> generatedEquipment = new List<string>();
         for (int i = 0; i < Mathf.Max(1, quantity); i++)
         {
-            generatedEquipment.Add(equipmentOfRarity[RNG.SeedRange(0, equipmentOfRarity.Count)]);
+            generatedEquipment.Add(GenerateEquipmentOfRarity(rarity));
         }
         return generatedEquipment;
     }
@@ -410,6 +415,11 @@ public class AutoChessDataManager : SavedData
     public void GainEquipment(string equipName)
     {
         if (equipName.Length <= 0){return;}
+        if (equipName == "Random")
+        {
+            GainEquipment(GenerateEquipmentOfRarity(1));
+            return;
+        }
         AddLog("Gained Equipment: " + equipName);
         equipment.Add(equipName);
     }

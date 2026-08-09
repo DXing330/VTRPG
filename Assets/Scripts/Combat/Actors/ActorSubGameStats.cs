@@ -93,7 +93,14 @@ public class ActorSubGameStats : ActorStats
     }
     public AutoChessTrait autoChessTrait = new();
     public string autoChessAttackRangeShape = "Circle";
-    public string GetAutoChessAttackRangeShape(){return autoChessAttackRangeShape;}
+    public string GetAutoChessAttackRangeShape(bool PVP = false)
+    {
+        if (PVP && !AKAOE())
+        {
+            return "Circle";
+        }
+        return autoChessAttackRangeShape;
+    }
     public int akHealer = 0;
     public bool AKHealer(){return akHealer > 0;}
     public int akAOE = 0;

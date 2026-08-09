@@ -2214,6 +2214,14 @@ public class BattleMap : MapManager
         if (targetActor == null){return;}
         MoveActorToTile(targetActor, targetTile, true);
     }
+    public void DashToSkill(TacticActor dasher, string target, string specifics)
+    {
+        TacticActor targetActor = FindActorByTargetSpecifics(dasher, target, specifics);
+        if (targetActor == null){return;}
+        int targetTile = GetClosestEmptyTile(targetActor);
+        if (targetTile < 0) return;
+        MoveActorToTile(dasher, targetTile, true);
+    }
     public void DisplaceSkill(TacticActor displacer, List<int> targetedTiles, string displaceType, int force)
     {
         battleMapUtility.DisplaceSkill(displacer, targetedTiles, displaceType, force, this);

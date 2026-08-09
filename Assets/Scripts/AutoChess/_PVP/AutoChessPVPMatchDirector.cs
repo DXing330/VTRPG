@@ -5,6 +5,8 @@ using UnityEngine;
 // In charge of handling gameplay loop: player prep phase -> finish -> ai prep -> start battle -> finish AI battles -> watch player battle -> prep phase
 public class AutoChessPVPMatchDirector : MonoBehaviour
 {
+    public bool autoAssignAIGenomes = false;
+    public List<AutoChessPVPGenome> matchAIGenomes;
     public bool matchOver = false;
     public int roundCount = 0;
     public AutoChessPVPDataManager allPlayers;
@@ -100,7 +102,14 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         {
             if (allTeams[i].PlayerData() || allTeams[i].GetHealth() <= 0){continue;}
             var entry = GenomeProvider.Get(allTeams[i]);
-            if (entry != null) AIManager.genome = entry.genome;
+            if (autoAssignAIGenomes && i < matchAIGenomes.Count)
+            {
+                AIManager.genome = matchAIGenomes[i];
+            }
+            else if (entry != null)
+            {
+                AIManager.genome = entry.genome;  
+            } 
             else
             {
                 AIManager.DefaultGenome();
@@ -119,7 +128,14 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         {
             if (allTeams[i].PlayerData() || allTeams[i].GetHealth() <= 0){continue;}
             var entry = GenomeProvider.Get(allTeams[i]);
-            if (entry != null) AIManager.genome = entry.genome;
+            if (autoAssignAIGenomes && i < matchAIGenomes.Count)
+            {
+                AIManager.genome = matchAIGenomes[i];
+            }
+            else if (entry != null)
+            {
+                AIManager.genome = entry.genome;
+            }
             else
             {
                 AIManager.DefaultGenome();

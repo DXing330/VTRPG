@@ -10,6 +10,8 @@ public class GenomeEntry
 {
     public string id; // unique guid
     public string tag; // "anchor", "gen1", "champion", "mutant", etc.
+    public string genePool;
+    public string preferredFaction;
     public int generation;
     public float fitness;
     public int wins;
@@ -37,6 +39,8 @@ public class GenomeEntry
         {
             id = System.Guid.NewGuid().ToString(),
             tag = tag,
+            genePool = genePool,
+            preferredFaction = preferredFaction,
             generation = generation,
             fitness = fitness,
             wins = wins,
@@ -63,10 +67,19 @@ public class GenomeEntry
 [CreateAssetMenu(fileName = "SavedGenomes", menuName = "ScriptableObjects/PVPAI/SavedGenomes", order = 1)]
 public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
 {
+    public string filename = "autochess_genome_database.json";
     public List<GenomeEntry> entries = new();
     public List<GenomeEntry> AllEntries => entries;
     public GenomeEntry GetById(string id) => entries.FirstOrDefault(e => e.id == id);
     public List<GenomeEntry> GetByTag(string tag) => entries.Where(e => e.tag == tag).ToList();
+    public List<GenomeEntry> GetByGenePool(string pool)
+    {
+        return entries.Where(e => e.genePool == pool).ToList();
+    }
+    public List<GenomeEntry> GetByGenePoolAndGeneration(string pool, int generation)
+    {
+        return entries.Where(e => e.genePool == pool && e.generation == generation).ToList();
+    }
     public GenomeEntry GetRandom() => entries.Count > 0 ? entries[UnityEngine.Random.Range(0, entries.Count)] : null;
     public GenomeEntry GetTopFitness(int generationFilter = -1)
     {
@@ -105,12 +118,18 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
     }
     public GenomeEntry AddChild(GenomeEntry parentA, GenomeEntry parentB, int generation, string tag = "child")
     {
+        AutoChessPVPGenome childGenome =
+        AutoChessPVPGenome.Crossover(parentA.genome, parentB.genome);
+        childGenome.genePool = parentA.genePool;
+        childGenome.preferredFaction = parentA.preferredFaction;
         var child = new GenomeEntry
         {
             id = System.Guid.NewGuid().ToString(),
             tag = tag,
             generation = generation,
-            genome = AutoChessPVPGenome.Crossover(parentA.genome, parentB.genome)
+            genePool = parentA.genePool,
+            preferredFaction = parentA.preferredFaction,
+            genome = childGenome
         };
         entries.Add(child);
         return child;
@@ -126,7 +145,7 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
     {
         public List<GenomeEntry> entries;
     }
-    public void SaveToDisk(string filename = "autochess_genome_database.json")
+    public void SaveToDisk()
     {
         var wrapper = new GenomeDatabaseWrapper { entries = this.entries };
         string json = JsonUtility.ToJson(wrapper, true);
@@ -134,7 +153,7 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         File.WriteAllText(path, json);
         Debug.Log($"GenomeDatabase saved: {path} ({entries.Count} entries)");
     }
-    public void LoadFromDisk(string filename = "autochess_genome_database.json")
+    public void LoadFromDisk()
     {
         string path = Path.Combine(Application.persistentDataPath, filename);
         if (!File.Exists(path))
@@ -147,6 +166,7 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         this.entries = wrapper.entries ?? new List<GenomeEntry>();
         // Auto-heal old genomes whenever the database is loaded
         MigrateGenomeSizes();
+        MigratePreferredFactions();
         Debug.Log($"GenomeDatabase loaded: {entries.Count} entries");
     }
     // --- Quick init for training ---
@@ -155,6 +175,71 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         Clear();
         for (int i = 0; i < anchorCount; i++) AddDefaultAnchor(generation: 0);
         for (int i = anchorCount; i < size; i++) AddRandom("gen0", generation: 0);
+    }
+    public void AssignUnassignedToBasePool()
+    {
+        foreach (var entry in entries)
+        {
+            if (entry == null)
+                continue;
+            if (string.IsNullOrEmpty(entry.genePool))
+            {
+                entry.genePool = "Base";
+                if (entry.genome != null)
+                    entry.genome.genePool = "Base";
+            }
+        }
+    }
+    // Quick Init To Start A Population
+    public void AddGenePool(AutoChessPVPGenomeTemplate template, int size, int generation = 0, float initialMutationRate = 0.15f, float initialMutationStrength = 1f)
+    {
+        if (template == null)
+        {
+            Debug.LogError("Cannot create gene pool: template is null.");
+            return;
+        }
+        string poolName = template.templateName;
+        if (string.IsNullOrEmpty(poolName))
+        {
+            Debug.LogError("Cannot create gene pool: template has no templateName.");
+            return;
+        }
+        int removedCount = entries.RemoveAll(entry => entry != null && entry.genePool == poolName);
+        if (removedCount > 0)
+        {
+            Debug.Log($"Overwriting gene pool '{poolName}'. " + $"Removed {removedCount} existing genomes.");
+        }
+        for (int i = 0; i < size; i++)
+        {
+            AutoChessPVPGenome genome = template.CreateGenome();
+            // Keep one genome exactly at the template.
+            // Mutate the rest to create initial diversity.
+            if (i > 0)
+            {
+                genome.Mutate(initialMutationRate, initialMutationStrength);
+            }
+            genome.genePool = poolName;
+            genome.preferredFaction = template.preferredFaction;
+            GenomeEntry entry = new GenomeEntry
+            {
+                id = Guid.NewGuid().ToString(),
+                tag = $"gen{generation}",
+                generation = generation,
+                genePool = poolName,
+                preferredFaction = template.preferredFaction,
+                genome = genome,
+            };
+            entries.Add(entry);
+        }
+        Debug.Log($"Created gene pool '{poolName}' with {size} genomes.");
+    }
+    public bool HasGenePool(string poolName)
+    {
+        return entries.Any(e => e != null && e.genePool == poolName);
+    }
+    public List<GenomeEntry> GetGenePool(string poolName)
+    {
+        return entries.Where(e => e != null && e.genePool == poolName).ToList();
     }
     // For Updating After Expanding Genome.
     public void MigrateGenomeSizes()
@@ -180,6 +265,73 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         {
             Debug.Log($"Migrated {entries.Count} genomes to {targetLength} genes.");
             SaveToDisk(); // persist immediately
+        }
+    }
+    bool IsValidPreferredFaction(string faction)
+    {
+        switch (faction)
+        {
+            case "Yan":
+            case "Sargon":
+            case "Kjerag":
+            case "Aegir":
+            case "Victoria":
+            case "Laterano":
+                return true;
+            default:
+                return false;
+        }
+    }
+    public void MigratePreferredFactions()
+    {
+        bool changed = false;
+        int repaired = 0;
+        foreach (var entry in entries)
+        {
+            if (entry == null)
+                continue;
+            // If preferred faction is already assigned,
+            // make sure the genome agrees with it.
+            if (!string.IsNullOrEmpty(entry.preferredFaction))
+            {
+                if (entry.genome != null &&
+                    entry.genome.preferredFaction != entry.preferredFaction)
+                {
+                    entry.genome.preferredFaction = entry.preferredFaction;
+                    changed = true;
+                }
+                continue;
+            }
+            // If preferred faction is missing,
+            // try to recover it from the gene pool name.
+            if (!string.IsNullOrEmpty(entry.genePool))
+            {
+                string recoveredFaction = entry.genePool;
+
+                // Only recover if this is actually one
+                // of your faction gene pools.
+                if (IsValidPreferredFaction(recoveredFaction))
+                {
+                    entry.preferredFaction = recoveredFaction;
+
+                    if (entry.genome != null)
+                    {
+                        entry.genome.preferredFaction = recoveredFaction;
+                        entry.genome.genePool = entry.genePool;
+                    }
+
+                    repaired++;
+                    changed = true;
+                }
+            }
+        }
+        if (changed)
+        {
+            SaveToDisk();
+            Debug.Log(
+                $"Preferred faction migration complete. " +
+                $"Repaired {repaired} entries."
+            );
         }
     }
 }

@@ -655,6 +655,8 @@ public class AutoChessPrepManager : ClickTileManager
     public void MergeIntoLevelTwoActor(string newName)
     {
         dataManager.AddLog("3 Level 1 [" + newName + "] Units Fused Into 1 Level 2 Unit");
+        // As a bonus, get a free equipment.
+        dataManager.GainEquipment("Random");
         // Need To Make Sure Equipment Returns To Equipment Inventory.
         // Determine The Actor To Level Up.
         bool merged = false;

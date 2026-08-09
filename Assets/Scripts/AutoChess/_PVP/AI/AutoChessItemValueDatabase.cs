@@ -29,9 +29,25 @@ public class ItemCombination
     }
 }
 
+[System.Serializable]
+public class ItemTagValueEntry
+{
+    public string itemTag;
+    public string unitTag;
+    public float value;
+}
+
+[System.Serializable]
+public class ItemTagValueDatabaseJson
+{
+    public int version;
+    public List<ItemTagValueEntry> itemTagValues;
+}
+
 public class AutoChessItemValueDatabase : MonoBehaviour
 {
-    public TextAsset jsonFile;
+    public TextAsset itemValueJson;
+    public TextAsset itemUnitTagValueJson;
 
     public int expectedVersion = 1;
 
@@ -48,6 +64,30 @@ public class AutoChessItemValueDatabase : MonoBehaviour
         return 0f;
     }
 
+    private Dictionary<(string,string), float> itemTagMatrix = new();
+    public float GetTagCompatibility(List<string> itemTags, List<string> unitTags)
+    {
+        float score = 0;
+        int count = 0;
+        foreach(string itemTag in itemTags)
+        {
+            foreach(string unitTag in unitTags)
+            {
+                if(itemTagMatrix.TryGetValue(
+                    (itemTag, unitTag),
+                    out float value))
+                {
+                    score += value;
+                }
+                count++;
+            }
+        }
+        if (count > 0)
+        {
+            score /= count;
+        }
+        return score;
+    }
 
     void Awake()
     {
@@ -57,19 +97,17 @@ public class AutoChessItemValueDatabase : MonoBehaviour
 
     public void Load()
     {
-        if(jsonFile == null)
+        if(itemValueJson == null)
         {
             Debug.LogWarning(
                 "Missing item value JSON"
             );
             return;
         }
-
         ItemValueDatabaseJson data =
             JsonUtility.FromJson<ItemValueDatabaseJson>(
-                jsonFile.text
+                itemValueJson.text
             );
-
         if(data == null || data.items == null)
         {
             Debug.LogWarning(
@@ -77,25 +115,30 @@ public class AutoChessItemValueDatabase : MonoBehaviour
             );
             return;
         }
-
         if(data.version != expectedVersion)
         {
             Debug.LogWarning(
                 "Item database version mismatch"
             );
         }
-
         itemValues.Clear();
-
         foreach(var item in data.items)
         {
             itemValues[item.name] = item.value;
         }
-
-        Debug.Log(
-            "Loaded item values: "
-            + itemValues.Count
-        );
+        Debug.Log("Loaded item values: " + itemValues.Count);
+        if(itemUnitTagValueJson == null)
+        {
+            Debug.LogWarning("Missing item value JSON");
+            return;
+        }
+        var tagData = JsonUtility.FromJson<ItemTagValueDatabaseJson>(itemUnitTagValueJson.text);
+        itemTagMatrix.Clear();
+        foreach(var entry in tagData.itemTagValues)
+        {
+            itemTagMatrix[(entry.itemTag, entry.unitTag)] = entry.value;
+        }
+        Debug.Log("Loaded item tag values: " + itemTagMatrix.Count);
         BuildCombinationCache();
     }
 

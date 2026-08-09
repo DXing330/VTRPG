@@ -373,7 +373,8 @@ public class AutoChessPVPBattleManager : AutoBattleManager
     public override List<int> GetPlayerActorAttackRangeTiles(TacticActor actor)
     {
         int range = actor.GetAttackRange();
-        string rangeType = actor.GetAutoChessAttackRangeShape();
+        // If You Are Not AOE Then You Get A Circle, Since Turning Direction Is A Free Action.
+        string rangeType = actor.GetAutoChessAttackRangeShape(true);
         int location = actor.GetLocation();
         int direction = actor.GetDirection();
         int selectedTile = map.mapUtility.PointInDirection(location, direction, map.mapSize);
@@ -415,7 +416,7 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             {
                 for (int i = 0; i < hurtAllies.Count; i++)
                 {
-                    hurtAllies[i].Heal(actor.GetAttack());
+                    hurtAllies[i].Heal(actor.GetAttack() * (actor.GetAttackSpeed() + 100) / 100);
                 }
             }
             else if (hurtAllies.Count <= 0)
@@ -426,7 +427,7 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             else if (!actor.AKAOE() && hurtAllies.Count > 0)
             {
                 TacticActor healTarget = map.FindActorByStat(hurtAllies, "Health", false);
-                healTarget.Heal(actor.GetAttack());
+                healTarget.Heal(actor.GetAttack() * (actor.GetAttackSpeed() + 100) / 100);
             }
             EndTurn(actor);
             return;
@@ -497,31 +498,39 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         }
         return winningTeam;
     }
+    public StatDatabase unitRarity;
     public override void EndRound()
     {
         int endBattleResult = EndBattle();
         if (endBattleResult >= 0)
         {
+            int unitDamage = 0;
+            for (int i = 0; i < map.battlingActors.Count; i++)
+            {
+                if (map.battlingActors[i].GetHealth() <= 0 || map.battlingActors[i].GetTeam() != endBattleResult){continue;}
+                unitDamage += int.Parse(unitRarity.ReturnValue(map.battlingActors[i].GetSpriteName()));
+                unitDamage += map.battlingActors[i].GetAutoChessLevel();
+            }
             // 2 = TIE
             if (endBattleResult == 2)
             {
                 // Both Lose
-                leftTeam.LoseHealth(leftTeam.GetRound());
+                leftTeam.LoseHealth(leftTeam.GetRound() + rightTeam.GetLevel());
                 leftTeam.NewRound(1);
-                rightTeam.LoseHealth(rightTeam.GetRound());
+                rightTeam.LoseHealth(rightTeam.GetRound() + leftTeam.GetLevel());
                 rightTeam.NewRound(1);
             }
             // 0 = Left Wins
             else if (endBattleResult == 0)
             {
                 leftTeam.NewRound(0);
-                rightTeam.LoseHealth(rightTeam.GetRound() + leftTeam.GetLevel());
+                rightTeam.LoseHealth(rightTeam.GetRound() + leftTeam.GetLevel() + unitDamage);
                 rightTeam.NewRound(1);
             }
             // 1 = Right Wins
             else if (endBattleResult == 1)
             {
-                leftTeam.LoseHealth(leftTeam.GetRound() + rightTeam.GetLevel());
+                leftTeam.LoseHealth(leftTeam.GetRound() + rightTeam.GetLevel() + unitDamage);
                 leftTeam.NewRound(1);
                 rightTeam.NewRound(0);
             }

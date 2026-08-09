@@ -54,6 +54,12 @@ public class ActiveDetailViewerSwitch : ScriptableObject
             string[] eBlocks = e.Split("Equals");
             return "All " + eBlocks[1] + " gain " + p + " " + ASD(s) + ".";
         }
+        if (e.Contains("AutoTargetEquals"))
+        {
+            string[] eBlocks = e.Split("Equals");
+            if (eBlocks.Length < 3){return "???";}
+            return "The " + eBlocks[1] + " with the " + eBlocks[2] + " gains " + p + " " + ASD(s) + ".";
+        }
         if (e.EndsWith("Damage"))
         {
             string[] eBlocks = e.Split("Damage");
@@ -88,6 +94,8 @@ public class ActiveDetailViewerSwitch : ScriptableObject
                 return ASD(s) + " the target(s) with " + APD(p) + " additional force.";
             case "Grab":
                 return "Grab the " + APD(p) + " " + ASD(s) + " and place them on the forward tile.";
+            case "DashTo":
+                return "Move to the closest empty tile next to the " + APD(p) + " " + ASD(s) + ".";
             case "Teleport":
                 return "Move to the targeted tile.";
             case "TeleportTarget":

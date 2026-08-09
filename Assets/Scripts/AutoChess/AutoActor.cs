@@ -106,6 +106,7 @@ public class AutoActorRollUpData
     public int GetLevel(){return autoChessLevel;}
     public void SetLevel(int newData){autoChessLevel = newData;}
     public List<string> factions;
+    public bool FactionExists(string factionName){return factions.Contains(factionName);}
     public List<string> RAWGetFactions(){return factions;}
     public List<string> GetFactions(){return new List<string>(factions);}
     public void SetFactions(List<string> newFactions){factions = newFactions;}

@@ -26,6 +26,7 @@ public class AutoChessFactionEffectManager : ScriptableObject
     {
         for (int i = 0; i < allActors.Count; i++)
         {
+            bool allUnits = false;
             if (factionName == "Swift" && stackCount >= 40)
             {
                 allActors[i].AddPassiveSkill("AKSwiftTwo", stackCount.ToString());
@@ -42,14 +43,26 @@ public class AutoChessFactionEffectManager : ScriptableObject
                 }
                 return;
             }
-            ApplyFactionEffectToActor(allActors[i], factionName, factionCount, stackCount);
+            // Durable -> All
+            // Aid -> All
+            // Precision -> All Ranged (Passive Condition Checks For Ranged So Give Everyone)
+            // Resilient -> All Melee (Condition Checks)
+            if (factionName == "Durable" || factionName == "Aid" || factionName == "Precision" || factionName == "AKResilient")
+            {
+                allUnits = true;
+            }
+            ApplyFactionEffectToActor(allActors[i], factionName, factionCount, stackCount, allUnits);
         }
     }
-    public void ApplyFactionEffectToActor(AutoActor actor, string factionName, int factionCount, int stackCount)
+    public void ApplyFactionEffectToActor(AutoActor actor, string factionName, int factionCount, int stackCount, bool allUnits = false)
     {
         // Harmony
-        if (!actor.AutoChessFaction(factionName)){return;}
+        if (!actor.AutoChessFaction(factionName) && !allUnits){return;}
         string passiveName = "AK" + factionName;
+        if (factionName == "Resilient" && actor.GetAttackRange() > 1)
+        {
+            return;
+        }
         // Aegir/Yan/Raid/Resilient/Kjerag/Aid/Swift/Agile
         actor.AddPassiveSkill(passiveName, stackCount.ToString());
         switch (factionName)
@@ -59,7 +72,7 @@ public class AutoChessFactionEffectManager : ScriptableObject
             // Differences Between 2/3 Stacks.
             case "Precision":
             case "Durable":
-            if (factionCount >= 3)
+            if (factionCount >= 3 && actor.AutoChessFaction(factionName))
             {
                 actor.AddPassiveSkill(passiveName + " II", "1");
             }

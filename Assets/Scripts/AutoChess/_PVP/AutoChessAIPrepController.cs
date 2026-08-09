@@ -39,8 +39,11 @@ public class AutoChessAIPrepController : MonoBehaviour
     }
     public AutoChessShopManager shopManager;
     public StatDatabase unitRoles;
+    public List<string> GetUnitRoles(string unitName)
+    {
+        return unitRoles.ReturnStats(unitName);
+    }
     public StatDatabase unitRarity;
-    public StatDatabase itemRoles;
     public StatDatabase factionThresholds;
     public void AIPrepPhase(AutoChessDataManager dataManager)
     {
@@ -174,14 +177,11 @@ public class AutoChessAIPrepController : MonoBehaviour
         string name = unit.GetName();
         int tier = GetUnitTier(name);
         int cost = GetUnitCost(name);
-        int role = GetUnitRole(name);
         float score = 0;
-        score += genome.GetByName("W_BUY_POWER") * GetPower(unit);
+        //score += genome.GetByName("W_BUY_POWER") * GetPower(unit);
         score += genome.GetByName("W_BUY_TIER") * tier;
-        score += genome.GetByName("W_BUY_COST_EFF") * ((float)tier / Mathf.Max(1, cost));
         score += genome.GetByName("W_BUY_SYNERGY") * SynergyValue(unit.GetFactions());
         score += genome.GetByName("W_BUY_DUPLICATE") * DuplicateValue(name);
-        score += genome.GetByName("W_BUY_ROLE_FIT") * RoleNeedScore(role);
         score += genome.GetByName("W_UNIT_STACK_GENERATION") * StackGainValue(unit);
         score += genome.GetByName("W_UNIT_STACK_SCALING") * StackScalingValue(unit);
         score += genome.GetByName("W_UNIT_CYCLE") * CycleValue(unit);
@@ -196,14 +196,13 @@ public class AutoChessAIPrepController : MonoBehaviour
     }
     float KeepScore(AutoActorRollUpData unit)
     {
-        if (unit == null){return -999f;}
+        if (unit == null){return float.MinValue;}
         if (keepCache.TryGetValue(unit, out float cached))
         {
             return cached;
         }
         string name = unit.GetName();
         int tier = GetUnitTier(name);
-        int role = GetUnitRole(name);
         int star = unit.GetLevel();
         float score = 0;
         score += genome.GetByName("W_KEEP_TIER") * tier;
@@ -229,6 +228,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         for (int i = 0; i < prepManager.benchSlots.Count; i++)
         {
             float score = KeepScore(prepManager.benchSlots[i]);
+            // TODO decrease score for bench units with equipment, want to sell them faster to reclaim equipment.
             if (score < worstScore)
             {
                 worstScore = score;
@@ -240,7 +240,7 @@ public class AutoChessAIPrepController : MonoBehaviour
     int GetBestBenchIndex()
     {
         if (prepManager.benchSlots.Count <= 0){return -1;}
-        float bestScore = -999f;
+        float bestScore = float.MinValue;
         int index = 0;
         for (int i = 0; i < prepManager.benchSlots.Count; i++)
         {
@@ -297,8 +297,8 @@ public class AutoChessAIPrepController : MonoBehaviour
         if (bestSwapValue >= genome.GetByName("W_PLACE_SWAP_THRESH") && benchIndex >= 0 && fieldIndex >= 0)
         {
             int benchLocation = allBench[benchIndex].GetLocation();
-            allBench[benchIndex].SetLocation(FindBestTileForRole(allBench[benchIndex]));
             allBench[benchIndex].SetDirection(1);
+            allBench[benchIndex].SetLocation(FindBestTileForRole(allBench[benchIndex]));
             allField[fieldIndex].SetLocation(benchLocation);
             prepManager.MoveFromBenchToField(allBench[benchIndex]);
             prepManager.MoveFromFieldToBench(allField[fieldIndex]);
@@ -307,12 +307,19 @@ public class AutoChessAIPrepController : MonoBehaviour
             CheckAllSwaps(totalSwaps + 1);
         }
     }
+    int AegirPlaceFieldUnits(AutoActorRollUpData actor)
+    {
+        // Form a Chain Of Aegir Units, Ending With A Carry And Starting With Highest Attack NonAegir If Possible.
+        // Find The Base Of The Chain And The End.
+        // Make Sure The Directions Line Up.
+        return -1;
+    }
     void AutoPlaceFieldUnits(AutoChessDataManager dataManager)
     {
-        int bestBenchIndex = GetBestBenchIndex();
         // Place The Best Units If There Is Space.
         if (prepManager.fieldSlots.Count < prepManager.GetMaxFieldSlots())
         {
+            int bestBenchIndex = GetBestBenchIndex();
             if (bestBenchIndex < 0)
             {
                 // Go Buy Something, Anything Is Better Than Nothing.
@@ -384,17 +391,17 @@ public class AutoChessAIPrepController : MonoBehaviour
     }
     int FindBestTileForRole(AutoActorRollUpData actor)
     {
-        // TODO Back (Column 0-1) DPS/Support, Front (Column 1-2) Tanks
-        string role = unitRoles.ReturnValue(actor.GetName());
-        switch (role)
+        if (genome.GetPreferredFaction() == "Aegir" && actor.FactionExists("Aegir"))
         {
-            default:
-            return FindOpenSpot(0, 1);
-            case "Tank":
-            return FindOpenSpot(2, -1);
-            case "Support":
-            return FindOpenSpot(0, 1);
+            return AegirPlaceFieldUnits(actor);
         }
+        // Role Is Now A Comma Separated List Of Roles.
+        string role = unitRoles.ReturnValue(actor.GetName());
+        if (role.Contains("Tank"))
+        {
+            return FindOpenSpot(2, - 1);
+        }
+        return FindOpenSpot(0, 1);
     }
     // Check If You're Losing/Gaining Any Thresholds During A Swap
     float FindActiveFactionDifferences(AutoActorRollUpData benchUnit, AutoActorRollUpData fieldUnit)
@@ -466,6 +473,10 @@ public class AutoChessAIPrepController : MonoBehaviour
     // 4. EQUIPMENT PLACEMENT
     // ============================================================
     public StatDatabase itemTypeData;
+    public List<string> ReturnItemTypes(string itemName)
+    {
+        return itemTypeData.ReturnStats(itemName);
+    }
     List<string> GetAvailableComponents()
     {
         List<string> components = new();
@@ -494,52 +505,30 @@ public class AutoChessAIPrepController : MonoBehaviour
     }
     bool EquipItemToUnit(string itemName, bool exists = true)
     {
-        string itemType = itemTypeData.ReturnValue(itemName);
-        // For DPS pick highest rarity/attack.
-        if (itemType == "DPS")
+        // Find The Best Matching Unit For The Equipment.
+        int bestIndex = -1;
+        float bestScore = float.MinValue;
+        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
-            int dpsIndex = -1;
-            int maxAttack = -1;
-            for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+            AutoActorRollUpData unit = prepManager.fieldSlots[i];
+            if (unit.GetOpenEquipmentSlots() <= 0){continue;}
+            float score = itemValueDatabase.GetTagCompatibility(ReturnItemTypes(itemName), GetUnitRoles(unit.GetName()));
+            // Not only a match but check the value of the unit:
+            score += genome.GetByName("W_ITEM_FOCUS_HIGH_TIER_UNIT") * GetUnitTier(unit.GetName());
+            if (score > bestScore)
             {
-                if (unitRoles.ReturnValue(prepManager.fieldSlots[i].GetName()) == "DPS" && prepManager.fieldSlots[i].GetOpenEquipmentSlots() > 0 && prepManager.fieldSlots[i].GetAttack() > maxAttack)
-                {
-                    maxAttack = prepManager.fieldSlots[i].GetAttack();
-                    dpsIndex = i;
-                }
-            }
-            if (dpsIndex >= 0)
-            {
-                prepManager.fieldSlots[dpsIndex].EquipEquipment(itemName);
-                if (exists)
-                {
-                    prepManager.dataManager.UseEquipment(itemName);
-                }
-                return true;
+                bestScore = score;
+                bestIndex = i;
             }
         }
-        // For Tank pick highest rarity/health.
-        else if (itemType == "Tank")
+        if (bestIndex >= 0)
         {
-            int tankIndex = -1;
-            int maxHealth = -1;
-            for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+            prepManager.fieldSlots[bestIndex].EquipEquipment(itemName);
+            if (exists)
             {
-                if (unitRoles.ReturnValue(prepManager.fieldSlots[i].GetName()) == "Tank" && prepManager.fieldSlots[i].GetOpenEquipmentSlots() > 0 && prepManager.fieldSlots[i].GetHealth() > maxHealth)
-                {
-                    maxHealth = prepManager.fieldSlots[i].GetHealth();
-                    tankIndex = i;
-                }
+                prepManager.dataManager.UseEquipment(itemName);
             }
-            if (tankIndex >= 0)
-            {
-                prepManager.fieldSlots[tankIndex].EquipEquipment(itemName);
-                if (exists)
-                {
-                    prepManager.dataManager.UseEquipment(itemName);
-                }
-                return true;
-            }
+            return true;
         }
         return false;
     }
@@ -552,7 +541,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         for (int i = 0; i < combined.Count; i++)
         {
             float itemValue = ItemValue(combined[i]);
-            if (itemValue > 0)
+            if (itemValue > genome.GetByName("W_ITEM_SAVE"))
             {
                 EquipItemToUnit(combined[i]);
             }
@@ -568,14 +557,13 @@ public class AutoChessAIPrepController : MonoBehaviour
                 if(!string.IsNullOrEmpty(result))
                 {
                     float combinedValue = ItemValue(result);
-                    combinedValue -= genome.GetByName("W_ITEM_SAVE") * GetComponentFutureValue(components[i]);
-                    combinedValue -= genome.GetByName("W_ITEM_SAVE") * GetComponentFutureValue(components[j]);
+                    combinedValue -= genome.GetByName("W_ITEM_COMPONENT_SAVE") * GetComponentFutureValue(components[i]);
+                    combinedValue -= genome.GetByName("W_ITEM_COMPONENT_SAVE") * GetComponentFutureValue(components[j]);
                     ItemCombination newCombination = new(result, components[i] + "|" + components[j], combinedValue);
                     combinations.Add(newCombination);
                 }
             }
         }
-        // 2. TODO Rank combinations
         combinations.Sort((a, b) => a.value.CompareTo(b.value));
         for (int i = combinations.Count - 1; i >= 0; i--)
         {
@@ -583,7 +571,7 @@ public class AutoChessAIPrepController : MonoBehaviour
             if (!prepManager.dataManager.EquipmentComponentsExists(combinations[i].components)){continue;}
             float combinedValue = combinations[i].value;
             // Check If Equip.
-            if (combinedValue > 0)
+            if (combinedValue > genome.GetByName("W_ITEM_SAVE"))
             {
                 if (EquipItemToUnit(combinations[i].combinationName, false))
                 {
@@ -594,78 +582,58 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
     }
     // If lots of items of that type (dps/tank/supp) then value goes down.
-    float NeedDPSItem(List<string> fieldedItems)
+    float ItemTypeDuplicatePenalty(List<string> itemTypes)
     {
-        float dpsItemCount = 0f;
-        for (int i = 0; i < fieldedItems.Count; i++)
-        {
-            if (itemTypeData.ReturnValue(fieldedItems[i]) == "DPS")
-            {
-                dpsItemCount += 1f;
-            }
-        }
-        return 1f / (1f + dpsItemCount);
-    }
-    float NeedTankItem(List<string> fieldedItems)
-    {
-        float tankItemCount = 0f;
-        for (int i = 0; i < fieldedItems.Count; i++)
-        {
-            if (itemTypeData.ReturnValue(fieldedItems[i]) == "Tank")
-            {
-                tankItemCount += 1f;
-            }
-        }
-        return 1f / (1f + tankItemCount);
-    }
-    // Check Open Item Slots On Units.
-    float DPSMatch()
-    {
-        float openDPSitems = 0f;
+        float itemTypeCount = 0f;
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
-            if (unitRoles.ReturnValue(prepManager.fieldSlots[i].GetName()) == "DPS")
+            foreach (string itemName in prepManager.fieldSlots[i].GetEquipmentNames())
             {
-                openDPSitems += prepManager.fieldSlots[i].GetOpenEquipmentSlots();
+                foreach (string itemType in itemTypes)
+                {
+                    if (ReturnItemTypes(itemName).Contains(itemType))
+                    {
+                        itemTypeCount++;
+                        break;
+                    }
+                }
             }
         }
-        return Mathf.Clamp01(openDPSitems / 3f);
-    }
-    float TankMatch()
-    {
-        float openTankitems = 0f;
-        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
-        {
-            if (unitRoles.ReturnValue(prepManager.fieldSlots[i].GetName()) == "Tank")
-            {
-                openTankitems += prepManager.fieldSlots[i].GetOpenEquipmentSlots();
-            }
-        }
-        return Mathf.Clamp01(openTankitems / 3f);
+        return itemTypeCount;
     }
     public AutoChessItemValueDatabase itemValueDatabase;
     float ItemTrainingScore(string itemName)
     {
         return genome.GetByName("W_ITEM_VALUE") * itemValueDatabase.GetItemTrainingScore(itemName);
     }
+    float ItemBestMatch(string itemName)
+    {
+        float bestMatch = 0f;
+        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        {
+            if (prepManager.fieldSlots[i].GetOpenEquipmentSlots() <= 0){continue;}
+            float match = itemValueDatabase.GetTagCompatibility(ReturnItemTypes(itemName), GetUnitRoles(prepManager.fieldSlots[i].GetName()));
+            if (match > bestMatch)
+            {
+                bestMatch = match;
+            }
+        }
+        return bestMatch;
+    }
+    string ItemType(string itemStats)
+    {
+        if (itemStats.Contains("HP")){return "Tank";}
+        return "DPS";
+    }
     // Determines The Current Value Of An Item.
     float ItemValue(string itemName)
     {
-        List<string> fieldItems = prepManager.GetAllFieldEquipment();
-        string itemType = itemTypeData.ReturnValue(itemName);
-        // If already exists then value goes down.
         float value = 0f;
+        // Value is based on history + need + best match.
         value += ItemTrainingScore(itemName);
-        if(itemType == "DPS")
-        {
-            value += genome.GetByName("W_ITEM_DPS_NEED") * NeedDPSItem(fieldItems);
-            value += genome.GetByName("W_ITEM_DPS_MATCH") * DPSMatch();
-        }
-        if(itemType == "Tank")
-        {
-            value += genome.GetByName("W_ITEM_TANK_NEED") * NeedTankItem(fieldItems);
-            value += genome.GetByName("W_ITEM_TANK_MATCH") * TankMatch();
-        }
+        value -= genome.GetByName("W_ITEM_DUPLICATE_PENALTY") * ItemTypeDuplicatePenalty(ReturnItemTypes(itemName));
+        value += genome.GetByName("W_ITEM_UNIT_MATCH") *
+         ItemBestMatch(itemName);
         return value;
     }
     // ============================================================
@@ -678,20 +646,6 @@ public class AutoChessAIPrepController : MonoBehaviour
     int GetUnitCost(string name)
     {
         return shopManager.ReturnActorCost(name);
-    }
-    int GetUnitRole(string name)
-    {
-        string role = unitRoles.ReturnValue(name);
-        switch (role)
-        {
-            default:
-            case "DPS":
-            return 1; // Default DPS
-            case "Tank":
-            return 0;
-            case "Support":
-            return 2;
-        }
     }
     float GetPower(AutoActorRollUpData unit)
     {
@@ -765,14 +719,17 @@ public class AutoChessAIPrepController : MonoBehaviour
         {
             if (faction == "Main")
             {
-                value += EvaluateMainFactionScaling();
+                for (int i = 0; i < mainFactions.Count; i++)
+                {
+                    value += GetStacks(mainFactions[i]);
+                }
             }
             else
             {
-                value += EvaluateFaction(faction);
+                value += GetStacks(faction);
             }
         }
-        return value;
+        return value / 10f;
     }
     float StackGainValue(AutoActorRollUpData unit, bool isBuying = true)
     {
@@ -812,7 +769,6 @@ public class AutoChessAIPrepController : MonoBehaviour
             float lifetime = GetStackLifetime(trait, isBuying);
             value += stackAmount * lifetime * factionValue;
         }
-        value = Mathf.Min(value, 100f);
         return value;
     }
     float GetTraitStackAmount(AutoChessTrait trait)
@@ -825,7 +781,7 @@ public class AutoChessAIPrepController : MonoBehaviour
     }
     float GetStackLifetime(AutoChessTrait trait, bool isBuying)
     {
-        int roundsLeft = Mathf.Min(20, prepManager.dataManager.GetHealth() / (Mathf.Max(1, prepManager.dataManager.GetRound())));
+        int roundsLeft = Mathf.Min(15, prepManager.dataManager.GetHealth() / (Mathf.Max(1, prepManager.dataManager.GetLevel() + prepManager.dataManager.GetRound())));
         switch(trait.timing)
         {
             case "OnPurchase":
@@ -838,7 +794,7 @@ public class AutoChessAIPrepController : MonoBehaviour
             case "OnSkill":
                 return roundsLeft * 2f;
             case "OnAttack":
-                return roundsLeft * 4f;
+                return roundsLeft * 3f;
             case "OnKill":
                 return roundsLeft * 0.5f;
         }
@@ -897,25 +853,35 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         float score = 0;
         int count = factionManager.factionData.GetCountOfFaction(faction);
+        bool active = factionManager.factionData.FactionActive(faction);
         // All Factions Require At Least 2 Units To Be Active.
-        int commitment = Mathf.Max(0, count - 2);
         float stacks = GetStacks(faction);
         // Divide By 10 For Now To Decrease The Value Of Stacks.
         stacks /= 10f;
+        score += stacks * genome.GetByName("W_FACTION_STACKS");
+        if (active)
+        {
+            score *= genome.GetByName("W_FACTION_ACTIVE");
+        }
+        else
+        {
+            score *= genome.GetByName("W_FACTION_INACTIVE");
+        }
         switch(GetFactionType(faction))
         {
             case "Main":
-                score += commitment * genome.GetByName("W_FACTION_MAIN");
-                score += stacks * genome.GetByName("W_FACTION_STACKS");
+                score += count * genome.GetByName("W_FACTION_MAIN");
                 break;
             case "Econ":
-                score += commitment * genome.GetByName("W_FACTION_ECON");
-                score += stacks * genome.GetByName("W_FACTION_STACKS");
+                score += count * genome.GetByName("W_FACTION_ECON");
                 break;
             case "Side":
-                score += commitment * genome.GetByName("W_FACTION_SIDE");
-                score += stacks * genome.GetByName("W_FACTION_STACKS");
+                score += count * genome.GetByName("W_FACTION_SIDE");
                 break;
+        }
+        if (faction == genome.GetPreferredFaction())
+        {
+            score += genome.GetByName("W_PREF_FACTION") * (count + 1);
         }
         return score;
     }
@@ -934,21 +900,6 @@ public class AutoChessAIPrepController : MonoBehaviour
         if (count == 2) return genome.GetByName("W_DUP_POTENTIAL");
         // You Have 1 Of The Same Unit.
         return genome.GetByName("W_DUP_NONE");
-    }
-    float RoleNeedScore(int role)
-    {
-        int totalUnits = prepManager.fieldSlots.Count;
-        if (totalUnits == 0) return 1f;
-        int roleCount = 0;
-        foreach (var u in prepManager.fieldSlots) if (GetUnitRole(u.GetName()) == role) roleCount++;
-        float idealRatio = role switch
-        {
-            0 => genome.GetByName("W_ROLE_TANK_RATIO"),
-            1 => genome.GetByName("W_ROLE_DPS_RATIO"),
-            _ => genome.GetByName("W_ROLE_SUPPORT_RATIO")
-        };
-        int idealCount = Mathf.RoundToInt(totalUnits * idealRatio);
-        return Mathf.Max(0, idealCount - roleCount);
     }
     // DB Copied From Equip Manager For Convenience
     public string CombineEquipment(string firstItem, string secondItem)

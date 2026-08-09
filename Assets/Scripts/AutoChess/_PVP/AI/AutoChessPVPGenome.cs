@@ -10,11 +10,11 @@ public class AutoChessPVPGenome
     public static readonly List<string> GeneNames = new List<string>()
     {
         "W_BUY_TIER",
-        "W_BUY_COST_EFF",
+        "W_FACTION_ACTIVE",
         "W_BUY_SYNERGY",
-        "W_BUY_POWER",
+        "W_PREF_FACTION",
         "W_BUY_DUPLICATE",
-        "W_BUY_ROLE_FIT",
+        "W_FACTION_INACTIVE",
         "W_BUY_ECON_STRETCH",
         "W_KEEP_TIER",
         "W_KEEP_SYNERGY",
@@ -28,9 +28,9 @@ public class AutoChessPVPGenome
         "W_ECON_STREAK_LOSS",
         "W_PLACE_SWAP_THRESH",
         "W_SELL_MARGIN",
-        "W_ROLE_TANK_RATIO",
-        "W_ROLE_DPS_RATIO",
-        "W_ROLE_SUPPORT_RATIO",
+        "W_ROLE_TANK_RATIO", // Think About Synergy More Than Roles, If You Get A Full Faction You'll Naturally Have The Roles.
+        "W_ROLE_DPS_RATIO", // Think About Synergy More Than Roles, If You Get A Full Faction You'll Naturally Have The Roles.
+        "W_ROLE_SUPPORT_RATIO", // Think About Synergy More Than Roles, If You Get A Full Faction You'll Naturally Have The Roles.
         "W_SYN_HIT",
         "W_SYN_MAINTAIN",
         "W_SYN_ONEAWAY",
@@ -48,25 +48,25 @@ public class AutoChessPVPGenome
         "W_UNIT_CYCLE",
         "W_UNIT_CYCLE_SCALING",
         "W_ITEM_SAVE",
-        "W_ITEM_DPS_NEED",
-        "W_ITEM_DPS_MATCH",
-        "W_ITEM_TANK_NEED",
-        "W_ITEM_TANK_MATCH",
+        "W_ITEM_FOCUS_HIGH_TIER_UNIT",
+        "W_ITEM_UNIT_MATCH",
+        "W_ITEM_COMPONENT_SAVE",
+        "W_ITEM_DUPLICATE_PENALTY",
         "W_ITEM_VALUE"
     };
     // --- Defaults aligned to the indices above ---
     public static readonly float[] Defaults = new float[]
     {
         2.0f,   // 0  W_BUY_TIER
-        1.5f,   // 1  W_BUY_COST_EFF
-        3.0f,   // 2  W_BUY_SYNERGY
-        1.0f,   // 3  W_BUY_POWER
-        6.0f,   // 4  W_BUY_DUPLICATE
-        2.0f,   // 5  W_BUY_ROLE_FIT
+        2.0f,   // 1  W_FACTION_ACTIVE
+        2.0f,   // 2  W_BUY_SYNERGY
+        1.0f,   // 3  W_PREF_FACTION
+        2.0f,   // 4  W_BUY_DUPLICATE
+        0.5f,   // 5  W_FACTION_INACTIVE
         -1.0f,  // 6  W_BUY_ECON_STRETCH
         1.0f,   // 7  W_KEEP_TIER
         2.0f,   // 8  W_KEEP_SYNERGY
-        3.0f,   // 9  W_KEEP_DUPLICATE
+        2.0f,   // 9  W_KEEP_DUPLICATE
         3.0f,   // 10 W_KEEP_STAR_LEVEL
         3.0f,   // 11 W_ECON_INTEREST
         2.0f,   // 12 W_ECON_LEVEL_TIMING
@@ -82,26 +82,41 @@ public class AutoChessPVPGenome
         3.0f,   // 22 W_SYN_HIT
         1.5f,   // 23 W_SYN_MAINTAIN
         0.5f,   // 24 W_SYN_ONEAWAY
-        8.0f,   // 25 W_DUP_MERGE
+        3.0f,   // 25 W_DUP_MERGE
         2.0f,   // 26 W_DUP_CLOSE
-        5.0f,   // 27 W_DUP_POTENTIAL
-        -3.0f,  // 28 W_DUP_NONE
+        2.0f,   // 27 W_DUP_POTENTIAL
+        -2.0f,  // 28 W_DUP_NONE
         2.0f,   // 29 W_FACTION_MAIN
-        1.5f,   // 30 W_FACTION_ECON
+        1.0f,   // 30 W_FACTION_ECON
         1.0f,   // 31 W_FACTION_SIDE
-        2.5f,   // 32 W_FACTION_COMMITMENT
-        0.5f,   // 33 W_FACTION_STACKS
-        0.5f,   // 34 W_UNIT_STACK_GENERATION
+        2.0f,   // 32 W_FACTION_COMMITMENT
+        1.0f,   // 33 W_FACTION_STACKS
+        1.0f,   // 34 W_UNIT_STACK_GENERATION
         0.5f,   // 35 W_UNIT_STACK_SCALING
         0.5f,   // 36 W_UNIT_CYCLE
         0.5f,   // 37 W_UNIT_CYCLE_SCALING
         1.0f,   // 38 W_ITEM_SAVE
-        1.0f,   // 39 W_ITEM_DPS_NEED
-        1.0f,   // 40 W_ITEM_DPS_MATCH
-        1.0f,   // 41 W_ITEM_TANK_NEED
-        1.0f,   // 42 W_ITEM_TANK_MATCH
+        1.0f,   // 39 W_ITEM_URGENCY
+        1.0f,   // 40 W_ITEM_UNIT_MATCH
+        1.0f,   // 41 W_ITEM_COMPONENT_SAVE
+        1.0f,   // 42 W_ITEM_DUPLICATE_PENALTY
         1.0f    // 43 W_ITEM_VALUE
     };
+    public string genePool = "";
+    public void SetGenePool(string newPool)
+    {
+        genePool = newPool;
+    }
+    public string GetGenePool()
+    {
+        return genePool;
+    }
+    public string preferredFaction = "";
+    public void SetPreferredFaction(string newFaction)
+    {
+        preferredFaction = newFaction;
+    }
+    public string GetPreferredFaction(){return preferredFaction;}
     public float this[int index] => genes[index];
     public float GetByName(string name)
     {
@@ -112,6 +127,10 @@ public class AutoChessPVPGenome
             return 0f;
         }
         return idx >= 0 ? genes[idx] : 0f;
+    }
+    public string GetGeneNameAtIndex(int index)
+    {
+        return GeneNames[index];
     }
     public void SetByName(string name, float value)
     {
@@ -141,6 +160,8 @@ public class AutoChessPVPGenome
     public AutoChessPVPGenome Copy()
     {
         var g = new AutoChessPVPGenome();
+        g.genePool = genePool;
+        g.preferredFaction = preferredFaction;
         genes.CopyTo(g.genes, 0);
         return g;
     }
@@ -149,7 +170,7 @@ public class AutoChessPVPGenome
         var child = new AutoChessPVPGenome();
         for (int i = 0; i < child.genes.Length; i++)
         {
-            child.genes[i] = Random.value < 0.5f ? a.genes[i] : b.genes[i];
+            child.genes[i] = (a.genes[i] + b.genes[i]) / 2f;
         }
         return child;
     }

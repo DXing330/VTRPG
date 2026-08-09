@@ -10,7 +10,7 @@ public class SkillEffect : ScriptableObject
     public StatDatabase buffsAndStatus;
     public StatDatabase standardSpells;
     public int basicDenominator = 100;
-    public int baseStatusDuration = 3;
+    public int baseStatusDuration = 1;
     public void AffectActor(TacticActor target, string effect, string effectSpecifics, int level = 1, CombatLog combatLog = null)
     {
         if (target == null){return;}

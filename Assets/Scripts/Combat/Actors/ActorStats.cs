@@ -1013,6 +1013,8 @@ public class ActorStats : ActorInitialStats
     {
         CheckSilence();
         CheckSleeping();
+        CheckImmortal();
+        CheckIntangible();
     }
     public (bool, int) DecrementBoolDuration(bool newBool, int boolDuration)
     {
