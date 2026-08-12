@@ -21,7 +21,8 @@ public class EffectManager : ScriptableObject
     }
     public void StartTurn(TacticActor actor, BattleMap map)
     {
-        map.ActorStartsTurn(actor);
+        if (actor == null){return;}
+        map.ActorStartTurn(actor);
         passive.ApplyPassives(actor, "Start", map);
         // Status effects apply last so that passives have a chance to remove negative status effects.
         status.ApplyBuffEffects(actor, statusData, "Start", map);

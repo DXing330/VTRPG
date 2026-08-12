@@ -29,8 +29,8 @@ public class AutoChessPVPGenome
         "W_PLACE_SWAP_THRESH",
         "W_SELL_MARGIN",
         "W_ROLE_TANK_RATIO", // Think About Synergy More Than Roles, If You Get A Full Faction You'll Naturally Have The Roles.
-        "W_ROLE_DPS_RATIO", // Think About Synergy More Than Roles, If You Get A Full Faction You'll Naturally Have The Roles.
-        "W_ROLE_SUPPORT_RATIO", // Think About Synergy More Than Roles, If You Get A Full Faction You'll Naturally Have The Roles.
+        "W_MAIN_SYN_HIT",
+        "W_ECON_SYN_HIT",
         "W_SYN_HIT",
         "W_SYN_MAINTAIN",
         "W_SYN_ONEAWAY",
@@ -77,9 +77,9 @@ public class AutoChessPVPGenome
         2.5f,   // 17 W_PLACE_SWAP_THRESH
         0.5f,   // 18 W_SELL_MARGIN
         0.3f,   // 19 W_ROLE_TANK_RATIO
-        0.5f,   // 20 W_ROLE_DPS_RATIO
-        0.2f,   // 21 W_ROLE_SUPPORT_RATIO
-        3.0f,   // 22 W_SYN_HIT
+        3.0f,   // 20 W_MAIN_SYN_HIT
+        1.0f,   // 21 W_ECON_SYN_HIT
+        2.0f,   // 22 W_SYN_HIT
         1.5f,   // 23 W_SYN_MAINTAIN
         0.5f,   // 24 W_SYN_ONEAWAY
         3.0f,   // 25 W_DUP_MERGE
@@ -170,18 +170,20 @@ public class AutoChessPVPGenome
         var child = new AutoChessPVPGenome();
         for (int i = 0; i < child.genes.Length; i++)
         {
-            child.genes[i] = (a.genes[i] + b.genes[i]) / 2f;
+            float minRange = Mathf.Min(a.genes[i], b.genes[i]);
+            float maxRange = Mathf.Max(a.genes[i], b.genes[i]);
+            child.genes[i] = UnityEngine.Random.Range(minRange, maxRange);
         }
         return child;
     }
-    public void Mutate(float rate = 0.15f, float strength = 1.0f)
+    public void Mutate(float rate = 0.15f, float strength = 0.3f)
     {
         for (int i = 0; i < genes.Length; i++)
         {
             if (Random.value < rate)
             {
-                float noise = RandomGaussian() * strength;
-                genes[i] += noise;
+                float scale = Mathf.Sqrt(Mathf.Abs(genes[i]) + 1f);
+                genes[i] += RandomGaussian() * strength * scale;
             }
         }
     }

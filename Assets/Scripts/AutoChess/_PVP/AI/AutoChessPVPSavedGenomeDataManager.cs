@@ -14,6 +14,9 @@ public class GenomeEntry
     public string preferredFaction;
     public int generation;
     public float fitness;
+    public float elo = 1500f;
+    public int eloMatches = 0;
+    public float peakElo = 1500f;
     public int wins;
     public int matchesPlayed;
     public float avgPlacement;
@@ -43,6 +46,9 @@ public class GenomeEntry
             preferredFaction = preferredFaction,
             generation = generation,
             fitness = fitness,
+            elo = elo,
+            eloMatches = eloMatches,
+            peakElo = peakElo,
             wins = wins,
             matchesPlayed = matchesPlayed,
             avgPlacement = avgPlacement,
@@ -68,6 +74,7 @@ public class GenomeEntry
 public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
 {
     public string filename = "autochess_genome_database.json";
+    public string geneSchemaFilename = "autochess_genome_schema.json";
     public List<GenomeEntry> entries = new();
     public List<GenomeEntry> AllEntries => entries;
     public GenomeEntry GetById(string id) => entries.FirstOrDefault(e => e.id == id);
@@ -145,6 +152,11 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
     {
         public List<GenomeEntry> entries;
     }
+    [System.Serializable]
+    public class GeneSchemaWrapper
+    {
+        public List<string> geneNames;
+    }
     public void SaveToDisk()
     {
         var wrapper = new GenomeDatabaseWrapper { entries = this.entries };
@@ -152,6 +164,14 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         string path = Path.Combine(Application.persistentDataPath, filename);
         File.WriteAllText(path, json);
         Debug.Log($"GenomeDatabase saved: {path} ({entries.Count} entries)");
+        // Save current gene schema separately
+        var schemaWrapper = new GeneSchemaWrapper
+        {
+            geneNames = new List<string>(AutoChessPVPGenome.GeneNames)
+        };
+        string schemaJson = JsonUtility.ToJson(schemaWrapper, true);
+        string schemaPath = Path.Combine(Application.persistentDataPath, geneSchemaFilename);
+        File.WriteAllText(schemaPath, schemaJson);
     }
     public void LoadFromDisk()
     {
@@ -165,8 +185,20 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         var wrapper = JsonUtility.FromJson<GenomeDatabaseWrapper>(json);
         this.entries = wrapper.entries ?? new List<GenomeEntry>();
         // Auto-heal old genomes whenever the database is loaded
-        MigrateGenomeSizes();
-        MigratePreferredFactions();
+        bool changed = MigrateGenomeSizes();
+        string schemaPath = Path.Combine(Application.persistentDataPath, geneSchemaFilename);
+        if (File.Exists(schemaPath))
+        {
+            string schemaJson = File.ReadAllText(schemaPath);
+            GeneSchemaWrapper schema = JsonUtility.FromJson<GeneSchemaWrapper>(schemaJson);
+            List<string> oldGeneNames = schema.geneNames;
+            changed |= MigrateGenomeGeneNames(oldGeneNames);
+        }
+        changed |= MigratePreferredFactions();
+        if (changed)
+        {
+            SaveToDisk();
+        }
         Debug.Log($"GenomeDatabase loaded: {entries.Count} entries");
     }
     // --- Quick init for training ---
@@ -191,7 +223,7 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         }
     }
     // Quick Init To Start A Population
-    public void AddGenePool(AutoChessPVPGenomeTemplate template, int size, int generation = 0, float initialMutationRate = 0.15f, float initialMutationStrength = 1f)
+    public void AddGenePool(AutoChessPVPGenomeTemplate template, int size, int generation = 0, float initialMutationRate = 0.15f, float initialMutationStrength = 1f, bool overwriteExisting = true)
     {
         if (template == null)
         {
@@ -204,10 +236,21 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
             Debug.LogError("Cannot create gene pool: template has no templateName.");
             return;
         }
-        int removedCount = entries.RemoveAll(entry => entry != null && entry.genePool == poolName);
-        if (removedCount > 0)
+        if (!overwriteExisting)
         {
-            Debug.Log($"Overwriting gene pool '{poolName}'. " + $"Removed {removedCount} existing genomes.");
+            if (HasGenePool(poolName))
+            {
+                Debug.Log($"Gene pool '{poolName}' already exists. Skipping creation.");
+                return;
+            }
+        }
+        else
+        {
+            int removedCount = entries.RemoveAll(entry => entry != null && entry.genePool == poolName);
+            if (removedCount > 0)
+            {
+                Debug.Log($"Overwriting gene pool '{poolName}'. " + $"Removed {removedCount} existing genomes.");
+            }
         }
         for (int i = 0; i < size; i++)
         {
@@ -242,7 +285,7 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         return entries.Where(e => e != null && e.genePool == poolName).ToList();
     }
     // For Updating After Expanding Genome.
-    public void MigrateGenomeSizes()
+    public bool MigrateGenomeSizes()
     {
         bool changed = false;
         int targetLength = AutoChessPVPGenome.Defaults.Length;
@@ -264,8 +307,26 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         if (changed)
         {
             Debug.Log($"Migrated {entries.Count} genomes to {targetLength} genes.");
-            SaveToDisk(); // persist immediately
         }
+        return changed;
+    }
+    public bool MigrateGenomeGeneNames(List<string> oldGeneNames)
+    {
+        bool changed = false;
+        List<string> currentGeneNames = AutoChessPVPGenome.GeneNames;
+        for (int i = 0; i < currentGeneNames.Count; i++)
+        {
+            if (oldGeneNames[i] != currentGeneNames[i])
+            {
+                Debug.Log($"Migrated {oldGeneNames[i]} genome to {currentGeneNames[i]} with {AutoChessPVPGenome.Defaults[i]} default value.");
+                changed = true;
+                foreach (var entry in entries)
+                {
+                    entry.genome.genes[i] = AutoChessPVPGenome.Defaults[i];
+                }
+            }
+        }
+        return changed;
     }
     bool IsValidPreferredFaction(string faction)
     {
@@ -282,7 +343,7 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
                 return false;
         }
     }
-    public void MigratePreferredFactions()
+    public bool MigratePreferredFactions()
     {
         bool changed = false;
         int repaired = 0;
@@ -327,11 +388,24 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         }
         if (changed)
         {
+            Debug.Log($"Preferred faction migration complete. " + $"Repaired {repaired} entries.");
+        }
+        return changed;
+    }
+    [ContextMenu("Manually Migrate Old Gene Names")]
+    private void MigrateUsingOldGeneNames()
+    {
+        string path = Path.Combine(Application.persistentDataPath, filename);
+        string json = File.ReadAllText(path);
+        var wrapper = JsonUtility.FromJson<GenomeDatabaseWrapper>(json);
+        this.entries = wrapper.entries ?? new List<GenomeEntry>();
+        List<string> oldGeneNames = new List<string>
+        {
+        };
+        bool changed = MigrateGenomeGeneNames(oldGeneNames);
+        if (changed)
+        {
             SaveToDisk();
-            Debug.Log(
-                $"Preferred faction migration complete. " +
-                $"Repaired {repaired} entries."
-            );
         }
     }
 }

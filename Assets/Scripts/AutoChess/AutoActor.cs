@@ -122,6 +122,14 @@ public class AutoActorRollUpData
     public int resist; // Magic Resist.
     public int GetResist(){return resist;}
     public void SetResist(int newData){resist = newData;}
+    public int attackRange;
+    public int GetAttackRange(){return attackRange;}
+    public void SetAttackRange(int newData){attackRange = newData;}
+    public string attackShape;
+    public string GetAttackShape(){return attackShape;}
+    public void SetAttackShape(string newData){attackShape = newData;}
+    public bool healer = false;
+    public bool AOE = false;
     public string GetBaseStatString()
     {
         string baseStatString = GetName();
@@ -144,6 +152,10 @@ public class AutoActorRollUpData
             }
         }
         return emblems;
+    }
+    public bool EmblemExists(string emblem)
+    {
+        return GetEmblems().Contains(emblem);
     }
     public bool EquipmentExists(string equipName)
     {
@@ -196,10 +208,20 @@ public class AutoActorRollUpData
         trait = new AutoChessTrait();
         trait.LoadBaseTrait(blocks[1], blocks[2], blocks[3]);
         SetFactions(blocks[0].Split(",").ToList());
-        SetHealth(int.Parse(blocks[7]) + (10 * (newLevel - 1)));
-        SetAttack(int.Parse(blocks[8]) + (2 * (newLevel - 1)));
-        SetDefense(int.Parse(blocks[9]));
+        SetHealth(int.Parse(blocks[7]) + (int.Parse(blocks[7]) * (newLevel - 1) * 3 / 10));
+        SetAttack(int.Parse(blocks[8]) + (int.Parse(blocks[8]) * (newLevel - 1) * 3 / 10));
+        SetDefense(int.Parse(blocks[9]) + (int.Parse(blocks[9]) * (newLevel - 1) * 3 / 10));
         SetResist(int.Parse(blocks[10]));
+        SetAttackRange(int.Parse(blocks[11]));
+        SetAttackShape(blocks[14]);
+        if (int.Parse(blocks[15]) == 1)
+        {
+            healer = true;
+        }
+        if (int.Parse(blocks[17]) == 1)
+        {
+            AOE = true;
+        }
     }
     public void LoadBaseTrait(StatDatabase autoActorData)
     {
@@ -225,6 +247,10 @@ public class AutoActorRollUpData
         data += "Attack" + equals + attack + delimiter;
         data += "Defense" + equals + defense + delimiter;
         data += "Resist" + equals + resist + delimiter;
+        data += "Range" + equals + attackRange + delimiter;
+        data += "RangeShape" + equals + attackShape + delimiter;
+        data += "Healer" + equals + healer + delimiter;
+        data += "AOE" + equals + AOE + delimiter;
         data += "Equipment" + equals + String.Join(equipDelimiter, equipmentNames) + delimiter;
         data += "Location" + equals + location + delimiter;
         data += "Direction" + equals + direction + delimiter;
@@ -268,6 +294,20 @@ public class AutoActorRollUpData
             return;
             case "Resist":
             SetResist(int.Parse(value));
+            return;
+            case "Range":
+            SetAttackRange(int.Parse(value));
+            return;
+            case "RangeShape":
+            SetAttackShape(value);
+            return;
+            case "Healer":
+            if (bool.TryParse(value, out bool healerValue))
+                healer = healerValue;
+            return;
+            case "AOE":
+            if (bool.TryParse(value, out bool aoeValue))
+                AOE = aoeValue;
             return;
             case "Equipment":
             equipmentNames = new List<string>(value.Split(equipDelimiter).ToList());

@@ -61,6 +61,10 @@ public class StatDatabase : ScriptableObject
         }
         GetKeys();
         GetValues();
+        if (keys.Count != values.Count)
+        {
+            Debug.Log("Key-Value Count Not Equal");
+        }
     }
     public void SetAllKeys(string newKeys)
     {

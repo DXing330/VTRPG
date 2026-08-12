@@ -574,6 +574,19 @@ public class AutoChessPrepManager : ClickTileManager
         benchSlots.Remove(benchActor);
     }
     public List<AutoActorRollUpData> fieldSlots;
+    public bool UnitExists(AutoActorRollUpData newUnit, bool includeBench = true)
+    {
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            if (fieldSlots[i].GetName() == newUnit.GetName()){return true;}
+        }
+        if (!includeBench){return false;}
+        for (int i = 0; i < benchSlots.Count; i++)
+        {
+            if (benchSlots[i].GetName() == newUnit.GetName()){return true;}
+        }
+        return false;
+    }
     public List<string> GetAllFieldEquipment()
     {
         List<string> allEquipment = new List<string>();

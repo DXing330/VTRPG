@@ -67,14 +67,13 @@ public class BattleMap : MapManager
             MoveActorToTile(overlappingActors[i], newLocation, true);
         }
     }
-    public void ActorStartsTurn(TacticActor actor)
+    public void ActorStartTurn(TacticActor actor)
     {
         ApplyWeatherStartEffect(actor);
         ApplyTileStartEffect(actor);
         ApplyBuildingStartEffect(actor);
         ApplyTerrainStartEffect(actor);
         ApplyAuraEffects(actor, "Start");
-        // Ensure Each Actor Is On A Unique Tile, If Needed And Possible.
         EnsureUniqueActorToTile(actor);
     }
     public void ActorEndsTurn(TacticActor actor)
@@ -113,6 +112,22 @@ public class BattleMap : MapManager
         if (combatLog != null)
         {
             combatLog.SetRound(battleRound);
+        }
+        // Make Sure No Alive Actors Have Location = -1;
+        FixActorLocations();
+    }
+    // TODO Later Place It Next To A Random Alive Ally.
+    public void FixActorLocations()
+    {
+        for (int i = 0; i < battlingActors.Count; i++)
+        {
+            if (battlingActors[i].GetLocation() < 0 && battlingActors[i].GetHealth() > 0)
+            {
+                // Throw them all on a tile, it'll deal with itself somehow.
+                battlingActors[i].SetLocation(0);
+                UpdateCombatLog(battlingActors[i].GetPersonalName() + " was out of bounds.");
+                Debug.Log(battlingActors[i].GetPersonalName() + " was out of bounds.");
+            }
         }
     }
     public int GetRound()
@@ -176,6 +191,7 @@ public class BattleMap : MapManager
     }
     public void ApplyTileStartEffect(TacticActor actor)
     {
+        if (actor.GetLocation() < 0){return;}
         string terrainType = mapInfo[actor.GetLocation()];
         List<string> tilePassives = terrainPassives.ReturnStartPassive(terrainType);
         ApplyPassiveEffects(tilePassives, actor);
@@ -306,6 +322,7 @@ public class BattleMap : MapManager
     public TerrainPassivesList terrainEffectData;
     public void ApplyTerrainStartEffect(TacticActor actor)
     {
+        if (actor.GetLocation() < 0){return;}
         string terrainEffect = terrainEffectTiles[actor.GetLocation()];
         if (terrainEffect.Length < 1) { return; }
         List<string> tEffectP = terrainEffectData.ReturnStartPassive(terrainEffect);

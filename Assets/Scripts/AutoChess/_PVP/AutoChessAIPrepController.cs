@@ -12,6 +12,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         genome.ResetToDefault();
     }
     public AutoChessPrepManager prepManager;
+    public AutoChessAIPrepAegirPlacementController aegirPlacement;
     public AutoChessFactionManager factionManager;
     Dictionary<string, float> stackCache = new();
     float GetStacks(string factionName)
@@ -48,7 +49,6 @@ public class AutoChessAIPrepController : MonoBehaviour
     public void AIPrepPhase(AutoChessDataManager dataManager)
     {
         prepManager.SetDataManager(dataManager);
-        GetPitTiles();
         shopManager.shopData.GeneratePVPCurrentListing();
         shopManager.PVPRefreshData();
         BuildStackCache();
@@ -57,6 +57,8 @@ public class AutoChessAIPrepController : MonoBehaviour
         AcquireLoop(dataManager);
         AutoPlaceFieldUnits(dataManager);
         AutoPlaceEquipment(dataManager);
+        aegirPlacement.AegirPlaceFieldUnits();
+        aegirPlacement.AegirSafetyCheck();
         prepManager.SaveToDataManager();
         prepManager.StartBattle();
     }
@@ -180,7 +182,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         float score = 0;
         //score += genome.GetByName("W_BUY_POWER") * GetPower(unit);
         score += genome.GetByName("W_BUY_TIER") * tier;
-        score += genome.GetByName("W_BUY_SYNERGY") * SynergyValue(unit.GetFactions());
+        score += genome.GetByName("W_BUY_SYNERGY") * SynergyValue(unit);
         score += genome.GetByName("W_BUY_DUPLICATE") * DuplicateValue(name);
         score += genome.GetByName("W_UNIT_STACK_GENERATION") * StackGainValue(unit);
         score += genome.GetByName("W_UNIT_STACK_SCALING") * StackScalingValue(unit);
@@ -194,7 +196,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         buyCache[unit] = score;
         return score;
     }
-    float KeepScore(AutoActorRollUpData unit)
+    float KeepScore(AutoActorRollUpData unit, bool bench = true)
     {
         if (unit == null){return float.MinValue;}
         if (keepCache.TryGetValue(unit, out float cached))
@@ -206,7 +208,26 @@ public class AutoChessAIPrepController : MonoBehaviour
         int star = unit.GetLevel();
         float score = 0;
         score += genome.GetByName("W_KEEP_TIER") * tier;
-        score += genome.GetByName("W_KEEP_SYNERGY") * SynergyValue(unit.GetFactions());
+        // Score Increased Based On How Many Synergies Are Lost
+        float keepSynergyScore = 0f;
+        // For Bench Units.
+        if (bench)
+        {
+            for (int i = 0; i < unit.GetFactions().Count; i++)
+            {
+                keepSynergyScore += SynergyLossIfRemoved(unit.GetFactions()[i]);
+            }
+            score += genome.GetByName("W_KEEP_SYNERGY") * keepSynergyScore;
+        }
+        // For Field Units.
+        else
+        {
+            for (int i = 0; i < unit.GetFactions().Count; i++)
+            {
+                keepSynergyScore += SynergyLossIfRemoved(unit.GetFactions()[i], false);
+            }
+            score += genome.GetByName("W_KEEP_SYNERGY") * keepSynergyScore;
+        }
         score += genome.GetByName("W_KEEP_DUPLICATE") * DuplicatePotential(name);
         score += genome.GetByName("W_KEEP_STAR_LEVEL") * star;
         score += genome.GetByName("W_UNIT_STACK_GENERATION") * StackGainValue(unit, false);
@@ -259,11 +280,12 @@ public class AutoChessAIPrepController : MonoBehaviour
     int GetWorstFieldIndex()
     {
         if (prepManager.fieldSlots.Count <= 0){return -1;}
+        // If duplicates on the field, then return lowest rarity duplicate first.
         float worstScore = 999f;
         int index = -1;
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
-            float fieldScore = KeepScore(prepManager.fieldSlots[i]);
+            float fieldScore = KeepScore(prepManager.fieldSlots[i], false);
             if (fieldScore < worstScore)
             {
                 worstScore = fieldScore;
@@ -285,7 +307,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         {
             for (int j = 0; j < allField.Count; j++)
             {
-                float swapValue = KeepScore(allBench[i]) - KeepScore(allField[j]) + FindActiveFactionDifferences(allBench[i], allField[j]);
+                float swapValue = KeepScore(allBench[i]) - KeepScore(allField[j], false) + FindActiveFactionDifferences(allBench[i], allField[j]);
                 if (swapValue > bestSwapValue)
                 {
                     benchIndex = i;
@@ -297,22 +319,19 @@ public class AutoChessAIPrepController : MonoBehaviour
         if (bestSwapValue >= genome.GetByName("W_PLACE_SWAP_THRESH") && benchIndex >= 0 && fieldIndex >= 0)
         {
             int benchLocation = allBench[benchIndex].GetLocation();
+            int bestTile = aegirPlacement.FindBestTileForRole(allBench[benchIndex]);
+            // No Open Spots.
+            if (bestTile < 0){return;}
+            allBench[benchIndex].SetLocation(bestTile);
             allBench[benchIndex].SetDirection(1);
-            allBench[benchIndex].SetLocation(FindBestTileForRole(allBench[benchIndex]));
             allField[fieldIndex].SetLocation(benchLocation);
-            prepManager.MoveFromBenchToField(allBench[benchIndex]);
             prepManager.MoveFromFieldToBench(allField[fieldIndex]);
+            prepManager.MoveFromBenchToField(allBench[benchIndex]);
+            prepManager.SaveToDataManager();
             ClearScoreCaches();
             // Good Swap Means Try Again.
             CheckAllSwaps(totalSwaps + 1);
         }
-    }
-    int AegirPlaceFieldUnits(AutoActorRollUpData actor)
-    {
-        // Form a Chain Of Aegir Units, Ending With A Carry And Starting With Highest Attack NonAegir If Possible.
-        // Find The Base Of The Chain And The End.
-        // Make Sure The Directions Line Up.
-        return -1;
     }
     void AutoPlaceFieldUnits(AutoChessDataManager dataManager)
     {
@@ -324,13 +343,20 @@ public class AutoChessAIPrepController : MonoBehaviour
             {
                 // Go Buy Something, Anything Is Better Than Nothing.
                 AcquireLoop(dataManager);
+                if (prepManager.benchSlots.Count > 0)
+                {
+                    AutoPlaceFieldUnits(dataManager);
+                }
                 return;
             }
             AutoActorRollUpData bestBenchActor = prepManager.benchSlots[bestBenchIndex];
-            bestBenchActor.SetLocation(FindBestTileForRole(bestBenchActor));
+            int bestTile = aegirPlacement.FindBestTileForRole(bestBenchActor);
+            // No Open Spots.
+            if (bestTile < 0){return;}
+            bestBenchActor.SetLocation(bestTile);
             bestBenchActor.SetDirection(1);
             prepManager.MoveFromBenchToField(bestBenchActor);
-            // Loop Until Full.
+            prepManager.SaveToDataManager();
             AutoPlaceFieldUnits(dataManager);
             return;
         }
@@ -347,68 +373,21 @@ public class AutoChessAIPrepController : MonoBehaviour
             return colB.CompareTo(colA);
         });
     }
-    protected List<int> pitTiles = new List<int>();
-    void GetPitTiles()
-    {
-        pitTiles.Clear();
-        for (int i = 0; i < prepManager.dataManager.mapTiles.Count; i++)
-        {
-            if (prepManager.dataManager.mapTiles[i] == "Pit")
-            {
-                pitTiles.Add(i);
-            }
-        }
-    }
-    int FindOpenSpot(int startColumn = 2, int direction = -1)
-    {
-        List<int> spots = prepManager.mapUtility.GetTilesInColumn(startColumn, 9);
-        // Remove Any Pits/Occupied Spaces.
-        List<int> occupiedSpots = prepManager.GetTakenSpots();
-        for (int i = spots.Count - 1; i >= 0; i--)
-        {
-            if (pitTiles.Contains(spots[i]) || occupiedSpots.Contains(spots[i]))
-            {
-                spots.RemoveAt(i);
-            }
-        }
-        // Get The First Open Middle-Most Tile.
-        int row = 4;
-        for (int i = 0; i < 9; i++)
-        {
-            int tile = prepManager.mapUtility.ReturnTileNumberFromRowCol(row, startColumn, 9);
-            if (spots.Contains(tile)){return tile;}
-            if (i % 2 == 0)
-            {
-                row += ((i + 1));
-            }
-            else
-            {
-                row -= ((i + 1));
-            }
-        }
-        // Move To Next Column.
-        return FindOpenSpot(startColumn + direction, direction);
-    }
-    int FindBestTileForRole(AutoActorRollUpData actor)
-    {
-        if (genome.GetPreferredFaction() == "Aegir" && actor.FactionExists("Aegir"))
-        {
-            return AegirPlaceFieldUnits(actor);
-        }
-        // Role Is Now A Comma Separated List Of Roles.
-        string role = unitRoles.ReturnValue(actor.GetName());
-        if (role.Contains("Tank"))
-        {
-            return FindOpenSpot(2, - 1);
-        }
-        return FindOpenSpot(0, 1);
-    }
     // Check If You're Losing/Gaining Any Thresholds During A Swap
     float FindActiveFactionDifferences(AutoActorRollUpData benchUnit, AutoActorRollUpData fieldUnit)
     {
         float totalDifference = 0f;
-        List<string> benchFactions = benchUnit.RAWGetFactions();
+        // Adding a copy of a bench unit doesn't improve synergy, it can only decrease it.
         List<string> fieldFactions = fieldUnit.RAWGetFactions();
+        if (prepManager.UnitExists(benchUnit, false) && benchUnit.GetName() != fieldUnit.GetName())
+        {
+            for (int i = 0; i < fieldFactions.Count; i++)
+            {
+                totalDifference -= SynergyLossIfRemoved(fieldFactions[i], false);
+            }
+            return totalDifference;
+        }
+        List<string> benchFactions = benchUnit.RAWGetFactions();
         // Factions lost by removing the field unit.
         for (int i = 0; i < fieldFactions.Count; i++)
         {
@@ -424,7 +403,7 @@ public class AutoChessAIPrepController : MonoBehaviour
             }
             if (!shared)
             {
-                totalDifference -= SynergyLossIfRemoved(fieldFaction);
+                totalDifference -= SynergyLossIfRemoved(fieldFaction, false);
             }
         }
         // Factions gained by adding the bench unit.
@@ -447,9 +426,13 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         return totalDifference;
     }
-    float SynergyLossIfRemoved(string removedFaction)
+    // Needs To Track From Field Or Bench, Bench Only Hurts Econ.
+    float SynergyLossIfRemoved(string removedFaction, bool bench = true)
     {
         float loss = 0;
+        bool econ = factionManager.factionData.EconFaction(removedFaction);
+        // Bench Units Only Count For Econ.
+        if (bench && !econ){return 0f;}
         if (removedFaction == "Harmony")
         {
             for (int i = 0; i < mainFactions.Count; i++)
@@ -464,7 +447,18 @@ public class AutoChessAIPrepController : MonoBehaviour
         {
             if (currentCount >= t && (currentCount - 1) < t)
             {
-                loss += genome.GetByName("W_SYN_HIT");
+                if (econ)
+                {
+                    loss += genome.GetByName("W_ECON_SYN_HIT");
+                }
+                else if (factionManager.factionData.MainFaction(removedFaction))
+                {
+                    loss += genome.GetByName("W_MAIN_SYN_HIT");
+                }
+                else
+                {
+                    loss += genome.GetByName("W_SYN_HIT");
+                }
             }
         }
         return loss;
@@ -476,6 +470,11 @@ public class AutoChessAIPrepController : MonoBehaviour
     public List<string> ReturnItemTypes(string itemName)
     {
         return itemTypeData.ReturnStats(itemName);
+    }
+    public StatDatabase itemStackable;
+    public bool ItemStackable(string itemName)
+    {
+        return itemStackable.ReturnValue(itemName) == "1";
     }
     List<string> GetAvailableComponents()
     {
@@ -503,6 +502,35 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         return combined;
     }
+    bool EquipEmblemToUnit(string emblemName, bool exists = true)
+    {
+        int bestIndex = -1;
+        float worstScore = float.MaxValue;
+        string emblemFaction = emblemName.Replace(" Emblem", "");
+        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        {
+            AutoActorRollUpData unit = prepManager.fieldSlots[i];
+            // Equip It To The Worst Unit With Open Slots That Is Not Of The Faction.
+            if (unit.GetOpenEquipmentSlots() <= 0){continue;}
+            if (unit.FactionExists(emblemFaction) || unit.EmblemExists(emblemFaction)){continue;}
+            float score = KeepScore(unit);
+            if (score < worstScore)
+            {
+                worstScore = score;
+                bestIndex = i;
+            }
+        }
+        if (bestIndex >= 0)
+        {
+            prepManager.fieldSlots[bestIndex].EquipEquipment(emblemName);
+            if (exists)
+            {
+                prepManager.dataManager.UseEquipment(emblemName);
+            }
+            return true;
+        }
+        return false;
+    }
     bool EquipItemToUnit(string itemName, bool exists = true)
     {
         // Find The Best Matching Unit For The Equipment.
@@ -511,10 +539,16 @@ public class AutoChessAIPrepController : MonoBehaviour
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
             AutoActorRollUpData unit = prepManager.fieldSlots[i];
+            // Don't Equip If Full Obviously.
             if (unit.GetOpenEquipmentSlots() <= 0){continue;}
+            // Don't Equip If The Equipment Exists Already And It's Not Stackable.
+            if (unit.EquipmentExists(itemName) && !ItemStackable(itemName)){continue;}
             float score = itemValueDatabase.GetTagCompatibility(ReturnItemTypes(itemName), GetUnitRoles(unit.GetName()));
+            // Don't Equip If Score Is Negative.
+            if (score <= 0f){continue;}
             // Not only a match but check the value of the unit:
             score += genome.GetByName("W_ITEM_FOCUS_HIGH_TIER_UNIT") * GetUnitTier(unit.GetName());
+            // Also Check The Synergy Of The Unit?
             if (score > bestScore)
             {
                 bestScore = score;
@@ -540,6 +574,11 @@ public class AutoChessAIPrepController : MonoBehaviour
         // 2. Equip vs Save
         for (int i = 0; i < combined.Count; i++)
         {
+            if (combined[i].Contains("Emblem") && EmblemSynergy(combined[i]))
+            {
+                EquipEmblemToUnit(combined[i]);
+                continue;
+            }
             float itemValue = ItemValue(combined[i]);
             if (itemValue > genome.GetByName("W_ITEM_SAVE"))
             {
@@ -570,6 +609,15 @@ public class AutoChessAIPrepController : MonoBehaviour
             // Check If The Components Still Exist.
             if (!prepManager.dataManager.EquipmentComponentsExists(combinations[i].components)){continue;}
             float combinedValue = combinations[i].value;
+            // If Emblem + Hit Threshold Then Go, Else Pass.
+            if (combinations[i].combinationName.Contains("Emblem") && EmblemSynergy(combinations[i].combinationName))
+            {
+                if (EquipEmblemToUnit(combinations[i].combinationName, false))
+                {
+                    prepManager.dataManager.RemoveComponents(combinations[i].components);
+                }
+                continue;
+            }
             // Check If Equip.
             if (combinedValue > genome.GetByName("W_ITEM_SAVE"))
             {
@@ -658,13 +706,23 @@ public class AutoChessAIPrepController : MonoBehaviour
         string[] parts = val.Split('|');
         return System.Array.ConvertAll(parts, int.Parse);
     }
+    bool EmblemSynergy(string emblemName)
+    {
+        string faction = emblemName.Replace(" Emblem", "");
+        return SynergyValue(faction) > 0;
+    }
     float SynergyValue(string faction)
     {
+        if (string.IsNullOrEmpty(faction)){return 0f;}
         if (faction == "Harmony")
         {
-            return SynergyValue(mainFactions);
+            float totalSynergy = 0f;
+            for (int i = 0; i < mainFactions.Count; i++)
+            {
+                totalSynergy += SynergyValue(mainFactions[i]);
+            }
+            return totalSynergy;
         }
-        if (string.IsNullOrEmpty(faction)){return 0f;}
         int currentCount = factionManager.factionData.GetCountOfFaction(faction);
         int newCount = currentCount + 1;
         int[] thresholds = GetThresholds(faction);
@@ -680,7 +738,19 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         if (hitsThreshold)
         {
-            return genome.GetByName("W_SYN_HIT");
+            // Split This By Type Of Hit.
+            if (factionManager.factionData.EconFaction(faction))
+            {
+                return genome.GetByName("W_ECON_SYN_HIT");
+            }
+            else if (factionManager.factionData.MainFaction(faction))
+            {
+                return genome.GetByName("W_MAIN_SYN_HIT");
+            }
+            else
+            {
+                return genome.GetByName("W_SYN_HIT");
+            }
         }
         if (maintainsActive)
         {
@@ -692,16 +762,25 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         return 0f;
     }
-    float SynergyValue(List<string> factions)
+    float SynergyValue(AutoActorRollUpData unit)
     {
+        // If The Unit Already Exists On The Field Then It Does Not Increase Synergy.
+        if (prepManager.UnitExists(unit, false)){return 0f;}
+        List<string> factions = unit.GetFactions();
         if (factions == null || factions.Count == 0){return 0f;}
+        float totalSynergy = 0f;
         if (factions.Contains("Harmony"))
         {
-            return SynergyValue(mainFactions);
+            for (int i = 0; i < mainFactions.Count; i++)
+            {
+                totalSynergy += SynergyValue(mainFactions[i]);
+            }
+            return totalSynergy;
         }
-        float totalSynergy = 0f;
         for (int i = 0; i < factions.Count; i++)
         {
+            // If Econ Faction And Unit Exists Then Return 0f, It Will Not Gain Extra Synergy.
+            if (factionManager.factionData.EconFaction(factions[i]) && prepManager.UnitExists(unit)){return 0f;}
             totalSynergy += SynergyValue(factions[i]);
         }
         return totalSynergy;

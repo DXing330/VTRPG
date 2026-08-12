@@ -118,7 +118,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             database.AssignUnassignedToBasePool();
             for (int i = 0; i < genePoolTemplates.Count; i++)
             {
-                database.AddGenePool(genePoolTemplates[i], populationSize, currentGeneration);
+                database.AddGenePool(genePoolTemplates[i], populationSize, currentGeneration, 0.15f, 1.0f, false);
             }
             database.SaveToDisk();
         }
@@ -135,8 +135,8 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     public int podSize = 8;
     public int elites = 2;
     public int cullCount = 2;
-    public float mutationRate = 0.15f;
-    public float mutationStrength = 1f;
+    public float mutationRate = 0.2f;
+    public float mutationStrength = 0.3f;
     [Header("State")]
     public int generationsToKeep = 100;
     public int currentGeneration = 0;
@@ -175,6 +175,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         isTraining = true;
         Application.targetFrameRate = 10; // prevent overheating
         int startGen = currentGeneration;
+        float trainingStart = Time.realtimeSinceStartup;
         while (isTraining && (currentGeneration - startGen) < targetGenerations)
         {
             Debug.Log($"=== Generation {currentGeneration} Starting ===");
@@ -229,6 +230,8 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         }
         database.SaveToDisk();
         Debug.Log("Final save complete.");
+        float trainingEnd = Time.realtimeSinceStartup - trainingStart;
+        Debug.Log($"Training finished in {trainingEnd:F1}s over {targetGenerations} generations");
         Application.targetFrameRate = -1;
         if (quitWhenDone)
         {
@@ -247,7 +250,9 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         return null;
         int lowestMatches = members.Min(x => x.matchesPlayed);
         var leastPlayed = members.Where(x => x.matchesPlayed == lowestMatches).ToList();
-        return leastPlayed[UnityEngine.Random.Range(0, leastPlayed.Count)];
+        int lowestPlayedIndex = UnityEngine.Random.Range(0, leastPlayed.Count);
+        leastPlayed[lowestPlayedIndex].matchesPlayed++;
+        return leastPlayed[lowestPlayedIndex];
     }
     List<GenomeEntry> CreatePoolPod()
     {
@@ -272,8 +277,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                 pod.Add(GetRandomFromPool(genePoolTemplates[randomIndex].templateName));
             }
         }
-
-
         return pod;
     }
     IEnumerator RunGenerationPods()
@@ -323,7 +326,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     }
     void RecordPodResults(List<AutoChessDataManager> allTeams, int podIndex)
     {
-        var ranked = allTeams.Where(t => !t.PlayerData()).OrderByDescending(t => t.GetRound()).OrderByDescending(t => t.GetHealth()).ToList();
+        var ranked = allTeams.Where(t => !t.PlayerData()).OrderByDescending(t => t.GetRound()).ThenByDescending(t => t.GetHealth()).ToList();
         for (int i = 0; i < ranked.Count; i++)
         {
             var entry = GenomeProvider.Get(ranked[i]);
@@ -353,7 +356,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             entry.factionHistory.Add(String.Join(",", ranked[i].factionData.GetActiveFactions()));
             entry.stackHistory.Add(String.Join(",", ranked[i].factionData.GetActiveFactionStacks()));
             entry.equipmentHistory.Add(String.Join(",", ranked[i].GetFieldActorEquipment()));
-            entry.matchesPlayed++;
             entry.fitness += matchFitness;
             entry.avgPlacement = ((entry.avgPlacement * (entry.matchesPlayed - 1)) + placement) / entry.matchesPlayed;
             entry.avgRoundsSurvived = ((entry.avgRoundsSurvived * (entry.matchesPlayed - 1)) + rounds) / entry.matchesPlayed;
@@ -394,12 +396,12 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         if (relativeVariance < 0.15f) // < 15% of mean, population converged, fine-tune
         {
             mutationRate = Mathf.Max(0.05f, mutationRate * 0.95f);
-            mutationStrength = Mathf.Max(0.3f, mutationStrength * 0.95f);
+            mutationStrength = Mathf.Max(0.15f, mutationStrength * 0.95f);
         }
         else if (relativeVariance > 0.40f) // > 40% of mean, still exploring, stay aggressive
         {
             mutationRate = Mathf.Min(0.25f, mutationRate * 1.05f);
-            mutationStrength = Mathf.Min(1.5f, mutationStrength * 1.05f);
+            mutationStrength = Mathf.Min(0.3f, mutationStrength * 1.05f);
         }
     }
     void BreedNextGeneration()
@@ -464,12 +466,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         championGeneration = currentGeneration;
         // Add this generation's champion to the separate champion database.
         championDatabase.entries.Add(champion);
-        // Keep only the newest 50 champions for this gene pool.
         var poolChampions = championDatabase.entries.Where(e => e != null && e.genePool == champion.genePool).OrderByDescending(e => e.generation).ToList();
-        foreach (var old in poolChampions.Skip(50))
-        {
-            championDatabase.entries.Remove(old);
-        }
         championDatabase.SaveToDisk();
         Debug.Log($"Champion: Gen {currentGeneration} | " + $"Pool {champion.genePool} | " + $"Avg Fitness {bestAvg:F1}");
     }

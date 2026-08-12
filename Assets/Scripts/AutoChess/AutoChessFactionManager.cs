@@ -134,6 +134,8 @@ public class AutoChessFactionManager : MonoBehaviour
         }
         allFactionCounts[indexOf]++;
     }
+    // 8/9/26: AI Reviewed Claimed This Works As Intended
+    // Determines What Factions Are Active And How Many Units There Are In Each.
     public void UpdateActiveFactions()
     {
         // Refresh.

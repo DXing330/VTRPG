@@ -105,34 +105,67 @@ public class AutoChessDataManager : SavedData
     public void SetForesightStacks(int newInfo){startRoundForesightStacks = newInfo;}
     public int startRoundMarvelStacks;
     public void SetMarvelStacks(int newInfo){startRoundMarvelStacks = newInfo;}
+    public int startRoundVictoriaStacks;
+    public void SetVictoriaStacks(int newInfo){startRoundVictoriaStacks = newInfo;}
     public int GetStartRoundStacksOfFaction(string factionName)
     {
-        if (factionName == "Foresight"){return startRoundForesightStacks;}
-        else if (factionName == "Marvel"){return startRoundMarvelStacks;}
-        return 0;
+        switch (factionName)
+        {
+            default:
+            return 0;
+            case "Foresight":
+            return startRoundForesightStacks;
+            case "Marvel":
+            return startRoundMarvelStacks;
+            case "Victoria":
+            return startRoundVictoriaStacks;
+        }
     }
     public void SetStartRoundStacksOfFaction(string factionName, int amount)
     {
-        if (factionName == "Foresight")
+        switch (factionName)
         {
+            default:
+            break;
+            case "Foresight":
             SetForesightStacks(amount);
-        }
-        else if (factionName == "Marvel")
-        {
+            break;
+            case "Marvel":
             SetMarvelStacks(amount);
+            break;
+            case "Victoria":
+            SetVictoriaStacks(amount);
+            break;
         }
     }
-    public void GainGoldFromFaction(string faction = "Foresight", int breakpoint = 10, int gold = 2)
+    protected int GetCrossBreakpoints(string faction, int breakpoint)
     {
         int newStacks = int.Parse(factionData.GetStacksOfFaction(faction));
         int startStacks = GetStartRoundStacksOfFaction(faction);
         int oldBreakpoints = startStacks / breakpoint;
         int newBreakpoints = newStacks / breakpoint;
         int crossed = newBreakpoints - oldBreakpoints;
+        return crossed;
+    }
+    public void GainEquipFromFaction(string faction = "Victoria", int breakpoint = 25, string equipName = "RandomHammer")
+    {
+        int newStacks = int.Parse(factionData.GetStacksOfFaction(faction));
+        int crossed = GetCrossBreakpoints(faction, breakpoint);
+        for (int i = 0; i < crossed; i++)
+        {
+            GainEquipment(equipName);
+            AddLog($"Gained {equipName} from {faction} faction stacks. ({GetStartRoundStacksOfFaction(faction)}->{newStacks})");
+        }
+        SetStartRoundStacksOfFaction(faction, newStacks);
+    }
+    public void GainGoldFromFaction(string faction = "Foresight", int breakpoint = 10, int gold = 2)
+    {
+        int newStacks = int.Parse(factionData.GetStacksOfFaction(faction));
+        int crossed = GetCrossBreakpoints(faction, breakpoint);
         if (crossed > 0)
         {
             GainGold(crossed * gold);
-            AddLog("Gained " + (crossed * gold) + " gold from " + faction + " faction stacks. (" + startStacks + "->" + newStacks + ")");
+            AddLog($"Gained {crossed * gold} gold from {faction} faction stacks. ({GetStartRoundStacksOfFaction(faction)}->{newStacks})");
         }
         SetStartRoundStacksOfFaction(faction, newStacks);
     }
@@ -227,6 +260,7 @@ public class AutoChessDataManager : SavedData
         }
         GainGoldAfterBattle();
         GainExpAfterBattle();
+        GainEquipFromFaction(); // Victoria
         GainGoldFromFaction(); // Foresight.
         GainGoldFromFaction("Marvel", 50, 10); // Marvel.
         roundGainedActors = 0;
@@ -420,6 +454,11 @@ public class AutoChessDataManager : SavedData
             GainEquipment(GenerateEquipmentOfRarity(1));
             return;
         }
+        if (equipName == "RandomHammer")
+        {
+            GainEquipment(GenerateEquipmentOfRarity(2));
+            return;
+        }
         AddLog("Gained Equipment: " + equipName);
         equipment.Add(equipName);
     }
@@ -466,6 +505,7 @@ public class AutoChessDataManager : SavedData
         nextRoundGold = 0;
         startRoundForesightStacks = 0;
         startRoundMarvelStacks = 0;
+        startRoundVictoriaStacks = 0;
         roundSpentGold = 0;
         totalSpentGold = 0;
         roundRerolls = 0;
@@ -520,6 +560,7 @@ public class AutoChessDataManager : SavedData
         allData += "NextRoundGold=" + nextRoundGold + delimiter;
         allData += "Foresight=" + startRoundForesightStacks + delimiter;
         allData += "Marvel=" + startRoundMarvelStacks + delimiter;
+        allData += "Victoria=" + startRoundVictoriaStacks + delimiter;
         allData += "RoundGold=" + roundSpentGold + delimiter;
         allData += "TotalGold=" + totalSpentGold + delimiter;
         allData += "RoundRerolls=" + roundRerolls + delimiter;
@@ -599,6 +640,9 @@ public class AutoChessDataManager : SavedData
             return;
             case "Marvel":
             SetMarvelStacks(int.Parse(value));
+            return;
+            case "Victoria":
+            SetVictoriaStacks(int.Parse(value));
             return;
             case "RoundGold":
             SetRoundGold(int.Parse(value));

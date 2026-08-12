@@ -40,6 +40,8 @@ public class AutoChessActorMaker : ActorMaker
             int location = newAutoActor.GetLocation();
             location = mapUtility.HorizontalReflectTile(location, mapSize);
             newAutoActor.SetLocation(location);
+            // Flip The Direction For Aegir.
+            newAutoActor.FlipDirection();
         }
         return newAutoActor;
     }
@@ -146,17 +148,19 @@ public class AutoChessActorMaker : ActorMaker
         {
             default:
             return;
-            case "Gun-Knight's Might":
-            break;
-            // Needs Data About Purchased Count.
-            case "Tianshi's Cauldron":
-            break;
             // Needs Data From All Actors.
             case "Steam Heart":
-            break;
-            case "Kjeragandr's Tears":
-            break;
-            case "Desert Compass":
+            for (int i = 0; i < allActors.Count; i++)
+            {
+                List<AutoChessEquipment> actorEquipment = allActors[i].GetAutoChessEquipment();
+                for (int j = 0; j < actorEquipment.Count; j++)
+                {
+                    if (actorEquipment[j].GetName().Contains("Hammer"))
+                    {
+                        ApplyAutoChessEquipmentEffect(actor, allActors, actorEquipment[j]);
+                    }
+                }
+            }
             break;
             case "Thief's Gloves":
             if (actor.AutoChessMaxEquipCount()){return;}
