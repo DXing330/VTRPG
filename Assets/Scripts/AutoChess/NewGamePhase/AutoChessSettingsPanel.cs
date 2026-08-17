@@ -14,9 +14,15 @@ public class AutoChessSettingsPanel : MonoBehaviour
     {
         settingsData.Save();
         dataManager.NewGame();
+        if (pvpDataManager != null)
+        {
+            pvpDataManager.NewGameAllDataManagers();
+            // TODO Assign Genomes To Each Data Manager From The Champion Database.
+        }
         sceneMover.LoadScene(autoChessSceneName);
     }
     public AutoChessDataManager dataManager;
+    public AutoChessPVPDataManager pvpDataManager;
     public AutoChessSettingsDataManager settingsData;
     // Map Display + Select.
     public AutoChessMapDisplay mapDisplay;

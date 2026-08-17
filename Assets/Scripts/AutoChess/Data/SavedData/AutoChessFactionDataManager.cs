@@ -169,7 +169,7 @@ public class AutoChessFactionDataManager : SavedData
     }
     public override void Save()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         allData = "";
         allData += "Factions=" + String.Join(delimiter2, allFactions) + delimiter;
         allData += "Stacks=" + String.Join(delimiter2, allFactionStacks) + delimiter;
@@ -179,7 +179,7 @@ public class AutoChessFactionDataManager : SavedData
     }
     public override void Load()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath))
         {
             allData = File.ReadAllText(dataPath);

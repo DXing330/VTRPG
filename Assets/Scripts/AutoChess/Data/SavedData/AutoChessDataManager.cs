@@ -11,6 +11,25 @@ public class AutoChessDataManager : SavedData
     public bool playerData = false;
     public bool PlayerData(){return playerData;}
     public List<SavedData> subDataManagers;
+    public AutoChessPVPGenome genome;
+    public AutoChessPVPGenome GetGenome()
+    {
+        if (genome == null)
+        {
+            genome = AutoChessPVPGenome.CreateDefault();
+        }
+        return genome;
+    }
+    public void SetGenome(AutoChessPVPGenome newGenome)
+    {
+        if (newGenome == null)
+        {
+            Debug.LogWarning("Attempted to assign a null genome.");
+            return;
+        }
+        // Copy rather than keeping a reference to an external genome.
+        genome = newGenome.Copy();
+    }
     public AutoChessTactician tactician;
     public AutoChessFactionDataManager factionData;
     public AutoChessLogDataManager logData; // Track Round / Gold / Exp / Etc.
@@ -548,8 +567,12 @@ public class AutoChessDataManager : SavedData
     }
     public override void Save()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         allData = "";
+        if (genome != null)
+        {
+            allData += "Genome=" + genome.Save() + delimiter;
+        }
         allData += "Level=" + level + delimiter;
         allData += "Exp=" + exp + delimiter;
         allData += "Gold=" + gold + delimiter;
@@ -580,7 +603,7 @@ public class AutoChessDataManager : SavedData
     }
     public override void Load()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath))
         {
             allData = File.ReadAllText(dataPath);
@@ -610,6 +633,13 @@ public class AutoChessDataManager : SavedData
         switch (key)
         {
             default:
+            return;
+            case "Genome":
+            if (genome == null)
+            {
+                genome = AutoChessPVPGenome.CreateDefault();
+            }
+            genome.Load(value);
             return;
             case "Level":
             SetLevel(int.Parse(value));

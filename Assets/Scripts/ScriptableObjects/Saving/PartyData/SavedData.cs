@@ -42,20 +42,19 @@ public class SavedData : ScriptableObject
         dataList = allData.Split(delimiter).ToList();
         Save();
     }
+    protected string GetSavePath()
+    {
+        return TrainingWorkerStorage.GetFilePath(filename);
+    }
     public virtual void Save()
     {
-        dataPath = Application.persistentDataPath+"/"+filename;
-        allData = "";
-        for (int i = 0; i < dataList.Count; i++)
-        {
-            allData += dataList[i];
-            if (i < dataList.Count - 1){allData += delimiter;}
-        }
+        dataPath = GetSavePath();
+        allData = String.Join(delimiter, dataList);
         File.WriteAllText(dataPath, allData);
     }
     public virtual void Load()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath))
         {
             allData = File.ReadAllText(dataPath);

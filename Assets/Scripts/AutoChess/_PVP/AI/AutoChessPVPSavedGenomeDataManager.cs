@@ -29,18 +29,13 @@ public class GenomeEntry
     public List<string> factionHistory = new();
     public List<string> stackHistory = new();
     public List<string> equipmentHistory = new();
-    public string championTeam;
-    public string championBench;
-    public string championFactions;
-    public string championStacks;
-    public string championEquipment;
     public AutoChessPVPGenome genome;
     public float WinRate => matchesPlayed > 0 ? (float)wins / matchesPlayed : 0f;
     public GenomeEntry Clone()
     {
         return new GenomeEntry
         {
-            id = System.Guid.NewGuid().ToString(),
+            id = id,
             tag = tag,
             genePool = genePool,
             preferredFaction = preferredFaction,
@@ -61,13 +56,64 @@ public class GenomeEntry
             factionHistory = factionHistory != null ? new List<string>(factionHistory) : new List<string>(),
             stackHistory = stackHistory != null ? new List<string>(stackHistory) : new List<string>(),
             equipmentHistory = equipmentHistory != null ? new List<string>(equipmentHistory) : new List<string>(),
-            championTeam = championTeam,
-            championBench = championBench,
-            championFactions = championFactions,
-            championStacks = championStacks,
-            championEquipment = championEquipment,
             genome = genome?.Copy()
         };
+    }
+    // For Use By Parallel Trainers
+    public GenomeEntry CreateEvaluationCopy()
+    {
+        GenomeEntry copy = Clone();
+        // Evaluation starts from zero.
+        copy.fitness = 0;
+        copy.wins = 0;
+        copy.matchesPlayed = 0;
+        copy.avgPlacement = 0;
+        copy.avgRoundsSurvived = 0;
+        copy.avgFinalGold = 0;
+        copy.avgFinalLevel = 0;
+        copy.avgGoldSpent = 0;
+        copy.teamHistory.Clear();
+        copy.benchHistory.Clear();
+        copy.factionHistory.Clear();
+        copy.stackHistory.Clear();
+        copy.equipmentHistory.Clear();
+        return copy;
+    }
+    public void MergeEvaluation(GenomeEntry other)
+    {
+        if (other == null)
+            return;
+        if (id != other.id)
+        {
+            Debug.LogError($"Cannot merge GenomeEntries with different IDs: " + $"{id} != {other.id}"
+            );
+            return;
+        }
+        int oldMatches = matchesPlayed;
+        int addedMatches = other.matchesPlayed;
+        int totalMatches = oldMatches + addedMatches;
+        fitness += other.fitness;
+        wins += other.wins;
+        matchesPlayed = totalMatches;
+        if (totalMatches > 0)
+        {
+            avgPlacement = ((avgPlacement * oldMatches) + (other.avgPlacement * addedMatches)) / totalMatches;
+
+            avgRoundsSurvived = ((avgRoundsSurvived * oldMatches) + (other.avgRoundsSurvived * addedMatches)) / totalMatches;
+            avgFinalGold = ((avgFinalGold * oldMatches) + (other.avgFinalGold * addedMatches)) / totalMatches;
+            avgFinalLevel = ((avgFinalLevel * oldMatches) + (other.avgFinalLevel * addedMatches)) / totalMatches;
+            avgGoldSpent = ((avgGoldSpent * oldMatches) + (other.avgGoldSpent * addedMatches)) / totalMatches;
+        }
+        if (other.teamHistory != null)
+            teamHistory.AddRange(other.teamHistory);
+        if (other.benchHistory != null)
+            benchHistory.AddRange(other.benchHistory);
+        if (other.factionHistory != null)
+            factionHistory.AddRange(other.factionHistory);
+        if (other.stackHistory != null)
+            stackHistory.AddRange(other.stackHistory);
+        if (other.equipmentHistory != null)
+            equipmentHistory.AddRange(other.equipmentHistory);
     }
 }
 [CreateAssetMenu(fileName = "SavedGenomes", menuName = "ScriptableObjects/PVPAI/SavedGenomes", order = 1)]
@@ -127,8 +173,6 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
     {
         AutoChessPVPGenome childGenome =
         AutoChessPVPGenome.Crossover(parentA.genome, parentB.genome);
-        childGenome.genePool = parentA.genePool;
-        childGenome.preferredFaction = parentA.preferredFaction;
         var child = new GenomeEntry
         {
             id = System.Guid.NewGuid().ToString(),
@@ -157,12 +201,23 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
     {
         public List<string> geneNames;
     }
-    public void SaveToDisk()
+    protected string GetSavePath(bool master = false)
+    {
+        if (master)
+        {
+            return Application.persistentDataPath + "/" + filename;
+        }
+        return TrainingWorkerStorage.GetFilePath(filename);
+    }
+    public void SaveToDisk(bool master = false)
     {
         var wrapper = new GenomeDatabaseWrapper { entries = this.entries };
-        string json = JsonUtility.ToJson(wrapper, true);
-        string path = Path.Combine(Application.persistentDataPath, filename);
-        File.WriteAllText(path, json);
+        string json = JsonUtility.ToJson(wrapper, master);
+        string path = GetSavePath(master);
+        string tempPath = path + ".tmp";
+        File.WriteAllText(tempPath, json);
+        if (File.Exists(path)){File.Delete(path);}
+        File.Move(tempPath, path);
         Debug.Log($"GenomeDatabase saved: {path} ({entries.Count} entries)");
         // Save current gene schema separately
         var schemaWrapper = new GeneSchemaWrapper
@@ -170,12 +225,12 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
             geneNames = new List<string>(AutoChessPVPGenome.GeneNames)
         };
         string schemaJson = JsonUtility.ToJson(schemaWrapper, true);
-        string schemaPath = Path.Combine(Application.persistentDataPath, geneSchemaFilename);
+        string schemaPath = TrainingWorkerStorage.GetFilePath(geneSchemaFilename);
         File.WriteAllText(schemaPath, schemaJson);
     }
-    public void LoadFromDisk()
+    public void LoadFromDisk(bool master = false)
     {
-        string path = Path.Combine(Application.persistentDataPath, filename);
+        string path = GetSavePath(master);
         if (!File.Exists(path))
         {
             Debug.LogWarning($"No save found at {path}");
@@ -185,19 +240,22 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         var wrapper = JsonUtility.FromJson<GenomeDatabaseWrapper>(json);
         this.entries = wrapper.entries ?? new List<GenomeEntry>();
         // Auto-heal old genomes whenever the database is loaded
-        bool changed = MigrateGenomeSizes();
-        string schemaPath = Path.Combine(Application.persistentDataPath, geneSchemaFilename);
-        if (File.Exists(schemaPath))
+        if (master)
         {
-            string schemaJson = File.ReadAllText(schemaPath);
-            GeneSchemaWrapper schema = JsonUtility.FromJson<GeneSchemaWrapper>(schemaJson);
-            List<string> oldGeneNames = schema.geneNames;
-            changed |= MigrateGenomeGeneNames(oldGeneNames);
-        }
-        changed |= MigratePreferredFactions();
-        if (changed)
-        {
-            SaveToDisk();
+            bool changed = MigrateGenomeSizes();
+            string schemaPath = TrainingWorkerStorage.GetFilePath(geneSchemaFilename);
+            if (File.Exists(schemaPath))
+            {
+                string schemaJson = File.ReadAllText(schemaPath);
+                GeneSchemaWrapper schema = JsonUtility.FromJson<GeneSchemaWrapper>(schemaJson);
+                List<string> oldGeneNames = schema.geneNames;
+                changed |= MigrateGenomeGeneNames(oldGeneNames);
+            }
+            changed |= MigratePreferredFactions();
+            if (changed)
+            {
+                SaveToDisk(master);
+            }
         }
         Debug.Log($"GenomeDatabase loaded: {entries.Count} entries");
     }
@@ -395,7 +453,7 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
     [ContextMenu("Manually Migrate Old Gene Names")]
     private void MigrateUsingOldGeneNames()
     {
-        string path = Path.Combine(Application.persistentDataPath, filename);
+        string path = GetSavePath();
         string json = File.ReadAllText(path);
         var wrapper = JsonUtility.FromJson<GenomeDatabaseWrapper>(json);
         this.entries = wrapper.entries ?? new List<GenomeEntry>();

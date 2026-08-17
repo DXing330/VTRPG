@@ -9,7 +9,35 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     public List<AutoChessPVPGenome> matchAIGenomes;
     public bool matchOver = false;
     public int roundCount = 0;
+    // Result Is Only Used When Player Defeated Or Match Over.
+    public int GetPlayerPlacement()
+    {
+        AutoChessDataManager playerData = GetPlayerTeam();
+        // No Player In The Game.
+        if (playerData == null){return -1;}
+        // Player Is Dead.
+        if (playerData.GetHealth() <= 0)
+        {
+            // Count Alive AI Left.
+            return GetAliveTeams().Count + 1;
+        }
+        // Player Is Alive -> First Place.
+        return 1;
+    }
     public AutoChessPVPDataManager allPlayers;
+    public List<AutoChessDataManager> GetAliveTeams()
+    {
+        List<AutoChessDataManager> allTeams = allPlayers.GetAllTeams();
+        List<AutoChessDataManager> aliveTeams = new();
+        for (int i = 0; i < allTeams.Count; i++)
+        {
+            if (allTeams[i].GetHealth() > 0)
+            {
+                aliveTeams.Add(allTeams[i]);
+            }
+        }
+        return aliveTeams;
+    }
     public AutoChessDataManager GetPlayerTeam()
     {
         List<AutoChessDataManager> allTeams = allPlayers.GetAllTeams();
@@ -52,8 +80,13 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     public void StartPlayerPrepPhase()
     {
         AutoChessDataManager playerTeam = GetPlayerTeam();
-        // Player is dead only AI left or game over.
-        if (playerTeam == null){return;}
+        //
+        // Player is dead, only AI left or game over.
+        if (playerTeam == null || playerTeam.GetHealth() <= 0 || GetAliveTeams().Count == 1)
+        {
+            matchOver = true;
+            return;
+        }
         prepManager.SetDataManager(playerTeam);
     }
     [ContextMenu("Test AI Run")]
@@ -237,11 +270,6 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     {
         matchOver = false;
         List<AutoChessDataManager> allTeams = allPlayers.GetAllTeams();
-        int aliveCount = 0;
-        for (int i = 0; i < allTeams.Count; i++)
-        {
-            if (allTeams[i].GetHealth() > 0){aliveCount++;}
-        }
-        if (aliveCount <= 1){matchOver = true;}
+        if (GetAliveTeams().Count <= 1){matchOver = true;}
     }
 }

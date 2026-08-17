@@ -111,7 +111,7 @@ public class AutoChessEnemyDataManager : SavedData
     }
     public override void Save()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         allData = "";
         allData += "Round=" + round + delimiter;
         allData += "EnemyGroups=" + String.Join(delimiter2, availableEnemyGroups) + delimiter;
@@ -121,7 +121,7 @@ public class AutoChessEnemyDataManager : SavedData
     }
     public override void Load()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath))
         {
             allData = File.ReadAllText(dataPath);

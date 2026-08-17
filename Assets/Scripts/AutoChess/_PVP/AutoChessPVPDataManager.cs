@@ -29,6 +29,8 @@ public class AutoChessPVPDataManager : SavedData
     public AutoChessLogDataManager playerLogs;
     public RNGUtility playerSeed;
     public AutoChessShopDataManager shopData;
+    public AutoChessPVPSavedGenomeDataManager championGenomes;
+    public List<AutoChessPVPGenome> matchAIGenomes;
     public List<AutoChessDataManager> dataManagers;
     public List<AutoChessFactionDataManager> factionDataManagers;
     public List<AutoChessTactician> tacticians;
@@ -77,6 +79,7 @@ public class AutoChessPVPDataManager : SavedData
             tacticians[i].NewGame();
         }
         shopData.NewGame();
+        // TODO Get A Genome For Each DataManager.
     }
     public override void Load()
     {

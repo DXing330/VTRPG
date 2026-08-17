@@ -509,28 +509,28 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             {
                 if (map.battlingActors[i].GetHealth() <= 0 || map.battlingActors[i].GetTeam() != endBattleResult){continue;}
                 unitDamage += int.Parse(unitRarity.ReturnValue(map.battlingActors[i].GetSpriteName()));
-                unitDamage += map.battlingActors[i].GetAutoChessLevel();
+                unitDamage += map.battlingActors[i].GetAutoChessLevel() / 2;
             }
             // 2 = TIE
             if (endBattleResult == 2)
             {
                 // Both Lose
-                leftTeam.LoseHealth(leftTeam.GetRound() + rightTeam.GetLevel());
+                leftTeam.LoseHealth((leftTeam.GetRound() + rightTeam.GetLevel()) / 2);
                 leftTeam.NewRound(1);
-                rightTeam.LoseHealth(rightTeam.GetRound() + leftTeam.GetLevel());
+                rightTeam.LoseHealth((rightTeam.GetRound() + leftTeam.GetLevel()) / 2);
                 rightTeam.NewRound(1);
             }
             // 0 = Left Wins
             else if (endBattleResult == 0)
             {
                 leftTeam.NewRound(0);
-                rightTeam.LoseHealth(rightTeam.GetRound() + leftTeam.GetLevel() + unitDamage);
+                rightTeam.LoseHealth((rightTeam.GetRound() + leftTeam.GetLevel()) / 2 + unitDamage);
                 rightTeam.NewRound(1);
             }
             // 1 = Right Wins
             else if (endBattleResult == 1)
             {
-                leftTeam.LoseHealth(leftTeam.GetRound() + rightTeam.GetLevel() + unitDamage);
+                leftTeam.LoseHealth((leftTeam.GetRound() + rightTeam.GetLevel()) / 2 + unitDamage);
                 leftTeam.NewRound(1);
                 rightTeam.NewRound(0);
             }

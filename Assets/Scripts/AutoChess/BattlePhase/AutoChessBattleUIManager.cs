@@ -6,6 +6,8 @@ using TMPro;
 // Later Add Another Helper For Meta End Game Stuff.
 public class AutoChessBattleUIManager : MonoBehaviour
 {
+    public bool PVP = false;
+    public AutoChessPVPMatchDirector PVPMatchDirector;
     public AutoChessPrepManager prepManager;
     public AutoChessEnemyDisplay enemyDisplay;
     public GeneralUtility utility;
@@ -22,14 +24,16 @@ public class AutoChessBattleUIManager : MonoBehaviour
     {
         utility.DisableGameObjects(nonBattleUI);
         mapRect.localScale = startBattleSize;
-        
     }
     public void EndBattle()
     {
         utility.EnableGameObjects(defaultNonBattleUI);
         mapRect.localScale = endBattleSize;
         prepManager.UpdateAllUI();
-        enemyDisplay.UpdateDisplay();
+        if (enemyDisplay != null)
+        {
+            enemyDisplay.UpdateDisplay();
+        }
         CheckEndGame();
         combatLog.ActivateCombatLogLarge();
     }
@@ -49,11 +53,36 @@ public class AutoChessBattleUIManager : MonoBehaviour
         inventory.GainGold(round / 2);
         inventory.Save();
     }
+    public void PVPPlacementReward(int placement)
+    {
+        inventory.Load();
+        inventory.GainGold((8 - placement) * 4);
+        inventory.Save();
+    }
     public void CheckEndGame()
     {
         endGameUIObject.SetActive(false);
-        bool finalRound = prepManager.dataManager.FinalRound();
         int health = prepManager.dataManager.GetHealth();
+        if (PVP)
+        {
+            int placement = PVPMatchDirector.GetPlayerPlacement();
+            if (health <= 0)
+            {
+                PVPPlacementReward(placement);
+                endGameUIObject.SetActive(true);
+                endGameText.text = $"Defeat...";
+                endGameText.color = Color.red;
+            }
+            if (PVPMatchDirector.matchOver)
+            {
+                PVPPlacementReward(placement);
+                endGameUIObject.SetActive(true);
+                endGameText.text = "Victory!";
+                endGameText.color = Color.green;
+            }
+            return;
+        }
+        bool finalRound = prepManager.dataManager.FinalRound();
         if (health <= 0)
         {
             endGameUIObject.SetActive(true);

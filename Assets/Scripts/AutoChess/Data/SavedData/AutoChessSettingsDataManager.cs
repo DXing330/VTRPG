@@ -70,7 +70,7 @@ public class AutoChessSettingsDataManager : SavedData
     }
     public override void Save()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         allData = "";
         allData += "NewGame=" + newGame + delimiter;
         allData += "Difficulty=" + difficultyScaling + delimiter;
@@ -85,7 +85,7 @@ public class AutoChessSettingsDataManager : SavedData
     }
     public override void Load()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath))
         {
             allData = File.ReadAllText(dataPath);

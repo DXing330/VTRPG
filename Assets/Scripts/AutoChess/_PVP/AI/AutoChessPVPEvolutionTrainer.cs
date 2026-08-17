@@ -5,6 +5,16 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[Serializable]
+public class TournamentMatchLog
+{
+    public List<string> rankedIds = new();
+}
+[Serializable]
+public class TournamentMatchLogList
+{
+    public List<TournamentMatchLog> matches = new();
+}
 public static class GenomeProvider
 {
     private static Dictionary<AutoChessDataManager, GenomeEntry> map = new();
@@ -12,7 +22,6 @@ public static class GenomeProvider
     public static GenomeEntry Get(AutoChessDataManager team) => map.TryGetValue(team, out var e) ? e : null;
     public static void Clear() => map.Clear();
 }
-
 public class AutoChessPVPEvolutionTrainer : MonoBehaviour
 {
     public enum GenePoolMatchMode
@@ -22,10 +31,20 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     }
     [Header("Gene Pool Settings")]
     public GenePoolMatchMode matchMode = GenePoolMatchMode.SpecialistVsBase;
+    public enum TrainingMode
+    {
+        Normal,
+        Master,
+        Worker
+    }
+    [Header("Training Mode")]
+    public bool autoStartTraining = true;
+    public TrainingMode trainingMode = TrainingMode.Normal;
+    public int workerCount = 1;
     [Header("Headless Mode")]
-    public bool autoStartTraining = false;
     public int targetGenerations = 100;
     public bool quitWhenDone = false;
+    public int trainingWorker = 0;
     void Awake()
     {
         string[] args = System.Environment.GetCommandLineArgs();
@@ -33,8 +52,35 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         {
             switch (args[i])
             {
-                case "--train":
+                case "--train-master":
+                    trainingMode = TrainingMode.Master;
                     autoStartTraining = true;
+                    autoStartEloTournament = false;
+                    break;
+                case "--train-worker":
+                    trainingMode = TrainingMode.Worker;
+                    autoStartTraining = true;
+                    autoStartEloTournament = false;
+                    break;
+                case "--train-master-elo":
+                    trainingMode = TrainingMode.Master;
+                    autoStartTraining = false;
+                    autoStartEloTournament = true;
+                    break;
+                case "--train-worker-elo":
+                    trainingMode = TrainingMode.Worker;
+                    autoStartTraining = false;
+                    autoStartEloTournament = true;
+                    break;
+                case "--workers":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out workerCount);
+                    break;
+                case "--worker":
+                    if (i + 1 < args.Length)
+                    {
+                        int.TryParse(args[++i], out trainingWorker);
+                    }
                     break;
                 case "--gens":
                     if (i + 1 < args.Length)
@@ -75,33 +121,33 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                 case "--quit":
                     quitWhenDone = true;
                     break;
+                case "--eloMatches":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out eloTargetMatches);
+                    break;
             }
         }
-
-        Debug.Log(
-            $"Training Config: " +
-            $"autoStart={autoStartTraining}, " +
-            $"gens={targetGenerations}, " +
-            $"pop={populationSize}, " +
-            $"matches={matchesPerGenome}, " +
-            $"pod={podSize}, " +
-            $"elite={elites}, " +
-            $"cull={cullCount}, " +
-            $"mutRate={mutationRate}, " +
-            $"mutStrength={mutationStrength}, " +
-            $"keep={generationsToKeep}, " +
-            $"quit={quitWhenDone}"
-        );
+        if (autoStartEloTournament)
+        {
+            int seed = trainingWorker * 10000 + System.DateTime.Now.DayOfYear;
+            UnityEngine.Random.InitState(seed);
+        }
+        if (trainingWorker > 0)
+        {
+            TrainingWorkerStorage.SetWorker(trainingWorker);
+            Debug.Log($"Training worker {trainingWorker} using isolated storage: " + TrainingWorkerStorage.GetPersistentPath());
+        }
     }
     [Header("References")]
     public AutoChessPVPSavedGenomeDataManager database;
     public AutoChessPVPSavedGenomeDataManager championDatabase;
+    public AutoChessPVPTournamentMatchSavedData tournamentMatchData;
     public bool newGenePools = false;
     public List<AutoChessPVPGenomeTemplate> genePoolTemplates = new();
     protected void LoadDB()
     {
-        database.LoadFromDisk();
-        championDatabase.LoadFromDisk();
+        database.LoadFromDisk(true);
+        championDatabase.LoadFromDisk(true);
         if (database.AllEntries.Count == 0)
         {
             database.InitPopulation(populationSize);
@@ -160,79 +206,308 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             }
             LoadDB();
             Debug.Log("LoadDB finished.");
+            if (autoStartEloTournament)
+            {
+                if (tournamentMatchData != null)
+                {
+                    tournamentMatchData.ClearHistory();
+                }
+                StartChampionEloTournament();
+            }
         }
         catch (System.Exception e)
         {
             Debug.LogError("CRASH IN START: " + e);
         }
     }
-    [ContextMenu("Start Training")]
-    public void StartTraining() => StartCoroutine(RunTrainingLoop());
-    [ContextMenu("Stop Training")]
-    public void StopTraining() => isTraining = false;
-    IEnumerator RunTrainingLoop()
+    [Header("Champion Elo Tournament")]
+    public int eloTargetMatches = 50;
+    public int priorityChampionsPerPod = 2;
+    public float eloKFactor = 10f;
+    public bool autoStartEloTournament = false;
+    [ContextMenu("Start Champion Elo Tournament")]
+    public void StartChampionEloTournament()
     {
-        isTraining = true;
-        Application.targetFrameRate = 10; // prevent overheating
-        int startGen = currentGeneration;
-        float trainingStart = Time.realtimeSinceStartup;
-        while (isTraining && (currentGeneration - startGen) < targetGenerations)
+        if (championDatabase == null)
         {
-            Debug.Log($"=== Generation {currentGeneration} Starting ===");
-            matchesCompletedThisGen = 0;
-            string genTag = $"gen{currentGeneration}";
-            currentGenPool = database.GetByTag(genTag).ToList();
-            //GetByGenePoolAndGeneration(poolName, currentGeneration);
-            if (currentGenPool.Count == 0)
+            Debug.LogError("Cannot start Champion Elo Tournament: championDatabase is null.");
+            return;
+        }
+        if (trainingMode == TrainingMode.Worker)
+        {
+            StartCoroutine(RunTournamentWorkerLoop());
+        }
+        else if (trainingMode == TrainingMode.Master)
+        {
+            StartCoroutine(RunTournamentMasterLoop());
+        }
+        else
+        {
+            // Normal mode: single process, run locally
+            StartCoroutine(RunChampionEloTournament());
+        }
+    }
+    List<GenomeEntry> CreateTournamentPod()
+    {
+        List<GenomeEntry> pod = new();
+        // Priority: champions that need more matches
+        List<GenomeEntry> underSampled = championDatabase.entries.Where(c => c != null && c.eloMatches < eloTargetMatches).OrderBy(c => c.eloMatches).ThenBy(c => UnityEngine.Random.value).ToList();
+        for (int i = 0; i < Mathf.Min(priorityChampionsPerPod, underSampled.Count); i++)
+        {
+            pod.Add(underSampled[i]);
+        }
+        // Fill remaining slots randomly
+        List<GenomeEntry> randomChampions = championDatabase.entries.Where(c => c != null && !pod.Contains(c)).OrderBy(c => UnityEngine.Random.value).Take(podSize - pod.Count).ToList();
+        pod.AddRange(randomChampions);
+        for (int i = 0; i < pod.Count; i++)
+        {
+            pod[i].eloMatches++;
+        }
+        return pod;
+    }
+    TournamentMatchLogList currentMatchLogs = new();
+    void SaveMatchLog(List<string> rankedIds)
+    {
+        currentMatchLogs.matches.Add(new TournamentMatchLog { rankedIds = rankedIds });
+    }
+    void SaveMatchLogFile(TournamentMatchLogList logs, string path)
+    {
+        string json = JsonUtility.ToJson(logs, false);
+        string tempPath = path + ".tmp";
+        File.WriteAllText(tempPath, json);
+        if (File.Exists(path)) File.Delete(path);
+        File.Move(tempPath, path);
+    }
+    IEnumerator RunTournamentWorkerLoop()
+    {
+        Debug.Log($"=== Tournament Worker {trainingWorker} starting ===");
+        // Load master champion DB for current Elo values
+        championDatabase.LoadFromDisk(true);
+        currentMatchLogs = new TournamentMatchLogList();
+        // Load match count from start signal
+        string workerDir = TrainingWorkerStorage.GetPersistentPath();
+        string startPath = Path.Combine(workerDir, "tournament_start.txt");
+        // Wait for start signal
+        while (!File.Exists(startPath))
+        {
+            yield return new WaitForSeconds(1f);
+        }
+        string countStr = File.ReadAllText(startPath).Trim();
+        if (!int.TryParse(countStr, out int matchesToRun))
+        {
+            Debug.LogError($"Worker {trainingWorker}: Could not parse match count.");
+            yield break;
+        }
+        try { File.Delete(startPath); } catch { }
+        Debug.Log($"Worker {trainingWorker}: Running {matchesToRun} tournament matches");
+        // Clear any old match logs
+        string logPath = Path.Combine(workerDir, "tournament_matches.json");
+        if (File.Exists(logPath))
+        {
+            try { File.Delete(logPath); } catch { }
+        }
+        float tournamentStart = Time.realtimeSinceStartup;
+        int matchesRun = 0;
+        for (int i = 0; i < matchesToRun; i++)
+        {
+            // Build pod from champion database
+            List<GenomeEntry> pod = CreateTournamentPod();
+            if (pod.Count < podSize)
             {
-                currentGenPool = database.AllEntries.ToList();
-                foreach (var e in currentGenPool) 
-                {
-                    e.generation = currentGeneration;
-                    e.tag = genTag;
-                }
+                Debug.LogWarning($"Worker {trainingWorker}: Could not build full pod, skipping.");
+                continue;
             }
-            foreach (var entry in currentGenPool)
+            yield return StartCoroutine(RunPodMatch(pod, i, true));
+            matchesRun++;
+            // Save incremental log every 10 matches (crash recovery)
+            if (i % 10 == 0)
             {
-                entry.fitness = 0;
-                entry.wins = 0;
-                entry.matchesPlayed = 0;
-                entry.avgPlacement = 0;
-                entry.avgRoundsSurvived = 0;
-                entry.avgFinalGold = 0;
-                entry.avgFinalLevel = 0;
-                entry.avgGoldSpent = 0;
-                entry.teamHistory.Clear();
-                entry.benchHistory.Clear();
-                entry.factionHistory.Clear();
-                entry.stackHistory.Clear();
-                entry.equipmentHistory.Clear();
-            }
-            yield return RunGenerationPods();
-            int unmatched = currentGenPool.Count(x => x.matchesPlayed == 0);
-            Debug.Log($"{unmatched} genomes received no matches this generation.");
-            if (!isTraining) break;
-            AdjustMutation();
-            UpdateChampion();
-            BreedNextGeneration();
-            PruneDatabase();
-            database.SaveToDisk();
-            if ((currentGeneration - startGen) >= targetGenerations - 1)
-            {
-                Debug.Log($"Training complete. Reached generation {currentGeneration}.");
-                isTraining = false;
-            }
-            else
-            {
-                currentGeneration++;
-                yield return new WaitForSeconds(0.5f); // cool-down between generations
+                SaveMatchLogFile(currentMatchLogs, logPath);
             }
         }
-        database.SaveToDisk();
-        Debug.Log("Final save complete.");
-        float trainingEnd = Time.realtimeSinceStartup - trainingStart;
-        Debug.Log($"Training finished in {trainingEnd:F1}s over {targetGenerations} generations");
-        Application.targetFrameRate = -1;
+        // Final save
+        SaveMatchLogFile(currentMatchLogs, logPath);
+        // Signal completion
+        string donePath = Path.Combine(workerDir, "tournament_done.txt");
+        try { File.WriteAllText(donePath, matchesRun.ToString()); } catch { }
+        float tournamentTime = Time.realtimeSinceStartup - tournamentStart;
+        Debug.Log($"{matchesRun} finished in {tournamentTime:F1}s");
+        #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+        #else
+        Application.Quit();
+        #endif
+    }
+    void SignalTournamentStart(int matchesPerWorker)
+    {
+        for (int i = 1; i <= workerCount; i++)
+        {
+            string startPath = Path.Combine(TrainingWorkerStorage.GetWorkerPath(i), "tournament_start.txt");
+            try { File.WriteAllText(startPath, matchesPerWorker.ToString()); } catch { }
+        }
+    }
+    IEnumerator WaitForTournamentWorkers()
+    {
+        float startTime = Time.realtimeSinceStartup;
+        bool[] workerDone = new bool[workerCount + 1];
+        while (true)
+        {
+            bool allDone = true;
+            for (int i = 1; i <= workerCount; i++)
+            {
+                if (workerDone[i]) continue;
+                string donePath = Path.Combine(TrainingWorkerStorage.GetWorkerPath(i), "tournament_done.txt");
+                if (File.Exists(donePath))
+                {
+                    workerDone[i] = true;
+                    Debug.Log($"MASTER: Worker {i} tournament complete.");
+                }
+                else{allDone = false;}
+            }
+            if (allDone) break;
+            if (Time.realtimeSinceStartup - startTime > workerEloTimeoutSeconds)
+            {
+                Debug.LogError("MASTER: Timeout waiting for tournament workers.");
+                for (int i = 1; i <= workerCount; i++)
+                {
+                    if (!workerDone[i])
+                        Debug.LogWarning($"MASTER: Worker {i} never finished.");
+                }
+                break;
+            }
+            yield return new WaitForSeconds(2f);
+        }
+        Debug.Log("MASTER: All tournament workers done.");
+    }
+    void MergeTournamentMatchLogs()
+    {
+        var allLogs = new List<TournamentMatchLog>();
+        for (int worker = 1; worker <= workerCount; worker++)
+        {
+            string logPath = Path.Combine(TrainingWorkerStorage.GetWorkerPath(worker), "tournament_matches.json");
+            if (!File.Exists(logPath))
+            {
+                Debug.LogWarning($"MASTER: Worker {worker} match log missing.");
+                continue;
+            }
+            string json = File.ReadAllText(logPath);
+            var logs = JsonUtility.FromJson<TournamentMatchLogList>(json);
+            if (logs?.matches != null)
+            {
+                allLogs.AddRange(logs.matches);
+                Debug.Log($"MASTER: Loaded {logs.matches.Count} matches from worker {worker}");
+            }
+            // Cleanup
+            try { File.Delete(logPath); } catch { }
+        }
+        Debug.Log($"MASTER: Total matches to replay: {allLogs.Count}");
+        // Shuffle for fair ordering
+        Shuffle(allLogs);
+        // Replay all matches
+        ReplayTournamentMatches(allLogs);
+    }
+    void CleanupTournamentSignals()
+    {
+        for (int i = 1; i <= workerCount; i++)
+        {
+            string dir = TrainingWorkerStorage.GetWorkerPath(i);
+            foreach (var f in new[] { "tournament_start.txt", "tournament_done.txt", "tournament_matches.json" })
+            {
+                string path = Path.Combine(dir, f);
+                if (File.Exists(path)) try { File.Delete(path); } catch { }
+            }
+        }
+    }
+    void ReplayTournamentMatches(List<TournamentMatchLog> allLogs)
+    {
+        foreach (var log in allLogs)
+        {
+            var ranked = log.rankedIds.Select(id => championDatabase.GetById(id)).Where(c => c != null).ToList();
+            if (ranked.Count != podSize)
+            {
+                Debug.LogWarning($"Skipping match: only {ranked.Count}/{podSize} champions found.");
+                continue;
+            }
+            UpdateElo(ranked);
+            if (tournamentMatchData != null)
+            {
+                tournamentMatchData.AddMatch(ranked);
+            }
+            foreach (GenomeEntry champion in ranked)
+            {
+                champion.eloMatches++;
+                champion.peakElo = Mathf.Max(champion.peakElo, champion.elo);
+            }
+        }
+        Debug.Log($"MASTER: Replayed {allLogs.Count} matches.");
+    }
+    IEnumerator RunTournamentMasterLoop()
+    {
+        Application.targetFrameRate = 5;
+        // Load champion database
+        championDatabase.LoadFromDisk(true);
+        if (championDatabase.entries.Count < podSize)
+        {
+            Debug.LogWarning($"Need {podSize} champions, have {championDatabase.entries.Count}.");
+            yield break;
+        }
+        // Calculate matches per worker
+        int totalTargetMatches = eloTargetMatches * championDatabase.entries.Count;
+        int matchesPerWorker = Mathf.CeilToInt((float)totalTargetMatches / (workerCount * priorityChampionsPerPod));
+        Debug.Log($"=== Tournament Master Starting ===");
+        Debug.Log($"Champions: {championDatabase.entries.Count}");
+        Debug.Log($"Matches per worker: {matchesPerWorker}");
+        // Remove Old Signals.
+        CleanupTournamentSignals();
+        // Signal workers to start
+        SignalTournamentStart(matchesPerWorker);
+        // Wait for all workers
+        yield return StartCoroutine(WaitForTournamentWorkers());
+        // Merge and replay all match logs
+        MergeTournamentMatchLogs();
+        // Save final results
+        championDatabase.SaveToDisk(true);
+        Debug.Log("=== Tournament Master Complete ===");
+        // Remove Old Signals.
+        CleanupTournamentSignals();
+        if (quitWhenDone)
+        {
+            Application.Quit();
+        }
+    }
+    IEnumerator RunChampionEloTournament()
+    {
+        if (championDatabase.entries.Count < podSize)
+        {
+            yield break;
+        }
+        Debug.Log($"=== Champion Elo Tournament Starting ===");
+        Debug.Log($"Champions: {championDatabase.entries.Count}");
+        List<GenomeEntry> underSampled = championDatabase.entries.Where(c => c != null && c.eloMatches < eloTargetMatches).OrderBy(c => c.eloMatches).ThenBy(c => UnityEngine.Random.value).ToList();
+        int underSampledCount = underSampled.Count;
+        for (int i = 0; i < 1 + eloTargetMatches * underSampledCount / priorityChampionsPerPod; i++)
+        {
+            // Champions that still need initial Elo calibration.
+            underSampled = championDatabase.entries.Where(c => c != null && c.eloMatches < eloTargetMatches).OrderBy(c => c.eloMatches).ThenBy(c => UnityEngine.Random.value).ToList();
+            if (underSampled.Count == 0){break;}
+            List<GenomeEntry> pod = new();
+            // Add priority/new champions.
+            for (int j = 0; j < Mathf.Min(priorityChampionsPerPod, underSampled.Count); j++)
+            {
+                pod.Add(underSampled[j]);
+            }
+            // Fill remaining slots randomly from the entire champion pool.
+            List<GenomeEntry> randomChampions = championDatabase.entries.Where(c => c != null && !pod.Contains(c)).OrderBy(c => UnityEngine.Random.value).Take(podSize - pod.Count).ToList();
+            pod.AddRange(randomChampions);
+            if (pod.Count < podSize)
+            {
+                Debug.LogWarning($"Elo tournament needs {podSize} champions, " + $"but only found {pod.Count}.");
+                break;
+            }
+            yield return StartCoroutine(RunPodMatch(pod, i, true));
+        }
+        Debug.Log("=== Champion Elo Tournament Complete ===");
+        championDatabase.SaveToDisk(true);
         if (quitWhenDone)
         {
             Debug.Log("Quitting application.");
@@ -243,65 +518,283 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             #endif
         }
     }
-    GenomeEntry GetRandomFromPool(string tag)
+    [ContextMenu("Start Training")]
+    public void StartTraining() => StartCoroutine(RunTrainingLoop());
+    [ContextMenu("Stop Training")]
+    public void StopTraining() => isTraining = false;
+    IEnumerator RunTrainingLoop()
     {
-        List<GenomeEntry> members = database.GetByGenePoolAndGeneration(tag, currentGeneration);
-        if(members.Count == 0)
-        return null;
-        int lowestMatches = members.Min(x => x.matchesPlayed);
-        var leastPlayed = members.Where(x => x.matchesPlayed == lowestMatches).ToList();
-        int lowestPlayedIndex = UnityEngine.Random.Range(0, leastPlayed.Count);
-        leastPlayed[lowestPlayedIndex].matchesPlayed++;
-        return leastPlayed[lowestPlayedIndex];
+        if (trainingMode == TrainingMode.Worker)
+        {
+            yield return StartCoroutine(RunWorkerLoop());
+            yield break;
+        }
+        else if (trainingMode == TrainingMode.Master)
+        {
+            yield return StartCoroutine(RunMasterLoop());
+            yield break;
+        }
     }
-    List<GenomeEntry> CreatePoolPod()
+    [Header("Master Worker Control")]
+    public string workerExecutablePath = "";
+    public float workerTimeoutSeconds = 3600f;
+    public float workerEloTimeoutSeconds = 36000f;
+    // REPLACE LaunchWorkers() entirely:
+    void SignalWorkersReady(int generation)
     {
-        List<GenomeEntry> pod = new();
-        if(matchMode == GenePoolMatchMode.SpecialistVsBase)
+        for (int i = 1; i <= workerCount; i++)
         {
-            for (int i = 0; i < genePoolTemplates.Count; i++)
+            string readyPath = Path.Combine(TrainingWorkerStorage.GetWorkerPath(i), "next_generation_ready.txt");
+            try { File.WriteAllText(readyPath, generation.ToString()); } catch { }
+        }
+    }
+    void CleanupPreviousGen(int generation)
+    {
+        for (int i = 1; i <= workerCount; i++)
+        {
+            string workerDir = TrainingWorkerStorage.GetWorkerPath(i);
+            // Delete old ready signals
+            string readyPath = Path.Combine(workerDir, "next_generation_ready.txt");
+            if (File.Exists(readyPath))
             {
-                pod.Add(GetRandomFromPool(genePoolTemplates[i].templateName));
+                try { File.Delete(readyPath); } catch { }
             }
-            for(int i = pod.Count; i < podSize; i++)
+            // Delete old result file
+            string resultPath = TrainingWorkerStorage.GetWorkerFilePath(i, database.filename);
+            if (File.Exists(resultPath))
             {
-                pod.Add(GetRandomFromPool("Base"));
+                try { File.Delete(resultPath); } catch { }
             }
         }
-        if(matchMode == GenePoolMatchMode.Specialists)
+    }
+    void SignalWorkersDone()
+    {
+        for (int i = 1; i <= workerCount; i++)
         {
-            for (int i = 0; i < podSize; i++)
+            string donePath = Path.Combine(TrainingWorkerStorage.GetWorkerPath(i), "generations_done.txt");
+            try { File.WriteAllText(donePath, "generations_done"); } catch { }
+        }
+    }
+    IEnumerator WaitForWorkerFiles()
+    {
+        float startTime = Time.realtimeSinceStartup;
+        bool[] workerDone = new bool[workerCount + 1];
+        while (true)
+        {
+            bool allDone = true;
+            for (int i = 1; i <= workerCount; i++)
             {
-                // Get A Random One From A Template.
-                int randomIndex = UnityEngine.Random.Range(0, genePoolTemplates.Count);
-                pod.Add(GetRandomFromPool(genePoolTemplates[randomIndex].templateName));
+                if (workerDone[i]) continue;
+                string path = TrainingWorkerStorage.GetWorkerFilePath(i, database.filename);
+                if (File.Exists(path))
+                {
+                    workerDone[i] = true;
+                    Debug.Log($"MASTER: Worker {i} file detected.");
+                }
+                else
+                {
+                    allDone = false;
+                }
+            }
+            if (allDone) break;
+            if (Time.realtimeSinceStartup - startTime > workerTimeoutSeconds)
+            {
+                Debug.LogError("MASTER: Timeout waiting for worker files.");
+                for (int i = 1; i <= workerCount; i++)
+                {
+                    if (!workerDone[i]){Debug.LogWarning($"MASTER: Worker {i} never produced a file.");}
+                }
+                break;
+            }
+            yield return new WaitForSeconds(1f);
+        }
+        Debug.Log("MASTER: Done waiting for worker files.");
+    }
+    IEnumerator RunMasterLoop()
+    {
+        Application.targetFrameRate = 5;
+        isTraining = true;
+        for (int gen = 0; gen < targetGenerations && isTraining; gen++)
+        {
+            Debug.Log($"=== MASTER: Generation {currentGeneration} ===");
+            CleanupPreviousGen(currentGeneration);
+            SignalWorkersReady(currentGeneration);
+            yield return StartCoroutine(WaitForWorkerFiles());
+            MergeWorkerResults();
+            currentGenPool = database.GetByTag($"gen{currentGeneration}").ToList();
+            AdjustMutation();
+            UpdateChampion();
+            BreedNextGeneration();
+            PruneDatabase();
+            database.SaveToDisk(true);
+            Debug.Log($"=== MASTER: {currentGeneration} complete ===");
+            currentGeneration++;
+        }
+        isTraining = false;
+        SignalWorkersDone();
+        if (quitWhenDone)
+        {
+            Application.Quit();
+        }
+    }
+    void MergeWorkerResults()
+    {
+        string genTag = $"gen{currentGeneration}";
+        List<GenomeEntry> masterPopulation = database.GetByTag(genTag);
+        if (masterPopulation.Count == 0)
+        {
+            Debug.LogError($"MASTER: Cannot merge generation {currentGeneration}: " + "master population is empty.");
+            return;
+        }
+        int totalMerged = 0;
+        for (int worker = 1; worker <= workerCount; worker++)
+        {
+            string workerPath = TrainingWorkerStorage.GetWorkerFilePath(worker, database.filename);
+            if (!File.Exists(workerPath))
+            {
+                Debug.LogError($"MASTER: Worker {worker} result missing: {workerPath}");
+                continue;
+            }
+            string json = File.ReadAllText(workerPath);
+            var wrapper = JsonUtility.FromJson<AutoChessPVPSavedGenomeDataManager.GenomeDatabaseWrapper>(json);
+            if (wrapper == null || wrapper.entries == null)
+            {
+                Debug.LogError($"MASTER: Worker {worker} result could not be loaded.");
+                continue;
+            }
+            Debug.Log($"MASTER: Merging worker {worker}: " + $"{wrapper.entries.Count} entries.");
+            foreach (GenomeEntry workerEntry in wrapper.entries)
+            {
+                if (workerEntry == null){continue;}
+                if (workerEntry.generation != currentGeneration)
+                {
+                    Debug.LogError($"MASTER: Worker {worker} returned wrong generation! " + $"Genome {workerEntry.id} is generation {workerEntry.generation}, " + $"but master expects {currentGeneration}. Skipping.");
+                    continue;
+                }
+                GenomeEntry masterEntry = masterPopulation.FirstOrDefault(e => e != null && e.id == workerEntry.id);
+                if (masterEntry == null)
+                {
+                    Debug.LogWarning($"MASTER: Worker {worker} returned unknown genome " + $"{workerEntry.id}");
+                    continue;
+                }
+                masterEntry.MergeEvaluation(workerEntry);
+                totalMerged++;
+            }
+            if (File.Exists(workerPath))
+            {
+                try
+                {
+                    File.Delete(workerPath);
+                    Debug.Log($"MASTER: Cleaned up worker {worker} file.");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"MASTER: Could not delete worker {worker} file: {e.Message}");
+                }
             }
         }
-        return pod;
+        Debug.Log($"MASTER: Merge complete. " + $"Merged {totalMerged} worker genome evaluations.");
+    }
+    IEnumerator RunWorkerLoop()
+    {
+        Debug.Log($"=== Worker {trainingWorker} starting ===");
+        isTraining = true;
+        float noSignalTimeout = 300f;
+        float lastSignalTime = Time.realtimeSinceStartup;
+        while (isTraining)
+        {
+            string workerDir = TrainingWorkerStorage.GetPersistentPath();
+            string donePath = Path.Combine(workerDir, "generations_done.txt");
+            if (File.Exists(donePath))
+            {
+                Debug.Log($"Worker {trainingWorker}: Master signaled done. Exiting.");
+                try { File.Delete(donePath); } catch { }
+                isTraining = false;
+                break;
+            }
+            Application.targetFrameRate = 5;
+            string readyPath = Path.Combine(workerDir, "next_generation_ready.txt");
+            while (!File.Exists(readyPath))
+            {
+                if (File.Exists(donePath))
+                {
+                    Debug.Log($"Worker {trainingWorker}: Master done while waiting. Exiting.");
+                    try { File.Delete(donePath); } catch { }
+                    isTraining = false;
+                    break;
+                }
+                if (Time.realtimeSinceStartup - lastSignalTime > noSignalTimeout)
+                {
+                    Debug.LogWarning($"Worker {trainingWorker}: No signal for {noSignalTimeout}s. Exiting.");
+                    isTraining = false;
+                    break;
+                }
+                yield return new WaitForSeconds(1f);
+            }
+            if (!isTraining){break;}
+            Application.targetFrameRate = -1;
+            string genStr = File.ReadAllText(readyPath).Trim();
+            try { File.Delete(readyPath); } catch { }
+            if (!int.TryParse(genStr, out currentGeneration))
+            {
+                Debug.LogError($"Worker {trainingWorker}: Could not parse generation from ready file.");
+                break;
+            }
+            lastSignalTime = Time.realtimeSinceStartup;
+            // Run generation
+            float trainingStart = Time.realtimeSinceStartup;
+            Debug.Log($"=== Worker {trainingWorker}: Generation {currentGeneration} Starting ===");
+            matchesCompletedThisGen = 0;
+            database.LoadFromDisk(true);
+            string genTag = $"gen{currentGeneration}";
+            List<GenomeEntry> sourcePopulation = database.GetByTag(genTag).ToList();
+            if (sourcePopulation.Count == 0)
+            {
+                Debug.LogError($"Worker {trainingWorker}: no genomes for gen {currentGeneration}");
+                yield return new WaitForSeconds(3f);
+                continue;
+            }
+            currentGenPool = sourcePopulation.Select(e => e.CreateEvaluationCopy()).ToList();
+            yield return RunGenerationPods();
+            database.entries = currentGenPool;
+            database.SaveToDisk();
+            float trainingEnd = Time.realtimeSinceStartup - trainingStart;
+            Debug.Log($"Worker {trainingWorker}: Gen {currentGeneration} done in {trainingEnd:F1}s");
+        }
+        // Cleanup and exit
+        Debug.Log($"Worker {trainingWorker}: exiting.");
+        #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+        #else
+        Application.Quit();
+        #endif
+        yield break;  // Ensure coroutine ends cleanly
     }
     IEnumerator RunGenerationPods()
     {
-        int populationCount = currentGenPool.Count;
-        if (matchMode == GenePoolMatchMode.Specialists)
+        // Build flat schedule: every genome gets exactly matchesPerGenome slots
+        List<GenomeEntry> schedule = new();
+        foreach (var entry in currentGenPool)
         {
-            populationCount = populationSize * genePoolTemplates.Count;
+            for (int i = 0; i < matchesPerGenome; i++)
+                schedule.Add(entry);
         }
-        int podsPerGeneration = Mathf.CeilToInt((populationCount * matchesPerGenome) / (float)podSize);
-        for (int i = 0; i < podsPerGeneration; i++)
+        Shuffle(schedule);
+        int podIndex = 0;
+        for (int i = 0; i + podSize <= schedule.Count; i += podSize)
         {
-            List<GenomeEntry> pod = CreatePoolPod();
-            // Safety
-            pod.RemoveAll(x => x == null);
-            if (pod.Count < podSize)
-            {
-                Debug.LogWarning($"Pod {i} only has {pod.Count}/{podSize} genomes.");
-                continue;
-            }
-            yield return StartCoroutine(RunPodMatch(pod, i));
-            yield return new WaitForSeconds(0.2f);
+            List<GenomeEntry> pod = schedule.GetRange(i, podSize);
+            yield return StartCoroutine(RunPodMatch(pod, podIndex++));
+            yield return new WaitForSeconds(0.1f);
+        }
+        int leftover = schedule.Count % podSize;
+        if (leftover > 0)
+        {
+            Debug.LogWarning($"RunGenerationPods: {leftover} genomes left over (not enough for a full pod). " +
+                $"Consider adjusting populationSize × matchesPerGenome to be divisible by podSize.");
         }
     }
-    IEnumerator RunPodMatch(List<GenomeEntry> pod, int podIndex)
+    IEnumerator RunPodMatch(List<GenomeEntry> pod, int podIndex, bool elo = false)
     {
         GenomeProvider.Clear();
         var allTeams = director.allPlayers.GetAllTeams();
@@ -322,9 +815,16 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         }
         float podElapsed = Time.realtimeSinceStartup - podStart;
         Debug.Log($"Pod {podIndex} finished in {podElapsed:F1}s over {director.roundCount} rounds");
-        RecordPodResults(allTeams, podIndex);
+        if (!elo)
+        {
+            RecordPodResults(allTeams);
+        }
+        else
+        {
+            RecordEloResults(allTeams);
+        }
     }
-    void RecordPodResults(List<AutoChessDataManager> allTeams, int podIndex)
+    void RecordPodResults(List<AutoChessDataManager> allTeams)
     {
         var ranked = allTeams.Where(t => !t.PlayerData()).OrderByDescending(t => t.GetRound()).ThenByDescending(t => t.GetHealth()).ToList();
         for (int i = 0; i < ranked.Count; i++)
@@ -351,6 +851,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                 matchFitness += hp * 0.5f;
             }
             // Store The Teams.
+            entry.matchesPlayed++;
             entry.teamHistory.Add(String.Join(",", ranked[i].GetFieldActorNames()));
             entry.benchHistory.Add(String.Join(",", ranked[i].GetBenchActorNames()));
             entry.factionHistory.Add(String.Join(",", ranked[i].factionData.GetActiveFactions()));
@@ -363,6 +864,71 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             entry.avgFinalLevel = ((entry.avgFinalLevel * (entry.matchesPlayed - 1)) + finalLevel) / entry.matchesPlayed;
             entry.avgGoldSpent = ((entry.avgGoldSpent * (entry.matchesPlayed - 1)) + goldSpent) / entry.matchesPlayed;
             if (won) entry.wins++;
+        }
+    }
+    void RecordEloResults(List<AutoChessDataManager> allTeams)
+    {
+        var rankedTeams = allTeams.Where(t => !t.PlayerData()).OrderByDescending(t => t.GetRound()).ThenByDescending(t => t.GetHealth()).ToList();
+        List<GenomeEntry> rankedChampions = new();
+        foreach (var team in rankedTeams)
+        {
+            GenomeEntry champion = GenomeProvider.Get(team);
+            if (champion == null)
+            {
+                Debug.LogError("Could not find GenomeEntry for team.");
+                return;
+            }
+            rankedChampions.Add(champion);
+        }
+        if (rankedChampions.Count != podSize)
+        {
+            Debug.LogError($"Expected {podSize} champions, " + $"got {rankedChampions.Count}.");
+            return;
+        }
+        // Worker: save match log, don't update Elo
+        if (trainingMode == TrainingMode.Worker)
+        {
+            SaveMatchLog(rankedChampions.Select(c => c.id).ToList());
+            return;
+        }
+        UpdateElo(rankedChampions);
+        // Save placement history as generations.
+        if (tournamentMatchData != null)
+        {
+            tournamentMatchData.AddMatch(rankedChampions);
+        }
+        // Tournament-local + lifetime counts.
+        foreach (GenomeEntry champion in rankedChampions)
+        {
+            champion.eloMatches++;
+            champion.peakElo = Mathf.Max(champion.peakElo, champion.elo);
+        }
+        championDatabase.SaveToDisk(true);
+    }
+    void UpdateElo(List<GenomeEntry> ranked)
+    {
+        Dictionary<string, float> oldRatings = ranked.ToDictionary(c => c.id, c => c.elo);
+        Dictionary<string, float> changes = ranked.ToDictionary(c => c.id, c => 0f);
+        float pairK = eloKFactor / Mathf.Max(1, ranked.Count - 1);
+        for (int i = 0; i < ranked.Count; i++)
+        {
+            for (int j = i + 1; j < ranked.Count; j++)
+            {
+                GenomeEntry winner = ranked[i];
+                GenomeEntry loser = ranked[j];
+                float winnerRating = oldRatings[winner.id];
+                float loserRating = oldRatings[loser.id];
+                float expectedWinner = 1f / (1f + Mathf.Pow(10f, (loserRating - winnerRating) / 400f));
+                float expectedLoser = 1f - expectedWinner;
+                float winnerChange = pairK * (1f - expectedWinner);
+                float loserChange = pairK * (0f - expectedLoser);
+                changes[winner.id] += winnerChange;
+                changes[loser.id] += loserChange;
+            }
+        }
+        foreach (GenomeEntry champion in ranked)
+        {
+            champion.elo += changes[champion.id];
         }
     }
     float FactionFitnessBonus(AutoChessDataManager team)
@@ -396,12 +962,12 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         if (relativeVariance < 0.15f) // < 15% of mean, population converged, fine-tune
         {
             mutationRate = Mathf.Max(0.05f, mutationRate * 0.95f);
-            mutationStrength = Mathf.Max(0.15f, mutationStrength * 0.95f);
+            mutationStrength = Mathf.Max(0.10f, mutationStrength * 0.95f);
         }
         else if (relativeVariance > 0.40f) // > 40% of mean, still exploring, stay aggressive
         {
-            mutationRate = Mathf.Min(0.25f, mutationRate * 1.05f);
-            mutationStrength = Mathf.Min(0.3f, mutationStrength * 1.05f);
+            mutationRate = Mathf.Min(0.4f, mutationRate * 1.05f);
+            mutationStrength = Mathf.Min(0.6f, mutationStrength * 1.05f);
         }
     }
     void BreedNextGeneration()
@@ -417,14 +983,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         {
             BreedPool(pool, nextGen);
         }
-        var championClone = champion?.Clone();
-        if(championClone != null)
-        {
-            championClone.genome.genePool = champion.genome.genePool;
-            championClone.tag = $"gen{nextGen}";
-            championClone.generation = nextGen;
-            database.entries.Add(championClone);
-        }
     }
     void BreedPool(string pool, int nextGen)
     {
@@ -435,6 +993,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         for(int i = 0; i < elites && i < ranked.Count; i++)
         {
             var clone = ranked[i].Clone();
+            clone.id = Guid.NewGuid().ToString();
             clone.tag = nextTag;
             clone.generation = nextGen;
             database.entries.Add(clone);
@@ -455,19 +1014,14 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         var best = currentGenPool.OrderByDescending(e => e.matchesPlayed > 0 ? e.fitness / e.matchesPlayed : 0f).First();
         float bestAvg = best.matchesPlayed > 0 ? best.fitness / best.matchesPlayed : 0f;
         champion = best.Clone();
-        champion.id = System.Guid.NewGuid().ToString();
+        champion.id = best.id;
         champion.tag = "champion";
         champion.generation = currentGeneration;
-        champion.championTeam = best.teamHistory.Count > 0 ? best.teamHistory[^1] : "";
-        champion.championBench = best.benchHistory.Count > 0 ? best.benchHistory[^1] : "";
-        champion.championFactions = best.factionHistory.Count > 0 ? best.factionHistory[^1] : "";
-        champion.championStacks = best.stackHistory.Count > 0 ? best.stackHistory[^1] : "";
-        champion.championEquipment = best.equipmentHistory.Count > 0 ? best.equipmentHistory[^1] : "";
         championGeneration = currentGeneration;
         // Add this generation's champion to the separate champion database.
         championDatabase.entries.Add(champion);
         var poolChampions = championDatabase.entries.Where(e => e != null && e.genePool == champion.genePool).OrderByDescending(e => e.generation).ToList();
-        championDatabase.SaveToDisk();
+        championDatabase.SaveToDisk(true);
         Debug.Log($"Champion: Gen {currentGeneration} | " + $"Pool {champion.genePool} | " + $"Avg Fitness {bestAvg:F1}");
     }
     GenomeEntry TournamentSelect(List<GenomeEntry> pool, int size)

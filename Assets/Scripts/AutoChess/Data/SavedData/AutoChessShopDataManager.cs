@@ -328,7 +328,7 @@ public class AutoChessShopDataManager : SavedData
     }
     public override void Save()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         allData = "";
         allData += "ShopLevel=" + shopLevel + delimiter;
         allData += "FrozenShop=" + frozenShop + delimiter;
@@ -341,7 +341,7 @@ public class AutoChessShopDataManager : SavedData
     }
     public override void Load()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath))
         {
             allData = File.ReadAllText(dataPath);

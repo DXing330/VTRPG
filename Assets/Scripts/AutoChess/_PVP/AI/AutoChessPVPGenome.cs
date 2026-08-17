@@ -28,7 +28,7 @@ public class AutoChessPVPGenome
         "W_ECON_STREAK_LOSS",
         "W_PLACE_SWAP_THRESH",
         "W_SELL_MARGIN",
-        "W_ROLE_TANK_RATIO", // Think About Synergy More Than Roles, If You Get A Full Faction You'll Naturally Have The Roles.
+        "W_MIN_TIER_FOR_ITEM",
         "W_MAIN_SYN_HIT",
         "W_ECON_SYN_HIT",
         "W_SYN_HIT",
@@ -76,7 +76,7 @@ public class AutoChessPVPGenome
         1.5f,   // 16 W_ECON_STREAK_LOSS
         2.5f,   // 17 W_PLACE_SWAP_THRESH
         0.5f,   // 18 W_SELL_MARGIN
-        0.3f,   // 19 W_ROLE_TANK_RATIO
+        2.0f,   // 19 W_MIN_TIER_FOR_ITEM
         3.0f,   // 20 W_MAIN_SYN_HIT
         1.0f,   // 21 W_ECON_SYN_HIT
         2.0f,   // 22 W_SYN_HIT
@@ -126,7 +126,7 @@ public class AutoChessPVPGenome
             Debug.LogError($"Genome gene '{name}' does not exist.");
             return 0f;
         }
-        return idx >= 0 ? genes[idx] : 0f;
+        return genes[idx];
     }
     public string GetGeneNameAtIndex(int index)
     {
@@ -168,6 +168,8 @@ public class AutoChessPVPGenome
     public static AutoChessPVPGenome Crossover(AutoChessPVPGenome a, AutoChessPVPGenome b)
     {
         var child = new AutoChessPVPGenome();
+        child.genePool = a.genePool;
+        child.preferredFaction = a.preferredFaction;
         for (int i = 0; i < child.genes.Length; i++)
         {
             float minRange = Mathf.Min(a.genes[i], b.genes[i]);
@@ -192,5 +194,38 @@ public class AutoChessPVPGenome
         float u1 = 1f - Random.value;
         float u2 = 1f - Random.value;
         return Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Cos(2f * Mathf.PI * u2);
+    }
+    public string Save()
+    {
+        string data = "";
+        data += string.Join("PVPGenomeGeneDelimiter", genes);
+        data += "PVPGenomeDelimiter" + genePool;
+        data += "PVPGenomeDelimiter" + preferredFaction;
+        return data;
+    }
+    public void Load(string savedGene)
+    {
+        ResetToDefault();
+        string[] parts = savedGene.Split("PVPGenomeDelimiter");
+        if (parts.Length > 0)
+        {
+            string[] geneStrings = parts[0].Split("PVPGenomeGeneDelimiter");
+            int count = Mathf.Min(geneStrings.Length, genes.Length);
+            for (int i = 0; i < count; i++)
+            {
+                if (float.TryParse(geneStrings[i], out float value))
+                {
+                    genes[i] = value;
+                }
+            }
+        }
+        if (parts.Length > 1)
+        {
+            genePool = parts[1];
+        }
+        if (parts.Length > 2)
+        {
+            preferredFaction = parts[2];
+        }
     }
 }
