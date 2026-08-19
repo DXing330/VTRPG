@@ -10,8 +10,10 @@ public class AutoChessAegirManager : MonoBehaviour
     public List<TacticActor> consumingActors;
     protected BattleMap map;
     protected AutoBattleManager manager;
+    int aegirTeam = -1;
     public void ApplyAegirFactionEffect(List<TacticActor> allActors, BattleMap newMap, AutoBattleManager newManager, int team = 0)
     {
+        aegirTeam = team;
         aegirActors.Clear();
         consumedActors.Clear();
         consumingActors.Clear();
@@ -20,18 +22,28 @@ public class AutoChessAegirManager : MonoBehaviour
         // Get The Aegir Actors.
         for (int i = 0; i < allActors.Count; i++)
         {
-            if (allActors[i].GetTeam() != team){continue;}
+            if (allActors[i].GetTeam() != aegirTeam){continue;}
             if (allActors[i].AutoChessFaction("Aegir"))
             {
                 aegirActors.Add(allActors[i]);
             }
         }
+        // Flip Then Flip Back.
+        if (team != 0)
+        {
+            for (int i = 0; i < allActors.Count; i++)
+            {
+                if (allActors[i].GetTeam() != aegirTeam){continue;}
+                allActors[i].SetLocation(map.mapUtility.HorizontalReflectTile(allActors[i].GetLocation(), map.mapSize));
+                allActors[i].FlipDirection();
+            }
+        }
         // Determine Consumed/Consuming.
         for (int i = 0; i < aegirActors.Count; i++)
         {
-            TacticActor consumed = map.GetActorInFrontActor(aegirActors[i]);
+            TacticActor consumed = map.GetActorInFrontActor(aegirActors[i], true);
             // Only Consume Allies
-            if (consumed != null && consumed.GetTeam() == team)
+            if (consumed != null && consumed.GetTeam() == aegirTeam)
             {
                 consumedActors.Add(consumed);
                 consumingActors.Add(aegirActors[i]);
@@ -73,6 +85,15 @@ public class AutoChessAegirManager : MonoBehaviour
                 Consume(consumedIndex);
             }
         }
+        if (team != 0)
+        {
+            for (int i = 0; i < allActors.Count; i++)
+            {
+                if (allActors[i].GetTeam() != aegirTeam){continue;}
+                allActors[i].SetLocation(map.mapUtility.HorizontalReflectTile(allActors[i].GetLocation(), map.mapSize));
+                allActors[i].FlipDirection();
+            }
+        }
     }
     protected bool CanConsume(int index)
     {
@@ -87,6 +108,6 @@ public class AutoChessAegirManager : MonoBehaviour
         map.UpdateCombatLog(consumingActors[index].GetSpriteName() + " consumes " + consumedActors[index].GetSpriteName() + " and gains " + attackGain + " attack. (" + originalAttack + "->" + consumingActors[index].GetBaseAttack() + ")");
         consumedActors.RemoveAt(index);
         consumingActors.RemoveAt(index);
-        manager.GainFactionStacks("Aegir", 2);
+        manager.GainFactionStacks("Aegir", 2, aegirTeam);
     }
 }

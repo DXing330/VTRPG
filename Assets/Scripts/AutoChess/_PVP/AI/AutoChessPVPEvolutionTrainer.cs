@@ -24,22 +24,14 @@ public static class GenomeProvider
 }
 public class AutoChessPVPEvolutionTrainer : MonoBehaviour
 {
-    public enum GenePoolMatchMode
-    {
-        SpecialistVsBase,
-        Specialists
-    }
-    [Header("Gene Pool Settings")]
-    public GenePoolMatchMode matchMode = GenePoolMatchMode.SpecialistVsBase;
     public enum TrainingMode
     {
-        Normal,
         Master,
         Worker
     }
     [Header("Training Mode")]
     public bool autoStartTraining = true;
-    public TrainingMode trainingMode = TrainingMode.Normal;
+    public TrainingMode trainingMode = TrainingMode.Master;
     public int workerCount = 1;
     [Header("Headless Mode")]
     public int targetGenerations = 100;
@@ -105,6 +97,10 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                 case "--cull":
                     if (i + 1 < args.Length)
                         int.TryParse(args[++i], out cullCount);
+                    break;
+                case "--crossbreedRate":
+                    if (i + 1 < args.Length)
+                        float.TryParse(args[++i], out crossbreedRate);
                     break;
                 case "--mutRate":
                     if (i + 1 < args.Length)
@@ -181,6 +177,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     public int podSize = 8;
     public int elites = 2;
     public int cullCount = 2;
+    public float crossbreedRate = 0.1f;
     public float mutationRate = 0.2f;
     public float mutationStrength = 0.3f;
     [Header("State")]
@@ -193,6 +190,8 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     private List<GenomeEntry> currentGenPool = new();
     void Start()
     {
+        // Don't needs logging during training.
+        director.allPlayers.DisableLogs();
         try
         {
             if (database == null)
@@ -250,15 +249,13 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     List<GenomeEntry> CreateTournamentPod()
     {
         List<GenomeEntry> pod = new();
-        // Priority: champions that need more matches
-        List<GenomeEntry> underSampled = championDatabase.entries.Where(c => c != null && c.eloMatches < eloTargetMatches).OrderBy(c => c.eloMatches).ThenBy(c => UnityEngine.Random.value).ToList();
-        for (int i = 0; i < Mathf.Min(priorityChampionsPerPod, underSampled.Count); i++)
-        {
-            pod.Add(underSampled[i]);
-        }
+        // Always take the two champions with the fewest Elo matches.
+        List<GenomeEntry> lowestMatchChampions = championDatabase.entries.Where(c => c != null).OrderBy(c => c.eloMatches).ThenBy(c => UnityEngine.Random.value).Take(priorityChampionsPerPod).ToList();
+        pod.AddRange(lowestMatchChampions);
         // Fill remaining slots randomly
         List<GenomeEntry> randomChampions = championDatabase.entries.Where(c => c != null && !pod.Contains(c)).OrderBy(c => UnityEngine.Random.value).Take(podSize - pod.Count).ToList();
         pod.AddRange(randomChampions);
+        // Workers Don't Save So No Double Counting, This Is So That Workers Know To Not Oversample The Original Undersampled Population.
         for (int i = 0; i < pod.Count; i++)
         {
             pod[i].eloMatches++;
@@ -451,9 +448,8 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             Debug.LogWarning($"Need {podSize} champions, have {championDatabase.entries.Count}.");
             yield break;
         }
-        // Calculate matches per worker
-        int totalTargetMatches = eloTargetMatches * championDatabase.entries.Count;
-        int matchesPerWorker = Mathf.CeilToInt((float)totalTargetMatches / (workerCount * priorityChampionsPerPod));
+        // All workers run the same number of matches
+        int matchesPerWorker = eloTargetMatches;
         Debug.Log($"=== Tournament Master Starting ===");
         Debug.Log($"Champions: {championDatabase.entries.Count}");
         Debug.Log($"Matches per worker: {matchesPerWorker}");
@@ -483,22 +479,10 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         }
         Debug.Log($"=== Champion Elo Tournament Starting ===");
         Debug.Log($"Champions: {championDatabase.entries.Count}");
-        List<GenomeEntry> underSampled = championDatabase.entries.Where(c => c != null && c.eloMatches < eloTargetMatches).OrderBy(c => c.eloMatches).ThenBy(c => UnityEngine.Random.value).ToList();
-        int underSampledCount = underSampled.Count;
-        for (int i = 0; i < 1 + eloTargetMatches * underSampledCount / priorityChampionsPerPod; i++)
+        // Always take the two champions with the fewest Elo matches.
+        for (int i = 0; i < eloTargetMatches; i++)
         {
-            // Champions that still need initial Elo calibration.
-            underSampled = championDatabase.entries.Where(c => c != null && c.eloMatches < eloTargetMatches).OrderBy(c => c.eloMatches).ThenBy(c => UnityEngine.Random.value).ToList();
-            if (underSampled.Count == 0){break;}
-            List<GenomeEntry> pod = new();
-            // Add priority/new champions.
-            for (int j = 0; j < Mathf.Min(priorityChampionsPerPod, underSampled.Count); j++)
-            {
-                pod.Add(underSampled[j]);
-            }
-            // Fill remaining slots randomly from the entire champion pool.
-            List<GenomeEntry> randomChampions = championDatabase.entries.Where(c => c != null && !pod.Contains(c)).OrderBy(c => UnityEngine.Random.value).Take(podSize - pod.Count).ToList();
-            pod.AddRange(randomChampions);
+            List<GenomeEntry> pod = CreateTournamentPod();
             if (pod.Count < podSize)
             {
                 Debug.LogWarning($"Elo tournament needs {podSize} champions, " + $"but only found {pod.Count}.");
@@ -621,7 +605,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             SignalWorkersReady(currentGeneration);
             yield return StartCoroutine(WaitForWorkerFiles());
             MergeWorkerResults();
-            currentGenPool = database.GetByTag($"gen{currentGeneration}").ToList();
+            currentGenPool = database.GetByGeneration(currentGeneration).ToList();
             AdjustMutation();
             UpdateChampion();
             BreedNextGeneration();
@@ -639,8 +623,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     }
     void MergeWorkerResults()
     {
-        string genTag = $"gen{currentGeneration}";
-        List<GenomeEntry> masterPopulation = database.GetByTag(genTag);
+        List<GenomeEntry> masterPopulation = database.GetByGeneration(currentGeneration);
         if (masterPopulation.Count == 0)
         {
             Debug.LogError($"MASTER: Cannot merge generation {currentGeneration}: " + "master population is empty.");
@@ -746,8 +729,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             Debug.Log($"=== Worker {trainingWorker}: Generation {currentGeneration} Starting ===");
             matchesCompletedThisGen = 0;
             database.LoadFromDisk(true);
-            string genTag = $"gen{currentGeneration}";
-            List<GenomeEntry> sourcePopulation = database.GetByTag(genTag).ToList();
+            List<GenomeEntry> sourcePopulation = database.GetByGeneration(currentGeneration).ToList();
             if (sourcePopulation.Count == 0)
             {
                 Debug.LogError($"Worker {trainingWorker}: no genomes for gen {currentGeneration}");
@@ -852,6 +834,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             }
             // Store The Teams.
             entry.matchesPlayed++;
+            entry.tacticianHistory.Add(ranked[i].tactician.GetTactician());
             entry.teamHistory.Add(String.Join(",", ranked[i].GetFieldActorNames()));
             entry.benchHistory.Add(String.Join(",", ranked[i].GetBenchActorNames()));
             entry.factionHistory.Add(String.Join(",", ranked[i].factionData.GetActiveFactions()));
@@ -970,23 +953,37 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             mutationStrength = Mathf.Min(0.6f, mutationStrength * 1.05f);
         }
     }
+    List<string> GetGenePoolNames()
+    {
+        List<string> pools = new();
+        pools.Add("Base");
+        foreach (var template in genePoolTemplates)
+        {
+            if (!pools.Contains(template.templateName))
+            {
+                pools.Add(template.templateName);
+            }
+        }
+        return pools;
+    }
+    string GetRandomDifferentPool(string currentPool, List<string> allPools)
+    {
+        List<string> candidates = allPools.Where(p => p != currentPool).ToList();
+        if (candidates.Count == 0)
+            return currentPool;
+        return candidates[UnityEngine.Random.Range(0, candidates.Count)];
+    }
     void BreedNextGeneration()
     {
         int nextGen = currentGeneration + 1;
-        List<string> pools = new();
-        pools.Add("Base");
-        foreach(var template in genePoolTemplates)
-        {
-            pools.Add(template.templateName);
-        }
+        List<string> pools = GetGenePoolNames();
         foreach(string pool in pools)
         {
-            BreedPool(pool, nextGen);
+            BreedPool(pool, nextGen, pools);
         }
     }
-    void BreedPool(string pool, int nextGen)
+    void BreedPool(string pool, int nextGen, List<string> allPools)
     {
-        string nextTag = $"gen{nextGen}";
         var ranked = database.GetByGenePoolAndGeneration(pool, currentGeneration).OrderByDescending(e => e.matchesPlayed > 0 ? e.fitness / e.matchesPlayed : 0f).ToList();
         if(ranked.Count == 0){return;}
         // Elites
@@ -994,16 +991,31 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         {
             var clone = ranked[i].Clone();
             clone.id = Guid.NewGuid().ToString();
-            clone.tag = nextTag;
+            clone.tag = "elite";
             clone.generation = nextGen;
             database.entries.Add(clone);
         }
         var breedingPool = ranked.Take(Mathf.Max(2, ranked.Count - cullCount)).ToList();
         while(database.GetByGenePoolAndGeneration(pool,nextGen).Count < populationSize)
         {
+            string tag = "child";
             var a = TournamentSelect(breedingPool, 3);
             var b = TournamentSelect(breedingPool, 3);
-            var child = database.AddChild(a, b, nextGen, nextTag);
+            bool crossbreed = UnityEngine.Random.value < crossbreedRate;
+            if (crossbreed)
+            {
+                // Pick a different pool.
+                string donorPool = GetRandomDifferentPool(pool, allPools);
+                // Find genomes from that pool in the CURRENT generation.
+                var donorPopulation = database.GetByGenePoolAndGeneration(donorPool, currentGeneration).OrderByDescending(e => e.matchesPlayed > 0 ? e.fitness / e.matchesPlayed : 0f).ToList();
+                if (donorPopulation.Count > 0)
+                {
+                    var donorBreedingPool = donorPopulation.Take(Mathf.Max(2, donorPopulation.Count - cullCount)).ToList();
+                    b = TournamentSelect(donorBreedingPool, 3);
+                    tag = "crossbreed";
+                }
+            }
+            var child = database.AddChild(a, b, nextGen, tag);
             child.genome.Mutate(mutationRate, mutationStrength);
             child.genome.genePool = pool;
         }
@@ -1020,7 +1032,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         championGeneration = currentGeneration;
         // Add this generation's champion to the separate champion database.
         championDatabase.entries.Add(champion);
-        var poolChampions = championDatabase.entries.Where(e => e != null && e.genePool == champion.genePool).OrderByDescending(e => e.generation).ToList();
         championDatabase.SaveToDisk(true);
         Debug.Log($"Champion: Gen {currentGeneration} | " + $"Pool {champion.genePool} | " + $"Avg Fitness {bestAvg:F1}");
     }

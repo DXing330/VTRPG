@@ -20,12 +20,26 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         leftTeam = team1;
         rightTeam = team2;
     }
+    public override void GainFactionStacks(string faction, int stackAmount, int team = 0)
+    {
+        if (team == 0)
+        {
+            leftTeam.factionData.GainFactionStacks(faction, stackAmount);
+        }
+        else if (team == 1)
+        {
+            rightTeam.factionData.GainFactionStacks(faction, stackAmount);
+        }
+    }
     public override void TriggerTrait(TacticActor actor, string timing, TacticActor otherActor = null)
     {
         AutoChessTrait trait = actor.autoChessTrait;
         if (trait.timing == timing)
         {
-            map.UpdateCombatLog(actor.GetPersonalName() + "'s Trait Activates");
+            if (!instantBattle)
+            {
+                map.UpdateCombatLog(actor.GetPersonalName() + "'s Trait Activates");
+            }
             // Make Sure You Give Trait Stacks To The Correct Team.
             if (actor.GetTeam() == 0)
             {
@@ -153,6 +167,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
     // MAP/Basic Stuff.
     public void InitializeBattleState()
     {
+        if (battleUI != null)
+        {
+            battleUI.StartBattle();
+        }
         turretActive = 0;
         yanDragon = 0;
         yanDragonAttack = 0;
@@ -168,7 +186,6 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         currentRound = 1;
         actorMaker.ResetID();
         // Reset The Map.
-        map.combatLog.ForceStart();
         map.ForceStart();
         // Maybe Later If Different Teams Have Different Maps Then Randomize This.
         map.SetMapInfo(leftTeam.GetMapTiles());
@@ -236,11 +253,11 @@ public class AutoChessPVPBattleManager : AutoBattleManager
     public void InitializeFactionEffects()
     {
         // Track special faction effects here: Aegir/Yan/Kjerag
-        if (leftTeam.factionData.GetCountOfFaction("Kjerag") > 5)
+        if (leftTeam.factionData.GetCountOfFaction("Kjerag") >= 5)
         {
             kjeragWindCD = (Mathf.Max(1, 6 / Mathf.Max(1, (int.Parse(leftTeam.factionData.GetStacksOfFaction("Kjerag")) / 100))));
         }
-        if (leftTeam.factionData.GetCountOfFaction("Yan") > 5)
+        if (leftTeam.factionData.GetCountOfFaction("Yan") >= 5)
         {
             yanDragon = 1;
             int totalYanAttack = 0;
@@ -268,11 +285,11 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             }
         }
         // Track special right team faction effects here: Aegir/Yan/Kjerag
-        if (rightTeam.factionData.GetCountOfFaction("Kjerag") > 5)
+        if (rightTeam.factionData.GetCountOfFaction("Kjerag") >= 5)
         {
             kjeragWindCD2 = (Mathf.Max(1, 6 / Mathf.Max(1, (int.Parse(rightTeam.factionData.GetStacksOfFaction("Kjerag")) / 100))));
         }
-        if (rightTeam.factionData.GetCountOfFaction("Yan") > 5)
+        if (rightTeam.factionData.GetCountOfFaction("Yan") >= 5)
         {
             yanDragon2 = 1;
             int totalYanAttack = 0;
@@ -350,7 +367,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
     public override void ActorStartTurn(TacticActor actor)
     {
         map.AddNewCombatLog();
-        map.UpdateCombatLog(actor.GetPersonalName() + "'s Turn");
+        if (!instantBattle)
+        {
+            map.UpdateCombatLog(actor.GetPersonalName() + "'s Turn");
+        }
         if (actor == null){return;}
         if (actor.GetHealth() <= 0)
         {
@@ -381,6 +401,16 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         List<int> rangeTiles = map.mapUtility.GetPVPAutoActorAttackTilesByShapeSpan(selectedTile, rangeType, range, map.mapSize, location);
         return rangeTiles;
     }
+    protected bool SafeMoveAction(TacticActor actor, int tile)
+    {
+        if (tile < 0){return false;}
+        if (map.mapInfo[tile] != "Pit" && map.GetActorOnTile(tile) == null)
+        {
+            map.AIMoveActorToTile(actor, tile);
+            return true;
+        }
+        return false;
+    }
     protected void MoveAction(TacticActor actor)
     {
         if (actor.StatusExists("Frozen"))
@@ -390,9 +420,21 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             return;
         }
         List<int> path = actorAI.FastFindPathToTarget(actor, map, moveManager);
-        if (path.Count > 0 && map.GetActorOnTile(path[path.Count - 1]) == null)
+        if (path.Count > 0)
         {
-            map.AIMoveActorToTile(actor, path[path.Count - 1]);
+            int tile = path[path.Count - 1];
+            int direction = map.mapUtility.DirectionBetweenLocations(actor.GetLocation(), tile, map.mapSize);
+            if (!SafeMoveAction(actor, tile))
+            {
+                int leftDirection = (direction + 5) % 6;
+                int leftTile = map.mapUtility.PointInDirection(actor.GetLocation(), leftDirection, map.mapSize);
+                if (!SafeMoveAction(actor, leftTile))
+                {
+                    int rightDirection = (direction + 1) % 6;
+                    int rightTile = map.mapUtility.PointInDirection(actor.GetLocation(), rightDirection, map.mapSize);
+                    SafeMoveAction(actor, rightTile);
+                }
+            }
         }
         EndTurn(actor);
     }
@@ -537,6 +579,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             // Move To Next Round + Save.
             leftTeam.Save();
             rightTeam.Save();
+            if (battleUI != null && !instantBattle)
+            {
+                battleUI.EndBattle();
+            }
             return;
         }
         currentRound++;
@@ -553,8 +599,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
                 TriggerTrait(behindActors[i], "OnForwardAttack", attacker);
             }
         }
-        //map.UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName());
-        // Show Attack Speed Rolls In The combatLog?
+        if (!instantBattle)
+        {
+            map.UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName());
+        }
         attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
         if (defender.GetHealth() <= 0)
         {
@@ -579,7 +627,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             TriggerTrait(actor, "FirstSkill");
         }
         // Don't Bother With Costs In AutoMode.
-        //map.UpdateCombatLog(actor.GetPersonalName() + " uses " + skillName);
+        if (!instantBattle)
+        {
+            map.UpdateCombatLog(actor.GetPersonalName() + " uses " + skillName);
+        }
         actor.SetCurrentEnergy(0);
         activeManager.ActivateSkill(false);
         map.UpdateMap();

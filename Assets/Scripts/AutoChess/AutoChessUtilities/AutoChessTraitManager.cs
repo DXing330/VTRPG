@@ -26,6 +26,10 @@ public class AutoChessTraitManager : ScriptableObject
             return level * baseAmount;
             case "ShopLevel":
             return level * baseAmount * manager.dataManager.GetLevel();
+            case "GoldSpent":
+            return level * baseAmount * manager.dataManager.GetRoundGold();
+            case "UnitsBought":
+            return level * baseAmount * manager.dataManager.GetRoundActors();
         }
     }
 }

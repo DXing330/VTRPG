@@ -121,12 +121,8 @@ public class AutoChessPrepUIManager : MonoBehaviour
         {
             int castleTile = prepManager.GetCastleTile();
             mapSlots[castleTile].UpdateLayerSprite(castleSprite, 1);
-            HighlightEnemySpawnZone(prepManager);
         }
-        else
-        {
-            
-        }
+        HighlightEnemySpawnZone(prepManager);
     }
     public void HighlightEnemySpawnZone(AutoChessPrepManager prepManager)
     {
@@ -148,8 +144,8 @@ public class AutoChessPrepUIManager : MonoBehaviour
     {
         // Determine Attack Range + Type.
         string[] blocks = prepManager.actorData.ReturnValue(actor.GetName()).Split("|");
-        string range = blocks[10];
-        string rangeType = blocks[13];
+        string range = blocks[11];
+        string rangeType = blocks[14];
         int location = actor.GetLocation();
         int direction = actor.GetDirection();
         int selectedTile = prepManager.mapUtility.PointInDirection(location, direction, prepManager.mapSize);

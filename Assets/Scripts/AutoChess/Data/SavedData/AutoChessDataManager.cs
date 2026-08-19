@@ -18,7 +18,7 @@ public class AutoChessDataManager : SavedData
         {
             genome = AutoChessPVPGenome.CreateDefault();
         }
-        return genome;
+        return genome.Copy();
     }
     public void SetGenome(AutoChessPVPGenome newGenome)
     {
@@ -32,9 +32,12 @@ public class AutoChessDataManager : SavedData
     }
     public AutoChessTactician tactician;
     public AutoChessFactionDataManager factionData;
+    public bool logDataManager = true;
+    public void DisableLogs(){logDataManager = false;}
     public AutoChessLogDataManager logData; // Track Round / Gold / Exp / Etc.
     public void AddLog(string newLog)
     {
+        if (!logDataManager || logData == null){return;}
         logData.AddLog(newLog);
     }
     public void GainFactionStacks(string faction, int stackAmount)
@@ -45,6 +48,17 @@ public class AutoChessDataManager : SavedData
     public List<string> GetAllFactionStacks(){return factionData.GetAllFactionStacks();}
     public string delimiter2;
     protected int maxLevel = 10;
+    public string GetEconState()
+    {
+        string econState = "";
+        econState += $"Round:{GetRound()}-";
+        econState += $"Level:{GetLevel()}-";
+        econState += $"Gold:{GetGold()}-";
+        econState += $"HP:{GetHealth()}-";
+        econState += $"WStreak:{GetWinStreak()}-";
+        econState += $"LStreak:{GetLossStreak()}-";
+        return econState;
+    }
     public bool MaxLevel(){return level >= maxLevel;}
     public int level;
     public int GetLevel(){return level;}
@@ -72,7 +86,7 @@ public class AutoChessDataManager : SavedData
     }
     public int ExpToLevelUp()
     {
-        return (level + 1) * (level + 1);
+        return Mathf.Max(10, (level) * (level));
     }
     public void GainExp(int amount)
     {
@@ -267,12 +281,23 @@ public class AutoChessDataManager : SavedData
             lastRoundResult = result;
         }
     }
+    public void LogBattleStart()
+    {
+        if (logDataManager)
+        {
+            AddLog(GetFieldActorState());
+        }
+    }
     public void NewRound(int result = -1)
     {
         // Track The Round # Of Loss.
         if (health <= 0){return;}
         round++;
         AddLog("--- Round " + round + " Begins ---");
+        if (logDataManager)
+        {
+            AddLog(GetFieldActorState());
+        }
         if (result >= 0)
         {
             UpdateLastRoundResult(result);
@@ -295,7 +320,7 @@ public class AutoChessDataManager : SavedData
     public List<string> benchActorData;
     public List<string> GetBenchActorData()
     {
-        return benchActorData;
+        return new List<string>(benchActorData);
     }
     // Used By Tacticians.
     public void AddActorToBench(string newActorData)
@@ -318,7 +343,15 @@ public class AutoChessDataManager : SavedData
     public List<string> fieldActorData;
     public List<string> GetFieldActorData()
     {
-        return fieldActorData;
+        return new List<string>(fieldActorData);
+    }
+    public string GetFieldActorState()
+    {
+        string state = "";
+        state += "Units=" + String.Join(",", GetFieldActorNames()) + "&";
+        state += "Equipment=" + String.Join(",", GetFieldActorEquipment()) + "&";
+        state += "Factions=" + factionData.GetActiveFactionState();
+        return state;
     }
     public List<string> GetFieldActorNames()
     {
@@ -451,7 +484,7 @@ public class AutoChessDataManager : SavedData
         {
             if (equipment[i].Length <= 0){equipment.RemoveAt(i);}
         }
-        return equipment;
+        return new List<string>(equipment);
     }
     public void UseEquipment(string equipName)
     {

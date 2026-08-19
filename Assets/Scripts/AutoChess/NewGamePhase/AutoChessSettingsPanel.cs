@@ -13,11 +13,11 @@ public class AutoChessSettingsPanel : MonoBehaviour
     public void StartGame()
     {
         settingsData.Save();
+        // TODO Give A Random Tactician To Each Player, Except The Player Who Actually Selects Theres.
         dataManager.NewGame();
         if (pvpDataManager != null)
         {
-            pvpDataManager.NewGameAllDataManagers();
-            // TODO Assign Genomes To Each Data Manager From The Champion Database.
+            pvpDataManager.NewGameAllDataManagers(true);
         }
         sceneMover.LoadScene(autoChessSceneName);
     }
@@ -37,6 +37,7 @@ public class AutoChessSettingsPanel : MonoBehaviour
     {
         settingsData.ChangeMap(right);
         mapDisplay.DisplayMap(settingsData.GetSelectedMap());
+        settingsData.Save();
     }
     public TMP_Text difficultyText;
     public void UpdateDifficultyText()
@@ -59,5 +60,6 @@ public class AutoChessSettingsPanel : MonoBehaviour
     {
         settingsData.ChangeTactician(right);
         UpdateTacticianText();
+        settingsData.Save();
     }
 }

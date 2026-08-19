@@ -8,9 +8,12 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AutoChessFactionDataManager", menuName = "ScriptableObjects/AutoChess/AutoChessFactionDataManager", order = 1)]
 public class AutoChessFactionDataManager : SavedData
 {
+    public bool logDataManager = true;
+    public void DisableLogs(){logDataManager = false;}
     public AutoChessLogDataManager logData; // Track actor trait timing + stacks.
     public void AddLog(string newLog)
     {
+        if (!logDataManager || logData == null){return;}
         logData.AddLog(newLog);
     }
     public RNGUtility RNG;
@@ -34,6 +37,19 @@ public class AutoChessFactionDataManager : SavedData
     public List<string> GetAllFactions()
     {
         return new List<string>(allFactions);
+    }
+    public string GetAllFactionStacksString()
+    {
+        string allFactionStacks = "";
+        for (int i = 0; i < allFactions.Count; i++)
+        {
+            allFactionStacks += $"{allFactions[i]}:{GetStacksOfFaction(allFactions[i])}";
+            if (i < allFactions.Count - 1)
+            {
+                allFactionStacks += ",";
+            }
+        }
+        return allFactionStacks;
     }
     public List<string> allFactionStacks;
     public string HighestStackFaction()
@@ -94,6 +110,19 @@ public class AutoChessFactionDataManager : SavedData
         AddLog(faction + ": +" + stackAmount + " (" + oldStacks + "->" + (oldStacks + stackAmount) + ")");
     }
     public List<string> activeFactions;
+    public string GetActiveFactionState()
+    {
+        string state = "";
+        for (int i = 0; i < activeFactions.Count; i++)
+        {
+            state += $"{activeFactions[i]}:{GetStacksOfFaction(activeFactions[i])}";
+            if (i < activeFactions.Count - 1)
+            {
+                state += ",";
+            }
+        }
+        return state;
+    }
     public void SetActiveFactions(List<string> newFactions)
     {
         utility.RemoveEmptyListItems(newFactions);

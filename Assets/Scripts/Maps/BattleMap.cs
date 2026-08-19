@@ -18,6 +18,10 @@ public class BattleMap : MapManager
         ResetBuildings();
         ResetAuras();
         ResetActors();
+        if (combatLog != null)
+        {
+            combatLog.ForceStart();
+        }
     }
     protected override void Start()
     {
@@ -148,6 +152,7 @@ public class BattleMap : MapManager
     public CombatLog combatLog;
     public void AddNewCombatLog()
     {
+        if (combatLog == null){return;}
         combatLog.AddNewLog();
     }
     public void InitializeCombatLog()
@@ -1518,7 +1523,7 @@ public class BattleMap : MapManager
         {
             // Just for fun make the actor not appear on the map.
             // They can still use movement to determine the actors location so it doesn't really do anything if you're paying the slightest amount of attention.
-            if (battlingActors[i].invisible){continue;}
+            if (battlingActors[i].invisible || battlingActors[i].GetLocation() < 0){continue;}
             actorTiles[battlingActors[i].GetLocation()] = battlingActors[i].GetSpriteName();
             actorDirections[battlingActors[i].location] = battlingActors[i].GetDirection().ToString();
         }
@@ -2108,13 +2113,27 @@ public class BattleMap : MapManager
         }
         return all;
     }
-    public TacticActor GetActorInFrontActor(TacticActor actor)
+    // Currently Only Used By Aegir Consumption.
+    // Due To Flipping, It Is Possible For Actors To Overlap During This Step.
+    public TacticActor GetActorInFrontActor(TacticActor actor, bool aegir = true)
     {
         int location = actor.GetLocation();
         int direction = actor.GetDirection();
         int target = mapUtility.PointInDirection(location, direction, mapSize);
         if (target < 0){return null;}
-        return GetActorOnTile(target);
+        if (!aegir)
+        {
+            return GetActorOnTile(target);
+        }
+        for (int i = 0; i < battlingActors.Count; i++)
+        {
+            if (battlingActors[i].GetTeam() != actor.GetTeam()){continue;}
+            if (battlingActors[i].GetLocation() == target)
+            {
+                return battlingActors[i];
+            }
+        }
+        return null;
     }
     // From The Actors POV
     public TacticActor GetActorBehindActor(TacticActor actor)

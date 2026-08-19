@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class AutoChessAIPrepController : MonoBehaviour
 {
+    // For greater details during player matches.
+    public bool recordAIDecisions = false;
     // Load In Genome To Make Choices.
     public AutoChessPVPGenome genome;
     public void DefaultGenome()
@@ -35,6 +37,41 @@ public class AutoChessAIPrepController : MonoBehaviour
     // Only changes when buy/sell/swap a unit, all those actions already clear the cache. No benefit of caching bench/field separately on top of the above.
     Dictionary<AutoActorRollUpData, float> keepCache = new();
     Dictionary<AutoActorRollUpData, float> buyCache = new();
+    void LogUnitAndFactionScores()
+    {
+        string scores = "Field~";
+        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        {
+            scores += $"{prepManager.fieldSlots[i].GetName()}:{KeepScore(prepManager.fieldSlots[i], false)}";
+            if (i < prepManager.fieldSlots.Count - 1){scores += ",";}
+        }
+        prepManager.dataManager.AddLog(scores);
+        scores = "Bench~";
+        for (int i = 0; i < prepManager.benchSlots.Count; i++)
+        {
+            scores += $"{prepManager.benchSlots[i].GetName()}:{KeepScore(prepManager.benchSlots[i])}";
+            if (i < prepManager.benchSlots.Count - 1){scores += ",";}
+        }
+        prepManager.dataManager.AddLog(scores);
+        scores = "Stacks~" + factionManager.factionData.GetAllFactionStacksString();
+        prepManager.dataManager.AddLog(scores);
+    }
+    void LogShopScores()
+    {
+        string scores = "Shop~";
+        for (int i = 0; i < shopManager.shopActors.Count; i++)
+        {
+            shopManager.Select(i);
+            var shopActor = shopManager.GetSelectedActor();
+            if (shopActor == null) continue;
+            scores += $"{shopActor.GetName()}:{BuyScore(shopActor)}";
+            if (i < shopManager.shopActors.Count - 1)
+            {
+                scores += ",";
+            }
+        }
+        prepManager.dataManager.AddLog(scores);
+    }
     void ClearScoreCaches()
     {
         keepCache.Clear();
@@ -46,21 +83,36 @@ public class AutoChessAIPrepController : MonoBehaviour
     public void AIPrepPhase(AutoChessDataManager dataManager)
     {
         prepManager.SetDataManager(dataManager);
+        prepManager.DisableUI();
         shopManager.shopData.GeneratePVPCurrentListing();
         shopManager.PVPRefreshData();
         BuildStackCache();
         ClearScoreCaches();
+        if (recordAIDecisions)
+        {
+            dataManager.AddLog(dataManager.GetEconState());
+            LogUnitAndFactionScores();
+            LogShopScores();
+        }
+        // Log Economy State + Choice + Choice Option Weights.
         EconomyAction(dataManager);
+        // Log Each Shop Score + Choice.
         AcquireLoop(dataManager);
+        // Log Each Choice.
         AutoPlaceFieldUnits(dataManager);
+        // Log Each Equipment Score + Choice.
         equipmentController.AutoPlaceEquipment(this);
         aegirPlacement.AegirPlaceFieldUnits();
-        prepManager.SaveToDataManager();
+        if (recordAIDecisions)
+        {
+            dataManager.AddLog(dataManager.GetEconState());
+            LogUnitAndFactionScores();
+        }
         prepManager.StartBattle();
     }
-    // ============================================================
+    // ========================================================
     // 1. ECONOMY
-    // ============================================================
+    // ========================================================
     void EconomyAction(AutoChessDataManager dataManager)
     {
         int gold = dataManager.GetGold();
@@ -84,18 +136,38 @@ public class AutoChessAIPrepController : MonoBehaviour
         {
             levelScore += winStreakScore;
         }
+        if (recordAIDecisions)
+        {
+            dataManager.AddLog($"EconFinalScores~" + $"Level:{levelScore:F2}," + $"Save:{saveScore:F2}," + $"Reroll:{rerollScore:F2}");
+        }
         // Priority: Level up if urgent and affordable, else reroll if shop is weak and gold is high, else save
         if (!dataManager.MaxLevel() && gold >= 4 && levelScore > saveScore && levelScore > rerollScore)
         {
             prepManager.BuyExp();
+            if (recordAIDecisions)
+            {
+                dataManager.AddLog("EconDecision~Level");
+            }
             EconomyAction(dataManager);
         }
         else if (gold >= 1 && rerollScore > saveScore && rerollScore > levelScore)
         {
             prepManager.PVPRerollShop();
+            if (recordAIDecisions)
+            {
+                dataManager.AddLog("EconDecision~Reroll");
+                LogShopScores();
+            }
             EconomyAction(dataManager);
         }
         // Else Save Money -> Do Nothing.
+        else
+        {
+            if (recordAIDecisions)
+            {
+                dataManager.AddLog("EconDecision~Save");
+            }
+        }
     }
     float LevelUrgency(AutoChessDataManager dataManager)
     {
@@ -119,9 +191,9 @@ public class AutoChessAIPrepController : MonoBehaviour
         if (validSlots == 0) return -5f; // Empty shop = terrible
         return total / validSlots;
     }
-    // ============================================================
+    // ========================================================
     // 2. ACQUIRE (Shop + Bench merged)
-    // ============================================================
+    // ========================================================
     void AcquireLoop(AutoChessDataManager dataManager)
     {
         bool actionTaken = true;
@@ -154,11 +226,19 @@ public class AutoChessAIPrepController : MonoBehaviour
                 if (worstIndex < 0) break;
                 float worstKeep = KeepScore(prepManager.benchSlots[worstIndex]);
                 if (bestScore <= worstKeep + genome.GetByName("W_SELL_MARGIN")){break;} // margin threshold
+                if (recordAIDecisions)
+                {
+                    dataManager.AddLog($"Sell:{prepManager.benchSlots[worstIndex].GetName()},KeepScore:{worstKeep:F2},BuyScore:{bestScore:F2}");
+                }
                 prepManager.FastSellSelectedActor(prepManager.benchSlots[worstIndex]);
                 ClearScoreCaches();
             }
             if (dataManager.GetGold() >= buyCost)
             {
+                if (recordAIDecisions)
+                {
+                    dataManager.AddLog($"Buy:{shopManager.GetSelectedActor().GetName()},BuyScore:{bestScore:F2},Cost:{buyCost}");
+                }
                 prepManager.PVPBuySelectedActor(buyCost);
                 ClearScoreCaches();
                 actionTaken = true;
@@ -176,7 +256,6 @@ public class AutoChessAIPrepController : MonoBehaviour
         int tier = GetUnitTier(name);
         int cost = GetUnitCost(name);
         float score = 0;
-        //score += genome.GetByName("W_BUY_POWER") * GetPower(unit);
         score += genome.GetByName("W_BUY_TIER") * tier;
         score += genome.GetByName("W_BUY_SYNERGY") * SynergyValue(unit);
         score += genome.GetByName("W_BUY_DUPLICATE") * DuplicateValue(name);
@@ -269,9 +348,9 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         return index;
     }
-    // ============================================================
+    // ======================================================
     // 3. BOARD PLACEMENT
-    // ============================================================
+    // ======================================================
     int GetWorstFieldIndex()
     {
         if (prepManager.fieldSlots.Count <= 0){return -1;}
@@ -317,6 +396,10 @@ public class AutoChessAIPrepController : MonoBehaviour
             int bestTile = aegirPlacement.FindBestTileForRole(allBench[benchIndex]);
             // No Open Spots.
             if (bestTile < 0){return;}
+            if (recordAIDecisions)
+            {
+                prepManager.dataManager.AddLog($"Swap:{allField[fieldIndex].GetName()}->{allBench[benchIndex].GetName()},SwapScore:{bestSwapValue:F2},OldScore:{KeepScore(allField[fieldIndex], false)},NewScore:{KeepScore(allBench[benchIndex])}");
+            }
             allBench[benchIndex].SetLocation(bestTile);
             allBench[benchIndex].SetDirection(1);
             allField[fieldIndex].SetLocation(benchLocation);
@@ -348,6 +431,10 @@ public class AutoChessAIPrepController : MonoBehaviour
             int bestTile = aegirPlacement.FindBestTileForRole(bestBenchActor);
             // No Open Spots.
             if (bestTile < 0){return;}
+            if (recordAIDecisions)
+            {
+                dataManager.AddLog($"Place:{bestBenchActor.GetName()},Score:{KeepScore(bestBenchActor):F2}");
+            }
             bestBenchActor.SetLocation(bestTile);
             bestBenchActor.SetDirection(1);
             prepManager.MoveFromBenchToField(bestBenchActor);
@@ -360,13 +447,6 @@ public class AutoChessAIPrepController : MonoBehaviour
         {
             CheckAllSwaps(0);
         }
-        // Sort The Field Into Whatever Turn Order You Want.
-        prepManager.fieldSlots.Sort((a, b) =>
-        {
-            int colA = prepManager.mapUtility.GetColumn(a.GetLocation(), 9);
-            int colB = prepManager.mapUtility.GetColumn(b.GetLocation(), 9);
-            return colB.CompareTo(colA);
-        });
     }
     // Check If You're Losing/Gaining Any Thresholds During A Swap
     float FindActiveFactionDifferences(AutoActorRollUpData benchUnit, AutoActorRollUpData fieldUnit)
@@ -458,12 +538,9 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         return loss;
     }
-    // ============================================================
-    // 4. EQUIPMENT PLACEMENT (Rely On Helper)
-    // ============================================================
-    // ============================================================
+    // ======================================================
     // HELPERS — Wire these to your database
-    // ============================================================
+    // ======================================================
     public int GetUnitTier(string name)
     {
         return int.Parse(unitRarity.ReturnValue(name));
@@ -607,6 +684,7 @@ public class AutoChessAIPrepController : MonoBehaviour
             case "HighestActive":
             case "RandomActive":
             case "SelfAndBackActive":
+            case "FrontActive":
             case "SelfAndFrontActive":
             case "SelfAndFrontLineActive":
             case "CopyFront":
@@ -643,6 +721,7 @@ public class AutoChessAIPrepController : MonoBehaviour
             case "OnPurchase":
                 return isBuying ? 1f : 0f;
             case "OnForwardSkill":
+                return roundsLeft / 2;
             case "FirstSkill":
             case "StartBattle":
                 return roundsLeft;
@@ -667,28 +746,47 @@ public class AutoChessAIPrepController : MonoBehaviour
     {
         AutoChessTrait trait = unit.GetTrait();
         if (trait == null) return 0f;
+        float value = 1f;
+        // Make Some Traits More Valuable.
+        switch (trait.effect)
+        {
+            default:
+            break;
+            case "Equipment":
+            value = 3f;
+            break;
+            case "HighestActiveUnit":
+            value = 3f;
+            break;
+        }
         switch (trait.timing)
         {
             case "OnPurchase":
-                return isBuying ? 2f : 0f;
+                return (isBuying ? 2f : 0f) * value;
             case "OnSold":
-                return 1f;
+                return 1f * value;
             default:
                 return 0f;
         }
     }
+    // Those That Are More Valuable To Keep On The Field Due To Their Traits.
     float CycleScalingValue(AutoActorRollUpData unit)
     {
         AutoChessTrait trait = unit.GetTrait();
-        if (trait == null) return 0f;
+        float value = 0f;
+        if (trait == null) return value;
         string s = trait.specifics;
         if (s.Contains("UnitsBoughtMultiBy"))
-            return 1f;
+            value += 1f;
         if (s.Contains("GoldSpentMultiBy"))
-            return 1f;
-        if (s.Contains("BenchSizeMultiBy1"))
-            return 1f;
-        return 0f;
+            value += 2f;
+        if (s.Contains("BenchSizeMultiBy"))
+            value += 2f;
+        if (trait.timing == "StartBattle")
+        {
+            value += 1f;
+        }
+        return value;
     }
     protected List<string> mainFactions = new List<string>(){"Yan", "Sargon", "Kjerag", "Aegir", "Victoria", "Laterano"};
     float EvaluateMainFactionScaling()

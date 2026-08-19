@@ -10,6 +10,11 @@ public class EquipmentDetailViewerSwitch : ScriptableObject
     public string ReturnAutoChessEquipmentDescription(string autoChessEquipmentName)
     {
         // TODO Add Descriptions For Custon Effects, Ie Theives Gloves, Tianshi Cauldron, Etc.
+        switch (autoChessEquipmentName)
+        {
+            case "Commercial Packaging Plan":
+            return "Gain a level 1 copy of the equipped unit whenever 8 units are sold each round.";
+        }
         string[] blocks = autoChessEquipmentData.ReturnValue(autoChessEquipmentName).Split("|");
         if (blocks.Length < 4){return "";}
         string[] effects = blocks[2].Split(",");

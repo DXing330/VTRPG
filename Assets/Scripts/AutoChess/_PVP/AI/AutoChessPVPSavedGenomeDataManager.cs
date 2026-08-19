@@ -24,6 +24,7 @@ public class GenomeEntry
     public float avgFinalGold;
     public float avgFinalLevel;
     public float avgGoldSpent;
+    public List<string> tacticianHistory = new();
     public List<string> teamHistory = new();
     public List<string> benchHistory = new();
     public List<string> factionHistory = new();
@@ -51,6 +52,7 @@ public class GenomeEntry
             avgFinalGold = avgFinalGold,
             avgFinalLevel = avgFinalLevel,
             avgGoldSpent = avgGoldSpent,
+            tacticianHistory = tacticianHistory != null ? new List<string>(tacticianHistory) : new List<string>(),
             teamHistory = teamHistory != null ? new List<string>(teamHistory) : new List<string>(),
             benchHistory = benchHistory != null ? new List<string>(benchHistory) : new List<string>(),
             factionHistory = factionHistory != null ? new List<string>(factionHistory) : new List<string>(),
@@ -72,6 +74,7 @@ public class GenomeEntry
         copy.avgFinalGold = 0;
         copy.avgFinalLevel = 0;
         copy.avgGoldSpent = 0;
+        copy.tacticianHistory.Clear();
         copy.teamHistory.Clear();
         copy.benchHistory.Clear();
         copy.factionHistory.Clear();
@@ -98,12 +101,13 @@ public class GenomeEntry
         if (totalMatches > 0)
         {
             avgPlacement = ((avgPlacement * oldMatches) + (other.avgPlacement * addedMatches)) / totalMatches;
-
             avgRoundsSurvived = ((avgRoundsSurvived * oldMatches) + (other.avgRoundsSurvived * addedMatches)) / totalMatches;
             avgFinalGold = ((avgFinalGold * oldMatches) + (other.avgFinalGold * addedMatches)) / totalMatches;
             avgFinalLevel = ((avgFinalLevel * oldMatches) + (other.avgFinalLevel * addedMatches)) / totalMatches;
             avgGoldSpent = ((avgGoldSpent * oldMatches) + (other.avgGoldSpent * addedMatches)) / totalMatches;
         }
+        if (other.tacticianHistory != null)
+            tacticianHistory.AddRange(other.tacticianHistory);
         if (other.teamHistory != null)
             teamHistory.AddRange(other.teamHistory);
         if (other.benchHistory != null)
@@ -125,6 +129,7 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
     public List<GenomeEntry> AllEntries => entries;
     public GenomeEntry GetById(string id) => entries.FirstOrDefault(e => e.id == id);
     public List<GenomeEntry> GetByTag(string tag) => entries.Where(e => e.tag == tag).ToList();
+    public List<GenomeEntry> GetByGeneration(int generation) => entries.Where(e => e.generation == generation).ToList();
     public List<GenomeEntry> GetByGenePool(string pool)
     {
         return entries.Where(e => e.genePool == pool).ToList();
@@ -227,6 +232,38 @@ public class AutoChessPVPSavedGenomeDataManager : ScriptableObject
         string schemaJson = JsonUtility.ToJson(schemaWrapper, true);
         string schemaPath = TrainingWorkerStorage.GetFilePath(geneSchemaFilename);
         File.WriteAllText(schemaPath, schemaJson);
+    }
+    // Used To Store A Small Slice Of Champions For Use In PVP
+    [ContextMenu("Filtered Load")]
+    public void FilteredLoadFromDisk()
+    {
+        string path = GetSavePath(true);
+        if (!File.Exists(path))
+        {
+            Debug.LogWarning($"No save found at {path}");
+            return;
+        }
+        string json = File.ReadAllText(path);
+        var wrapper = JsonUtility.FromJson<GenomeDatabaseWrapper>(json);
+        List<GenomeEntry> savedEntries = wrapper.entries;
+        // Select The Top 100 By Elo?
+        // Automatically discover factions from the database.
+        List<string> factions = savedEntries.Select(e => e.preferredFaction).Distinct().ToList();
+        int championsPerFaction = 12;
+        List<GenomeEntry> selected = new List<GenomeEntry>();
+        for (int i = 0; i < factions.Count; i++)
+        {
+            List<GenomeEntry> factionChampions = savedEntries.Where(e => e.preferredFaction == factions[i]).OrderByDescending(e => e.elo).Take(championsPerFaction).ToList();
+            for (int j = 0; j < factionChampions.Count; j++)
+            {
+                selected.Add(factionChampions[j].Clone());
+            }
+        }
+        entries = selected;
+        #if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(this);
+            UnityEditor.AssetDatabase.SaveAssets();
+        #endif
     }
     public void LoadFromDisk(bool master = false)
     {

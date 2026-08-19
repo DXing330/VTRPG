@@ -56,8 +56,10 @@ public class AutoChessBattleUIManager : MonoBehaviour
     public void PVPPlacementReward(int placement)
     {
         inventory.Load();
+        Debug.Log(inventory.GetGold());
         inventory.GainGold((8 - placement) * 4);
         inventory.Save();
+        Debug.Log(inventory.GetGold());
     }
     public void CheckEndGame()
     {
@@ -70,10 +72,10 @@ public class AutoChessBattleUIManager : MonoBehaviour
             {
                 PVPPlacementReward(placement);
                 endGameUIObject.SetActive(true);
-                endGameText.text = $"Defeat...";
+                endGameText.text = $"Placement:{placement}";
                 endGameText.color = Color.red;
             }
-            if (PVPMatchDirector.matchOver)
+            else if (health > 0 && PVPMatchDirector.matchOver)
             {
                 PVPPlacementReward(placement);
                 endGameUIObject.SetActive(true);

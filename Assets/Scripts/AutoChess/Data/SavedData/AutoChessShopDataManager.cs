@@ -10,9 +10,12 @@ using UnityEngine;
 public class AutoChessShopDataManager : SavedData
 {
     public string delimiter2;
+    public bool logDataManager = true;
+    public void DisableLogs(){logDataManager = false;}
     public AutoChessLogDataManager logData; // Shop State + Changes.
     public void AddLog(string newLog)
     {
+        if (!logDataManager || logData == null){return;}
         logData.AddLog(newLog);
     }
     public AutoChessTactician tactician;

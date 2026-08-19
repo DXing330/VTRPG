@@ -108,20 +108,20 @@ public class AutoChessFactionDisplay : MonoBehaviour
             case "Aegir": // Need a check for defeated ally count.
             return "At the start of battle, Aegir units consume the unit in front, absorbing their ATK. All Aegir units have {+" + (stacks * 2 + 30) + "%} health. If there are 5+ Aegir Faction allies, then the first 3 Aegir Faction allies defeated will immediately be revived.";
             case "Kjerag": // Implemented
-            return "Kjerag allies deal 130% damage, increased to {" + (130 + stacks) + "%} when attacking enemies that have cold or frozen status. If there are 6+ Kjerag Faction allies, then every {" + (Mathf.Max(1, 6 / Mathf.Max(1, (stacks / 100)))).ToString() + "} rounds, apply [Cold] status to all enemies.";
+            return "Kjerag allies deal 130% damage, increased to {" + (130 + stacks) + "%} when attacking enemies that have cold or frozen status. If there are 5+ Kjerag Faction allies, then every {" + (Mathf.Max(1, 6 / Mathf.Max(1, (stacks / 100)))).ToString() + "} rounds, apply [Cold] status to all enemies.";
             case "Laterano": // Implemented
-            return "After Laterano allies use a skill, Laterano allies' next basic attack deals {" + (40 + stacks) + "%} additonal damage. Additionally, if there are 6+ Laterano Faction allies, then whenever a Laterano unit uses a skill all Laterano Faction allies gain +1% damage with basic attacks";
+            return "After Laterano allies use a skill, Laterano allies' next basic attack deals {" + (40 + stacks) + "%} additonal damage. Additionally, if there are 5+ Laterano Faction allies, then whenever a Laterano unit uses a skill all Laterano Faction allies gain +1% damage with basic attacks";
             case "Victoria": // Implemented + Handled at start of battle by manager, since this equipment has 0 overlap with equipment in other game modes.
-            return "Victoria allies deal {" + (140 + stacks) + "%} damage when holding 1+ equipment. If there are 6+ Victoria Faction allies, then all Victoria Faction allies gain +80% attack.";
+            return "Victoria allies deal {" + (140 + stacks) + "%} damage when holding 1+ equipment. If there are 5+ Victoria Faction allies, then all Victoria Faction allies gain +80% attack.";
             case "Yan": // Summoning Handled At Start.
             return "Yan allies gain {+" + (30 + stacks) + "%} attack. If there are 6+ Yan Faction allies, then summon an additional powerful Yan ally.";
             case "Sargon": // Implemented
-            return "After a Sargon ally uses a skill, all Sargon Faction allies gain {+" + (stacks) + "%} attack speed. If there are 6+ Sargon Faction allies, then additionally gain {+" + (stacks) + "%} attack.";
+            return "After a Sargon ally uses a skill, all Sargon Faction allies gain {+" + (40 + stacks) + "%} attack speed. If there are 5+ Sargon Faction allies, then additionally gain {+" + (stacks) + "%} attack.";
             // SUB Damage
             case "Agile": // Implemented
             return "Agile units and adjacent allies gain {+" + (stacks + 10) + "%} attack speed.";
             case "Precision": // Implemented
-            return "Ranged units gain {+" + (stacks + 20) + "%} attack. If there are 3+ Precision Faction allies, then ranged units gain 30% defense penetration.";
+            return "Ranged units gain {+" + (stacks + 20) + "%} attack. If there are 3+ Precision Faction allies, then ranged units gain 20% defense penetration.";
             case "Swift": // Implemented
             return "After using a skill, swift units have a {+" + ((100 * stacks) / (50 + stacks)) + "%} chance to restore 2 energy. At 40+ stacks, all units have the same chance to restore 1 energy.";
             case "Raid": // Implemented.

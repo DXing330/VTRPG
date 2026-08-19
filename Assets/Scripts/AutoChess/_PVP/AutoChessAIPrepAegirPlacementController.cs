@@ -99,7 +99,6 @@ public class AutoChessAIPrepAegirPlacementController : MonoBehaviour
                 continue;
             }
             // Reset The Locations.
-            unit.SetLocation(-1);
             if (unit.FactionExists("Aegir") || unit.FactionExists("Harmony") || unit.EmblemExists("Aegir"))
             {
                 aegirUnits.Add(unit);

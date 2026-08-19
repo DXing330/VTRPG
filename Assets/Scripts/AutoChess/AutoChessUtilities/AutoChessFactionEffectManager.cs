@@ -81,7 +81,7 @@ public class AutoChessFactionEffectManager : ScriptableObject
             case "Laterano":
             case "Sargon":
             case "Victoria":
-            if (factionCount >= 6)
+            if (factionCount >= 5)
             {
                 actor.AddPassiveSkill(passiveName + " II", "1");
             }
@@ -115,7 +115,7 @@ public class AutoChessFactionEffectManager : ScriptableObject
                 actor.UpdateBaseAttack(actor.GetBaseAttack() * stackCount / 100);
                 break;
                 case "Health":
-                actor.UpdateBaseHealth(actor.GetBaseHealth() * stackCount / 100);
+                actor.UpdateBaseHealth(actor.GetBaseHealth() * stackCount / 100, false);
                 actor.HealToMaxHealth();
                 break;
                 case "Defense":

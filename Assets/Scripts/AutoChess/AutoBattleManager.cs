@@ -10,7 +10,7 @@ public class AutoBattleManager : MonoBehaviour
     public AutoChessDataManager data;
     public AutoChessTactician tactician;
     public AutoChessFactionManager factionManager;
-    public void GainFactionStacks(string faction, int stackAmount)
+    public virtual void GainFactionStacks(string faction, int stackAmount, int team = 0)
     {
         factionManager.GainFactionStacks(faction, stackAmount);
     }
@@ -174,11 +174,11 @@ public class AutoBattleManager : MonoBehaviour
             tactician.ApplyStartBattleEffect(this, map.battlingActors);
         }
         // Track special faction effects here: Aegir/Yan/Kjerag
-        if (factionManager.factionData.GetCountOfFaction("Kjerag") > 5)
+        if (factionManager.factionData.GetCountOfFaction("Kjerag") >= 5)
         {
             kjeragWindCD = (Mathf.Max(1, 6 / Mathf.Max(1, (int.Parse(factionManager.factionData.GetStacksOfFaction("Kjerag")) / 100))));
         }
-        if (factionManager.factionData.GetCountOfFaction("Yan") > 5)
+        if (factionManager.factionData.GetCountOfFaction("Yan") >= 5)
         {
             yanDragon = 1;
             int totalYanAttack = 0;

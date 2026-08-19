@@ -21,20 +21,38 @@ public class AutoChessTactician : SavedData
     public StatDatabase tacticianDatabase;
     public RNGUtility RNG;
     public string tacticianName;
+    public string GetTactician(){return tacticianName;}
     public string tacticianTiming;
     public string tacticianDescription;
+    public void ResetTactician()
+    {
+        SetTactician("");
+    }
     public void SetTactician(string newName)
     {
         tacticianName = newName;
         string[] details = tacticianDatabase.ReturnValue(tacticianName).Split("|");
+        if (details.Length < 2)
+        {
+            tacticianTiming = "";
+            tacticianDescription = "";
+            Save();
+            return;
+        }
         tacticianTiming = details[0];
         tacticianDescription = details[1];
+        Save();
     }
     public override void NewGame()
     {
+        // Keep The Tactician Between Games Unless It's Manually Changed, Save Just To Be Safe.
+        if (tacticianName != "")
+        {
+            SetTactician(tacticianName);
+            return;
+        }
         List<string> allTacticians = tacticianDatabase.GetAllKeys();
         SetTactician(allTacticians[0]);
-        Save();
     }
     public override void Save()
     {
@@ -259,7 +277,7 @@ public class AutoChessTactician : SavedData
             for (int i = 0; i < allies.Count; i++)
             {
                 allies[i].UpdateBaseAttack(allies[i].GetBaseAttack() * 50 / 100);
-                allies[i].UpdateBaseHealth(allies[i].GetBaseHealth() * 50 / 100);
+                allies[i].UpdateBaseHealth(allies[i].GetBaseHealth() * 50 / 100, false);
                 allies[i].UpdateHealth(allies[i].GetBaseHealth() * 50 / 100);
             }
             break;

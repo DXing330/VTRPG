@@ -10,7 +10,6 @@ public class AutoChessPrepManager : ClickTileManager
 {
     public bool PVP = false;
     public AutoChessDataManager dataManager;
-    // For Use In PVP.
     public void SetDataManager(AutoChessDataManager newDataManager)
     {
         dataManager = newDataManager;
@@ -45,13 +44,21 @@ public class AutoChessPrepManager : ClickTileManager
         dataManager.NewGame();
     }
     public AutoChessPrepUIManager UIManager;
+    public bool UI = true;
+    public void EnableUI()
+    {
+        UI = true;
+        UpdateAllUI();
+    }
+    public void DisableUI(){UI = false;}
     // Put The Equipment UI Reset Here For Now.
     public void UpdateAllUI()
     {
-        if (UIManager == null){return;}
+        if (UIManager == null || !UI){return;}
         UIManager.UpdateAutoChessUI(this);
         shopManager.UpdateAutoChessShopUI();
         equipManager.StopManagingEquipment();
+        factionManager.UpdateActiveFactions();
     }
     void Start()
     {
@@ -128,6 +135,7 @@ public class AutoChessPrepManager : ClickTileManager
     public int mapSize = 7;
     public int GetCastleTile()
     {
+        if (PVP){return -1;}
         int column = 0; // Left Side.
         int row = mapSize / 2; // Middle.
         int castleTile = mapUtility.ReturnTileNumberFromRowCol(row, column, mapSize);
@@ -137,9 +145,20 @@ public class AutoChessPrepManager : ClickTileManager
     public void GenerateSpawnTiles()
     {
         spawnTiles = new List<int>();
-        for (int i = 0; i < mapSize; i++)
+        if (!PVP)
         {
-            spawnTiles.Add(mapUtility.ReturnTileNumberFromRowCol(i, mapSize - 1, mapSize));
+            for (int i = 0; i < mapSize; i++)
+            {
+                spawnTiles.Add(mapUtility.ReturnTileNumberFromRowCol(i, mapSize - 1, mapSize));
+            }
+            return;
+        }
+        for (int i = 3; i < mapSize; i++)
+        {
+            for (int j = 0; j < mapSize; j++)
+            {
+                spawnTiles.Add(mapUtility.ReturnTileNumberFromRowCol(j, i, mapSize));
+            }
         }
     }
     public List<int> GetSpawnTiles()
@@ -279,6 +298,13 @@ public class AutoChessPrepManager : ClickTileManager
     public void StartBattle()
     {
         ResetBonusSlots();
+        fieldSlots.Sort((a, b) =>
+        {
+            int colA = mapUtility.GetColumn(a.GetLocation(), 9);
+            int colB = mapUtility.GetColumn(b.GetLocation(), 9);
+            return colB.CompareTo(colA);
+        });
+        SaveToDataManager();
         ApplyStartBattleActorTraits();
         // Check The Tactician Effect.
         if (tactician != null)
@@ -286,6 +312,7 @@ public class AutoChessPrepManager : ClickTileManager
             tactician.Load();
             tactician.ApplyEndRoundEffect(this);
         }
+        dataManager.LogBattleStart();
     }
     public void ApplyStartBattleActorTraits()
     {

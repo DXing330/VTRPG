@@ -6,12 +6,12 @@ using UnityEngine;
 public class AutoChessPVPMatchDirector : MonoBehaviour
 {
     public bool autoAssignAIGenomes = false;
-    public List<AutoChessPVPGenome> matchAIGenomes;
     public bool matchOver = false;
     public int roundCount = 0;
     // Result Is Only Used When Player Defeated Or Match Over.
     public int GetPlayerPlacement()
     {
+        allPlayers.Save();
         AutoChessDataManager playerData = GetPlayerTeam();
         // No Player In The Game.
         if (playerData == null){return -1;}
@@ -25,6 +25,13 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         return 1;
     }
     public AutoChessPVPDataManager allPlayers;
+    public bool logMatches = false;
+    public AutoChessLogDataManager matchHistoryLog;
+    public void AddLog(string newLog)
+    {
+        if (!logMatches){return;}
+        matchHistoryLog.AddLog(newLog);
+    }
     public List<AutoChessDataManager> GetAliveTeams()
     {
         List<AutoChessDataManager> allTeams = allPlayers.GetAllTeams();
@@ -49,6 +56,7 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     }
     public RNGUtility RNG;
     public AutoChessPrepManager prepManager;
+    public GameObject gameOverObject;
     public AutoChessPVPBattleManager battleManager;
     public AutoChessAIPrepController AIManager;
     public List<AutoChessDataManager> roundLeftTeams;
@@ -74,20 +82,30 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     void Start()
     {
         allPlayers.Load();
-        // TODO Start The PrepManager.
+        if (logMatches)
+        {
+            matchHistoryLog.Load();
+        }
         StartPlayerPrepPhase();
     }
     public void StartPlayerPrepPhase()
     {
         AutoChessDataManager playerTeam = GetPlayerTeam();
-        //
+        // Ignore Very Early Matches.
+        if (playerTeam.GetRound() < 2){matchHistoryLog.NewGame();}
+        allPlayers.Save();
         // Player is dead, only AI left or game over.
         if (playerTeam == null || playerTeam.GetHealth() <= 0 || GetAliveTeams().Count == 1)
         {
             matchOver = true;
+            if (gameOverObject != null)
+            {
+                gameOverObject.SetActive(true);
+            }
             return;
         }
         prepManager.SetDataManager(playerTeam);
+        prepManager.EnableUI();
     }
     [ContextMenu("Test AI Run")]
     public void TestAI()
@@ -123,9 +141,7 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         {
             TimedAIPrepPhase();
         }
-        Debug.Log("Rounds: " + roundCount +
-            "\nAI Prep: " + totalAIPrepTime +
-            "\nBattle: " + totalBattleTime);
+        Debug.Log("Rounds: " + roundCount + "\nAI Prep: " + totalAIPrepTime + "\nBattle: " + totalBattleTime);
     }
     public void TimedAIPrepPhase()
     {
@@ -135,9 +151,9 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         {
             if (allTeams[i].PlayerData() || allTeams[i].GetHealth() <= 0){continue;}
             var entry = GenomeProvider.Get(allTeams[i]);
-            if (autoAssignAIGenomes && i < matchAIGenomes.Count)
+            if (autoAssignAIGenomes)
             {
-                AIManager.genome = matchAIGenomes[i];
+                AIManager.genome = allTeams[i].GetGenome();
             }
             else if (entry != null)
             {
@@ -161,9 +177,9 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         {
             if (allTeams[i].PlayerData() || allTeams[i].GetHealth() <= 0){continue;}
             var entry = GenomeProvider.Get(allTeams[i]);
-            if (autoAssignAIGenomes && i < matchAIGenomes.Count)
+            if (autoAssignAIGenomes)
             {
-                AIManager.genome = matchAIGenomes[i];
+                AIManager.genome = allTeams[i].GetGenome();
             }
             else if (entry != null)
             {
@@ -243,7 +259,6 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     }
     public IEnumerator RunAllBattles()
     {
-        roundCount++;
         // Go In Order.
         int playerIndex = -1;
         for (int i = 0; i < roundLeftTeams.Count; i++)
@@ -254,17 +269,36 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
                 continue;
             }
             battleManager.SetTeams(roundLeftTeams[i], roundRightTeams[i]);
+            if (logMatches)
+            {
+                AddLog("ROUND:" + roundLeftTeams[i].GetRound() + " | BATTLE:" + (i + 1));
+                AddLog("LEFT TEAM:");
+                AddLog(roundLeftTeams[i].GetFieldActorState());
+                AddLog("RIGHT TEAM:");
+                AddLog(roundRightTeams[i].GetFieldActorState());
+            }
             battleManager.SetInstantBattle();
             battleManager.StartBattle();
         }
         if (playerIndex >= 0)
         {
+            AddLog("ROUND " + roundLeftTeams[playerIndex].GetRound() + " | PLAYER BATTLE");
+            AddLog("LEFT TEAM:");
+            AddLog(roundLeftTeams[playerIndex].GetFieldActorState());
+            AddLog("RIGHT TEAM:");
+            AddLog(roundRightTeams[playerIndex].GetFieldActorState());
             battleManager.SetTeams(roundLeftTeams[playerIndex], roundRightTeams[playerIndex]);
             battleManager.SetInstantBattle(false);
             battleManager.StartBattle();
             yield return new WaitUntil(() => battleManager.EndBattle() >= 0);
         }
         CheckMatchOver();
+        if (!matchOver && playerIndex >= 0)
+        {
+            allPlayers.shopData.NewRound();
+            StartPlayerPrepPhase();
+            matchHistoryLog.Save();
+        }
     }
     protected void CheckMatchOver()
     {

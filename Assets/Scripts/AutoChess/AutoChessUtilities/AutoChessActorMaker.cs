@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class AutoChessActorMaker : ActorMaker
 {
+    public bool logActorMaker = false;
     public MapUtility mapUtility;
     public PartyData permanentPartyData;
     public StatDatabase actorData;
@@ -37,10 +38,9 @@ public class AutoChessActorMaker : ActorMaker
         // Flip The Right Team.
         if (team != 0)
         {
-            int location = newAutoActor.GetLocation();
-            location = mapUtility.HorizontalReflectTile(location, mapSize);
-            newAutoActor.SetLocation(location);
-            // Flip The Direction For Aegir.
+            int oldLocation = newAutoActor.GetLocation();
+            int newLocation = mapUtility.HorizontalReflectTile(oldLocation, mapSize);
+            newAutoActor.SetLocation(newLocation);
             newAutoActor.FlipDirection();
         }
         return newAutoActor;
@@ -83,7 +83,7 @@ public class AutoChessActorMaker : ActorMaker
         }
         else
         {
-            newActor.SetDirection(location);
+            newActor.SetDirection(direction);
         }
         newActor.SetTeam(0);
         newActor.SetID(GetCurrentID());

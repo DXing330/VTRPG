@@ -103,6 +103,8 @@ public class AutoActorDisplay : MonoBehaviour
         {
             default:
             return "";
+            case "DuringBattle":
+            return "During battle,";
             case "StartBattle":
             return "At the start of each battle,";
             case "OnPurchase":
@@ -128,6 +130,10 @@ public class AutoActorDisplay : MonoBehaviour
     public string ReturnTraitEffect(string effect, string specifics)
     {
         string amount = ReturnTraitSpecifics(specifics);
+        if (specifics.Contains("Scaling"))
+        {
+            return amount;
+        }
         switch (effect)
         {
             default:
@@ -140,6 +146,8 @@ public class AutoActorDisplay : MonoBehaviour
             return " gain " + amount + " gold.";
             case "NextRoundGold":
             return " gain " + amount + " gold, next round.";
+            case "RandomActive":
+            return " increase a random active faction stacks by " + amount + ".";
             case "HighestActive":
             return " increase highest active faction stacks by " + amount + ".";
             case "Unit":
@@ -190,6 +198,11 @@ public class AutoActorDisplay : MonoBehaviour
                 break;
             }
             return blocks[1] + details;
+        }
+        if (specifics.Contains("Scaling"))
+        {
+            string[] blocks = specifics.Split("Scaling");
+            return $" increase {blocks[0]} by 1% for every {blocks[1]} faction stacks.";
         }
         return specifics;
     }

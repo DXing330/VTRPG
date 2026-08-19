@@ -45,7 +45,7 @@ public class AutoChessAIPrepEquipmentController : MonoBehaviour
     {
         // Find The Best Matching Unit For The Equipment.
         int bestIndex = -1;
-        float bestScore = float.MinValue;
+        float bestScore = 0;
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
             AutoActorRollUpData unit = prepManager.fieldSlots[i];
@@ -70,6 +70,10 @@ public class AutoChessAIPrepEquipmentController : MonoBehaviour
         if (bestIndex >= 0)
         {
             prepManager.fieldSlots[bestIndex].EquipEquipment(itemName);
+            if (controller.recordAIDecisions)
+            {
+                prepManager.dataManager.AddLog($"ItemTarget:{itemName}->{prepManager.fieldSlots[bestIndex].GetName()},Score:{bestScore:F2}");
+            }
             if (exists)
             {
                 prepManager.dataManager.UseEquipment(itemName);
@@ -91,13 +95,27 @@ public class AutoChessAIPrepEquipmentController : MonoBehaviour
         {
             if (combined[i].Contains("Emblem") && EmblemSynergy(combined[i]))
             {
+                if (controller.recordAIDecisions)
+                {
+                    prepManager.dataManager.AddLog($"EmblemDecision:{combined[i]},Synergy:{controller.SynergyValue(combined[i].Replace(" Emblem", "")):F2}");
+                }
                 EquipEmblemToUnit(combined[i]);
                 continue;
             }
             float itemValue = ItemValue(combined[i]);
+            if (controller.recordAIDecisions)
+            {
+                prepManager.dataManager.AddLog($"ItemEvaluate:{combined[i]},Value:{itemValue:F2},Save:{genome.GetByName("W_ITEM_SAVE"):F2}");
+            }
             if (itemValue > genome.GetByName("W_ITEM_SAVE"))
             {
-                EquipItemToUnit(combined[i]);
+                if (EquipItemToUnit(combined[i]))
+                {
+                    if (controller.recordAIDecisions)
+                    {
+                        prepManager.dataManager.AddLog($"ItemDecision~Equip:{combined[i]},Value:{itemValue:F2}");
+                    }
+                }
             }
         }
         // 1. Find possible combinations
@@ -114,6 +132,10 @@ public class AutoChessAIPrepEquipmentController : MonoBehaviour
                     combinedValue -= genome.GetByName("W_ITEM_COMPONENT_SAVE") * GetComponentFutureValue(components[i]);
                     combinedValue -= genome.GetByName("W_ITEM_COMPONENT_SAVE") * GetComponentFutureValue(components[j]);
                     ItemCombination newCombination = new(result, components[i] + "|" + components[j], combinedValue);
+                    if (controller.recordAIDecisions)
+                    {
+                        prepManager.dataManager.AddLog($"CombineEvaluate:{components[i]}+{components[j]}->{result},Value:{combinedValue:F2}");
+                    }
                     combinations.Add(newCombination);
                 }
             }
@@ -140,6 +162,10 @@ public class AutoChessAIPrepEquipmentController : MonoBehaviour
                 {
                     // Remove The Components If Equipped.
                     prepManager.dataManager.RemoveComponents(combinations[i].components);
+                    if (controller.recordAIDecisions)
+                    {
+                        prepManager.dataManager.AddLog($"ItemDecision~Combine:{combinations[i].components}->{combinations[i].combinationName},Value:{combinedValue:F2}");
+                    }
                 }
             }
         }
@@ -211,7 +237,7 @@ public class AutoChessAIPrepEquipmentController : MonoBehaviour
     }
     float ItemBestMatch(string itemName)
     {
-        float bestMatch = float.MinValue;
+        float bestMatch = 0;
         for (int i = 0; i < prepManager.fieldSlots.Count; i++)
         {
             if (prepManager.fieldSlots[i].GetOpenEquipmentSlots() <= 0){continue;}

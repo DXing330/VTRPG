@@ -230,6 +230,7 @@ public class MapPathfinder : ScriptableObject
             if (distance > range){break;}
             tiles.Add(CheckClosestTile());
         }
+        if (tiles.Count <= 0){return tiles;}
         tiles.RemoveAt(0);
         return tiles;
     }

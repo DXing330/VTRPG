@@ -5,6 +5,7 @@ using UnityEngine;
 public class AutoChessBattleMap : BattleMap
 {
     public bool fast = false;
+    public bool debugMode = false;
     public override void UpdateMap()
     {
         if (fast){return;}
@@ -14,6 +15,10 @@ public class AutoChessBattleMap : BattleMap
         UpdateBuildings();
         UpdateTerrain();
         UpdateAutoChessActors();
+        if (debugMode)
+        {
+            DebugUpdateMap();
+        }
     }
     // Update Actors With Text, Not Images For Now.
     // Also Show The Castle Health?
@@ -33,6 +38,7 @@ public class AutoChessBattleMap : BattleMap
         {
             if (battlingActors[i].GetInvisible()){continue;}
             int location = battlingActors[i].GetLocation();
+            if (location < 0){continue;}
             mapTiles[location].ActivateLayerSprite(2);
             masterSprites.ApplyToImage(mapTiles[location].GetLayerSprite(2), battlingActors[i].GetSpriteName());
             mapTiles[location].ActivateDirectionArrow(battlingActors[i].GetDirection());
@@ -48,6 +54,13 @@ public class AutoChessBattleMap : BattleMap
         for (int i = 0; i < buildingLocations.Count; i++)
         {
             mapTiles[buildingLocations[i]].UpdateText(buildingHealths[i].ToString());
+        }
+    }
+    protected void DebugUpdateMap()
+    {
+        for (int i = 0; i < mapTiles.Count; i++)
+        {
+            mapTiles[i].UpdateText($"{i}");
         }
     }
 }

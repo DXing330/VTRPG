@@ -418,7 +418,7 @@ public class TacticActor : ActorSubGameStats
     public void SetDirection(int newDirection){direction = newDirection;}
     public void FlipDirection()
     {
-        direction = (direction + 3) % 6;
+        direction = 5 - direction;
     }
     // Mental state.
     protected string immuneMentalState = "Calm";

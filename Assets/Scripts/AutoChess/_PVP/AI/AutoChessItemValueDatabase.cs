@@ -73,9 +73,7 @@ public class AutoChessItemValueDatabase : MonoBehaviour
         {
             foreach(string unitTag in unitTags)
             {
-                if(itemTagMatrix.TryGetValue(
-                    (itemTag, unitTag),
-                    out float value))
+                if(itemTagMatrix.TryGetValue((itemTag, unitTag), out float value))
                 {
                     score += value;
                 }
@@ -126,7 +124,6 @@ public class AutoChessItemValueDatabase : MonoBehaviour
         {
             itemValues[item.name] = item.value;
         }
-        Debug.Log("Loaded item values: " + itemValues.Count);
         if(itemUnitTagValueJson == null)
         {
             Debug.LogWarning("Missing item value JSON");
@@ -138,7 +135,6 @@ public class AutoChessItemValueDatabase : MonoBehaviour
         {
             itemTagMatrix[(entry.itemTag, entry.unitTag)] = entry.value;
         }
-        Debug.Log("Loaded item tag values: " + itemTagMatrix.Count);
         BuildCombinationCache();
     }
 

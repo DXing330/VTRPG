@@ -931,19 +931,13 @@ public class MapUtility : ScriptableObject
     public int HorizontalReflectTile(int tileNumber, int mapSize)
     {
         int column = GetColumn(tileNumber, mapSize);
-        int mid = mapSize / 2;
-        // Reflect Across Middle.
-        int distance = column - mid;
-        int newColumn = (mid - distance);
+        int newColumn = (mapSize - 1) - column;
         return ReturnTileNumberFromRowCol(GetRow(tileNumber, mapSize), newColumn, mapSize);
     }
     public int VerticalReflectTile(int tileNumber, int mapSize)
     {
         int row = GetRow(tileNumber, mapSize);
-        int mid = mapSize / 2;
-        // Reflect Across Middle.
-        int distance = row - mid;
-        int newRow = (mid - distance);
+        int newRow = (mapSize - 1) - row;
         return ReturnTileNumberFromRowCol(newRow, GetColumn(tileNumber, mapSize), mapSize);
     }
 }
