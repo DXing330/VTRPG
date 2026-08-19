@@ -24,6 +24,7 @@ public class AutoChessFactionManager : MonoBehaviour
         factionDisplay.UpdateFactionDisplay(activeFactions, allFactionsWithUnits);
     }
     public List<string> activeFactions;
+    public StatDatabase factionThresholds;
     protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kjerag", "Laterano", "Sargon", "Victoria", "Yan"};
     public bool FactionActive(string factionName)
     {
@@ -39,8 +40,8 @@ public class AutoChessFactionManager : MonoBehaviour
         {
             activeCount++;
         }
-        if (activeCount > 2){return true;}
-        else if (activeCount == 2 && !factionData.MainFaction(factionName)){return true;}
+        int minimumThreshold = int.Parse(factionThresholds.ReturnValue(factionName).Split("|")[0]);
+        if (activeCount >= minimumThreshold){return true;}
         return false;
     }
     public int GetStacksOfFaction(string factionName)

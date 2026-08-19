@@ -69,6 +69,7 @@ public class AutoChessActorMaker : ActorMaker
             ApplyEquipmentToActor(newActor, equipmentString);
         }
         passiveOrganizer.OrganizeActorPassives(newActor);
+        newActor.InitializeStats();
         if (location < 0)
         {
             newActor.SetLocation(rollUpActor.GetLocation());

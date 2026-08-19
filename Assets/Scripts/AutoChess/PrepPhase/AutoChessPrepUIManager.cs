@@ -81,12 +81,11 @@ public class AutoChessPrepUIManager : MonoBehaviour
         deployLimitText.text = prepManager.fieldSlots.Count + "/" + (prepManager.GetMaxFieldSlots()).ToString();
         equipDisplay.UpdateDisplay();
     }
-    public void UpdateMap(AutoChessPrepManager prepManager)
+    public void UpdateMapWithDataManager(AutoChessDataManager newDataManager)
     {
-        // Display The Map Tiles.
         for (int i = 0; i < dataManager.mapTiles.Count; i++)
         {
-            mapSlots[i].UpdateLayerSprite(tileSprites.SpriteDictionary(dataManager.mapTiles[i]), 0);
+            mapSlots[i].UpdateLayerSprite(tileSprites.SpriteDictionary(newDataManager.mapTiles[i]), 0);
         }
         for (int i = 0; i < mapSlots.Count; i++)
         {
@@ -100,16 +99,18 @@ public class AutoChessPrepUIManager : MonoBehaviour
             mapSlots[i].ResetLayerSprite(3);
             mapSlots[i].ResetAutoChessEquipment();
         }
-        // Display The Actors.
-        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        List<string> fieldActorData = newDataManager.GetFieldActorData();
+        for (int i = 0; i < fieldActorData.Count; i++)
         {
-            int location = prepManager.fieldSlots[i].GetLocation();
-            string name = prepManager.fieldSlots[i].GetName();
-            //mapSlots[location].UpdateText(prepManager.fieldSlots[i].GetBaseStatString());
+            if (fieldActorData[i].Length <= 1){continue;}
+            AutoActorRollUpData newActor = new();
+            newActor.LoadRollUpData(fieldActorData[i]);
+            int location = newActor.GetLocation();
+            string name = newActor.GetName();
             mapSlots[location].ActivateLayerSprite(2);
             masterSprites.ApplyToImage(mapSlots[location].GetLayerSprite(2), name);
-            mapSlots[location].ActivateDirectionArrow(prepManager.fieldSlots[i].GetDirection());
-            List<string> equipNames = prepManager.fieldSlots[i].GetEquipmentNames();
+            mapSlots[location].ActivateDirectionArrow(newActor.GetDirection());
+            List<string> equipNames = newActor.GetEquipmentNames();
             for (int j = 0; j < equipNames.Count; j++)
             {
                 if (equipNames[j].Length <= 0){continue;}
@@ -117,6 +118,10 @@ public class AutoChessPrepUIManager : MonoBehaviour
                 masterSprites.ApplyToImage(mapSlots[location].GetEquipSlotImage(j), equipNames[j]);
             }
         }
+    }
+    public void UpdateMap(AutoChessPrepManager prepManager)
+    {
+        UpdateMapWithDataManager(prepManager.dataManager);
         if (!PVP)
         {
             int castleTile = prepManager.GetCastleTile();

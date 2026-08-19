@@ -30,6 +30,10 @@ public class AutoChessTraitManager : ScriptableObject
             return level * baseAmount * manager.dataManager.GetRoundGold();
             case "UnitsBought":
             return level * baseAmount * manager.dataManager.GetRoundActors();
+            case "SelfActiveUnits":
+            return level * baseAmount * manager.ReturnFieldUnitsWithMatchingFactions(actor);
+            case "BenchSize":
+            return level * baseAmount * manager.dataManager.GetBenchActorData().Count;
         }
     }
 }

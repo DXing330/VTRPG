@@ -14,6 +14,10 @@ public class EquipmentDetailViewerSwitch : ScriptableObject
         {
             case "Commercial Packaging Plan":
             return "Gain a level 1 copy of the equipped unit whenever 8 units are sold each round.";
+            case "Steam Heart":
+            return "Gain the effects of all hammers on the field.";
+            case "Thief's Gloves":
+            return "Gain up to 2 random equipment at the start of each battle.";
         }
         string[] blocks = autoChessEquipmentData.ReturnValue(autoChessEquipmentName).Split("|");
         if (blocks.Length < 4){return "";}

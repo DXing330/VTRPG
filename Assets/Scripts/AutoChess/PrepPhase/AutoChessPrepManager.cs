@@ -37,12 +37,6 @@ public class AutoChessPrepManager : ClickTileManager
         return spent;
     }
     public AutoChessTactician tactician;
-
-    [ContextMenu("New Game")]
-    public void NewGame()
-    {
-        dataManager.NewGame();
-    }
     public AutoChessPrepUIManager UIManager;
     public bool UI = true;
     public void EnableUI()
@@ -64,7 +58,6 @@ public class AutoChessPrepManager : ClickTileManager
     {
         GenerateSpawnTiles();
         ResetSelected();
-        // Load From Data Manager.
         dataManager.Load();
         factionManager.SetDataManager(dataManager);
         LoadSlots();
@@ -305,6 +298,7 @@ public class AutoChessPrepManager : ClickTileManager
             return colB.CompareTo(colA);
         });
         SaveToDataManager();
+        dataManager.Save();
         ApplyStartBattleActorTraits();
         // Check The Tactician Effect.
         if (tactician != null)
@@ -336,7 +330,19 @@ public class AutoChessPrepManager : ClickTileManager
                 factionManager.factionData.GainFactionStacks(activeFactions[i], aidBonus);
             }
         }
-        // TODO Check The Swire Thing On Bench.
+        // Special Cases That Activate Even On The Bench.
+        for (int i = 0; i < benchSlots.Count; i++)
+        {
+            string benchName = benchSlots[i].GetName();
+            if (benchName == "Ceylon")
+            {
+                CheckTraitTiming(benchSlots[i], "StartBattle");
+            }
+            else if (benchName == "Swire" && (factionManager.FactionActive("Investor") || factionManager.FactionActive("Yan")))
+            {
+                CheckTraitTiming(benchSlots[i], "StartBattle");
+            }
+        }
         UpdateAllUI();
     }
     // EQUIP
@@ -613,6 +619,18 @@ public class AutoChessPrepManager : ClickTileManager
             if (benchSlots[i].GetName() == newUnit.GetName()){return true;}
         }
         return false;
+    }
+    public int ReturnFieldUnitsWithMatchingFactions(AutoActorRollUpData newUnit)
+    {
+        int count = 0;
+        for (int i = 0; i < fieldSlots.Count; i++)
+        {
+            if (fieldSlots[i].SharedFactions(newUnit))
+            {
+                count++;
+            }
+        }
+        return count;
     }
     public List<string> GetAllFieldEquipment()
     {

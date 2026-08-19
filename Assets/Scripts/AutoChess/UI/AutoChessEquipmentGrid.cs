@@ -4,6 +4,67 @@ using UnityEngine;
 
 public class AutoChessEquipmentGrid : MonoBehaviour
 {
+    public GeneralUtility utility;
+    public AutoChessDataManager dataManager;
+    public void UpdateGrid(bool full = true)
+    {
+        utility.DisableGameObjects(equipToolTipObjects);
+        if (full || dataManager == null)
+        {
+            utility.EnableGameObjects(equipToolTipObjects);
+            return;
+        }
+        // Update Based On Equipment Inventory.
+        List<string> availableEquipment = dataManager.GetEquipment();
+        int index = 0;
+        for (int row = 0; row < 15; row++)
+        {
+            for (int col = 0; col < 15; col++)
+            {
+                AutoChessEquipmentToolTip tip = equipToolTips[index];
+                GameObject tooltipObject = equipToolTipObjects[index];
+                bool show = false;
+                // Top-left corner.
+                if (row == 0 && col == 0)
+                {
+                    show = false;
+                }
+                else if (row == 0)
+                {
+                    show = availableEquipment.Contains(itemOrder[col - 1]);
+                }
+                // Header column
+                else if (col == 0)
+                {
+                    show = availableEquipment.Contains(itemOrder[row - 1]);
+                }
+                else
+                {
+                    // Combination.
+                    string first = itemOrder[row - 1];
+                    string second = itemOrder[col - 1];
+                    if (first == second)
+                    {
+                        // Same component needs two copies.
+                        int count = 0;
+                        foreach (string equipment in availableEquipment)
+                        {
+                            if (equipment == first){count++;}
+                        }
+                        show = count >= 2;
+                    }
+                    else
+                    {
+                        show = availableEquipment.Contains(first)
+                            && availableEquipment.Contains(second);
+                    }
+                }
+                tooltipObject.SetActive(show);
+                index++;
+            }
+        }
+    }
+    public List<GameObject> equipToolTipObjects;
     public List<AutoChessEquipmentToolTip> equipToolTips;
     [SerializeField]
     protected List<string> itemOrder = new()

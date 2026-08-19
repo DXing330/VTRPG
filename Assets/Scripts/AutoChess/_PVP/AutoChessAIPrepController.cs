@@ -308,7 +308,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         score += genome.GetByName("W_UNIT_STACK_GENERATION") * StackGainValue(unit, false);
         score += genome.GetByName("W_UNIT_STACK_SCALING") * StackScalingValue(unit);
         score += genome.GetByName("W_UNIT_CYCLE") * CycleValue(unit, false);
-        score += genome.GetByName("W_UNIT_CYCLE_SCALING") * CycleScalingValue(unit);
+        score += genome.GetByName("W_UNIT_CYCLE_SCALING") * CycleScalingValue(unit, bench);
         List<string> factions = unit.GetFactions();
         for (int i = 0; i < factions.Count; i++)
         {
@@ -770,7 +770,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
     }
     // Those That Are More Valuable To Keep On The Field Due To Their Traits.
-    float CycleScalingValue(AutoActorRollUpData unit)
+    float CycleScalingValue(AutoActorRollUpData unit, bool bench = false)
     {
         AutoChessTrait trait = unit.GetTrait();
         float value = 0f;
@@ -782,9 +782,21 @@ public class AutoChessAIPrepController : MonoBehaviour
             value += 2f;
         if (s.Contains("BenchSizeMultiBy"))
             value += 2f;
+        if (s.Contains("SelfActiveUnits"))
+            value += 2f;
         if (trait.timing == "StartBattle")
         {
             value += 1f;
+        }
+        // Free Stacks
+        if (bench && unit.GetName() == "Ceylon")
+        {
+            value += 1f;
+        }
+        // Potentially Free Gold.
+        if (bench && unit.GetName() == "Swire")
+        {
+            value += 0.5f;
         }
         return value;
     }

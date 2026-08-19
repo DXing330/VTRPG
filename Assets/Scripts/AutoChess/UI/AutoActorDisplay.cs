@@ -152,7 +152,7 @@ public class AutoActorDisplay : MonoBehaviour
             return " increase highest active faction stacks by " + amount + ".";
             case "Unit":
             case "Equipment":
-            return " gain " + amount + ".";
+            return " gain " + amount + " equipment.";
             case "AegirUnit":
             return " gain " + amount + " Skadi/Specter/Andreana.";
             case "HighestActiveUnit":
