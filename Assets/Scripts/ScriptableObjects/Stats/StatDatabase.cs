@@ -48,7 +48,7 @@ public class StatDatabase : ScriptableObject
         {
             allKeysAndValues = allKeys + keyValueDelimiter + allValues;
         }
-            EditorUtility.SetDirty(this);
+        EditorUtility.SetDirty(this);
         #endif
     }
     public virtual void Initialize()

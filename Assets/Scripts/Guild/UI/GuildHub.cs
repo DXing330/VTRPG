@@ -23,8 +23,8 @@ public class GuildHub : MonoBehaviour
     public void Start()
     {
         RemoveDungeonData();
-        NextStory();
-        UpdateStory();
+        //NextStory();
+        //UpdateStory();
         partyData.Save();
         UpdateUI();
     }

@@ -4,6 +4,19 @@ using UnityEngine;
 
 public class AutoChessActorTester : MonoBehaviour
 {
+    public AutoActorRollUpData testActor = new();
+    public StatDatabase autoActorData;
+    [ContextMenu("Test Auto Actor Load Base Stats")]
+    public void TestAutoActorLoadBaseStats()
+    {
+        List<string> testNames = autoActorData.GetAllKeys();
+        for (int i = 0; i < testNames.Count; i++)
+        {
+            testActor = new();
+            testActor.SetName(testNames[i]);
+            testActor.LoadBaseStats(autoActorData);
+        }
+    }
     public ActorSubGameStats testAutoChessActor;
     public List<string> allFactions;
     public string testFaction;

@@ -889,7 +889,7 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " if " + conTarget + " has more than " + specifics + " skills";
             // AK Autochess Conditions
             case "AKRaidCheck":
-                return " if skill is available for use and there is no enemy in range";
+                return " if skill is available for use and there is no enemy in range or if no attack was made last round";
         }
         return "";
     }

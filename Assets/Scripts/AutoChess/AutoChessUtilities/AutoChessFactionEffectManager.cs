@@ -2,11 +2,32 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+
 [CreateAssetMenu(fileName = "AutoChessFactionEffectManager", menuName = "ScriptableObjects/AutoChess/AutoChessFactionEffectManager", order = 1)]
 public class AutoChessFactionEffectManager : ScriptableObject
 {
+    public StatDatabase factionBreakpointsData;
+    private bool breakpointsInitialized = false;
+    private Dictionary<string, int> factionBreakpoints = new Dictionary<string, int>();
+    protected void InitializeBreakpoints()
+    {
+        if (breakpointsInitialized){return;}
+        List<string> allKeys = factionBreakpointsData.GetAllKeys();
+        for (int i = 0; i < allKeys.Count; i++)
+        {
+            string[] breakpoints = factionBreakpointsData.ReturnValue(allKeys[i]).Split("|");
+            // No Second Tier Effect Possible.
+            if (breakpoints.Length < 2)
+            {
+                continue;
+            }
+            factionBreakpoints[allKeys[i]] = int.Parse(breakpoints[1]);
+        }
+        breakpointsInitialized = true;
+    }
     public void ApplyFactionEffects(List<AutoActor> allActors, AutoChessFactionDataManager factionData)
     {
+        InitializeBreakpoints();
         List<string> activeFactions = factionData.GetActiveFactions();
         List<int> activeFactionCount = factionData.GetActiveFactionCount();
         List<int> activeFactionStacks = factionData.GetActiveFactionStacks();
@@ -27,27 +48,22 @@ public class AutoChessFactionEffectManager : ScriptableObject
         for (int i = 0; i < allActors.Count; i++)
         {
             bool allUnits = false;
+            // Active Swift Applies To All.
             if (factionName == "Swift" && stackCount >= 40)
             {
-                allActors[i].AddPassiveSkill("AKSwiftTwo", stackCount.ToString());
+                allActors[i].AddPassiveSkill("AKSwift II", stackCount.ToString());
             }
-            if (factionName == "Assist" && factionCount >= 3)
+            // Active Assist Applies To All.
+            if (factionName == "Assist")
             {
-                if (allActors[i].GetAutoChessLevel() > 1)
-                {
-                    allActors[i].AddPassiveSkill("AKAssist", "4");
-                }
-                else
-                {
-                    allActors[i].AddPassiveSkill("AKAssist", "2");
-                }
+                allActors[i].AddPassiveSkill("AKAssist", "2");
                 return;
             }
             // Durable -> All
             // Aid -> All
             // Precision -> All Ranged (Passive Condition Checks For Ranged So Give Everyone)
             // Resilient -> All Melee (Condition Checks)
-            if (factionName == "Durable" || factionName == "Aid" || factionName == "Precision" || factionName == "AKResilient")
+            if (factionName == "Durable" || factionName == "Aid" || factionName == "Precision" || factionName == "Resilient")
             {
                 allUnits = true;
             }
@@ -65,27 +81,12 @@ public class AutoChessFactionEffectManager : ScriptableObject
         }
         // Aegir/Yan/Raid/Resilient/Kjerag/Aid/Swift/Agile
         actor.AddPassiveSkill(passiveName, stackCount.ToString());
-        switch (factionName)
+        if(factionBreakpoints.TryGetValue(factionName, out int breakpoint))
         {
-            default:
-            break;
-            // Differences Between 2/3 Stacks.
-            case "Precision":
-            case "Durable":
-            if (factionCount >= 3 && actor.AutoChessFaction(factionName))
+            if (factionCount >= breakpoint)
             {
                 actor.AddPassiveSkill(passiveName + " II", "1");
             }
-            break;
-            // Differences Between 2/6 Stacks.
-            case "Laterano":
-            case "Sargon":
-            case "Victoria":
-            if (factionCount >= 5)
-            {
-                actor.AddPassiveSkill(passiveName + " II", "1");
-            }
-            break;
         }
     }
     public void ApplyScalingFactionTraitToActor(AutoActor actor, AutoChessFactionDataManager factionData)
@@ -105,6 +106,11 @@ public class AutoChessFactionEffectManager : ScriptableObject
         }
         stackCount *= Mathf.Max(1, actor.GetLevel());
         string[] scalingStats = specifics[0].Split("AND");
+        int scalingEvery = 1;
+        if (specifics.Length > 2)
+        {
+            scalingEvery = int.Parse(specifics[2]);
+        }
         for (int i = 0 ; i < scalingStats.Length; i++)
         {
             switch (scalingStats[i])
@@ -112,17 +118,17 @@ public class AutoChessFactionEffectManager : ScriptableObject
                 default:
                 break;
                 case "Attack":
-                actor.UpdateBaseAttack(actor.GetBaseAttack() * stackCount / 100);
+                actor.UpdateBaseAttack(actor.GetBaseAttack() * stackCount / 100 / scalingEvery);
                 break;
                 case "Health":
-                actor.UpdateBaseHealth(actor.GetBaseHealth() * stackCount / 100, false);
+                actor.UpdateBaseHealth(actor.GetBaseHealth() * stackCount / 100 / scalingEvery, false);
                 actor.HealToMaxHealth();
                 break;
                 case "Defense":
-                actor.UpdateBaseDefense(actor.GetBaseDefense() * stackCount / 100);
+                actor.UpdateBaseDefense(actor.GetBaseDefense() * stackCount / 100 / scalingEvery);
                 break;
                 case "AttackSpeed":
-                actor.UpdateBaseAttackSpeed(stackCount);
+                actor.UpdateBaseAttackSpeed(stackCount / scalingEvery);
                 break;
             }
         }

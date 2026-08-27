@@ -10,6 +10,7 @@ public class AutoChessFactionDataManager : SavedData
 {
     public bool logDataManager = true;
     public void DisableLogs(){logDataManager = false;}
+    public void EnableLogs(){logDataManager = true;}
     public AutoChessLogDataManager logData; // Track actor trait timing + stacks.
     public void AddLog(string newLog)
     {
@@ -18,15 +19,15 @@ public class AutoChessFactionDataManager : SavedData
     }
     public RNGUtility RNG;
     public string delimiter2;
-    public List<string> mainFactions; // Require 3 field units to activate.
+    protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kjerag", "Laterano", "Sargon", "Siracusa", "Victoria", "Yan", "Harmony"};
     public bool MainFaction(string factionName)
     {
-        return mainFactions.Contains(factionName);
+        return autoChessMainFactions.Contains(factionName);
     }
-    public List<string> econFactions; // Includes bench units.
+    protected readonly HashSet<string> autoChessEconFactions = new(){"Foresight", "Investor", "Marvel"};
     public bool EconFaction(string factionName)
     {
-        return econFactions.Contains(factionName);
+        return autoChessEconFactions.Contains(factionName);
     }
     public List<string> allFactions;
     public void SetAllFactions(List<string> newFactions)
@@ -75,9 +76,10 @@ public class AutoChessFactionDataManager : SavedData
     public int GetMainFactionStacks()
     {
         int count = 0;
-        for (int i = 0; i < mainFactions.Count; i++)
+        foreach (var item in autoChessMainFactions)
         {
-            count += int.Parse(GetStacksOfFaction(mainFactions[i]));
+            // Process item
+            count += int.Parse(GetStacksOfFaction(item));
         }
         return count;
     }
@@ -250,6 +252,7 @@ public class AutoChessFactionDataManager : SavedData
     }
     public void GainActiveStacks(List<string> actorFactions, int amount = 2)
     {
+        if (actorFactions == null || actorFactions.Count <= 0){return;}
         for (int i = 0; i < actorFactions.Count; i++)
         {
             if (!activeFactions.Contains(actorFactions[i])){continue;}

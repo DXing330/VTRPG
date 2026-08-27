@@ -32,12 +32,25 @@ public class AutoChessDataManager : SavedData
     }
     public AutoChessTactician tactician;
     public AutoChessFactionDataManager factionData;
-    public bool logDataManager = true;
-    public void DisableLogs(){logDataManager = false;}
+    public bool logging = true;
+    public AutoChessEncoderLogger encoderLogger;
+    public bool EncodeLogs(){return logging;}
+    public void DisableLogs()
+    {
+        logging = false;
+        factionData.DisableLogs();
+        encoderLogger.DisableLogs();
+    }
+    public void EnableLogs()
+    {
+        logging = true;
+        factionData.EnableLogs();
+        encoderLogger.EnableLogs();
+    }
     public AutoChessLogDataManager logData; // Track Round / Gold / Exp / Etc.
     public void AddLog(string newLog)
     {
-        if (!logDataManager || logData == null){return;}
+        if (!logging || logData == null){return;}
         logData.AddLog(newLog);
     }
     public void GainFactionStacks(string faction, int stackAmount)
@@ -283,7 +296,7 @@ public class AutoChessDataManager : SavedData
     }
     public void LogBattleStart()
     {
-        if (logDataManager)
+        if (logging)
         {
             AddLog(GetFieldActorState());
         }
@@ -294,7 +307,7 @@ public class AutoChessDataManager : SavedData
         if (health <= 0){return;}
         round++;
         AddLog("--- Round " + round + " Begins ---");
-        if (logDataManager)
+        if (logging)
         {
             AddLog(GetFieldActorState());
         }
@@ -377,6 +390,14 @@ public class AutoChessDataManager : SavedData
         }
         return actorEquipment;
     }
+    public int freeRerolls;
+    public void SetFreeRerolls(int amount)
+    {
+        freeRerolls = amount;
+    }
+    public int GetFreeRerolls(){return freeRerolls;}
+    public void UseFreeReroll(){freeRerolls--;}
+    public void GainFreeReroll(int amount = 1){freeRerolls += amount;}
     public int roundRerolls;
     public void SetRoundRerolls(int amount)
     {
@@ -386,6 +407,17 @@ public class AutoChessDataManager : SavedData
     public void Reroll()
     {
         roundRerolls++;
+        // Check Marvel Here.
+        if (factionData.FactionActive("Marvel"))
+        {
+            int stacks = int.Parse(factionData.GetStacksOfFaction("Marvel"));
+            int chance = ((20 + stacks) / (100 + stacks));
+            int roll = RNG.SeedRange(0, 100);
+            if (roll < chance)
+            {
+                GainFreeReroll();
+            }
+        }
     }
     public int roundGainedActors;
     public void SetRoundActors(int amount)
@@ -619,6 +651,7 @@ public class AutoChessDataManager : SavedData
         allData += "Victoria=" + startRoundVictoriaStacks + delimiter;
         allData += "RoundGold=" + roundSpentGold + delimiter;
         allData += "TotalGold=" + totalSpentGold + delimiter;
+        allData += "FreeRerolls=" + freeRerolls + delimiter;
         allData += "RoundRerolls=" + roundRerolls + delimiter;
         allData += "RoundActors=" + roundGainedActors + delimiter;
         allData += "RoundSold=" + roundSoldActors + delimiter;
@@ -712,6 +745,9 @@ public class AutoChessDataManager : SavedData
             return;
             case "TotalGold":
             SetTotalGold(int.Parse(value));
+            return;
+            case "FreeRerolls":
+            SetFreeRerolls(int.Parse(value));
             return;
             case "RoundRerolls":
             SetRoundRerolls(int.Parse(value));

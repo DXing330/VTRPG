@@ -25,26 +25,33 @@ public class AutoChessPVPDataManager : SavedData
         return playerAndAI;
     }
     public AutoChessDataManager playerData;
-    public AutoChessFactionDataManager playerFactions;
     public AutoChessTactician playerTactician;
-    public AutoChessLogDataManager playerLogs;
     public RNGUtility playerSeed;
     public AutoChessSettingsDataManager playerSettings;
     public AutoChessShopDataManager shopData;
     public AutoChessPVPSavedGenomeDataManager championGenomes;
-    public List<AutoChessPVPGenome> matchAIGenomes;
     public StatDatabase tacticianFactions;
     public List<AutoChessDataManager> dataManagers;
     public List<AutoChessFactionDataManager> factionDataManagers;
     public List<AutoChessTactician> tacticians;
     public List<AutoChessLogDataManager> logDataManagers;
+    public List<AutoChessEncoderLogger> encoderLogs;
     public void DisableLogs()
     {
         for (int i = 0; i < dataManagers.Count; i++)
         {
             dataManagers[i].DisableLogs();
-            factionDataManagers[i].DisableLogs();
         }
+        shopData.DisableLogs();
+    }
+    public void EnableLogs()
+    {
+        for (int i = 0; i < dataManagers.Count; i++)
+        {
+            dataManagers[i].EnableLogs();
+        }
+        playerData.EnableLogs();
+        shopData.EnableLogs();
     }
     public List<RNGUtility> seedManagers;
     [ContextMenu("Initialize All Data Managers")]
@@ -57,6 +64,7 @@ public class AutoChessPVPDataManager : SavedData
             tacticians[i].filename = "AIPVPAUTOCHESSTACTICIAN_" + (i+1);
             factionDataManagers[i].filename = "AIPVPAUTOCHESSFACTIONDATA_" + (i+1);
             logDataManagers[i].filename = "AIPVPAUTOCHESSLOGDATA_" + (i+1);
+            encoderLogs[i].filename = "AIDECISIONLOG_" + (i+1);
             seedManagers[i].filename = "AIPVPAUTOCHESSRNGSEED_" + (i+1);
             // Update The Linkage Of Each.
             dataManagers[i].subDataManagers.Clear();
@@ -64,9 +72,11 @@ public class AutoChessPVPDataManager : SavedData
             dataManagers[i].subDataManagers.Add(logDataManagers[i]);
             dataManagers[i].subDataManagers.Add(tacticians[i]);
             dataManagers[i].subDataManagers.Add(seedManagers[i]);
+            dataManagers[i].subDataManagers.Add(encoderLogs[i]);
             dataManagers[i].tactician = tacticians[i];
             dataManagers[i].factionData = factionDataManagers[i];
             dataManagers[i].logData = logDataManagers[i];
+            dataManagers[i].encoderLogger = encoderLogs[i];
             dataManagers[i].RNG = seedManagers[i];
             tacticians[i].dataManager = dataManagers[i];
             tacticians[i].factionData = factionDataManagers[i];
@@ -78,10 +88,12 @@ public class AutoChessPVPDataManager : SavedData
                 EditorUtility.SetDirty(tacticians[i]);
                 EditorUtility.SetDirty(factionDataManagers[i]);
                 EditorUtility.SetDirty(logDataManagers[i]);
+                EditorUtility.SetDirty(encoderLogs[i]);
                 EditorUtility.SetDirty(seedManagers[i]);
             #endif
         }
     }
+    [ContextMenu("Manually Assign Genomes")]
     public void AssignMatchAIGenomes()
     {
         if (championGenomes == null || championGenomes.entries.Count == 0)
@@ -123,24 +135,15 @@ public class AutoChessPVPDataManager : SavedData
             if (tacticianFactions.ReturnValue(availableTacticians[i]) == "None"){availableTacticians.RemoveAt(i);}
         }
         playerSeed.ShuffleList(availableTacticians);
-        // TODO Later Let AI Pick Their Own Tactician.
+        // TODO Later Let AI Pick Their Own Tactician, For Now Just Shuffle Then Randomly Assign.
         for (int i = 0; i < dataManagers.Count; i++)
         {
             if (player && i == 0){continue;}
             dataManagers[i].tactician.ResetTactician();
-            for (int j = availableTacticians.Count - 1; j >= 0; j--)
-            {
-                string tacticianFaction = tacticianFactions.ReturnValue(availableTacticians[j]);
-                if (tacticianFaction == "Any" || tacticianFaction == dataManagers[i].GetGenome().GetPreferredFaction())
-                {
-                    dataManagers[i].tactician.SetTactician(availableTacticians[j]);
-                    availableTacticians.RemoveAt(j);
-                    break;
-                }
-            }
+            dataManagers[i].tactician.SetTactician(availableTacticians[0]);
+            availableTacticians.RemoveAt(0);
         }
     }
-    [ContextMenu("New Game All Data Managers")]
     public void NewGameAllDataManagers(bool player = false)
     {
         // In PVP Assign Genomes + Tacticians Randomly.

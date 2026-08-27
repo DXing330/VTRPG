@@ -7,13 +7,11 @@ public class Condition : PassiveSkill
 {
     List<string> statuses;
     List<string> statusInfo;
-
     protected bool Timing(string timing, string time)
     {
         if (timing == "ALL"){return true;}
         return timing == time;
     }
-
     protected bool OtherTiming(string timing)
     {
         if (timing == "ALL" || timing == "Start" || timing == "End")
@@ -22,7 +20,6 @@ public class Condition : PassiveSkill
         }
         return true;
     }
-
     protected bool ActorImmune(TacticActor actor, string status)
     {
         List<string> possibleImmunities = actor.GetStartTurnPassives();
@@ -38,7 +35,15 @@ public class Condition : PassiveSkill
         }
         return false;
     }
-
+    // For Testing
+    public void ForceApplyEffects(TacticActor actor, StatDatabase allData, BattleMap map)
+    {
+        statuses = new List<string>(actor.GetStatuses());
+        for (int i = statuses.Count - 1; i >= 0; i--)
+        {
+            ApplyPassive(actor, map, allData.ReturnValue(statuses[i]));
+        }
+    }
     public void ApplyStartEndEffects(TacticActor actor, StatDatabase allData, string timing, BattleMap map)
     {
         statuses = new List<string>(actor.GetStatuses());
@@ -53,7 +58,6 @@ public class Condition : PassiveSkill
             actor.AdjustStatusDuration(i);
         }
     }
-
     public void ApplyBuffEffects(TacticActor actor, StatDatabase allData, string timing, BattleMap map)
     {
         statuses = new List<string>(actor.GetBuffs());
@@ -65,7 +69,6 @@ public class Condition : PassiveSkill
             actor.AdjustBuffDuration(i);
         }
     }
-
     public void AdjustOtherTimingDurations(TacticActor actor, StatDatabase allData)
     {
         statuses = new List<string>(actor.GetBuffs());

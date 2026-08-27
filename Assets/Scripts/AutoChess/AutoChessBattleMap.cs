@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class AutoChessBattleMap : BattleMap
 {
-    public bool fast = false;
     public bool debugMode = false;
     public override void UpdateMap()
     {

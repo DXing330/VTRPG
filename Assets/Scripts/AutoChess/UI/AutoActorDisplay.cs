@@ -70,7 +70,7 @@ public class AutoActorDisplay : MonoBehaviour
             factionIconObjects[i].SetActive(true);
             factionIcons[i].sprite = masterSprites.SpriteDictionary(allFactions[i]);
         }
-        traitText.text = ReturnTraitDescription(blocks[1], blocks[2], blocks[3]);
+        traitText.text = ReturnTraitDescription(newName, blocks[1], blocks[2], blocks[3]);
         skillText.text = activeViewer.ReturnActiveDescriptionOnlyFromName(blocks[4]) + "\n" + "CD: " + blocks[5];
         HPText.text = blocks[7];
         ATKText.text = blocks[8];
@@ -89,12 +89,16 @@ public class AutoActorDisplay : MonoBehaviour
         ATKText.text = actor.GetAttack().ToString();
         DEFText.text = actor.GetDefense().ToString();
     }
+    public StatDatabase benchTraitData;
     // TRAIT DETAILS, Maybe Move This To A Utility Later.
-    public string ReturnTraitDescription(string timing, string effect, string specifics)
+    public string ReturnTraitDescription(string actorName, string timing, string effect, string specifics)
     {
         string description = "";
         description += ReturnTraitTiming(timing);
         description += ReturnTraitEffect(effect, specifics);
+        // Add a text for bench units.
+        string[] benchTrait = benchTraitData.ReturnValue(actorName).Split("|");
+        description += ReturnBenchTrait(benchTrait[0], benchTrait[1]);
         return description;
     }
     public string ReturnTraitTiming(string timing)
@@ -151,8 +155,11 @@ public class AutoActorDisplay : MonoBehaviour
             case "HighestActive":
             return " increase highest active faction stacks by " + amount + ".";
             case "Unit":
+            return $" gain {amount}.";
+            case "Reroll":
+            return $" gain {amount} free rerolls.";
             case "Equipment":
-            return " gain " + amount + " equipment.";
+            return $" gain {amount} equipment.";
             case "AegirUnit":
             return " gain " + amount + " Skadi/Specter/Andreana.";
             case "HighestActiveUnit":
@@ -196,6 +203,9 @@ public class AutoActorDisplay : MonoBehaviour
                 case "SelfActiveUnits":
                 details = " times the number of units on the field that are part of the same faction";
                 break;
+                case "Reroll":
+                details = " times the number times the shop was refreshed";
+                break;
             }
             return blocks[1] + details;
         }
@@ -205,5 +215,24 @@ public class AutoActorDisplay : MonoBehaviour
             return $" increase {blocks[0]} by 1% for every {blocks[1]} faction stacks.";
         }
         return specifics;
+    }
+    public string ReturnBenchTrait(string active, string conditions)
+    {
+        string benchString = "";
+        if (active == "0"){return benchString;}
+        benchString += "\nActivatable From Bench";
+        if (conditions == "None"){return benchString;}
+        string[] factionReqs = conditions.Split("OR");
+        benchString += " if ";
+        for (int i = 0; i < factionReqs.Length; i++)
+        {
+            benchString += factionReqs[i];
+            if (i < factionReqs.Length - 1)
+            {
+                benchString += " or ";
+            }
+        }
+        benchString += " are active";
+        return benchString;
     }
 }

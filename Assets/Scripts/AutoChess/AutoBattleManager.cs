@@ -5,7 +5,19 @@ using UnityEngine;
 // Controls Battle Turn Setup/Cleanup/Lifecycle/BattleStacks
 public class AutoBattleManager : MonoBehaviour
 {
+    public bool instantBattle = true; // For AI/Testing Battles
+    public void SetInstantBattle(bool instant = true)
+    {
+        instantBattle = instant;
+        if (prepManager != null)
+        {
+            prepManager.UI = !instant;
+            map.fast = instant;
+            factionManager.fast = instant;
+        }
+    }
     public GeneralUtility utility;
+    public AutoChessPrepManager prepManager;
     public AutoChessBattleUIManager battleUI;
     public AutoChessDataManager data;
     public AutoChessTactician tactician;

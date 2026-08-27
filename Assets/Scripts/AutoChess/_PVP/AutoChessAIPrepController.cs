@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,6 +7,7 @@ public class AutoChessAIPrepController : MonoBehaviour
 {
     // For greater details during player matches.
     public bool recordAIDecisions = false;
+    public AutoChessStateEncoder stateEncoder;
     // Load In Genome To Make Choices.
     public AutoChessPVPGenome genome;
     public void DefaultGenome()
@@ -26,7 +28,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         return 0f;
     }
-    void BuildStackCache()
+    public void BuildStackCache()
     {
         stackCache.Clear();
         foreach (string faction in factionManager.factionData.GetAllFactions())
@@ -72,7 +74,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         prepManager.dataManager.AddLog(scores);
     }
-    void ClearScoreCaches()
+    public void ClearScoreCaches()
     {
         keepCache.Clear();
         buyCache.Clear();
@@ -80,8 +82,36 @@ public class AutoChessAIPrepController : MonoBehaviour
     public AutoChessShopManager shopManager;
     public StatDatabase unitRarity;
     public StatDatabase factionThresholds;
-    public void AIPrepPhase(AutoChessDataManager dataManager)
+    protected bool timeTracking = false;
+    Stopwatch timer = null;
+    private Dictionary<string, double> timingTotals =
+    new Dictionary<string, double>();
+    public void ResetTimingData()
     {
+        timingTotals.Clear();
+    }
+    private void LogTiming(string label, Stopwatch newTimer)
+    {
+        newTimer.Stop();
+        double milliseconds = newTimer.Elapsed.TotalMilliseconds;
+        if (timingTotals.ContainsKey(label))
+            timingTotals[label] += milliseconds;
+        else
+            timingTotals.Add(label, milliseconds);
+    }
+    public void LogTimingSummary()
+    {
+        UnityEngine.Debug.Log("========== AI TIMING TOTALS ==========");
+        foreach (var pair in timingTotals)
+        {
+            UnityEngine.Debug.Log($"[AI TIMING] {pair.Key}: {pair.Value:F2} ms");
+        }
+        UnityEngine.Debug.Log("======================================");
+    }
+    public virtual void AIPrepPhase(AutoChessDataManager dataManager, bool timed = false)
+    {
+        timeTracking = timed;
+        if (timeTracking){timer = Stopwatch.StartNew();}
         prepManager.SetDataManager(dataManager);
         prepManager.DisableUI();
         shopManager.shopData.GeneratePVPCurrentListing();
@@ -94,27 +124,40 @@ public class AutoChessAIPrepController : MonoBehaviour
             LogUnitAndFactionScores();
             LogShopScores();
         }
+        if (timeTracking){LogTiming("Setup", timer);}
+        if (timeTracking){timer = Stopwatch.StartNew();}
         // Log Economy State + Choice + Choice Option Weights.
         EconomyAction(dataManager);
+        if (timeTracking){LogTiming("EconomyAction", timer);}
         // Log Each Shop Score + Choice.
+        if (timeTracking){timer = Stopwatch.StartNew();}
         AcquireLoop(dataManager);
+        if (timed){LogTiming("AcquireLoop", timer);}
         // Log Each Choice.
+        if (timeTracking){timer = Stopwatch.StartNew();}
         AutoPlaceFieldUnits(dataManager);
+        if (timed){LogTiming("PlaceUnits", timer);}
         // Log Each Equipment Score + Choice.
+        if (timeTracking){timer = Stopwatch.StartNew();}
         equipmentController.AutoPlaceEquipment(this);
+        if (timed){LogTiming("PlaceItems", timer);}
+        if (timeTracking){timer = Stopwatch.StartNew();}
         aegirPlacement.AegirPlaceFieldUnits();
         if (recordAIDecisions)
         {
             dataManager.AddLog(dataManager.GetEconState());
             LogUnitAndFactionScores();
         }
+        if (timeTracking){timer = Stopwatch.StartNew();}
         prepManager.StartBattle();
+        if (timed){LogTiming("StartBattle", timer);}
     }
     // ========================================================
     // 1. ECONOMY
     // ========================================================
-    void EconomyAction(AutoChessDataManager dataManager)
+    protected virtual void EconomyAction(AutoChessDataManager dataManager)
     {
+        Stopwatch econTimer = null;
         int gold = dataManager.GetGold();
         int level = dataManager.GetLevel();
         int hp = dataManager.GetHealth();
@@ -123,7 +166,8 @@ public class AutoChessAIPrepController : MonoBehaviour
         float levelScore = genome.GetByName("W_ECON_LEVEL_TIMING") * LevelUrgency(dataManager);
         float saveScore = genome.GetByName("W_ECON_INTEREST") * (Mathf.Min(gold / 10, 5));
         float hpUrgencyScore = genome.GetByName("W_ECON_HP_URGENCY") * (100 - hp);
-        float rerollScore = genome.GetByName("W_ECON_REROLL") * ShopQualityScore();
+        // Reroll Less At High Health And More At Low Health.
+        float rerollScore = genome.GetByName("W_ECON_REROLL") * ShopQualityScore() * Mathf.Clamp01((100f - hp) / 60f);
         float winStreakScore = genome.GetByName("W_ECON_STREAK_WIN") * (Mathf.Min(winStreak, 5));
         float lossStreakScore = genome.GetByName("W_ECON_STREAK_LOSS") * (Mathf.Min(lossStreak, 5));
         // If Losing And High HP Then Keep Saving To Lose More For Econ.
@@ -152,7 +196,9 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         else if (gold >= 1 && rerollScore > saveScore && rerollScore > levelScore)
         {
-            prepManager.PVPRerollShop();
+            if (timeTracking){econTimer = Stopwatch.StartNew();}
+            prepManager.FastRerollShop();
+            if (timeTracking){LogTiming("Reroll", econTimer);}
             if (recordAIDecisions)
             {
                 dataManager.AddLog("EconDecision~Reroll");
@@ -178,23 +224,23 @@ public class AutoChessAIPrepController : MonoBehaviour
     }
     float ShopQualityScore()
     {
-        float total = 0f;
-        int validSlots = 0;
+        float bestScore = 0f;
         for (int i = 0; i < shopManager.shopActors.Count; i++)
         {
             shopManager.Select(i);
             var actor = shopManager.GetSelectedActor();
             if (actor == null) continue;
-            total += BuyScore(actor);
-            validSlots++;
+            if (BuyScore(actor) > bestScore)
+            {
+                bestScore = BuyScore(actor);
+            }
         }
-        if (validSlots == 0) return -5f; // Empty shop = terrible
-        return total / validSlots;
+        return bestScore;
     }
     // ========================================================
     // 2. ACQUIRE (Shop + Bench merged)
     // ========================================================
-    void AcquireLoop(AutoChessDataManager dataManager)
+    protected virtual void AcquireLoop(AutoChessDataManager dataManager)
     {
         bool actionTaken = true;
         while (actionTaken && dataManager.GetGold() > 0)
@@ -224,7 +270,7 @@ public class AutoChessAIPrepController : MonoBehaviour
             {
                 int worstIndex = FindWorstBenchUnit();
                 if (worstIndex < 0) break;
-                float worstKeep = KeepScore(prepManager.benchSlots[worstIndex]);
+                float worstKeep = SellScore(prepManager.benchSlots[worstIndex]);
                 if (bestScore <= worstKeep + genome.GetByName("W_SELL_MARGIN")){break;} // margin threshold
                 if (recordAIDecisions)
                 {
@@ -239,7 +285,7 @@ public class AutoChessAIPrepController : MonoBehaviour
                 {
                     dataManager.AddLog($"Buy:{shopManager.GetSelectedActor().GetName()},BuyScore:{bestScore:F2},Cost:{buyCost}");
                 }
-                prepManager.PVPBuySelectedActor(buyCost);
+                prepManager.FastBuySelectedActor(buyCost);
                 ClearScoreCaches();
                 actionTaken = true;
             }
@@ -262,13 +308,21 @@ public class AutoChessAIPrepController : MonoBehaviour
         score += genome.GetByName("W_UNIT_STACK_GENERATION") * StackGainValue(unit);
         score += genome.GetByName("W_UNIT_STACK_SCALING") * StackScalingValue(unit);
         score += genome.GetByName("W_UNIT_CYCLE") * CycleValue(unit);
-        score += genome.GetByName("W_UNIT_CYCLE_SCALING") * CycleScalingValue(unit);
+        // Buying Should Give Bonus Value To Those With Good Bench Traits.
+        score += genome.GetByName("W_UNIT_CYCLE_SCALING") * CycleScalingValue(unit, true);
         List<string> factions = unit.GetFactions();
         for (int i = 0; i < factions.Count; i++)
         {
             score += EvaluateFaction(factions[i]);
         }
         buyCache[unit] = score;
+        return score;
+    }
+    public float SellScore(AutoActorRollUpData unit)
+    {
+        float score = KeepScore(unit);
+        // Lower The Score For OnSold Traits -> More Likely To Sell
+        score -= 2 * genome.GetByName("W_UNIT_CYCLE") * CycleValue(unit, false);
         return score;
     }
     public float KeepScore(AutoActorRollUpData unit, bool bench = true)
@@ -293,6 +347,7 @@ public class AutoChessAIPrepController : MonoBehaviour
                 keepSynergyScore += SynergyLossIfRemoved(unit.GetFactions()[i]);
             }
             score += genome.GetByName("W_KEEP_SYNERGY") * keepSynergyScore;
+            // TODO Add Value For Those With Bench Traits.
         }
         // For Field Units.
         else
@@ -323,7 +378,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         float worstScore = 9999f;
         for (int i = 0; i < prepManager.benchSlots.Count; i++)
         {
-            float score = KeepScore(prepManager.benchSlots[i]);
+            float score = SellScore(prepManager.benchSlots[i]);
             if (score < worstScore)
             {
                 worstScore = score;
@@ -411,7 +466,7 @@ public class AutoChessAIPrepController : MonoBehaviour
             CheckAllSwaps(totalSwaps + 1);
         }
     }
-    void AutoPlaceFieldUnits(AutoChessDataManager dataManager)
+    protected virtual void AutoPlaceFieldUnits(AutoChessDataManager dataManager)
     {
         // Place The Best Units If There Is Space.
         if (prepManager.fieldSlots.Count < prepManager.GetMaxFieldSlots())
@@ -565,6 +620,7 @@ public class AutoChessAIPrepController : MonoBehaviour
         string faction = emblemName.Replace(" Emblem", "");
         return SynergyValue(faction) > 0;
     }
+    // Only Used In Buy + Swap Scores, Since It Considers The Potential Addition.
     public float SynergyValue(string faction)
     {
         if (string.IsNullOrEmpty(faction)){return 0f;}
@@ -583,36 +639,49 @@ public class AutoChessAIPrepController : MonoBehaviour
         bool hitsThreshold = false;
         bool maintainsActive = false;
         bool oneAway = false;
+        int highestHit = 0;
+        int highestOneOff = 0;
         for (int i = 0; i < thresholds.Length; i++)
         {
             int t = thresholds[i];
-            if (currentCount < t && newCount >= t) hitsThreshold = true;
-            if (currentCount >= t) maintainsActive = true;
-            if (currentCount == t - 1) oneAway = true;
+            if (currentCount < t && newCount >= t)
+            {
+                hitsThreshold = true;
+                highestHit = i + 1;
+            }
+            if (currentCount >= t)
+            {
+                maintainsActive = true;
+            }
+            if (newCount == t - 1)
+            {
+                oneAway = true;
+                highestOneOff = i + 1;
+            }
         }
         if (hitsThreshold)
         {
             // Split This By Type Of Hit.
             if (factionManager.factionData.EconFaction(faction))
             {
-                return genome.GetByName("W_ECON_SYN_HIT");
+                return genome.GetByName("W_ECON_SYN_HIT") * highestHit;
             }
             else if (factionManager.factionData.MainFaction(faction))
             {
-                return genome.GetByName("W_MAIN_SYN_HIT");
+                return genome.GetByName("W_MAIN_SYN_HIT") * highestHit;
             }
             else
             {
-                return genome.GetByName("W_SYN_HIT");
+                return genome.GetByName("W_SYN_HIT") * highestHit;
             }
+        }
+        if (oneAway)
+        {
+            return genome.GetByName("W_SYN_ONEAWAY") * highestOneOff;
         }
         if (maintainsActive)
         {
             return genome.GetByName("W_SYN_MAINTAIN");
-        }
-        if (oneAway)
-        {
-            return genome.GetByName("W_SYN_ONEAWAY");
         }
         return 0f;
     }
@@ -713,25 +782,26 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         return 1f;
     }
+    // Win -> No Damage, Loss -> -Round -EnemyLevel -EnemyUnitsAlive, Tie -> -Round -EnemyLevel
+    int EstimateRoundsLeft()
+    {
+        // Assuming You Tie Every Game?
+        return Mathf.Max(1, Mathf.Min(15, prepManager.dataManager.GetHealth() / (prepManager.dataManager.GetLevel() + prepManager.dataManager.GetRound())));
+    }
     float GetStackLifetime(AutoChessTrait trait, bool isBuying)
     {
-        int roundsLeft = Mathf.Min(15, prepManager.dataManager.GetHealth() / (Mathf.Max(1, prepManager.dataManager.GetLevel() + prepManager.dataManager.GetRound())));
+        int roundsLeft = EstimateRoundsLeft();
         switch(trait.timing)
         {
             case "OnPurchase":
                 return isBuying ? 1f : 0f;
-            case "OnForwardSkill":
-                return roundsLeft / 2;
-            case "FirstSkill":
+            case "OnDeath":
             case "StartBattle":
                 return roundsLeft;
-            case "OnForwardAttack":
             case "OnSkill":
                 return roundsLeft * 2f;
             case "OnAttack":
                 return roundsLeft * 3f;
-            case "OnKill":
-                return roundsLeft * 0.5f;
         }
         return 0f;
     }
@@ -775,29 +845,32 @@ public class AutoChessAIPrepController : MonoBehaviour
         AutoChessTrait trait = unit.GetTrait();
         float value = 0f;
         if (trait == null) return value;
+        // StartBattle traits generate value over the course of a battle.
+        if (trait.timing == "StartBattle")
+        {
+            if (!bench || prepManager.traitManager.BenchTraitActive(prepManager, unit))
+            {
+                value += 1f;
+                // Bench Units Have More Value Since They Don't Take Field Space.
+                if (bench)
+                {
+                    value += 1f;
+                }
+            }
+        }
         string s = trait.specifics;
         if (s.Contains("UnitsBoughtMultiBy"))
             value += 1f;
         if (s.Contains("GoldSpentMultiBy"))
             value += 2f;
+        if (s.Contains("RerollMultiBy"))
+            value += 2f;
         if (s.Contains("BenchSizeMultiBy"))
             value += 2f;
         if (s.Contains("SelfActiveUnits"))
             value += 2f;
-        if (trait.timing == "StartBattle")
-        {
-            value += 1f;
-        }
-        // Free Stacks
-        if (bench && unit.GetName() == "Ceylon")
-        {
-            value += 1f;
-        }
-        // Potentially Free Gold.
-        if (bench && unit.GetName() == "Swire")
-        {
-            value += 0.5f;
-        }
+        int roundsLeft = EstimateRoundsLeft();
+        value *= roundsLeft;
         return value;
     }
     protected List<string> mainFactions = new List<string>(){"Yan", "Sargon", "Kjerag", "Aegir", "Victoria", "Laterano"};
@@ -827,11 +900,11 @@ public class AutoChessAIPrepController : MonoBehaviour
         score += stacks * genome.GetByName("W_FACTION_STACKS");
         if (active)
         {
-            score *= genome.GetByName("W_FACTION_ACTIVE");
+            score += genome.GetByName("W_FACTION_ACTIVE");
         }
         else
         {
-            score *= genome.GetByName("W_FACTION_INACTIVE");
+            score += genome.GetByName("W_FACTION_INACTIVE");
         }
         switch(GetFactionType(faction))
         {
@@ -845,6 +918,7 @@ public class AutoChessAIPrepController : MonoBehaviour
                 score += count * genome.GetByName("W_FACTION_SIDE");
                 break;
         }
+        // Hard force some gene pools into their preferred faction.
         if (faction == genome.GetPreferredFaction())
         {
             score += genome.GetByName("W_PREF_FACTION") * (count + 1);

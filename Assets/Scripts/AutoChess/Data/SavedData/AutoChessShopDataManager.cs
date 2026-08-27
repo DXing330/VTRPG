@@ -12,6 +12,7 @@ public class AutoChessShopDataManager : SavedData
     public string delimiter2;
     public bool logDataManager = true;
     public void DisableLogs(){logDataManager = false;}
+    public void EnableLogs(){logDataManager = true;}
     public AutoChessLogDataManager logData; // Shop State + Changes.
     public void AddLog(string newLog)
     {
@@ -84,131 +85,141 @@ public class AutoChessShopDataManager : SavedData
     }
     protected int DetermineRarity()
     {
-        int levelIndex = Mathf.Clamp(GetShopLevel() - 1, 0, rarityWeights.GetLength(0) - 1);
+        int levelIndex = Mathf.Clamp(shopLevel - 1, 0, rarityWeights.GetLength(0) - 1);
         int roll = autoChessShopRNG.SeedRange(0, 100);
         int cumulative = 0;
-        for (int rarity = 0; rarity < rarityWeights.GetLength(1); rarity++)
+        for (int r = 0; r < rarityWeights.GetLength(1); r++)
         {
-            cumulative += rarityWeights[levelIndex, rarity];
-            if (roll < cumulative)
-            {
-                return rarity + 1; // convert 0-based column to rarity 1-6
-            }
+            cumulative += rarityWeights[levelIndex, r];
+            if (roll < cumulative) return r + 1;
         }
         return 1;
     }
     // Rebuilt During New Game.
     // All Actors Either Exist In The Bench/Pool/Listing.
-    public List<string> currentPool;
-    public bool RemoveFromPool(string newData)
+    public bool RemoveFromPool(string actorName)
     {
-        int indexOf = currentPool.IndexOf(newData);
-        if (indexOf < 0){return false;}
-        currentPool.RemoveAt(indexOf);
-        currentPoolRarity.RemoveAt(indexOf);
-        currentPoolFactions.RemoveAt(indexOf);
-        return true;
+        if (!_actorCache.TryGetValue(actorName, out var data)) return false;
+        var bucket = _poolByRarity[data.rarity];
+        for (int i = 0; i < bucket.Count; i++)
+        {
+            if (bucket[i] == actorName)
+            {
+                int last = bucket.Count - 1;
+                bucket[i] = bucket[last];
+                bucket.RemoveAt(last);
+                _totalPoolCount--;
+                return true;
+            }
+        }
+        return false;
     }
     // When Selling/Rerolling.
-    public void AddToPool(string newData, int level = 1)
+    public void AddToPool(string actorName, int level = 1)
     {
-        int count = 1;
-        if (level > 1){count = 3;}
+        if (!_actorCache.TryGetValue(actorName, out var data)) return;
+        int count = level > 1 ? 3 : 1;
+        var bucket = _poolByRarity[data.rarity];
         for (int i = 0; i < count; i++)
-        {
-            currentPool.Add(newData);
-            currentPoolRarity.Add(unitRarity.ReturnValue(newData));
-            string[] blocks = unitData.ReturnValue(newData).Split("|");
-            currentPoolFactions.Add(blocks[0]);
-        }
+            bucket.Add(actorName);
+        _totalPoolCount += count;
     }
-    public void SetCurrentPool(string newData)
-    {
-        currentPool = newData.Split(delimiter2).ToList();
-    }
-    public List<string> currentPoolRarity;
-    public void SetCurrentPoolRarity(string newData)
-    {
-        currentPoolRarity = newData.Split(delimiter2).ToList();
-    }
-    public List<string> ReturnCurrentPoolOfRarity(int rarity)
-    {
-        string rarityString = rarity.ToString();
-        List<string> pool = new List<string>();
-        for (int i = 0; i < currentPoolRarity.Count; i++)
-        {
-            if (rarityString != currentPoolRarity[i]){continue;}
-            pool.Add(currentPool[i]);
-        }
-        return pool;
-    }
-    public List<string> currentPoolFactions;
-    public void SetCurrentPoolFactions(string newData)
-    {
-        currentPoolFactions = newData.Split(delimiter2).ToList();
-    }
-    public List<string> ReturnCurrentPoolOfFaction(string faction)
-    {
-        List<string> pool = new List<string>();
-        for (int i = 0; i < currentPoolFactions.Count; i++)
-        {
-            // Can't Get Higher Rarity Than Shop Level.
-            if (int.Parse(currentPoolRarity[i]) > GetShopLevel()){continue;}
-            string[] factionBlocks = currentPoolFactions[i].Split(",");
-            if (!factionBlocks.Contains(faction)){continue;}
-            pool.Add(currentPool[i]);
-        }
-        return pool;
-    }
+    // Used By Ethan + Yu Traits
     public string ReturnRandomActorFromFaction(string faction)
     {
-        return ReturnRandomActorFromPool(ReturnCurrentPoolOfFaction(faction));
-    }
-    public string ReturnRandomActorFromFactionAndRarity(string faction, int rarity)
-    {
-        List<string> factionPool = ReturnCurrentPoolOfFaction(faction);
-        for (int i = factionPool.Count - 1; i >= 0; i--)
+        // Build list of all pool copies matching faction
+        List<string> matches = new List<string>();
+        for (int r = 1; r <= Mathf.Min(6, GetShopLevel()); r++)
         {
-            if (int.Parse(unitRarity.ReturnValue(factionPool[i])) < rarity)
+            foreach (var name in _poolByRarity[r])
             {
-                factionPool.RemoveAt(i);
+                string[] factions = _actorCache[name].faction.Split(",");
+                foreach (var f in factions)
+                {
+                    if (f.Trim() == faction)
+                    {
+                        matches.Add(name);
+                        break; // one copy = one entry
+                    }
+                }
             }
         }
-        return ReturnRandomActorFromPool(factionPool);
+        if (matches.Count == 0) return null;
+        int roll = autoChessShopRNG.SeedRange(0, matches.Count);
+        string chosen = matches[roll];
+        RemoveFromPool(chosen);
+        return chosen;
     }
-    public string ReturnRandomActor()
+    // Used By That One Tactician.
+    public string ReturnRandomActorFromFactionAndRarity(string faction = "Laterano", int minRarity = 4)
     {
-        List<string> randomPool = new List<string>(currentPool);
-        for (int i = currentPool.Count - 1; i >= 0; i--)
+        List<string> matches = new List<string>();
+        for (int r = minRarity; r <= 6; r++)
         {
-            if (int.Parse(currentPoolRarity[i]) > GetShopLevel())
+            foreach (var name in _poolByRarity[r])
             {
-                randomPool.RemoveAt(i);
+                string[] factions = _actorCache[name].faction.Split(",");
+                foreach (var f in factions)
+                {
+                    if (f.Trim() == faction)
+                    {
+                        matches.Add(name);
+                        break;
+                    }
+                }
             }
         }
-        return ReturnRandomActorFromPool(randomPool);
+        if (matches.Count == 0) return null;
+        int roll = autoChessShopRNG.SeedRange(0, matches.Count);
+        string chosen = matches[roll];
+        RemoveFromPool(chosen);
+        return chosen;
     }
-    // Consumes The Actor From The Listing Automatically.
-    public string ReturnRandomActorFromPool(List<string> pool)
+    public string DrawRandomOfRarity(int rarity)
     {
-        string actorName = currentPool[0];
-        if (pool.Count <= 0)
+        var bucket = _poolByRarity[rarity];
+        if (bucket.Count == 0) return null;
+        int roll = autoChessShopRNG.SeedRange(0, bucket.Count);
+        int last = bucket.Count - 1;
+        string chosen = bucket[roll];
+        bucket[roll] = bucket[last];
+        bucket.RemoveAt(last);
+        _totalPoolCount--;
+        return chosen;
+    }
+    public string DrawRandomAny()
+    {
+        if (_totalPoolCount == 0) return null;
+        int validPoolCount = 0;
+        for (int r = 1; r <= Mathf.Min(GetShopLevel(), 6); r++)
+            validPoolCount += _poolByRarity[r].Count;
+        if (validPoolCount == 0) return null;
+        int roll = autoChessShopRNG.SeedRange(0, validPoolCount);
+        int cumulative = 0;
+        for (int r = 1; r <= Mathf.Min(6, GetShopLevel()); r++)
         {
-            logData.AddLog("Empty Pool - Using Default Value");
-            RemoveFromPool(actorName);
-            return actorName;
+            cumulative += _poolByRarity[r].Count;
+            if (roll < cumulative)
+            {
+                var bucket = _poolByRarity[r];
+                int last = bucket.Count - 1;
+                string chosen = bucket[last];
+                bucket.RemoveAt(last);
+                _totalPoolCount--;
+                return chosen;
+            }
         }
-        int roll = autoChessShopRNG.SeedRange(0, pool.Count);
-        actorName = pool[roll];
-        RemoveFromPool(actorName);
-        return actorName;
+        return null;
     }
     public List<string> currentListing;
-    public void ModifyCurrentList(int index, string effect, string specifics)
+    public void ModifyCurrentList(int index, string effect, string specifics, bool AI = false)
     {
         string original = currentListing[index];
-        AddToPool(currentListing[index]);
-        currentListing.RemoveAt(index);
+        if (AI)
+        {
+            original = PVPCurrentListing[index];
+        }
+        AddToPool(original);
         string newRoll = original;
         switch (effect)
         {
@@ -216,43 +227,41 @@ public class AutoChessShopDataManager : SavedData
             newRoll = ReturnRandomActorFromFaction(specifics);
             break;
             case "Copy":
-            string copy = currentListing[int.Parse(specifics)];
+            string copy = original;
             if (RemoveFromPool(copy))
             {
                 newRoll = copy;
             }
             break;
         }
-        if (newRoll != original)
+        logData.AddLog(newRoll + " Added To Shop Listing");
+        if (!AI)
         {
-            logData.AddLog(newRoll + " Added To Shop Listing");
+            currentListing[index] = newRoll;
         }
         else
         {
-            logData.AddLog("Unable To Find Replacement");
+            PVPCurrentListing[index] = newRoll;
         }
-        currentListing.Insert(index, newRoll);
     }
     public void GenerateCurrentListing(bool reroll = false)
     {
         logData.AddLog("Generating New Shop Listing");
-        for (int i = 0; i < currentListing.Count; i++)
-        {
-            AddToPool(currentListing[i]);
-        }
+        foreach (var item in currentListing)
+            AddToPool(item);
         currentListing.Clear();
-        // Determine How Many Slots Are Available.
-        int availableSlots = Mathf.Min(6, 3 + GetShopLevel() / 3);
-        for (int i = 0; i < availableSlots; i++)
+        int slots = Mathf.Min(6, 3 + GetShopLevel() / 3);
+        for (int i = 0; i < slots; i++)
         {
-            string newRoll = ReturnRandomActorFromPool(ReturnCurrentPoolOfRarity(DetermineRarity()));
-            logData.AddLog(newRoll + " Added To Shop");
-            currentListing.Add(newRoll);
+            string chosen = DrawRandomOfRarity(DetermineRarity());
+            if (chosen != null)
+            {
+                logData.AddLog(chosen + " Added To Shop");
+                currentListing.Add(chosen);
+            }
         }
         if (tactician != null && reroll)
-        {
             tactician.ApplyRerollEffect(this);
-        }
     }
     public List<string> GetCurrentListing(){return currentListing;}
     public void SetCurrentListing(string newData)
@@ -279,20 +288,18 @@ public class AutoChessShopDataManager : SavedData
     }
     public void GeneratePVPCurrentListing(bool reroll = false)
     {
-        logData.AddLog("Generating New Shop Listing");
-        for (int i = 0; i < PVPCurrentListing.Count; i++)
-        {
-            AddToPool(PVPCurrentListing[i]);
-        }
+        foreach (var item in PVPCurrentListing)
+            AddToPool(item);
         PVPCurrentListing.Clear();
-        // Determine How Many Slots Are Available.
-        int availableSlots = Mathf.Min(6, 3 + GetShopLevel() / 3);
-        for (int i = 0; i < availableSlots; i++)
+        int slots = Mathf.Min(6, 3 + GetShopLevel() / 3);
+        for (int i = 0; i < slots; i++)
         {
-            string newRoll = ReturnRandomActorFromPool(ReturnCurrentPoolOfRarity(DetermineRarity()));
-            logData.AddLog(newRoll + " Added To Shop");
-            PVPCurrentListing.Add(newRoll);
+            string chosen = DrawRandomOfRarity(DetermineRarity());
+            if (chosen != null)
+                PVPCurrentListing.Add(chosen);
         }
+        if (tactician != null && reroll)
+            tactician.ApplyRerollEffect(this, true);
     }
     public override void NewRound()
     {
@@ -304,26 +311,47 @@ public class AutoChessShopDataManager : SavedData
         }
         GenerateCurrentListing();
     }
+    // === RUNTIME STATE: Buckets only ===
+    [System.NonSerialized] private List<string>[] _poolByRarity = new List<string>[7];
+    [System.NonSerialized] private int _totalPoolCount = 0;
+    // Cache: actor name -> (rarity as int, faction string, copies when sold)
+    // Built once at NewGame, never parsed again
+    [System.NonSerialized] private Dictionary<string, (int rarity, string faction)> _actorCache;
+    // One-time init (call from NewGame or Awake)
+    private void InitRarityBuckets()
+    {
+        for (int r = 1; r <= 6; r++)
+            _poolByRarity[r] = new List<string>();
+        foreach (var bucket in _poolByRarity)
+            bucket?.Clear();
+    }
     [ContextMenu("New Game")]
     public override void NewGame()
     {
         shopLevel = 1;
         frozenShop = 0;
-        currentPool.Clear();
-        currentPoolRarity.Clear();
-        currentPoolFactions.Clear();
+        currentListing.Clear();
+        PVPCurrentListing.Clear();
+        // Clear buckets
+        InitRarityBuckets();
+        _totalPoolCount = 0;
+        // Build fast lookup cache
+        _actorCache = new Dictionary<string, (int, string)>();
         List<string> allNames = unitData.GetAllKeys();
         for (int i = 0; i < allNames.Count; i++)
         {
-            // 6, 12, 18, 24, 30, 36 of each unit.
-            int rarity = int.Parse(unitRarity.ReturnValue(allNames[i]));
-            string[] dataBlocks = unitData.ReturnValue(allNames[i]).Split("|");
-            for (int j = 0; j < 42 - 6 * rarity; j++)
+            string name = allNames[i];
+            int rarity = int.Parse(unitRarity.ReturnValue(name));
+            if (rarity > 6){continue;} // Special Units Not In Shop.
+            string faction = unitData.ReturnValue(name).Split("|")[0];
+            _actorCache[name] = (rarity, faction);
+            int copies = 24 - 3 * rarity; // 21,18,15,12,9,6
+            var bucket = _poolByRarity[rarity];
+            for (int j = 0; j < copies; j++)
             {
-                currentPool.Add(allNames[i]);
-                currentPoolRarity.Add(rarity.ToString());
-                currentPoolFactions.Add(dataBlocks[0]);
+                bucket.Add(name);
             }
+            _totalPoolCount += copies;
         }
         autoChessShopRNG.NewGame();
         GenerateCurrentListing();
@@ -332,18 +360,37 @@ public class AutoChessShopDataManager : SavedData
     public override void Save()
     {
         dataPath = GetSavePath();
+        // Build count map: "ActorName:Rarity:Count"
+        Dictionary<string, int> counts = new Dictionary<string, int>();
+        for (int r = 1; r <= 6; r++)
+        {
+            foreach (var name in _poolByRarity[r])
+            {
+                if (!counts.ContainsKey(name))
+                {
+                    counts[name] = 0;
+                }
+                counts[name]++;
+            }
+        }
+        List<string> poolEntries = new List<string>();
+        foreach (var kvp in counts)
+        {
+            poolEntries.Add(kvp.Key + ":" + kvp.Value);
+        }
         allData = "";
         allData += "ShopLevel=" + shopLevel + delimiter;
         allData += "FrozenShop=" + frozenShop + delimiter;
-        allData += "CurrentPool=" + String.Join(delimiter2, currentPool) + delimiter;
-        allData += "CurrentPoolRarity=" + String.Join(delimiter2, currentPoolRarity) + delimiter;
-        allData += "CurrentPoolFactions=" + String.Join(delimiter2, currentPoolFactions) + delimiter;
+        allData += "Pool=" + String.Join(delimiter2, poolEntries) + delimiter;
         allData += "CurrentListing=" + String.Join(delimiter2, currentListing) + delimiter;
+        allData += "PVPCurrentListing=" + String.Join(delimiter2, PVPCurrentListing) + delimiter;
         File.WriteAllText(dataPath, allData);
         autoChessShopRNG.Save();
     }
     public override void Load()
     {
+        InitRarityBuckets();
+        _actorCache = new Dictionary<string, (int, string)>();
         dataPath = GetSavePath();
         if (File.Exists(dataPath))
         {
@@ -369,26 +416,52 @@ public class AutoChessShopDataManager : SavedData
         string value = blocks[1];
         switch (key)
         {
-            default:
-            return;
             case "ShopLevel":
-            SetShopLevel(value);
-            return;
+            shopLevel = int.Parse(value);
+            break;
             case "FrozenShop":
             frozenShop = int.Parse(value);
-            return;
-            case "CurrentPool":
-            SetCurrentPool(value);
-            return;
-            case "CurrentPoolRarity":
-            SetCurrentPoolRarity(value);
-            return;
-            case "CurrentPoolFactions":
-            SetCurrentPoolFactions(value);
-            return;
+            break;
+            case "Pool":
+            ParsePool(value);
+            break;
             case "CurrentListing":
-            SetCurrentListing(value);
-            return;
+            if (!string.IsNullOrEmpty(value))
+                currentListing = value.Split(delimiter2).ToList();
+            break;
+            case "PVPCurrentListing":
+            if (!string.IsNullOrEmpty(value))
+                PVPCurrentListing = value.Split(delimiter2).ToList();
+            break;
+        }
+    }
+    void ParsePool(string data)
+    {
+        if (string.IsNullOrEmpty(data)) return;
+        string[] entries = data.Split(delimiter2);
+        for (int i = 0; i < entries.Length; i++)
+        {
+            string[] parts = entries[i].Split(":");
+            if (parts.Length < 2) continue;
+            string name = parts[0];
+            int count = int.Parse(parts[1]);
+            if (!_actorCache.TryGetValue(name, out var info))
+            {
+                // Fallback: rebuild cache entry if missing (modded save?)
+                int rarity = int.Parse(unitRarity.ReturnValue(name));
+                string faction = unitData.ReturnValue(name).Split("|")[0];
+                info = (rarity, faction);
+                _actorCache[name] = info;
+            }
+            var bucket = _poolByRarity[info.rarity];
+            if (bucket == null)  // ← DEFENSIVE CHECK
+            {
+                Debug.LogError($"Bucket for {name} with rarity {info.rarity} is null!");
+                continue;
+            }
+            for (int j = 0; j < count; j++)
+                bucket.Add(name);
+            _totalPoolCount += count;
         }
     }
 }

@@ -18,6 +18,7 @@ public class AutoChessPrepManager : ClickTileManager
         tactician = dataManager.tactician;
         shopManager.shopData.logData = dataManager.logData;
         shopManager.shopData.SetShopLevel(dataManager.GetLevel());
+        shopManager.shopData.tactician = dataManager.tactician;
         LoadSlots();
     }
     public void SaveToDataManager()
@@ -38,13 +39,31 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public AutoChessTactician tactician;
     public AutoChessPrepUIManager UIManager;
+    public bool logging = false;
+    [ContextMenu("Log State")]
+    public void LogState()
+    {
+        float[] state = dataManager.encoderLogger.encoder.Encode(this, dataManager, shopManager, factionManager);
+        bool[] mask = dataManager.encoderLogger.encoder.BuildValidMask(this, dataManager, shopManager, factionManager);
+        dataManager.encoderLogger.encoder.DebugLogState(state, mask, this, dataManager, shopManager);
+    }
+    public void LogDecision(int action)
+    {
+        if (!logging || !dataManager.EncodeLogs()) return;
+        dataManager.encoderLogger.LogDecision(this, dataManager, shopManager, factionManager, action);
+    }
     public bool UI = true;
     public void EnableUI()
     {
         UI = true;
+        factionManager.EnableUI();
         UpdateAllUI();
     }
-    public void DisableUI(){UI = false;}
+    public void DisableUI()
+    {
+        UI = false;
+        factionManager.DisableUI();
+    }
     // Put The Equipment UI Reset Here For Now.
     public void UpdateAllUI()
     {
@@ -59,7 +78,7 @@ public class AutoChessPrepManager : ClickTileManager
         GenerateSpawnTiles();
         ResetSelected();
         dataManager.Load();
-        factionManager.SetDataManager(dataManager);
+        SetDataManager(dataManager);
         LoadSlots();
         UpdateAllUI();
     }
@@ -146,7 +165,7 @@ public class AutoChessPrepManager : ClickTileManager
             }
             return;
         }
-        for (int i = 3; i < mapSize; i++)
+        for (int i = 4; i < mapSize; i++)
         {
             for (int j = 0; j < mapSize; j++)
             {
@@ -177,7 +196,7 @@ public class AutoChessPrepManager : ClickTileManager
             if (timing == "OnPurchase" && factionManager.FactionActive("Investor"))
             {
                 ApplyActorTrait(actor, trait);
-                if (factionManager.GetStacksOfFaction("Investor") >= 70)
+                if (factionManager.GetStacksOfFaction("Investor") >= 50)
                 {
                     ApplyActorTrait(actor, trait);
                 }
@@ -187,109 +206,11 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public void ApplyActorTrait(AutoActorRollUpData actor, AutoChessTrait trait, bool copied = false)
     {
-        if (trait == null){return;}
-        int intSpecifics = traitManager.ReturnTraitSpecificsInt(actor, this);
-        AutoActorRollUpData backActor = GetBackActor(actor);
-        AutoActorRollUpData frontActor = GetFrontActor(actor);
-        List<string> factionsToAdd = new List<string>();
-        switch (trait.effect)
-        {
-            // Self/SelfActive/HighestActive/RandomActive
-            default:
-            factionManager.GainStacksSwitch(actor, intSpecifics);
-            break;
-            case "SelfAndBackActive":
-            factionsToAdd.AddRange(actor.GetFactions().Distinct().ToList());
-            if (backActor != null)
-            {
-                factionsToAdd.AddRange(backActor.GetFactions().Distinct().ToList());
-            }
-            factionManager.GainActiveStacks(factionsToAdd, intSpecifics);
-            break;
-            case "SelfAndFrontActive":
-            factionsToAdd.AddRange(actor.GetFactions().Distinct().ToList());
-            if (frontActor != null)
-            {
-                factionsToAdd.AddRange(frontActor.GetFactions().Distinct().ToList());
-            }
-            factionManager.GainActiveStacks(factionsToAdd, intSpecifics);
-            break;
-            case "SelfAndFrontLineActive":
-            List<AutoActorRollUpData> lineActors = GetActorsInLineDirection(actor);
-            for (int i = 0; i < lineActors.Count; i++)
-            {
-                factionsToAdd.AddRange(lineActors[i].GetFactions().Distinct().ToList());
-            }
-            factionManager.GainActiveStacks(factionsToAdd, intSpecifics);
-            break;
-            case "AllActiveBench":
-            for (int i = 0; i < benchSlots.Count; i++)
-            {
-                factionsToAdd.AddRange(benchSlots[i].GetFactions().Distinct().ToList());
-            }
-            factionManager.GainActiveStacks(factionsToAdd, intSpecifics);
-            break;
-            // Don't Unlimited Copy.
-            case "CopyFront":
-            if (copied || frontActor == null){break;}
-            dataManager.AddLog("Copied " + frontActor.GetName() + "'s trait.");
-            ApplyActorTrait(actor, frontActor.trait, true);
-            break;
-            case "CopyBack":
-            if (copied || backActor == null){break;}
-            dataManager.AddLog("Copied " + backActor.GetName() + "'s trait.");
-            ApplyActorTrait(actor, backActor.trait, true);
-            break;
-            case "Gold":
-            dataManager.GainGold(intSpecifics);
-            break;
-            case "NextRoundGold":
-            dataManager.GainNextRoundGold(intSpecifics);
-            break;
-            case "Equipment":
-            dataManager.GainEquipment(trait.specifics);
-            break;
-            case "AegirUnit":
-            for (int i = 0; i < Mathf.Max(1, intSpecifics); i++)
-            {
-                List<string> randomAegirUnits = new List<string>{"Specter", "Skadi", "Andreana"};
-                string randomGainedAegir = randomAegirUnits[shopManager.shopData.autoChessShopRNG.SeedRange(0, randomAegirUnits.Count)];
-                AutoActorRollUpData gainedAegir = new AutoActorRollUpData();
-                gainedAegir.SetName(randomGainedAegir);
-                if (shopManager.RemoveFromPool(randomGainedAegir))
-                {
-                    GainActor(gainedAegir);
-                }
-            }
-            break;
-            case "Unit":
-            for (int i = 0; i < Mathf.Max(1, intSpecifics); i++)
-            {
-                string gainedUnitName = trait.specifics;
-                AutoActorRollUpData gainedUnit = new AutoActorRollUpData();
-                gainedUnit.SetName(gainedUnitName);
-                if (shopManager.RemoveFromPool(gainedUnitName))
-                {
-                    GainActor(gainedUnit);
-                }
-            }
-            break;
-            case "HighestActiveUnit":
-            string faction = factionManager.HighestUnitCountFaction();
-            if (faction == "")
-            {
-                GainRandomActor();
-                break;
-            }
-            for (int i = 0; i < Mathf.Max(1, intSpecifics); i++)
-            {
-                GainActorOfFaction(faction);
-            }
-            break;
-        }
+        traitManager.ApplyActorTraitToPrepManager(this, actor, trait, copied);
     }
     public void StartBattle()
     {
+        LogDecision(0);
         ResetBonusSlots();
         fieldSlots.Sort((a, b) =>
         {
@@ -298,15 +219,20 @@ public class AutoChessPrepManager : ClickTileManager
             return colB.CompareTo(colA);
         });
         SaveToDataManager();
-        dataManager.Save();
+        if (UI)
+        {
+            dataManager.Save();
+        }
         ApplyStartBattleActorTraits();
         // Check The Tactician Effect.
         if (tactician != null)
         {
-            tactician.Load();
             tactician.ApplyEndRoundEffect(this);
         }
-        dataManager.LogBattleStart();
+        if (UI)
+        {
+            dataManager.LogBattleStart();
+        }
     }
     public void ApplyStartBattleActorTraits()
     {
@@ -316,6 +242,7 @@ public class AutoChessPrepManager : ClickTileManager
         {
             CheckTraitTiming(fieldSlots[i], "StartBattle");
         }
+        traitManager.CheckBenchTraits(this, benchSlots);
         List<string> activeFactions = factionManager.factionData.GetActiveFactions();
         if (activeFactions.Contains("Aid"))
         {
@@ -328,19 +255,6 @@ public class AutoChessPrepManager : ClickTileManager
             for (int i = 0; i < activeFactions.Count; i++)
             {
                 factionManager.factionData.GainFactionStacks(activeFactions[i], aidBonus);
-            }
-        }
-        // Special Cases That Activate Even On The Bench.
-        for (int i = 0; i < benchSlots.Count; i++)
-        {
-            string benchName = benchSlots[i].GetName();
-            if (benchName == "Ceylon")
-            {
-                CheckTraitTiming(benchSlots[i], "StartBattle");
-            }
-            else if (benchName == "Swire" && (factionManager.FactionActive("Investor") || factionManager.FactionActive("Yan")))
-            {
-                CheckTraitTiming(benchSlots[i], "StartBattle");
             }
         }
         UpdateAllUI();
@@ -359,17 +273,24 @@ public class AutoChessPrepManager : ClickTileManager
         shopManager.Select(index);
         UIManager.UpdateActorDisplay(shopManager.GetSelectedActor());
     }
-    public void PVPRerollShop()
+    public void FastRerollShop(bool PVP = true)
     {
+        if (dataManager.GetFreeRerolls() > 0)
+        {
+            LogDecision(2);
+            dataManager.UseFreeReroll();
+            shopManager.FastReroll(PVP);
+            dataManager.Reroll();
+            return;
+        }
         if (!SpendGold(1)){return;}
-        shopManager.PVPReroll();
+        LogDecision(2);
+        shopManager.FastReroll(PVP);
         dataManager.Reroll();
     }
     public void RerollShop()
     {
-        if (!SpendGold(1)){return;}
-        shopManager.Reroll();
-        dataManager.Reroll();
+        FastRerollShop(false);
         UpdateAllUI();
     }
     protected int expCost = 4;
@@ -377,7 +298,9 @@ public class AutoChessPrepManager : ClickTileManager
     {
         if (dataManager.MaxLevel()){return;}
         if (!SpendGold(expCost)){return;}
+        LogDecision(1);
         dataManager.GainExp(expCost);
+        shopManager.shopData.SetShopLevel(dataManager.GetLevel());
         UpdateAllUI();
     }
     public void FreezeShop()
@@ -387,10 +310,10 @@ public class AutoChessPrepManager : ClickTileManager
     // This Will Remove It From The Pool.
     public void GainRandomActor()
     {
-        string newActorName = shopManager.shopData.ReturnRandomActor();
+        string newActorName = shopManager.shopData.DrawRandomAny();
         GainActor(newActorName);
     }
-    // Generate A Random Actor Of That Faction.
+    // Generate A Random Actor Of That Faction Only Used By 1 Tactician.
     public void GainActorOfFactionAndRarity(string faction, int rarity, int level = 1)
     {
         string newActorName = shopManager.shopData.ReturnRandomActorFromFactionAndRarity(faction, rarity);
@@ -404,6 +327,7 @@ public class AutoChessPrepManager : ClickTileManager
             shopManager.shopData.RemoveFromPool(newActorName);
         }
     }
+    // Used By Ethan + Yu
     public void GainActorOfFaction(string faction)
     {
         string newActorName = shopManager.shopData.ReturnRandomActorFromFaction(faction);
@@ -424,6 +348,13 @@ public class AutoChessPrepManager : ClickTileManager
     {
         dataManager.AddLog("Gained " + newActor.GetName());
         // Check For Merging To Level Up.
+        // Kazemaru is special.
+        if (newActor.GetName() == "Kazemaru" && level == 1 && GetLevelOneActorsWithName(newActor.GetName()) >= 1)
+        {
+            MergeIntoLevelTwoActor(newActor.GetName());
+            UpdateAllUI();
+            return;
+        }
         if (level == 1 && GetLevelOneActorsWithName(newActor.GetName()) >= 2)
         {
             CheckTraitTiming(newActor, "OnPurchase");
@@ -432,8 +363,11 @@ public class AutoChessPrepManager : ClickTileManager
             UpdateAllUI();
             return;
         }
+        if (!newActor.LoadBaseStats(actorData, level))
+        {
+            return;
+        }
         dataManager.GainActor(newActor);
-        newActor.LoadBaseStats(actorData, level);
         // Determine If A Trait Is Triggered.
         CheckTraitTiming(newActor, "OnPurchase");
         // Determine If Go To Bench Vs Bonus Area.
@@ -446,19 +380,22 @@ public class AutoChessPrepManager : ClickTileManager
         }
         newActor.SetLocation(newSlot);
         benchSlots.Add(newActor);
+        SaveToDataManager();
         UpdateAllUI();
     }
-    public void PVPBuySelectedActor(int cost)
+    public void FastBuySelectedActor(int cost, bool PVP = true)
     {
-        if (factionManager.FactionActive("Foresight") && factionManager.GetStacksOfFaction("Foresight") >= 100)
+        if (factionManager.FactionActive("Foresight") && factionManager.GetStacksOfFaction("Foresight") >= 80)
         {
             cost--;
         }
         if (!SpendGold(cost)){return;}
+        int selectedShopIndex = shopManager.GetSelectedIndex();
+        LogDecision(3 + selectedShopIndex);
         AutoActorRollUpData boughtActor = shopManager.GetSelectedActor();
         dataManager.AddLog("Bought " + boughtActor.GetName());
         GainActor(boughtActor);
-        shopManager.PVPBuySelectedActor();
+        shopManager.FastBuySelectedActor(PVP);
     }
     public void BuySelectedActor()
     {
@@ -466,13 +403,7 @@ public class AutoChessPrepManager : ClickTileManager
         if (newSlot < 0){return;}
         int cost = shopManager.SelectedCost();
         if (cost < 0){return;}
-        if (!SpendGold(cost)){return;}
-        // Remove The Actor From The Shop.
-        AutoActorRollUpData boughtActor = shopManager.GetSelectedActor();
-        dataManager.AddLog("Bought " + boughtActor.GetName());
-        GainActor(boughtActor);
-        shopManager.BuySelectedActor();
-        SaveToDataManager();
+        FastBuySelectedActor(cost, false);
         UpdateAllUI();
     }
     protected void CommercialPackagingPlan()
@@ -505,12 +436,26 @@ public class AutoChessPrepManager : ClickTileManager
         dataManager.ReclaimEquipmentFromActor(soldActor);
         dataManager.SellActor();
         shopManager.SellActor(soldActor);
-        if (benchSlots.Contains(soldActor))
+        int benchIndex = benchSlots.IndexOf(soldActor);
+        int fieldIndex = fieldSlots.IndexOf(soldActor);
+        if (benchIndex >= 0)
         {
+            LogDecision(9 + benchIndex);  // HOOK: Sell Bench 0-11
             benchSlots.Remove(soldActor);
         }
-        else if (fieldSlots.Contains(soldActor))
+        // TODO How To Log Sell From Field?
+        // Maybe Move It Back To Bench Then Log Sell From Bench?
+        else if (fieldIndex >= 0)
         {
+            bool benchFull = benchSlots.Count >= maxBenchSlots;
+            if (!benchFull)
+            {
+                // Normal case: Return + Sell
+                LogDecision(33 + fieldIndex);// Return
+                MoveFromFieldToBench(soldActor);
+                int newBenchIndex = benchSlots.IndexOf(soldActor);
+                LogDecision(9 + newBenchIndex);// Sell
+            }
             fieldSlots.Remove(soldActor);
         }
         ResetSelected();
@@ -602,9 +547,12 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public void MoveFromBenchToField(AutoActorRollUpData benchActor)
     {
-        if (!benchSlots.Contains(benchActor)){return;}
+        int indexOf = benchSlots.IndexOf(benchActor);
+        if (indexOf < 0){return;}
+        LogDecision(21 + indexOf);
         fieldSlots.Add(benchActor);
         benchSlots.Remove(benchActor);
+        dataManager.AddLog($"{benchActor.GetName()} moved to bench.");
     }
     public List<AutoActorRollUpData> fieldSlots;
     public bool UnitExists(AutoActorRollUpData newUnit, bool includeBench = true)
@@ -643,9 +591,12 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public void MoveFromFieldToBench(AutoActorRollUpData fieldActor)
     {
-        if (!fieldSlots.Contains(fieldActor)){return;}
+        int indexOf = fieldSlots.IndexOf(fieldActor);
+        if (indexOf < 0){return;}
+        LogDecision(33 + indexOf);
         benchSlots.Add(fieldActor);
         fieldSlots.Remove(fieldActor);
+        dataManager.AddLog($"{fieldActor.GetName()} moved to bench.");
     }
     public List<int> GetTakenSpots()
     {
@@ -667,7 +618,7 @@ public class AutoChessPrepManager : ClickTileManager
             }
         }
         int bonusSlots = Mathf.Min(2, fieldSlotEquipCount);
-        return 3 + bonusSlots +(dataManager.GetLevel() / 2);
+        return 4 + bonusSlots +(dataManager.GetLevel() / 2);
     }
     public AutoActorRollUpData GetFieldSlotActorOnTileNumber(int tileNumber)
     {
@@ -712,7 +663,7 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public void MergeIntoLevelTwoActor(string newName)
     {
-        dataManager.AddLog("3 Level 1 [" + newName + "] Units Fused Into 1 Level 2 Unit");
+        dataManager.AddLog($"[{newName}] Fused Into Level 2 Unit");
         // As a bonus, get a free equipment.
         dataManager.GainEquipment("Random");
         // Need To Make Sure Equipment Returns To Equipment Inventory.
@@ -836,15 +787,10 @@ public class AutoChessPrepManager : ClickTileManager
             {
                 int fieldLocation = fieldSlots[selectedActorIndex].GetLocation();
                 currentBenchActor.SetLocation(fieldLocation);
-                fieldSlots.Add(currentBenchActor);
-                benchSlots.Remove(currentBenchActor);
+                MoveFromBenchToField(currentBenchActor);
             }
-            AutoActorRollUpData newAutoActor = new AutoActorRollUpData();
-            newAutoActor.LoadRollUpData(fieldSlots[selectedActorIndex].ReturnRollUpData());
-            newAutoActor.SetLocation(clickedLocation);
-            newAutoActor.SetDirection(1);
-            fieldSlots.RemoveAt(selectedActorIndex);
-            benchSlots.Add(newAutoActor);
+            fieldSlots[selectedActorIndex].SetLocation(clickedLocation);
+            MoveFromFieldToBench(fieldSlots[selectedActorIndex]);
             ResetSelected();
         }
         SaveToDataManager();

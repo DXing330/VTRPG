@@ -5,11 +5,6 @@ using UnityEngine;
 // In charge of PVP battles: reset map -> load in actors/factions/equip/etc. -> loop turns -> end battle -> deal damage to loser
 public class AutoChessPVPBattleManager : AutoBattleManager
 {
-    public bool instantBattle = true; // For AI/Testing Battles
-    public void SetInstantBattle(bool instant = true)
-    {
-        instantBattle = instant;
-    }
     public AutoChessDataManager leftTeam;
     public List<AutoActor> leftTeamActors;
     public AutoChessDataManager rightTeam;
@@ -115,7 +110,21 @@ public class AutoChessPVPBattleManager : AutoBattleManager
     {
         if (actor.GetHealth() > 0){return;}
         TriggerTrait(actor, "OnDeath");
+        List<string> deathActives = new List<string>(actor.GetDeathActives());
+        for (int i = 0; i < deathActives.Count; i++)
+        {
+            if (deathActives[i].Length <= 0) { continue; }
+            activeManager.SetSkillFromName(deathActives[i], actor);
+            activeManager.GetTargetedTiles(actor.GetLocation());
+            ActivateSkill(deathActives[i], actor);
+        }
         // Check On Revives.
+        if (actor.Resurrect())
+        {
+            map.ResurrectActor(actor);
+            ResilientCheckResurrectedAlly(actor);
+            return;
+        }
         if (actor.GetTeam() == 0)
         {
             if (aegirRevives > 0 && actor.AutoChessFaction("Aegir"))
@@ -145,23 +154,6 @@ public class AutoChessPVPBattleManager : AutoBattleManager
                 map.ResurrectActor(actor);
                 return;
             }
-        }
-        // Resurrect After Gaining Stacks.
-        if (actor.Resurrect())
-        {
-            map.ResurrectActor(actor);
-            ResilientCheckResurrectedAlly(actor);
-            return;
-        }
-        List<string> deathActives = new List<string>(actor.GetDeathActives());
-        // Only Trigger Death Actives Once For Enemies.
-        actor.DisableDeathActives();
-        for (int i = 0; i < deathActives.Count; i++)
-        {
-            if (deathActives[i].Length <= 0) { continue; }
-            activeManager.SetSkillFromName(deathActives[i], actor);
-            activeManager.GetTargetedTiles(actor.GetLocation());
-            ActivateSkill(deathActives[i], actor);
         }
     }
     // MAP/Basic Stuff.
@@ -261,18 +253,20 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         {
             yanDragon = 1;
             int totalYanAttack = 0;
+            int totalYanHealth = 0;
             for (int i = 0; i < leftTeamActors.Count; i++)
             {
                 if (leftTeamActors[i].AutoChessFaction("Yan"))
                 {
+                    totalYanHealth += leftTeamActors[i].GetBaseHealth();
                     totalYanAttack += leftTeamActors[i].GetBaseAttack();
                 }
             }
             yanDragonAttack = totalYanAttack * 30 / 100;
-            // TODO Determine Location, Probably Open Backline Spot.
             int dragonLocation = map.EmptyStartingTileByEdge(3);
             AutoActor yanDragonActor = actorMaker.CreateActorByName("YanDragon", 0, dragonLocation);
-            yanDragonActor.SetBaseAttack(yanDragonAttack);
+            yanDragonActor.UpdateBaseAttack(yanDragonAttack);
+            yanDragonActor.UpdateBaseHealth(totalYanHealth * 30 / 100, false);
             actorMaker.ReorganizeActorPassives(yanDragonActor);
             map.AddActorToBattle(yanDragonActor);
         }
@@ -293,17 +287,20 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         {
             yanDragon2 = 1;
             int totalYanAttack = 0;
+            int totalYanHealth = 0;
             for (int i = 0; i < rightTeamActors.Count; i++)
             {
                 if (rightTeamActors[i].AutoChessFaction("Yan"))
                 {
+                    totalYanHealth += rightTeamActors[i].GetBaseHealth();
                     totalYanAttack += rightTeamActors[i].GetBaseAttack();
                 }
             }
             yanDragonAttack2 = totalYanAttack * 30 / 100;
             int dragonLocation2 = map.EmptyStartingTileByEdge(1);
             AutoActor yanDragonActor2 = actorMaker.CreateActorByName("YanDragon", 1, dragonLocation2);
-            yanDragonActor2.SetBaseAttack(yanDragonAttack2);
+            yanDragonActor2.UpdateBaseAttack(yanDragonAttack2);
+            yanDragonActor2.UpdateBaseHealth(totalYanHealth * 30 / 100, false);
             actorMaker.ReorganizeActorPassives(yanDragonActor2);
             map.AddActorToBattle(yanDragonActor2);
         }
@@ -622,10 +619,6 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             }
         }
         TriggerTrait(actor, "OnSkill");
-        if (actor.ReturnTotalRoundSkills() == 0)
-        {
-            TriggerTrait(actor, "FirstSkill");
-        }
         // Don't Bother With Costs In AutoMode.
         if (!instantBattle)
         {

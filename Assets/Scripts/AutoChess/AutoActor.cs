@@ -14,6 +14,7 @@ public enum AutoChessFaction
     Kjerag, // Ice
     Aegir, // Water
     Sargon, // Earth
+    Siracusa, // Dark
     Victoria, // Lightning
     // Additional alliances
     Precision,
@@ -209,11 +210,16 @@ public class AutoActorRollUpData
     // Need The Trait Since Some Traits Activate During Prep Phase.
     public AutoChessTrait trait;
     public AutoChessTrait GetTrait(){return trait;}
-    public void LoadBaseStats(StatDatabase autoActorData, int newLevel = 1)
+    public bool LoadBaseStats(StatDatabase autoActorData, int newLevel = 1)
     {
         SetLevel(newLevel);
         string data = autoActorData.ReturnValue(autoChessName);
         string[] blocks = data.Split("|");
+        if (blocks.Length < 18)
+        {
+            Debug.Log(autoChessName);
+            return false;
+        }
         trait = new AutoChessTrait();
         trait.LoadBaseTrait(blocks[1], blocks[2], blocks[3]);
         SetFactions(blocks[0].Split(",").ToList());
@@ -231,6 +237,7 @@ public class AutoActorRollUpData
         {
             AOE = true;
         }
+        return true;
     }
     public void LoadBaseTrait(StatDatabase autoActorData)
     {
@@ -341,6 +348,7 @@ public class AutoActor : TacticActor
         baseCrit = 0;
         baseCritPower = 200;
         baseHitChance = 100;
+        currentHitChance = baseHitChance;
         baseDodge = 0;
         ResetEquipment();
         ResetPassives();

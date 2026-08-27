@@ -104,19 +104,21 @@ public class AutoChessFactionDisplay : MonoBehaviour
             case "Harmony": // No Passive Needed?
             return "Harmony Faction allies count as Aegir, Kjerag, Laterano, Sargon, Victoria and Yan Faction allies.";
             case "Assist": // Need a check for upgraded allies.
-            return "All allies gain +30% HP and +30% ATK. Doubled for upgraded allies.";
+            return "All allies take -20% DMG and gain +20% ATK.";
             case "Aegir": // Need a check for defeated ally count.
-            return "At the start of battle, Aegir units consume the unit in front, absorbing their ATK. All Aegir units have {+" + (stacks * 2 + 30) + "%} health. If there are 5+ Aegir Faction allies, then the first 3 Aegir Faction allies defeated will immediately be revived.";
+            return "At the start of battle, Aegir units consume the unit in front, absorbing their ATK. All Aegir units have {+" + (stacks + 40) + "%} health. If there are 5+ Aegir Faction allies, then the first 3 Aegir Faction allies defeated will immediately be revived.";
             case "Kjerag": // Implemented
             return "Kjerag allies deal 130% damage, increased to {" + (130 + stacks) + "%} when attacking enemies that have cold or frozen status. If there are 5+ Kjerag Faction allies, then every {" + (Mathf.Max(1, 6 / Mathf.Max(1, (stacks / 100)))).ToString() + "} rounds, apply [Cold] status to all enemies.";
             case "Laterano": // Implemented
             return "After Laterano allies use a skill, Laterano allies' next basic attack deals {" + (40 + stacks) + "%} additonal damage. Additionally, if there are 5+ Laterano Faction allies, then whenever a Laterano unit uses a skill all Laterano Faction allies gain +1% damage with basic attacks";
-            case "Victoria": // Implemented + Handled at start of battle by manager, since this equipment has 0 overlap with equipment in other game modes.
-            return "Victoria allies deal {" + (140 + stacks) + "%} damage when holding 1+ equipment. If there are 5+ Victoria Faction allies, then all Victoria Faction allies gain +80% attack.";
+            case "Siracusa": // Implemented
+            return "Siracusa allies gain {" + (40 + stacks) + "%} attack speed. If there are 5+ Siracusa Faction allies, then all Siracusa allies deal {" + (stacks / 12) + "} bonus dark damage when attacking.";
+            case "Victoria": // Implemented.
+            return "Victoria allies deal {" + (140 + stacks) + "%} damage. If there are 5+ Victoria Faction allies, then all Victoria Faction allies gain +80% attack.";
             case "Yan": // Summoning Handled At Start.
-            return "Yan allies gain {+" + (30 + stacks) + "%} attack. If there are 6+ Yan Faction allies, then summon an additional powerful Yan ally.";
+            return "Yan allies gain {+" + (40 + stacks) + "%} attack. If there are 6+ Yan Faction allies, then summon an additional powerful Yan ally.";
             case "Sargon": // Implemented
-            return "After a Sargon ally uses a skill, all Sargon Faction allies gain {+" + (40 + stacks) + "%} attack speed. If there are 5+ Sargon Faction allies, then additionally gain {+" + (stacks) + "%} attack.";
+            return "After a Sargon ally uses a skill, all Sargon Faction allies gain {+" + (stacks / 6) + "%} attack speed. If there are 5+ Sargon Faction allies, then additionally gain {+" + (stacks / 12) + "%} attack.";
             // SUB Damage
             case "Agile": // Implemented
             return "Agile units and adjacent allies gain {+" + (stacks + 10) + "%} attack speed.";
@@ -128,18 +130,18 @@ public class AutoChessFactionDisplay : MonoBehaviour
             return "Raid allies gain {+" + (stacks + 30) + "%} attack while having a buff. Additionally, Raid allies will redeploy to an empty tile closest to an enemy if no enemy is in range during their skill activation.";
             // SUB Support
             case "Resilient": // Implemented
-            return "Melee units have {~" + ((100 * stacks) / (50 + stacks)) + "%} chance to be instantly revived upon being defeated.";
+            return "Melee units have {~" + ((100 * stacks) / (50 + stacks)) + "%} chance to be instantly revived upon being defeated. If there are 3+ Resilient Faction units, then melee units grant +2 energy to all allies when defeated.";
             case "Durable": // Implemented
-            return "All allies gain {+" + (40 + stacks) + "%} health. If there are 3+ Durable Faction allies, then all durable allies gain [Guard] and will attempt to block attacks for nearby allies.";
+            return "All allies gain {+" + (40 + stacks) + "%} health. If there are 3+ Durable Faction allies, then all allies take 40% less damage from attacks.";
             case "Aid": // Implemented + Not In Battle
             return "All allies gain {+" + (40 + stacks) + "%} defense. At the start of each battle, all active factions gain 2 stacks. If there are 3+ Aid Faction allies, then instead gain 4 stacks.";
             // ECON
             case "Marvel": // Not In Battle
-            return "When rerolling, there is {~" + ((100 * stacks) / (100 + stacks)) + "%} chance to gain 1 gold. Every 50 stacks, gain 10 gold next round.";
+            return "When rerolling, there is {~" + ((20 + stacks) / (100 + stacks)) + "%} chance to gain 1 gold. Every 50 stacks, gain 10 gold next round.";
             case "Foresight": // Not In Battle
-            return "Every 10 stacks, gain 2 gold next round. At 100+ stacks, shop units cost -1 gold.";
+            return "Every 10 stacks, gain 2 gold next round. At 80+ stacks, shop units cost -1 gold.";
             case "Investor": // Not In Battle
-            return "Double all [When Obtained] trait effects. At 70+ stacks, triple the effects.";
+            return "Double all [When Obtained] trait effects. At 50+ stacks, triple the effects.";
         }
     }
 }

@@ -9,6 +9,8 @@ public class PassiveEffectTester : MonoBehaviour
     // For Better Map Initialization.
     public AttackManagerTester attackTester;
     public StatDatabase allPassives;
+    public Condition buffStatusManager;
+    public StatDatabase allBuffsStatuses;
     public PassiveSkill passive;
     public BattleMap map;
     public string dummyTime;
@@ -29,6 +31,7 @@ public class PassiveEffectTester : MonoBehaviour
         map.combatLog.ForceStart();
         map.combatLog.AddNewLog();
         // Set up the actors.
+        dummyActor.InitializeStats();
         dummyActor.SetInitialStatsFromString(actorStats);
         dummyActor.InitializeStats();
         passiveOrganizer.OrganizeActorPassives(dummyActor);
@@ -81,5 +84,29 @@ public class PassiveEffectTester : MonoBehaviour
                 TestPassiveWithAddedPassive(allPassiveNames[i], "2");
             }
         }
+    }
+    [ContextMenu("Test All Buffs & Statuses")]
+    public void TestAllBuffStatus()
+    {
+        List<string> allTests = allBuffsStatuses.GetAllKeys();
+        for (int i = 0; i < allTests.Count; i++)
+        {
+            TestStatus(allTests[i]);
+        }
+    }
+    public void TestStatus(string statusName)
+    {
+        InitializeMap();
+        string original = dummyActor.ReturnTestStatsString();
+        dummyActor.AddStatus(statusName, 1);
+        buffStatusManager.ForceApplyEffects(dummyActor, allBuffsStatuses, map);
+        string final = dummyActor.ReturnTestStatsString();
+        Debug.Log(statusName + ":" + original + ">" + final);
+    }
+    public string testStatus = "";
+    [ContextMenu("Test Single Status")]
+    public void TestTestStatus()
+    {
+        TestStatus(testStatus);
     }
 }

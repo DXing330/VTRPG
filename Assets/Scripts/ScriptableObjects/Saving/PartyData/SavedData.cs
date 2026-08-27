@@ -42,7 +42,7 @@ public class SavedData : ScriptableObject
         dataList = allData.Split(delimiter).ToList();
         Save();
     }
-    protected string GetSavePath()
+    protected virtual string GetSavePath()
     {
         return TrainingWorkerStorage.GetFilePath(filename);
     }

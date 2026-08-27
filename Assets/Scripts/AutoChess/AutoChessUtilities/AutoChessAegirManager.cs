@@ -105,9 +105,12 @@ public class AutoChessAegirManager : MonoBehaviour
         int originalAttack = consumingActors[index].GetBaseAttack();
         consumingActors[index].UpdateBaseAttack(attackGain);
         consumedActors[index].UpdateHealth(CONSUMEHPLOSS);
-        map.UpdateCombatLog(consumingActors[index].GetSpriteName() + " consumes " + consumedActors[index].GetSpriteName() + " and gains " + attackGain + " attack. (" + originalAttack + "->" + consumingActors[index].GetBaseAttack() + ")");
+        if (!manager.instantBattle)
+        {
+            map.UpdateCombatLog(consumingActors[index].GetSpriteName() + " consumes " + consumedActors[index].GetSpriteName() + " and gains " + attackGain + " attack. (" + originalAttack + "->" + consumingActors[index].GetBaseAttack() + ")");
+        }
         consumedActors.RemoveAt(index);
         consumingActors.RemoveAt(index);
-        manager.GainFactionStacks("Aegir", 2, aegirTeam);
+        manager.GainFactionStacks("Aegir", 3, aegirTeam);
     }
 }

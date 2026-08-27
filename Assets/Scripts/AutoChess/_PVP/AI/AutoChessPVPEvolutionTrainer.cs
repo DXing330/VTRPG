@@ -37,6 +37,24 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     public int targetGenerations = 100;
     public bool quitWhenDone = false;
     public int trainingWorker = 0;
+    void NeuralNetTraining()
+    {
+        benchmarkNeuralNet = true;
+        autoStartTraining = false;
+        autoStartEloTournament = false;
+    }
+    void GenomeTraining()
+    {
+        benchmarkNeuralNet = false;
+        autoStartTraining = true;
+        autoStartEloTournament = false;
+    }
+    void GenomeElo()
+    {
+        benchmarkNeuralNet = false;
+        autoStartTraining = false;
+        autoStartEloTournament = true;
+    }
     void Awake()
     {
         string[] args = System.Environment.GetCommandLineArgs();
@@ -44,25 +62,24 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         {
             switch (args[i])
             {
+                case "--benchmark-neural-net":
+                    NeuralNetTraining();
+                    break;
                 case "--train-master":
                     trainingMode = TrainingMode.Master;
-                    autoStartTraining = true;
-                    autoStartEloTournament = false;
+                    GenomeTraining();
                     break;
                 case "--train-worker":
                     trainingMode = TrainingMode.Worker;
-                    autoStartTraining = true;
-                    autoStartEloTournament = false;
+                    GenomeTraining();
                     break;
                 case "--train-master-elo":
                     trainingMode = TrainingMode.Master;
-                    autoStartTraining = false;
-                    autoStartEloTournament = true;
+                    GenomeElo();
                     break;
                 case "--train-worker-elo":
                     trainingMode = TrainingMode.Worker;
-                    autoStartTraining = false;
-                    autoStartEloTournament = true;
+                    GenomeElo();
                     break;
                 case "--workers":
                     if (i + 1 < args.Length)
@@ -121,6 +138,10 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                     if (i + 1 < args.Length)
                         int.TryParse(args[++i], out eloTargetMatches);
                     break;
+                case "--neuralNetMatches":
+                    if (i + 1 < args.Length)
+                        int.TryParse(args[++i], out neuralNetBenchmarkMatches);
+                    break;
             }
         }
         if (autoStartEloTournament)
@@ -172,8 +193,8 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     public AutoChessPVPMatchDirector director;
     public AutoChessAIPrepController aiController;
     [Header("Evolution Settings")]
-    public int populationSize = 8; // This Is Per Gene Pool Not Full Population
-    public int matchesPerGenome = 6;
+    public int populationSize = 16; // This Is Per Gene Pool Not Full Population
+    public int matchesPerGenome = 1;
     public int podSize = 8;
     public int elites = 2;
     public int cullCount = 2;
@@ -212,6 +233,12 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                     tournamentMatchData.ClearHistory();
                 }
                 StartChampionEloTournament();
+                return;
+            }
+            if (benchmarkNeuralNet)
+            {
+                StartCoroutine(RunNeuralNetBenchmark());
+                return;
             }
         }
         catch (System.Exception e)
@@ -307,6 +334,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         int matchesRun = 0;
         for (int i = 0; i < matchesToRun; i++)
         {
+            director.EnableLogs(); // Log Champion Decisions For Training.
             // Build pod from champion database
             List<GenomeEntry> pod = CreateTournamentPod();
             if (pod.Count < podSize)
@@ -502,10 +530,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             #endif
         }
     }
-    [ContextMenu("Start Training")]
-    public void StartTraining() => StartCoroutine(RunTrainingLoop());
-    [ContextMenu("Stop Training")]
-    public void StopTraining() => isTraining = false;
     IEnumerator RunTrainingLoop()
     {
         if (trainingMode == TrainingMode.Worker)
@@ -519,10 +543,68 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             yield break;
         }
     }
+    [Header("Neural Net Config")]
+    public bool benchmarkNeuralNet = false;
+    public int placementWinThreshold = 4; // 4th place or higher is considered a "Win".
+    public int neuralNetBenchmarkMatches = 10;
+    [ContextMenu("Benchmark Neural Net vs Champions")]
+    public void StartNeuralNetBenchmark()
+    {
+        if (!benchmarkNeuralNet || director.neuralNetController == null)
+        {
+            Debug.Log("Neural net benchmark disabled or controller missing.");
+            return;
+        }
+        StartCoroutine(RunNeuralNetBenchmark());
+    }
+    public IEnumerator RunNeuralNetBenchmark()
+    {
+        int winCount = 0;
+        Debug.Log($"=== Neural Net Benchmark: {neuralNetBenchmarkMatches} matches ===");
+        for (int i = 0; i < neuralNetBenchmarkMatches; i++)
+        {
+            Application.targetFrameRate = -1;
+            director.EnableLogs(); // Create Logs For More Training.
+            // Setup: 1 neural net (slot 0), 7 champions
+            director.neuralNetCount = 1;
+            director.SetupNNMatch();
+            // Run match
+            director.matchOver = false;
+            director.roundCount = 0;
+            while (!director.matchOver && director.roundCount < 30)
+            {
+                director.AIPrepPhase(true);
+                yield return null;
+            }
+            // Check placement
+            var allTeams = director.allPlayers.GetAllTeams();
+            var ranked = allTeams.OrderByDescending(t => t.GetRound()).ThenByDescending(t => t.GetHealth()).ToList();
+            int neuralPlacement = ranked.IndexOf(allTeams[0]) + 1; // Slot 0 is neural net
+            bool won = neuralPlacement <= placementWinThreshold;
+            if (won){winCount++;}
+        }
+        float winRate = (float)winCount / neuralNetBenchmarkMatches;
+        Debug.Log($"=== Benchmark Complete: {winCount}/{neuralNetBenchmarkMatches} top-4 ({winRate:P0}) ===");
+        if (winRate > 0.55f)
+        {
+            Debug.Log("Neural net is competitive — consider for promotion");
+        }
+        else
+        {
+            Debug.Log("Neural net needs more training");
+        }
+        if (quitWhenDone)
+        {
+            #if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+            #else
+            Application.Quit();
+            #endif
+        }
+    }
     [Header("Master Worker Control")]
-    public string workerExecutablePath = "";
-    public float workerTimeoutSeconds = 3600f;
-    public float workerEloTimeoutSeconds = 36000f;
+    public float workerTimeoutSeconds = 360f;
+    public float workerEloTimeoutSeconds = 3600f;
     // REPLACE LaunchWorkers() entirely:
     void SignalWorkersReady(int generation)
     {
@@ -598,6 +680,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     {
         Application.targetFrameRate = 5;
         isTraining = true;
+        float trainingStart = Time.realtimeSinceStartup;
         for (int gen = 0; gen < targetGenerations && isTraining; gen++)
         {
             Debug.Log($"=== MASTER: Generation {currentGeneration} ===");
@@ -616,6 +699,8 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         }
         isTraining = false;
         SignalWorkersDone();
+        float trainingTime = Time.realtimeSinceStartup - trainingStart;
+        Debug.Log($"{targetGenerations} finished in {trainingTime:F1}s");
         if (quitWhenDone)
         {
             Application.Quit();
@@ -772,8 +857,17 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         int leftover = schedule.Count % podSize;
         if (leftover > 0)
         {
-            Debug.LogWarning($"RunGenerationPods: {leftover} genomes left over (not enough for a full pod). " +
-                $"Consider adjusting populationSize × matchesPerGenome to be divisible by podSize.");
+            // NEW: Pad with cyclic repeats instead of warning
+            Debug.LogWarning($"RunGenerationPods: {leftover} genomes left over. " +
+                $"Padding with cyclic repeats to fill final pod.");
+            int startIdx = schedule.Count - leftover;
+            List<GenomeEntry> finalPod = schedule.GetRange(startIdx, leftover);
+            // Cyclically fill remaining slots
+            for (int i = 0; i < podSize - leftover; i++)
+            {
+                finalPod.Add(schedule[i]);
+            }
+            yield return StartCoroutine(RunPodMatch(finalPod, podIndex++, false));
         }
     }
     IEnumerator RunPodMatch(List<GenomeEntry> pod, int podIndex, bool elo = false)

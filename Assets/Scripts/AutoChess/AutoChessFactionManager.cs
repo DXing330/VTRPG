@@ -9,6 +9,8 @@ using UnityEngine;
 public class AutoChessFactionManager : MonoBehaviour
 {
     public bool fast = false;
+    public void DisableUI(){fast = true;}
+    public void EnableUI(){fast = false;}
     public AutoChessDataManager dataManager;
     public AutoChessFactionDataManager factionData;
     public void SetDataManager(AutoChessDataManager newData)

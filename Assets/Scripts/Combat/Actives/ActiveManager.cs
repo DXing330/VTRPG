@@ -442,6 +442,19 @@ public class ActiveManager : MonoBehaviour
                     active.AffectActor(targets[i], "Status", specifics, power);
                 }
                 return;
+            case "AttackEnemies+Displace":
+                if (targets.Count <= 0) { return; }
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    if (targets[i].GetTeam() == skillUser.GetTeam())
+                    {
+                        targetedTiles.Remove(targets[i].GetLocation());
+                        continue;
+                    }
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
+                }
+                map.DisplaceSkill(skillUser, targetedTiles, specifics, power);
+                return;
             case "AttackAllEnemies":
                 targets = map.AllEnemies(skillUser);
                 if (targets.Count <= 0) { return; }

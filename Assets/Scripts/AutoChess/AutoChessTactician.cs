@@ -95,7 +95,7 @@ public class AutoChessTactician : SavedData
         }
     }
     // DONE
-    public void ApplyRerollEffect(AutoChessShopDataManager shopData)
+    public void ApplyRerollEffect(AutoChessShopDataManager shopData, bool AI = false)
     {
         if (tacticianTiming != "Reroll"){return;}
         int roundRerollCount = dataManager.GetRoundRerolls();
@@ -104,19 +104,19 @@ public class AutoChessTactician : SavedData
             case "DuYaoye":
             if (roundRerollCount > 1){return;}
             AddLog();
-            shopData.ModifyCurrentList(0, "Faction", "Yan");
-            shopData.ModifyCurrentList(1, "Faction", "Yan");
+            shopData.ModifyCurrentList(0, "Faction", "Yan", AI);
+            shopData.ModifyCurrentList(1, "Faction", "Yan", AI);
             return;
             case "Orchid":
             AddLog();
-            shopData.ModifyCurrentList(1, "Copy", "0");
+            shopData.ModifyCurrentList(1, "Copy", "0", AI);
             return;
             case "Pepe":
             if (roundRerollCount > 0){return;}
             AddLog();
-            shopData.ModifyCurrentList(0, "Faction", "Sargon");
-            shopData.ModifyCurrentList(1, "Faction", "Sargon");
-            shopData.ModifyCurrentList(2, "Faction", "Sargon");
+            shopData.ModifyCurrentList(0, "Faction", "Sargon", AI);
+            shopData.ModifyCurrentList(1, "Faction", "Sargon", AI);
+            shopData.ModifyCurrentList(2, "Faction", "Sargon", AI);
             return;
         }
     }

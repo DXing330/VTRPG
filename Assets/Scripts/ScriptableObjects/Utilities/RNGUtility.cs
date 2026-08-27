@@ -26,7 +26,6 @@ public class RNGUtility : SavedData
         RandomNumberGenerator.Fill(bytes);
         seed = BitConverter.ToUInt64(bytes, 0);
         seedHistory.Clear();
-        Save();
         for (int i = 0; i < subRNG.Count; i++)
         {
             subRNG[i].SetSeed(seed);
@@ -36,7 +35,6 @@ public class RNGUtility : SavedData
     {
         seed = newSeed;
         seedHistory.Clear();
-        Save();
     }
     public ulong GetSeed()
     {

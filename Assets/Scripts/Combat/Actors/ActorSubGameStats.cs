@@ -71,14 +71,13 @@ public class ActorSubGameStats : ActorStats
         if (autoChessFactions.Contains(newFaction)){return;}
         autoChessFactions.Add(newFaction);
     }
-    protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kjerag", "Laterano", "Sargon", "Victoria", "Yan"};
+    protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kjerag", "Laterano", "Sargon", "Siracusa", "Victoria", "Yan", "Harmony"};
     public bool AutoChessFaction(string factionName)
     {
         for (int i = 0; i < autoChessFactions.Count; i++)
         {
             string factionString = autoChessFactions[i].ToString();
             if (factionString == factionName){return true;}
-            if (factionString == "Harmony" && (autoChessMainFactions.Contains(factionName))){return true;}
         }
         return false;
     }

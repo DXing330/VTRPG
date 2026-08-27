@@ -7,8 +7,9 @@ using UnityEngine;
 // Add a battle manager so the map doesn't get too bloated, the map is just the visualization of the battle map and anything that will result in a change of that visualization, a lot of logic will be handled somewhere else.
 public class BattleMap : MapManager
 {
+    public bool fast = false;
     [ContextMenu("ForceStart")]
-    public void ForceStart()
+    public virtual void ForceStart()
     {
         InitializeEmptyList();
         terrainEffectTiles = new List<string>(emptyList);
@@ -992,6 +993,18 @@ public class BattleMap : MapManager
     public List<string> actorTiles;
     public bool TileNotEmpty(int tileNumber)
     {
+        if (tileNumber < 0 || tileNumber >= actorTiles.Count)
+        {
+            Debug.Log(tileNumber);
+            if (actorTiles.Count < mapInfo.Count)
+            {
+                GetActorTiles();
+            }
+            else
+            {
+                return false;
+            }
+        }
         // If someone's name is on the tile then it's not empty.
         return (actorTiles[tileNumber].Length > 1);
     }
@@ -2120,7 +2133,7 @@ public class BattleMap : MapManager
         int location = actor.GetLocation();
         int direction = actor.GetDirection();
         int target = mapUtility.PointInDirection(location, direction, mapSize);
-        if (target < 0){return null;}
+        if (target < 0 || target == location){return null;}
         if (!aegir)
         {
             return GetActorOnTile(target);

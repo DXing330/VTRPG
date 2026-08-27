@@ -9,7 +9,10 @@ using TMPro;
 public class MapTile : MonoBehaviour
 {
     public int tileNumber;
-    public void SetTileNumber(int newNumber){tileNumber = newNumber;}
+    public void SetTileNumber(int newNumber)
+    {
+        tileNumber = newNumber;
+    }
     public ClickTileManager cMap;
     public GameObject mainObject;
     public int elevation = 0;

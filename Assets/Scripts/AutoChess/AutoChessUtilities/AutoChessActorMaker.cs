@@ -56,6 +56,8 @@ public class AutoChessActorMaker : ActorMaker
         AutoActor newActor = new AutoActor();
         string actorName = rollUpActor.GetName();
         string actorStats = actorData.ReturnValue(actorName);
+        // This Resets Factions, Just Reset HitChance In The InitializeStats.
+        //newActor.InitializeStats();
         newActor.SetPersonalName(actorName);
         newActor.SetSpriteName(actorName);
         newActor.AutoChessSetInitialStatsFromString(actorStats, rollUpActor.GetLevel());
@@ -69,7 +71,6 @@ public class AutoChessActorMaker : ActorMaker
             ApplyEquipmentToActor(newActor, equipmentString);
         }
         passiveOrganizer.OrganizeActorPassives(newActor);
-        newActor.InitializeStats();
         if (location < 0)
         {
             newActor.SetLocation(rollUpActor.GetLocation());

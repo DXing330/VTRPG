@@ -74,9 +74,16 @@ public class AutoChessShopManager : MonoBehaviour
         RefreshData();
         UI.UpdateAutoChessShopUI(this);
     }
-    public void PVPReroll()
+    public void FastReroll(bool PVP = true)
     {
-        shopData.GeneratePVPCurrentListing(true);
+        if (PVP)
+        {
+            shopData.GeneratePVPCurrentListing(true);
+        }
+        else
+        {
+            shopData.GenerateCurrentListing(true);
+        }
     }
     public void Reroll()
     {
@@ -103,6 +110,10 @@ public class AutoChessShopManager : MonoBehaviour
         AutoActorRollUpData selectedActor = shopActors[selectedIndex];
         return ReturnActorCost(selectedActor);
     }
+    public int GetSelectedIndex()
+    {
+        return selectedIndex;
+    }
     public AutoActorRollUpData GetSelectedActor()
     {
         return shopActors[selectedIndex];
@@ -115,12 +126,20 @@ public class AutoChessShopManager : MonoBehaviour
     {
         return null;
     }
-    public void PVPBuySelectedActor()
+    public void FastBuySelectedActor(bool PVP = true)
     {
         shopActors.RemoveAt(selectedIndex);
-        shopData.RemoveFromPVPListing(selectedIndex);
-        ResetSelected();
-        PVPRefreshData();
+        if (PVP)
+        {
+            shopData.RemoveFromPVPListing(selectedIndex);
+            ResetSelected();
+            PVPRefreshData();
+        }
+        else
+        {
+            shopData.RemoveFromListing(selectedIndex);
+            ResetSelected();
+        }
     }
     public void BuySelectedActor()
     {

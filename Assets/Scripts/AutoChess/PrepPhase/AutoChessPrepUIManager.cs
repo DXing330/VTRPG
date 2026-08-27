@@ -64,6 +64,8 @@ public class AutoChessPrepUIManager : MonoBehaviour
         for (int i = 0; i < prepManager.benchSlots.Count; i++)
         {
             int benchIndex = prepManager.benchSlots[i].GetLocation();
+            // Since The Player Needs To Move Back To Back When Selling From Field.
+            if (benchIndex < 0 || benchIndex >= benchSlots.Count){continue;}
             benchSlots[benchIndex].UpdateBenchSlot(prepManager.benchSlots[i]);
         }
         UpdateMap(prepManager);

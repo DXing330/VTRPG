@@ -909,8 +909,8 @@ public class PassiveSkill : SkillEffect
                 return (actor.GetActiveSkills().Count > int.Parse(conditionSpecifics));
             // AK Autochess Conditions
             case "AKRaidCheck":
-                // Enough Energy For Skill && No Target In Range
-                return (actor.GetAutoSkillCoolDown() <= actor.GetEnergy() && map.battleMapUtility.GetActorOnFacingTile(actor, map) == null);
+                // No Attacks Last Round OR Enough Energy For Skill && No Target In Range
+                return (actor.ReturnPreviousRoundAttacks() == 0 || (actor.GetAutoSkillCoolDown() <= actor.GetEnergy() && map.battleMapUtility.GetActorOnFacingTile(actor, map) == null));
         }
         return true;
     }
