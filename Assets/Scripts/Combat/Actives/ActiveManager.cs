@@ -66,6 +66,7 @@ public class ActiveManager : MonoBehaviour
         string shape = active.GetRangeShape();
         if (spell){ shape = magicSpell.GetRangeShape(); }
         targetableTiles = new List<int>(GetTiles(start, shape, true, spell));
+        targetableTiles = map.FilterTilesForLineOfSight(start, targetableTiles);
         if (targetableTiles.Count <= 0) { targetableTiles.Add(start); }
         return targetableTiles;
     }
@@ -97,6 +98,7 @@ public class ActiveManager : MonoBehaviour
             shape = magicSpell.GetShape();
         }
         targetedTiles = new List<int>(GetTiles(start, shape, false, spellCast));
+        targetedTiles = map.FilterTilesForLineOfSight(start, targetedTiles);
         if (!spellCast)
         {
             if (active.GetShape() == "Circle" || active.GetShape() == "None")

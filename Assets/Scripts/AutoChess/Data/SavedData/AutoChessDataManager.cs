@@ -4,10 +4,24 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+    using UnityEditor;
+#endif
 
 [CreateAssetMenu(fileName = "AutoChessDataManager", menuName = "ScriptableObjects/AutoChess/AutoChessDataManager", order = 1)]
 public class AutoChessDataManager : SavedData
 {
+    public override void SetFolderName(string newName = "")
+    {
+        for (int i = 0; i < subDataManagers.Count; i++)
+        {
+            subDataManagers[i].SetFolderName(newName);
+        }
+        foldername = newName;
+        #if UNITY_EDITOR
+            EditorUtility.SetDirty(this);
+        #endif
+    }
     public bool playerData = false;
     public bool PlayerData(){return playerData;}
     public List<SavedData> subDataManagers;

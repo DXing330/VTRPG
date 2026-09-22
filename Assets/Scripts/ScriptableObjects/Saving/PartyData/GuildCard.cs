@@ -175,14 +175,14 @@ public class GuildCard : SavedData
     public override void NewGame()
     {
         allData = newGameData;
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         File.WriteAllText(dataPath, allData);
         Load();
     }
 
     public override void Save()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         allData = "";
         allData += "Rank=" + guildRank.ToString() + delimiter;
         allData += "Exp=" + guildExp.ToString() + delimiter;
@@ -197,7 +197,7 @@ public class GuildCard : SavedData
 
     public override void Load()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath)) { allData = File.ReadAllText(dataPath); }
         else { allData = newGameData; }
         if (allData.Length < newGameData.Length) { allData = newGameData; }

@@ -3,10 +3,68 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+[System.Serializable]
+public class HierarchicalMask
+{
+    public bool[] actionTypeMask; // 7
+    public bool[] buyMask;        // 6
+    public bool[] sellBenchMask;  // 12
+    public bool[] placeBenchMask; // 12
+    public bool[] fieldMask;      // 11
+}
 // In charge of converting game state to a fixed length float[] of [0-1] values
 [CreateAssetMenu(fileName = "AutoChessStateEncoder", menuName = "ScriptableObjects/AutoChess/AutoChessStateEncoder", order = 1)]
 public class AutoChessStateEncoder : ScriptableObject
 {
+    public const int ACTION_DONE = 0;
+    public const int ACTION_LEVEL_UP = 1;
+    public const int ACTION_REROLL = 2;
+    public const int ACTION_BUY = 3;
+    public const int ACTION_SELL_BENCH = 4;
+    public const int ACTION_PLACE_BENCH = 5;
+    public const int ACTION_RETURN_FIELD = 6;
+    public const int ACTION_TYPE_COUNT = 7;
+    public void DecodeAction(int flatAction, out int actionType, out int actionIndex)
+    {
+        actionType = ACTION_DONE;
+        actionIndex = -1;
+        if (flatAction == 0)
+        {
+            actionType = ACTION_DONE;
+        }
+        else if (flatAction == 1)
+        {
+            actionType = ACTION_LEVEL_UP;
+        }
+        else if (flatAction == 2)
+        {
+            actionType = ACTION_REROLL;
+        }
+        else if (flatAction >= 3 && flatAction <= 8)
+        {
+            actionType = ACTION_BUY;
+            actionIndex = flatAction - 3;
+        }
+        else if (flatAction >= 9 && flatAction <= 20)
+        {
+            actionType = ACTION_SELL_BENCH;
+            actionIndex = flatAction - 9;
+        }
+        else if (flatAction >= 21 && flatAction <= 32)
+        {
+            actionType = ACTION_PLACE_BENCH;
+            actionIndex = flatAction - 21;
+        }
+        else if (flatAction >= 33 && flatAction <= 43)
+        {
+            actionType = ACTION_RETURN_FIELD;
+            actionIndex = flatAction - 33;
+        }
+        else
+        {
+            Debug.LogError($"Invalid flat action: {flatAction}");
+        }
+    }
     [Header("Config")]
     [SerializeField] private int maxBench = 12;
     [SerializeField] private int maxField = 11; // 9 base + 2 from HR File
@@ -97,19 +155,23 @@ public class AutoChessStateEncoder : ScriptableObject
         int benchCount = prep.benchSlots.Count;
         int fieldCount = prep.fieldSlots.Count;
         int maxField = prep.GetMaxFieldSlots();
-        bool benchFull = benchCount >= maxBench;
+        bool benchFull = benchCount >= prep.GetMaxBenchSlots();
         bool fieldFull = fieldCount >= maxField;
         // 0: Done
         valid[0] = true;
         // 1: Level Up
         valid[1] = !maxLevel && gold >= 4;
         // 2: Reroll
-        valid[2] = gold >= 2;
+        valid[2] = data.GetFreeRerolls() > 0 || gold >= 1;
         // 3-8: Buy Shop Slot 0-5
         for (int i = 0; i < 6; i++)
         {
             bool slotExists = shop.shopActors.Count > i && shop.shopActors[i] != null;
             int cost = slotExists ? shop.ReturnActorCost(shop.shopActors[i].GetName()) : int.MaxValue;
+            if (factions.FactionActive("Foresight") && factions.GetStacksOfFaction("Foresight") >= 80)
+            {
+                cost--;
+            }
             valid[3 + i] = slotExists && gold >= cost;
         }
         // 9-20: Sell Bench Unit 0-11
@@ -120,8 +182,80 @@ public class AutoChessStateEncoder : ScriptableObject
             valid[21 + i] = benchCount > i && !fieldFull;
         // 33-43: Return Field Unit 0-10
         for (int i = 0; i < 11; i++)
-            valid[33 + i] = fieldCount > i && !benchFull;
+        {
+            bool canReturnNormally = !benchFull;
+            bool canReturnForSwap = benchFull && fieldFull;
+            valid[33 + i] = fieldCount > i && (canReturnNormally || canReturnForSwap);
+        }
         return valid;
+    }
+    public HierarchicalMask BuildHierarchicalMask(bool[] flatMask)
+    {
+        var result = new HierarchicalMask
+        {
+            actionTypeMask = new bool[ACTION_TYPE_COUNT],
+            buyMask = new bool[6],
+            sellBenchMask = new bool[12],
+            placeBenchMask = new bool[12],
+            fieldMask = new bool[11]
+        };
+        // ----------------------------------------
+        // ROOT ACTION MASK
+        // ----------------------------------------
+        // Done
+        result.actionTypeMask[ACTION_DONE] = flatMask[0];
+        // LevelUp
+        result.actionTypeMask[ACTION_LEVEL_UP] = flatMask[1];
+        // Reroll
+        result.actionTypeMask[ACTION_REROLL] = flatMask[2];
+        // ----------------------------------------
+        // BUY
+        // ----------------------------------------
+        bool anyBuy = false;
+        for (int i = 0; i < 6; i++)
+        {
+            bool valid = flatMask[3 + i];
+            result.buyMask[i] = valid;
+            if (valid)
+                anyBuy = true;
+        }
+        result.actionTypeMask[ACTION_BUY] = anyBuy;
+        // ----------------------------------------
+        // BENCH ACTIONS
+        // A slot is relevant if either selling or
+        // placing that bench slot is possible.
+        // ----------------------------------------
+        bool anySell = false;
+        bool anyPlace = false;
+        for (int i = 0; i < 12; i++)
+        {
+            result.sellBenchMask[i] =
+                flatMask[9 + i];
+            result.placeBenchMask[i] =
+                flatMask[21 + i];
+            if (result.sellBenchMask[i])
+                anySell = true;
+            if (result.placeBenchMask[i])
+                anyPlace = true;
+        }
+        result.actionTypeMask[ACTION_SELL_BENCH] =
+            anySell;
+        result.actionTypeMask[ACTION_PLACE_BENCH] =
+            anyPlace;
+        // ----------------------------------------
+        // FIELD ACTIONS
+        // ----------------------------------------
+        bool anyReturnField = false;
+        for (int i = 0; i < 11; i++)
+        {
+            bool valid = flatMask[33 + i];
+            result.fieldMask[i] = valid;
+            if (valid)
+                anyReturnField = true;
+        }
+        result.actionTypeMask[ACTION_RETURN_FIELD] =
+            anyReturnField;
+        return result;
     }
     // ============================================
     // MAIN ENTRY
@@ -155,7 +289,7 @@ public class AutoChessStateEncoder : ScriptableObject
         s.Add(Norm(prep.GetMaxFieldSlots(), 11f)); // Max Field
         s.Add(Norm(prep.fieldSlots.Count, 11f)); // Current Field
         s.Add(Norm(prep.benchSlots.Count, 12f)); // Current Bench
-        s.Add(Norm(maxBench - prep.benchSlots.Count, 12f));  // bench space remaining
+        s.Add(Norm(prep.GetMaxBenchSlots() - prep.benchSlots.Count, 12f));  // bench space remaining
         // Econ faction indicators
         bool investorActive = factions.factionData.FactionActive("Investor");
         s.Add(investorActive ? 1f : 0f);
@@ -189,7 +323,7 @@ public class AutoChessStateEncoder : ScriptableObject
     private void EncodeBench(List<float> s, AutoChessPrepManager prep, AutoChessFactionManager factions)
     {
         var bench = prep.benchSlots.Select(u => (unit: u, score: GetUnitTier(u.GetName()))).OrderByDescending(x => x.score).ToList();
-        for (int i = 0; i < maxBench; i++)
+        for (int i = 0; i < prep.GetMaxBenchSlots(); i++)
         {
             if (i < bench.Count)
                 EncodeBenchUnit(s, bench[i].unit, prep, factions);
@@ -392,14 +526,14 @@ public class AutoChessStateEncoder : ScriptableObject
         idx += 76;
 
         // --- BENCH ---
-        Debug.Log($"--- BENCH [89-712] ({maxBench}×{BENCH_FEATURES}) ---");
-        for (int i = 0; i < maxBench; i++)
+        Debug.Log($"--- BENCH [89-712] ({prep.GetMaxBenchSlots()}×{BENCH_FEATURES}) ---");
+        for (int i = 0; i < prep.GetMaxBenchSlots(); i++)
         {
             int b = idx + i * BENCH_FEATURES;
             if (state[b] > 0.5f)
                 Debug.Log($"  [{i}] present tier={state[b+1]*5f:F0} lvl={state[b+2]*3f:F0} copies={state[b+3]*2f:F0} traitActive={state[b+4]>0.5f} equip={state[b+5]>0.5f}");
         }
-        idx += maxBench * BENCH_FEATURES;
+        idx += prep.GetMaxBenchSlots() * BENCH_FEATURES;
 
         // --- FIELD ---
         Debug.Log($"--- FIELD [713-1306] ({maxField}×{FIELD_FEATURES}) ---");
@@ -434,8 +568,8 @@ public class AutoChessStateEncoder : ScriptableObject
         // --- ASSERTIONS ---
         bool ok = state.Length == StateSize;
         if (prep.benchSlots.Count > 0 && state[13 + 76] < 0.5f) { Debug.LogError("Bench has actors but slot 0 empty!"); ok = false; }
-        if (prep.fieldSlots.Count > 0 && state[13 + 76 + maxBench * BENCH_FEATURES] < 0.5f) { Debug.LogError("Field has actors but slot 0 empty!"); ok = false; }
-        if (shop.shopActors.Count > 0 && state[13 + 76 + maxBench * BENCH_FEATURES + maxField * FIELD_FEATURES] < 0.5f) { Debug.LogError("Shop has actors but slot 0 empty!"); ok = false; }
+        if (prep.fieldSlots.Count > 0 && state[13 + 76 + prep.GetMaxBenchSlots() * BENCH_FEATURES] < 0.5f) { Debug.LogError("Field has actors but slot 0 empty!"); ok = false; }
+        if (shop.shopActors.Count > 0 && state[13 + 76 + prep.GetMaxBenchSlots() * BENCH_FEATURES + maxField * FIELD_FEATURES] < 0.5f) { Debug.LogError("Shop has actors but slot 0 empty!"); ok = false; }
         Debug.Log(ok ? "PASS" : "FAIL");
         Debug.Log("========== END ==========");
     }

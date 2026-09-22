@@ -31,22 +31,21 @@ public static class TrainingWorkerStorage
     {
         if (!IsWorkerMode)
             return Application.persistentDataPath;
-        string trainingPath = Path.Combine(
-            Application.persistentDataPath,
-            "Training"
-        );
-        string workerPath = Path.Combine(
-            trainingPath,
-            $"Worker_{workerId}"
-        );
+        string trainingPath = Path.Combine(Application.persistentDataPath, "Training");
+        string workerPath = Path.Combine(trainingPath, $"Worker_{workerId}");
         Directory.CreateDirectory(workerPath);
         return workerPath;
     }
     public static string GetFilePath(string filename)
     {
-        return Path.Combine(
-            GetPersistentPath(),
-            filename
-        );
+        return Path.Combine(GetPersistentPath(), filename);
+    }
+    public static string GetFolderPath(string foldername, string filename)
+    {
+        if (string.IsNullOrEmpty(foldername)){return GetFilePath(filename);}
+        string path = Path.Combine(GetPersistentPath(), foldername);
+        Directory.CreateDirectory(path);
+        path = Path.Combine(path, filename);
+        return path;
     }
 }

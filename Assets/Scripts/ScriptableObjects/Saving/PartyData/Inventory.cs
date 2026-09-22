@@ -80,7 +80,7 @@ public class Inventory : SavedData
 
     public override void Save()
     {
-        dataPath = Application.persistentDataPath+"/"+filename;
+        dataPath = GetSavePath();
         allData = "Gold=" + GetGold() + delimiter;
         allData += "ItemLimit=" + GetItemLimit() + delimiter;
         allData += "Items=" + String.Join(delimiterTwo, items) + delimiter;
@@ -90,7 +90,7 @@ public class Inventory : SavedData
 
     public override void Load()
     {
-        dataPath = Application.persistentDataPath+"/"+filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
         else{allData = newGameData;}
         if (allData.Contains(delimiter)){dataList = allData.Split(delimiter).ToList();}

@@ -40,8 +40,9 @@ public class AutoChessPrepUIManager : MonoBehaviour
         sellActorObject.SetActive(true);
         manageEquipObject.SetActive(true);
     }
-    public void UpdateActorDisplay(AutoActorRollUpData actor)
+    public void UpdateActorDisplay(AutoActorRollUpData actor, bool sellable = true)
     {
+        sellActorObject.SetActive(sellable);
         actorDisplayObject.SetActive(true);
         actorDisplay.DisplayActor(actor);
     }

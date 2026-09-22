@@ -4,6 +4,81 @@ using UnityEngine;
 
 public class AutoChessAIPrepEquipmentController : MonoBehaviour
 {
+    public int minTierForItem = 2;
+    public void GenericAutoPlaceEquipment(AutoChessAIPrepController newController)
+    {
+        controller = newController;
+        prepManager = newController.prepManager;
+        // Heuristic Approach.
+        // 1. Find regular equipment.
+        List<string> combined = GetAvailableCombinedItems(prepManager.dataManager);
+        // 2. Equip vs Save
+        for (int i = 0; i < combined.Count; i++)
+        {
+            // No Emblems
+            if (combined[i].Contains("Emblem")){continue;}
+            GenericEquipItem(prepManager.dataManager, prepManager, combined[i], true);
+        }
+        // 1. Find possible combinations
+        List<string> components = GetAvailableComponents();
+        List<ItemCombination> combinations = new();
+        for(int i = 0; i < components.Count; i++)
+        {
+            for(int j = i + 1; j < components.Count; j++)
+            {
+                string result = CombineEquipment(components[i], components[j]);
+                if(!string.IsNullOrEmpty(result))
+                {
+                    float combinedValue = itemValueDatabase.GetItemTrainingScore(result);
+                    ItemCombination newCombination = new(result, components[i] + "|" + components[j], combinedValue);
+                    combinations.Add(newCombination);
+                }
+            }
+        }
+        combinations.Sort((a, b) => a.value.CompareTo(b.value));
+        for (int i = combinations.Count - 1; i >= 0; i--)
+        {
+            // Check If The Components Still Exist.
+            if (!prepManager.dataManager.EquipmentComponentsExists(combinations[i].components)){continue;}
+            float combinedValue = combinations[i].value;
+            // If Emblem, Then Pass.
+            if (combinations[i].combinationName.Contains("Emblem")){continue;}
+            // Check If Equip.
+            if (GenericEquipItem(prepManager.dataManager, prepManager, combinations[i].combinationName, false))
+            {
+                prepManager.dataManager.RemoveComponents(combinations[i].components);
+            }
+        }
+    }
+    bool GenericEquipItem(AutoChessDataManager team, AutoChessPrepManager prepManager, string itemName, bool exists)
+    {
+        int bestIndex = -1;
+        float bestScore = 0f;
+        for (int i = 0; i < prepManager.fieldSlots.Count; i++)
+        {
+            var unit = prepManager.fieldSlots[i];
+            if (unit.GetOpenEquipmentSlots() <= 0) continue;
+            int tier = controller.GetUnitTier(unit.GetName());
+            if (tier < minTierForItem) continue;  // Floor: 3-star minimum
+            if (unit.EquipmentExists(itemName) && !ItemStackable(itemName)) continue;
+            float compatibility = itemValueDatabase.GetTagCompatibility(ReturnItemTypes(itemName), GetUnitRoles(unit.GetName()));
+            if (compatibility <= 0f) continue;
+            // Tier × compatibility: high tier naturally weights higher, but an amazing fit on a lower tier can still win
+            float score = tier * compatibility;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestIndex = i;
+            }
+        }
+        if (bestIndex >= 0)
+        {
+            prepManager.fieldSlots[bestIndex].EquipEquipment(itemName);
+            if (exists) team.UseEquipment(itemName);
+            return true;
+        }
+        return false;
+    }
     protected AutoChessAIPrepController controller;
     bool EmblemSynergy(string emblemName)
     {

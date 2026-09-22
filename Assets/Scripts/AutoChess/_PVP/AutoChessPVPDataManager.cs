@@ -24,6 +24,11 @@ public class AutoChessPVPDataManager : SavedData
         }
         return playerAndAI;
     }
+    [ContextMenu("Initialize Player Folder Names")]
+    public void InitializePlayerFolderNames()
+    {
+        playerData.SetFolderName(foldername);
+    }
     public AutoChessDataManager playerData;
     public AutoChessTactician playerTactician;
     public RNGUtility playerSeed;
@@ -60,6 +65,7 @@ public class AutoChessPVPDataManager : SavedData
         for (int i = 0; i < dataManagers.Count; i++)
         {
             // Set The File Names For The Data Paths.
+            dataManagers[i].SetFolderName(foldername);
             dataManagers[i].filename = "AIPVPAUTOCHESSDATA_" + (i+1);
             tacticians[i].filename = "AIPVPAUTOCHESSTACTICIAN_" + (i+1);
             factionDataManagers[i].filename = "AIPVPAUTOCHESSFACTIONDATA_" + (i+1);
@@ -115,6 +121,34 @@ public class AutoChessPVPDataManager : SavedData
                 break;
             }
             GenomeEntry entry = available[genomeIndex++];
+            Debug.Log($"Champion With {entry.elo} Elo Assigned To Slot {i}");
+            AutoChessPVPGenome genome = entry.genome.Copy();
+            dataManagers[i].SetGenome(genome);
+        }
+    }
+    public void AssignChampionGenomes(bool[] neuralNetPlayers)
+    {
+        if (championGenomes == null || championGenomes.entries.Count == 0)
+        {
+            Debug.LogError("No champion genomes available.");
+            return;
+        }
+        List<GenomeEntry> available = championGenomes.entries.Where(e => e != null && e.genome != null).OrderBy(e => Random.value).ToList();
+        int genomeIndex = 0;
+        for (int i = 0; i < dataManagers.Count; i++)
+        {
+            if (!fullAI && i == 0)
+            {
+                continue;
+            }
+            if (i < neuralNetPlayers.Length && neuralNetPlayers[i]){continue;}
+            if (genomeIndex >= available.Count)
+            {
+                Debug.LogWarning("Not enough champion genomes.");
+                break;
+            }
+            GenomeEntry entry = available[genomeIndex++];
+            Debug.Log($"Champion With {entry.elo} Elo Assigned To Slot {i}");
             AutoChessPVPGenome genome = entry.genome.Copy();
             dataManagers[i].SetGenome(genome);
         }

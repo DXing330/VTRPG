@@ -89,7 +89,7 @@ public class GuildStorage : SavedData
 
     public override void NewGame()
     {
-        dataPath = Application.persistentDataPath+"/"+filename;
+        dataPath = GetSavePath();
         allData = newGameData;
         File.WriteAllText(dataPath, allData);
         Load();
@@ -98,7 +98,7 @@ public class GuildStorage : SavedData
 
     public override void Save()
     {
-        dataPath = Application.persistentDataPath+"/"+filename;
+        dataPath = GetSavePath();
         allData = "";
         allData += "Gold=" + storedGold + delimiter;
         allData += "MaxDItems=" + maxDungeonStorage + delimiter;
@@ -110,7 +110,7 @@ public class GuildStorage : SavedData
 
     public override void Load()
     {
-        dataPath = Application.persistentDataPath+"/"+filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
         else
         {

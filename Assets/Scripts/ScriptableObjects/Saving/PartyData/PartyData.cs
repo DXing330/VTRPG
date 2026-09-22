@@ -328,7 +328,7 @@ public class PartyData : SavedData
         partyNames = utility.RemoveEmptyListItems(partyNames);
         partyIDs = utility.RemoveEmptyListItems(partyIDs);
         partyStats = utility.RemoveEmptyListItems(partyStats);
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         allData = "";
         allData += "Names=" + String.Join(delimiterTwo, partyNames) + delimiter;
         allData += "ID=" + String.Join(delimiterTwo, partyIDs) + delimiter;
@@ -353,7 +353,7 @@ public class PartyData : SavedData
     }
     public override void Load()
     {
-        dataPath = Application.persistentDataPath + "/" + filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath)) { allData = File.ReadAllText(dataPath); }
         else { allData = newGameData; }
         if (allData.Contains(delimiter))

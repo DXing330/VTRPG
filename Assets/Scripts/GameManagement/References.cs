@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class References : MonoBehaviour
 {
+    public string referenceFolderName;
     // Used to prevent resources from being unloaded since they are not referenced.
     public Dungeon dungeonReference;
     public CharacterList partyReference;

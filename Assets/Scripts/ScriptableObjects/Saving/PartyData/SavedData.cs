@@ -4,12 +4,23 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+    using UnityEditor;
+#endif
 
 [CreateAssetMenu(fileName = "SavedData", menuName = "ScriptableObjects/DataContainers/SavedData/SavedData", order = 1)]
 public class SavedData : ScriptableObject
 {
     public GeneralUtility utility;
     protected string dataPath;
+    public string foldername;
+    public virtual void SetFolderName(string newName = "")
+    {
+        foldername = newName;
+        #if UNITY_EDITOR
+            EditorUtility.SetDirty(this);
+        #endif
+    }
     public string filename;
     public string newGameData;
     public string allData;
@@ -44,7 +55,7 @@ public class SavedData : ScriptableObject
     }
     protected virtual string GetSavePath()
     {
-        return TrainingWorkerStorage.GetFilePath(filename);
+        return TrainingWorkerStorage.GetFolderPath(foldername, filename);
     }
     public virtual void Save()
     {

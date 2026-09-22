@@ -1597,7 +1597,6 @@ public class BattleMap : MapManager
             UpdateHighlightsWithoutReseting(moveManager.GetReachableTilesBasedOnActions(selectedActor, battlingActors, i), colorDictionary.keys[i + 1]);
         }
     }
-
     public void UpdateMovingPath(TacticActor actor, int selectedTile)
     {
         List<string> originalHighlightedTiles = new List<string>(highlightedTiles);
@@ -1605,8 +1604,7 @@ public class BattleMap : MapManager
         UpdateHighlightsWithoutReseting(path, "Red");
         highlightedTiles = new List<string>(originalHighlightedTiles);
     }
-
-    protected void UpdateHighlightsWithoutReseting(List<int> newTiles, string colorKey = "MoveClose", int layer = 4)
+    public void UpdateHighlightsWithoutReseting(List<int> newTiles, string colorKey = "MoveClose", int layer = 4)
     {
         if (!DisplayLayerExists(layer)){return;}
         string colorName = colorDictionary.GetColorNameByKey(colorKey);
@@ -1616,7 +1614,6 @@ public class BattleMap : MapManager
         }
         mapDisplayers[layer].HighlightCurrentTiles(mapTiles, highlightedTiles, currentTiles);
     }
-
     protected void HighlightTileWithoutReseting(int newTile, string colorKey, int layer = 4)
     {
         if (!DisplayLayerExists(layer)){return;}
@@ -1624,7 +1621,6 @@ public class BattleMap : MapManager
         highlightedTiles[newTile] = colorName;
         mapDisplayers[layer].HighlightCurrentTiles(mapTiles,highlightedTiles, currentTiles);
     }
-
     public void UpdateStartingPositionTiles(string pattern, int selectedTile = -1, List<int> overrideStartingPositions = null)
     {
         int startTileCount = mapSize * mapSize / 2 - (mapSize * mapSize / 2) % mapSize;
@@ -1672,9 +1668,13 @@ public class BattleMap : MapManager
         if (index < 0 || index >= battlingActors.Count) { return null; }
         return battlingActors[index];
     }
+    public string GetTileInfo(int tileNumber)
+    {
+        return mapInfo[tileNumber];
+    }
     public string GetTileInfoOfActor(TacticActor actor)
     {
-        return mapInfo[actor.GetLocation()];
+        return GetTileInfo(actor.GetLocation());
     }
     public bool TileTypeExists(string tileType)
     {
@@ -1711,8 +1711,13 @@ public class BattleMap : MapManager
         int dist = mapSize * mapSize;
         for (int i = 0; i < mapInfo.Count; i++)
         {
+            // Skip Tiles Beyond Attack Range.
+            if (mapUtility.DistanceBetweenTiles(i, end, mapSize) > attackRange)
+            {
+                continue;
+            }
             // Ignore those without line of sight.
-            if (!LineOfSightBetweenTiles(i, end, attackRange))
+            if (!LineOfSightBetweenTiles(i, end))
             {
                 continue;
             }
@@ -1833,22 +1838,26 @@ public class BattleMap : MapManager
         // Ranged Attacks.
         else
         {
-            for (int i = attackable.Count - 1; i >= 0; i--)
-            {
-                if (!LineOfSightBetweenTiles(startTile, attackable[i], range))
-                {
-                    attackable.RemoveAt(i);
-                }
-            }
+            return FilterTilesForLineOfSight(startTile, attackable);
         }
         return attackable;
     }
-    public bool LineOfSightBetweenTiles(int start, int target, int range = 2)
+    public List<int> FilterTilesForLineOfSight(int startTile, List<int> tiles)
+    {
+        List<int> LOSTiles = new List<int>();
+        for (int i = tiles.Count - 1; i >= 0; i--)
+        {
+            if (!LineOfSightBetweenTiles(startTile, tiles[i]))
+            {
+                tiles.RemoveAt(i);
+            }
+        }
+        return tiles;
+    }
+    public bool LineOfSightBetweenTiles(int start, int target)
     {
         // If the tiles are adjacent then return true.
         if (mapUtility.DistanceBetweenTiles(start, target, mapSize) <= 1){return true;}
-        // If tile is out of range return false.
-        if (mapUtility.DistanceBetweenTiles(start, target, mapSize) > range){return false;}
         int startElevation = GetTileElevation(start);
         // Get all the tiles inbetween the start and the target.
         List<int> tilesBetween = mapUtility.ShortestLineBetweenPoints(start, target, mapSize);
@@ -1861,7 +1870,19 @@ public class BattleMap : MapManager
     }
     public bool TileBlocksLineOfSight(int tile, int startElevation)
     {
-        if (GetTileElevation(tile) > startElevation){return true;}
+        if (tile < 0 || tile >= mapInfo.Count){return false;}
+        int tileLOSHeight = GetTileElevation(tile);
+        // Some Tiles Count As Higher Elevations.
+        if (GetTileInfo(tile).Contains("Mountain") || GetTileInfo(tile).Contains("Forest"))
+        {
+            tileLOSHeight++;
+        }
+        // Buildings Also Act As If Higher Elevations.
+        if (GetBuildingOnTile(tile) != "")
+        {
+            tileLOSHeight++;
+        }
+        if (tileLOSHeight > startElevation){return true;}
         // Some teffects also block line of sight?
         string tEffect = GetTerrainEffectOnTile(tile);
         if (tEffect == "Fog" || tEffect == "Toxic Mist"){return true;}

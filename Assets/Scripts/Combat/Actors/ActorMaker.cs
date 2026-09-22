@@ -13,6 +13,8 @@ public class ActorMaker : MonoBehaviour
     public StatDatabase actorStats;
     public StatDatabase elementPassives;
     public StatDatabase speciesPassives;
+    public StatDatabase attributeResists;
+    public StatDatabase attributeWeaknesses;
     public PassiveOrganizer passiveOrganizer;
     public void ReorganizeActorPassives(TacticActor actor)
     {
@@ -60,16 +62,21 @@ public class ActorMaker : MonoBehaviour
             actor.AddPassiveSkill(passives[i], levels[i]);
         }
     }
-
     public void AddAttributePassives(TacticActor actor)
     {
         List<string> attributes = actor.GetAttributes();
+        if (attributes.Count <= 0){return;}
         for (int i = 0; i < attributes.Count; i++)
         {
+            // TODO Add The Relevant Weakness/Resistances For Each Attribute.
+            string attrResist = attributeResists.ReturnValue(attributes[i]);
+            string attrWeak = attributeWeaknesses.ReturnValue(attributes[i]);
+            // 2 Attributes -> Immune, 3 -> Heal
+            actor.UpdateBaseDamageResist(attrResist, 50);
+            actor.UpdateBaseDamageResist(attrWeak, -50);
             actor.AddPassiveSkill(attributes[i], "1");
         }
     }
-
     public void AddElementPassives(TacticActor actor)
     {
         List<string> elements = actor.GetElements();
@@ -78,7 +85,6 @@ public class ActorMaker : MonoBehaviour
             AddElementPassive(actor, elements[i]);
         }
     }
-
     public void AddSpeciesPassives(TacticActor actor)
     {
         string speciesPassive = speciesPassives.ReturnValue(actor.GetSpecies());

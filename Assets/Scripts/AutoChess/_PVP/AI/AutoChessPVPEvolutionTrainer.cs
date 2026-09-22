@@ -316,6 +316,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         {
             yield return new WaitForSeconds(1f);
         }
+        decisionDB.ClearWorkerDecisionData();
         string countStr = File.ReadAllText(startPath).Trim();
         if (!int.TryParse(countStr, out int matchesToRun))
         {
@@ -489,6 +490,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         yield return StartCoroutine(WaitForTournamentWorkers());
         // Merge and replay all match logs
         MergeTournamentMatchLogs();
+        decisionDB.GatherChampionDatasets();
         // Save final results
         championDatabase.SaveToDisk(true);
         Debug.Log("=== Tournament Master Complete ===");
@@ -544,9 +546,10 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         }
     }
     [Header("Neural Net Config")]
+    public AutoChessDecisionDatabase decisionDB;
     public bool benchmarkNeuralNet = false;
-    public int placementWinThreshold = 4; // 4th place or higher is considered a "Win".
-    public int neuralNetBenchmarkMatches = 10;
+    public int placementWinThreshold = 1; // Adjustable, Could Be 4th place or higher is considered a "Win".
+    public int neuralNetBenchmarkMatches = 100;
     [ContextMenu("Benchmark Neural Net vs Champions")]
     public void StartNeuralNetBenchmark()
     {
@@ -565,8 +568,8 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         {
             Application.targetFrameRate = -1;
             director.EnableLogs(); // Create Logs For More Training.
-            // Setup: 1 neural net (slot 0), 7 champions
-            director.neuralNetCount = 1;
+            // Setup: 7 neural nets, 1 champion
+            director.neuralNetCount = 7;
             director.SetupNNMatch();
             // Run match
             director.matchOver = false;
@@ -576,22 +579,31 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                 director.AIPrepPhase(true);
                 yield return null;
             }
-            // Check placement
-            var allTeams = director.allPlayers.GetAllTeams();
-            var ranked = allTeams.OrderByDescending(t => t.GetRound()).ThenByDescending(t => t.GetHealth()).ToList();
-            int neuralPlacement = ranked.IndexOf(allTeams[0]) + 1; // Slot 0 is neural net
-            bool won = neuralPlacement <= placementWinThreshold;
-            if (won){winCount++;}
+            // If Log Matches Is True Then A Neural Net Has Won The Round.
+            if (director.logMatches)
+            {
+                winCount++;
+            }
+            // Log per-match summary
+            if ((i + 1) % 10 == 0 || i == 0)
+            {
+                float currentWinRate = (float)winCount / (i + 1);
+                Debug.Log($"  Match {i + 1}/{neuralNetBenchmarkMatches}: Cumulative win rate = {currentWinRate:P1}");
+            }
         }
         float winRate = (float)winCount / neuralNetBenchmarkMatches;
-        Debug.Log($"=== Benchmark Complete: {winCount}/{neuralNetBenchmarkMatches} top-4 ({winRate:P0}) ===");
+        Debug.Log($"=== Benchmark Complete ===");
         if (winRate > 0.55f)
         {
-            Debug.Log("Neural net is competitive — consider for promotion");
+            Debug.Log("Neural nets are competitive — consider for promotion");
+        }
+        else if (winRate > 0.20f)
+        {
+            Debug.Log("Neural nets showing promise — continue curriculum training");
         }
         else
         {
-            Debug.Log("Neural net needs more training");
+            Debug.Log("Neural nets need more training (stick to champion imitation)");
         }
         if (quitWhenDone)
         {

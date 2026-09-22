@@ -203,7 +203,7 @@ public class DungeonBag : SavedData
     }
     public override void Save()
     {
-        dataPath = Application.persistentDataPath+"/"+filename;
+        dataPath = GetSavePath();
         allData = "";
         allData += "Max=" + maxCapacity + delimiter;
         allData += "Items=" + String.Join(delimiterTwo, items) + delimiter;
@@ -213,7 +213,7 @@ public class DungeonBag : SavedData
     }
     public override void Load()
     {
-        dataPath = Application.persistentDataPath+"/"+filename;
+        dataPath = GetSavePath();
         if (File.Exists(dataPath)){allData = File.ReadAllText(dataPath);}
         else{allData = newGameData;}
         dataList = allData.Split(delimiter).ToList();

@@ -25,6 +25,16 @@ public class TerrainPassivesList : StatDatabase
             #endif
         }
     }
+    public List<string> ReturnPassivesOfAllTimings(string type)
+    {
+        List<string> allPassivesOfType = new List<string>();
+        allPassivesOfType.AddRange(ReturnAttackingPassive(type));
+        allPassivesOfType.AddRange(ReturnDefendingPassive(type));
+        allPassivesOfType.AddRange(ReturnMovingPassive(type));
+        allPassivesOfType.AddRange(ReturnStartPassive(type));
+        allPassivesOfType.AddRange(ReturnEndPassive(type));
+        return allPassivesOfType;
+    }
     public List<string> ReturnPassivesByTypeTiming(string type, string timing)
     {
         string key = type + timing;

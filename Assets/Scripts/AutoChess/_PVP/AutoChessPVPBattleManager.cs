@@ -553,6 +553,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             // 2 = TIE
             if (endBattleResult == 2)
             {
+                if (!instantBattle)
+                {
+                    map.UpdateCombatLog("TIE");
+                }
                 // Both Lose
                 leftTeam.LoseHealth((leftTeam.GetRound() + rightTeam.GetLevel()) / 2);
                 leftTeam.NewRound(1);
@@ -562,6 +566,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             // 0 = Left Wins
             else if (endBattleResult == 0)
             {
+                if (!instantBattle)
+                {
+                    map.UpdateCombatLog("Left Team Wins");
+                }
                 leftTeam.NewRound(0);
                 rightTeam.LoseHealth((rightTeam.GetRound() + leftTeam.GetLevel()) / 2 + unitDamage);
                 rightTeam.NewRound(1);
@@ -569,6 +577,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             // 1 = Right Wins
             else if (endBattleResult == 1)
             {
+                if (!instantBattle)
+                {
+                    map.UpdateCombatLog("Right Team Wins");
+                }
                 leftTeam.LoseHealth((leftTeam.GetRound() + rightTeam.GetLevel()) / 2 + unitDamage);
                 leftTeam.NewRound(1);
                 rightTeam.NewRound(0);

@@ -20,6 +20,44 @@ public class AutoChessEncoderLogger : SavedData
         public float[] state;
         public int action; // 0-43
         public bool[] validMask; // 44 booleans
+        // ----------------------------------------
+        // HIERARCHICAL ACTION LABELS
+        // ----------------------------------------
+        // 0 = Done
+        // 1 = LevelUp
+        // 2 = Reroll
+        // 3 = Buy
+        // 4 = SellBench
+        // 5 = PlaceBench
+        // 6 = ReturnField
+        public int actionType;
+        // Child action index.
+        // Buy:
+        //   0-5 = shop slot
+        // SellBench / PlaceBench:
+        //   0-11 = bench slot
+        // ReturnField:
+        //   0-10 = field slot
+        // Done / LevelUp / Reroll:
+        //   -1
+        public int actionIndex;
+        // Hierarchical validity masks.
+        public bool[] actionTypeMask; // 7
+        public bool[] buyMask; // 6
+        public bool[] sellBenchMask; // 12
+        public bool[] placeBenchMask; // 12
+        public bool[] fieldMask;      // 11
+    }
+    private string GetActionTypeName(int action)
+    {
+        if (action == 0) return "Done";
+        if (action == 1) return "LevelUp";
+        if (action == 2) return "Reroll";
+        if (action >= 3 && action <= 8) return $"Buy({action - 3})";
+        if (action >= 9 && action <= 20) return $"SellBench({action - 9})";
+        if (action >= 21 && action <= 32) return $"PlaceBench({action - 21})";
+        if (action >= 33 && action <= 43) return $"ReturnField({action - 33})";
+        return "Unknown";
     }
     public int MAX_STORED = 1024;
     private int writeIndex = 0;
@@ -43,16 +81,40 @@ public class AutoChessEncoderLogger : SavedData
         };
         Save();
     }
+    private DecisionStep BuildDecisionStep(float[] state, bool[] validMask, int action)
+    {
+        encoder.DecodeAction(action, out int actionType, out int actionIndex);
+        HierarchicalMask hierarchicalMask = encoder.BuildHierarchicalMask(validMask);
+        return new DecisionStep
+        {
+            state = state,
+            // Keep old representation.
+            action = action,
+            validMask = validMask,
+            // New hierarchical representation.
+            actionType = actionType,
+            actionIndex = actionIndex,
+            actionTypeMask = hierarchicalMask.actionTypeMask,
+            buyMask = hierarchicalMask.buyMask,
+            sellBenchMask = hierarchicalMask.sellBenchMask,
+            placeBenchMask = hierarchicalMask.placeBenchMask,
+            fieldMask = hierarchicalMask.fieldMask
+        };
+    }
     public void LogDecision(float[] state, bool[] validMask, int action)
     {
         if (!logging) return;
         if (currentMatch == null || currentMatch.steps == null) return;
-        currentMatch.steps[writeIndex] = new DecisionStep
+        if (action < 0 || action >= validMask.Length)
         {
-            state = state,
-            action = action,
-            validMask = validMask
-        };
+            Debug.LogError($"INVALID AI ACTION INDEX: action={action}, " + $"maskLength={validMask.Length}");
+            return;
+        }
+        if (!validMask[action])
+        {
+            Debug.LogError($"AI ACTION/MASK MISMATCH: " + $"action={GetActionTypeName(action)}");
+        }
+        currentMatch.steps[writeIndex] = BuildDecisionStep(state, validMask, action);
         writeIndex = (writeIndex + 1) % MAX_STORED;
     }
     public void LogDecision(AutoChessPrepManager prep, AutoChessDataManager data, AutoChessShopManager shop, AutoChessFactionManager factions, int action)
@@ -60,14 +122,21 @@ public class AutoChessEncoderLogger : SavedData
         if (!logging){return;}
         if (currentMatch == null || encoder == null || currentMatch.steps == null) return;
         float[] state = encoder.Encode(prep, data, shop, factions);
-        bool[] validMask = encoder.BuildValidMask(prep, data, shop,factions);
-        currentMatch.steps[writeIndex] = new DecisionStep
+        bool[] validMask = encoder.BuildValidMask(prep, data, shop, factions);
+        if (action < 0 || action >= validMask.Length)
         {
-            state = state,
-            action = action,
-            validMask = validMask
-        };
-        writeIndex = (writeIndex + 1) % MAX_STORED;
+            Debug.LogError($"INVALID AI ACTION INDEX: " + $"action={action}, " + $"maskLength={validMask.Length}");
+            return;
+        }
+        if (!validMask[action])
+        {
+            string actionTypeName = GetActionTypeName(action);
+            Debug.LogError($"AI ACTION/MASK MISMATCH: " + $"action={action}, " +$"actionType={actionTypeName}" + $" | benchCount={prep.benchSlots.Count}" + $" | fieldCount={prep.fieldSlots.Count}" + $" | maxField={prep.GetMaxFieldSlots()}" + $" | maxBench={prep.GetMaxBenchSlots()}");
+            Debug.LogError($"Full validMask: [{string.Join(", ", validMask)}]");
+            Debug.LogError($"Bench=[{string.Join(", ", prep.benchSlots.ConvertAll(x => x.GetName()))}]");
+            Debug.LogError($"Field=[{string.Join(", ", prep.fieldSlots.ConvertAll(x => x.GetName()))}]");
+        }
+        LogDecision(state, validMask, action);
     }
     public void SetFinalRank(int rank)
     {

@@ -17,46 +17,51 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         bool[] testMask = new bool[44];
         for (int i = 0; i < 44; i++)
             testMask[i] = true;
+        // Build hierarchical masks
+        BuildHierarchicalMasks(testMask, out var typeMask, out var buyMask, out var sellMask, out var placeMask, out var fieldMask);
         // Run inference
-        int action = PredictAction(testState, testMask);
+        int action = PredictAction(testState, typeMask, buyMask, sellMask, placeMask, fieldMask);
         // Log raw logits for inspection
-        _network.Forward(testState, _outputBuffer);
-        string logits = string.Join(", ", _outputBuffer.Select(x => x.ToString("F4")));
+        var outputs = new Dictionary<string, float[]>();
+        _network.Forward(testState, outputs);
+        string typeLogits = string.Join(", ", outputs["policy_type"].Select(x => x.ToString("F4")));
         Debug.Log($"Test Action: {action}");
-        Debug.Log($"Raw Logits: {logits}");
+        Debug.Log($"Type Logits: {typeLogits}");
     }
+
     public AutoChessAIPrepController genomeAI;
     public AutoChessStateEncoder stateEncoder;
     public string modelTag = "v1";
+
     // ============================================
     // NEW: Runtime weight loading — no rebuilds!
     // ============================================
-    [Tooltip("Path to binary weights file (relative to StreamingAssets or PersistentDataPath)")]
-    public string weightsPath = "autochess_policy_weights.bin";
-    [Tooltip("If true, watches the weights file and auto-reloads when it changes")]
-    public bool autoReloadWeights = true;
-    [Tooltip("How often to check for weight file changes (seconds)")]
-    public float reloadCheckInterval = 2f;
+    [Tooltip("Path to weights file (relative to StreamingAssets or PersistentDataPath)")]
+    public string weightsPath = "autochess_policy_weights.hnn";
+
     // The custom neural network — replaces ONNX InferenceSession
     private RuntimeNeuralNetwork _network;
-    private float[] _outputBuffer;  // Pre-allocated output buffer
+    private Dictionary<string, float[]> _headOutputs;  // Re-used output dictionary
     private string _lastWeightsPath;
     private long _lastFileSize = -1;
-    private float _reloadTimer = 0f;
+
     // ============================================
     // Exploration
     public bool addExplorationNoise = false;
     public float temperature = 1.0f;
     public float dirichletAlpha = 0.3f;
     public float noiseWeight = 0.25f;
+
     // Recording
     private List<AutoActorRollUpData> sortedBench;
     private List<AutoActorRollUpData> sortedField;
+
     // Logging.
     private float totalInferenceTime = 0f;
     private int inferenceCount = 0;
     private float totalStepTime = 0f;
     private int stepCount = 0;
+
     public void ResetTimers()
     {
         totalInferenceTime = 0f;
@@ -64,6 +69,7 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         totalStepTime = 0f;
         stepCount = 0;
     }
+
     [ContextMenu("Log NN Timing")]
     public void LogTiming()
     {
@@ -79,29 +85,17 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         ResetTimers();
     }
 
-    void Update()
-    {
-        // Auto-reload weights if file changed (for rapid iteration)
-        if (autoReloadWeights && _network != null)
-        {
-            _reloadTimer += Time.deltaTime;
-            if (_reloadTimer >= reloadCheckInterval)
-            {
-                _reloadTimer = 0f;
-                TryReloadWeights();
-            }
-        }
-    }
-
     // Only Load Fully Once.
     public bool loaded = false;
 
     public void LoadModel()
     {
+        if (_network == null) { loaded = false; }
         if (loaded) return;
 
         // Initialize the custom network
         _network = new RuntimeNeuralNetwork();
+        _headOutputs = new Dictionary<string, float[]>();
 
         // Try multiple paths for flexibility
         string[] possiblePaths = new string[]
@@ -131,15 +125,16 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
                 }
             }
         }
+
         if (!loadedWeights)
         {
             UnityEngine.Debug.LogError($"[NN] Could not find weights file: {weightsPath}. Searched in:" + string.Join("\n", possiblePaths.Select(p => "  - " + p)));
             return;
         }
-        // Pre-allocate output buffer
-        _outputBuffer = new float[_network.OutputSize];
+
         loaded = true;
     }
+
     /// <summary>
     /// Call this from external scripts to force a weight reload (e.g., after training round).
     /// </summary>
@@ -147,7 +142,6 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
     public void ReloadWeights()
     {
         if (_network == null || string.IsNullOrEmpty(_lastWeightsPath)) return;
-
         try
         {
             _network.LoadWeights(_lastWeightsPath);
@@ -163,7 +157,6 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
     private void TryReloadWeights()
     {
         if (string.IsNullOrEmpty(_lastWeightsPath) || !File.Exists(_lastWeightsPath)) return;
-
         var info = new FileInfo(_lastWeightsPath);
         if (info.Length != _lastFileSize)
         {
@@ -182,10 +175,8 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         genomeAI.prepManager.DisableUI();
         genomeAI.shopManager.shopData.GeneratePVPCurrentListing();
         genomeAI.shopManager.PVPRefreshData();
-
         // Decision loop: neural net chooses actions until Done
         RunDecisionLoop(dataManager);
-
         // Post-processing: field placement + equipment (genome logic)
         ArrangeFieldAndEquipment(dataManager);
     }
@@ -197,7 +188,6 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
     {
         int steps = 0;
         int maxSteps = 30;  // Safety cap
-
         while (steps < maxSteps)
         {
             var stepTimer = System.Diagnostics.Stopwatch.StartNew();
@@ -207,10 +197,13 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
             float[] state = stateEncoder.Encode(genomeAI.prepManager, dataManager, genomeAI.shopManager, genomeAI.factionManager);
             bool[] validMask = stateEncoder.BuildValidMask(genomeAI.prepManager, dataManager, genomeAI.shopManager, genomeAI.factionManager);
 
-            // Run inference
-            int action = PredictAction(state, validMask);
+            // Derive hierarchical masks
+            BuildHierarchicalMasks(validMask, out var typeMask, out var buyMask, out var sellMask, out var placeMask, out var fieldMask);
 
-            // Record for training
+            // Run inference
+            int action = PredictAction(state, typeMask, buyMask, sellMask, placeMask, fieldMask);
+
+            // Record for training (log flat mask + flat action for backwards compat)
             dataManager.encoderLogger.LogDecision(state, validMask, action);
 
             // Execute
@@ -223,7 +216,6 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
 
             // Stop conditions
             if (action == 0) break;  // Done
-
             // If only Done is valid, stop
             if (!HasNonDoneValidActions(validMask)) break;
         }
@@ -234,6 +226,39 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         for (int i = 1; i < mask.Length; i++)
             if (mask[i]) return true;
         return false;
+    }
+
+    // ============================================
+    // HIERARCHICAL MASK BUILDER
+    // ============================================
+    /// <summary>
+    /// Converts the flat 44-element valid mask into the 5 hierarchical masks
+    /// expected by the neural network.
+    /// </summary>
+    void BuildHierarchicalMasks(bool[] flatMask, out bool[] actionTypeMask, out bool[] buyMask, out bool[] sellMask, out bool[] placeMask, out bool[] fieldMask)
+    {
+        actionTypeMask = new bool[7];
+        buyMask = new bool[6];
+        sellMask = new bool[12];
+        placeMask = new bool[12];
+        fieldMask = new bool[11];
+
+        // Root actions that are always terminal (no children)
+        actionTypeMask[0] = flatMask[0]; // Done
+        actionTypeMask[1] = flatMask[1]; // LevelUp
+        actionTypeMask[2] = flatMask[2]; // Reroll
+
+        // Child masks derived directly from flat mask
+        for (int i = 0; i < 6; i++)  buyMask[i]   = flatMask[3 + i];
+        for (int i = 0; i < 12; i++) sellMask[i]  = flatMask[9 + i];
+        for (int i = 0; i < 12; i++) placeMask[i] = flatMask[21 + i];
+        for (int i = 0; i < 11; i++) fieldMask[i] = flatMask[33 + i];
+
+        // Parent action types are valid if they have ANY valid child
+        actionTypeMask[3] = buyMask.Any(b => b);   // Buy
+        actionTypeMask[4] = sellMask.Any(b => b);  // SellBench
+        actionTypeMask[5] = placeMask.Any(b => b); // PlaceBench
+        actionTypeMask[6] = fieldMask.Any(b => b); // ReturnField
     }
 
     // ============================================
@@ -294,6 +319,15 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
                         unit.SetLocation(benchLoc);
                         genomeAI.prepManager.MoveFromFieldToBench(unit);
                         genomeAI.prepManager.SaveToDataManager();
+                        break;
+                    }
+                    bool benchFull = genomeAI.prepManager.benchSlots.Count >= genomeAI.prepManager.GetMaxBenchSlots();
+                    bool fieldFull = genomeAI.prepManager.fieldSlots.Count >= genomeAI.prepManager.GetMaxFieldSlots();
+                    // Full bench + full field = first half of a swap.
+                    if (benchFull && fieldFull)
+                    {
+                        genomeAI.prepManager.MoveFromFieldToBench(unit);
+                        genomeAI.prepManager.SaveToDataManager();
                     }
                 }
                 break;
@@ -311,6 +345,7 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
     void ArrangeFieldAndEquipment(AutoChessDataManager dataManager)
     {
         PlaceFieldUnitsGeneric();
+        genomeAI.equipmentController.GenericAutoPlaceEquipment(genomeAI);
         genomeAI.aegirPlacement.AegirPlaceFieldUnits();
         genomeAI.prepManager.StartBattle();
     }
@@ -334,86 +369,135 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
     }
 
     // ============================================
-    // INFERENCE — REPLACED ONNX with custom network
+    // INFERENCE — HIERARCHICAL POLICY
     // ============================================
-    int PredictAction(float[] state, bool[] validMask)
+    int PredictAction(float[] state,
+        bool[] actionTypeMask, bool[] buyMask,
+        bool[] sellMask, bool[] placeMask, bool[] fieldMask)
     {
         var inferenceTimer = System.Diagnostics.Stopwatch.StartNew();
-
-        // Run forward pass through our custom network
-        _network.Forward(state, _outputBuffer);
-
+        // Run forward pass — all heads computed in one call
+        _network.Forward(state, _headOutputs);
         inferenceTimer.Stop();
         totalInferenceTime += (float)inferenceTimer.Elapsed.TotalMilliseconds;
         inferenceCount++;
-
-        // _outputBuffer now contains raw logits (same as ONNX output)
-        float[] logits = _outputBuffer;
-
-        // Apply mask and temperature (identical logic to before)
-        float[] probs = new float[44];
-        float maxLogit = float.NegativeInfinity;
-
-        for (int i = 0; i < 44; i++)
+        // 1. Sample action type from masked policy
+        float[] typeLogits = _headOutputs["policy_type"];
+        int actionType = 0;
+        if (temperature > 0f)
         {
-            if (!validMask[i])
+            float[] typeProbs = ApplyTemperatureAndSoftmax(typeLogits, actionTypeMask);
+            actionType = SampleCategorical(typeProbs, actionTypeMask);
+        }
+        else
+        {
+            actionType = ArgMax(typeLogits, actionTypeMask);
+        }
+        // 2. Route to child head and sample child index
+        float[] childLogits;
+        bool[] childMask;
+        int flatOffset;
+        switch (actionType)
+        {
+            case 0: return 0; // Done
+            case 1: return 1; // LevelUp
+            case 2: return 2; // Reroll
+            case 3: // Buy
+                childLogits = _headOutputs["buy"];
+                childMask = buyMask;
+                flatOffset = 3;
+                break;
+            case 4: // SellBench
+                childLogits = _headOutputs["sell"];
+                childMask = sellMask;
+                flatOffset = 9;
+                break;
+            case 5: // PlaceBench
+                childLogits = _headOutputs["place"];
+                childMask = placeMask;
+                flatOffset = 21;
+                break;
+            case 6: // ReturnField
+                childLogits = _headOutputs["field"];
+                childMask = fieldMask;
+                flatOffset = 33;
+                break;
+            default:
+                return 0; // Fallback to Done
+        }
+
+        childLogits = ApplyMask(childLogits, childMask);
+        int childIndex = temperature > 0f
+            ? SampleCategorical(childLogits, childMask)
+            : ArgMax(childLogits, childMask);
+
+        return flatOffset + childIndex;
+    }
+
+    // ============================================
+    // MASKING & SAMPLING UTILITIES
+    // ============================================
+    float[] ApplyMask(float[] logits, bool[] mask)
+    {
+        float[] masked = new float[logits.Length];
+        for (int i = 0; i < logits.Length; i++)
+            masked[i] = mask[i] ? logits[i] : float.NegativeInfinity;
+        return masked;
+    }
+
+    float[] ApplyTemperatureAndSoftmax(float[] logits, bool[] mask)
+    {
+        float[] probs = new float[logits.Length];
+
+        // Apply temperature
+        float maxLogit = float.NegativeInfinity;
+        for (int i = 0; i < logits.Length; i++)
+        {
+            if (!mask[i])
             {
                 probs[i] = float.NegativeInfinity;
             }
             else
             {
-                probs[i] = logits[i] / temperature;
+                probs[i] = logits[i] / Mathf.Max(0.0001f, temperature);
                 if (probs[i] > maxLogit) maxLogit = probs[i];
             }
         }
 
         // Stable softmax
         float sum = 0f;
-        for (int i = 0; i < 44; i++)
+        for (int i = 0; i < logits.Length; i++)
         {
-            if (validMask[i])
+            if (mask[i])
             {
                 probs[i] = Mathf.Exp(probs[i] - maxLogit);
                 sum += probs[i];
             }
         }
-        for (int i = 0; i < 44; i++)
-            if (validMask[i]) probs[i] /= sum;
+        for (int i = 0; i < logits.Length; i++)
+            if (mask[i]) probs[i] /= sum;
 
-        // Add Dirichlet noise for exploration (self-play only)
-        if (addExplorationNoise)
-        {
-            probs = AddDirichletNoise(probs, validMask);
-        }
-
-        // Sample or argmax
-        if (addExplorationNoise)
-            return SampleCategorical(probs, validMask);
-        else
-            return ArgMax(probs, validMask);
+        return probs;
     }
 
     // ============================================
-    // UTILITY METHODS (unchanged)
+    // EXPLORATION & SAMPLING (unchanged logic)
     // ============================================
     float[] AddDirichletNoise(float[] probs, bool[] validMask)
     {
         int validCount = validMask.Count(b => b);
-        float[] noise = new float[44];
-
+        float[] noise = new float[probs.Length];
         float[] alpha = new float[validCount];
         for (int i = 0; i < validCount; i++) alpha[i] = dirichletAlpha;
-
         float[] gamma = new float[validCount];
         float gammaSum = 0f;
         for (int i = 0; i < validCount; i++)
         {
-            gamma[i] = RandomGamma(alpha[i], 1f);
+            gamma[i] = RandomGamma(alpha[i]);
             gammaSum += gamma[i];
         }
-
         int idx = 0;
-        for (int i = 0; i < 44; i++)
+        for (int i = 0; i < probs.Length; i++)
         {
             if (validMask[i])
             {
@@ -421,10 +505,9 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
                 idx++;
             }
         }
-
-        float[] blended = new float[44];
+        float[] blended = new float[probs.Length];
         float sum = 0f;
-        for (int i = 0; i < 44; i++)
+        for (int i = 0; i < probs.Length; i++)
         {
             if (validMask[i])
             {
@@ -432,23 +515,48 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
                 sum += blended[i];
             }
         }
-        for (int i = 0; i < 44; i++)
+        for (int i = 0; i < probs.Length; i++)
             if (validMask[i]) blended[i] /= sum;
-
         return blended;
     }
 
-    float RandomGamma(float shape, float scale)
+    float RandomGamma(float shape)
     {
-        float u = Random.value;
-        return -Mathf.Log(u) * scale;
+        if (shape < 1f)
+        {
+            float u = Random.value;
+            return RandomGamma(shape + 1f) * Mathf.Pow(u, 1f / shape);
+        }
+        float d = shape - 1f / 3f;
+        float c = 1f / Mathf.Sqrt(9f * d);
+        while (true)
+        {
+            float x = RandomNormal();
+            float v = 1f + c * x;
+            if (v <= 0f) { continue; }
+            v = v * v * v;
+            float u = Random.value;
+            if (u < 1f - 0.0331f * x * x * x * x) { return d * v; }
+            if (Mathf.Log(u) < 0.5f * x * x + d * (1f - v + Mathf.Log(v))) { return d * v; }
+        }
+    }
+
+    float RandomNormal()
+    {
+        float u1 = 1f - Random.value;
+        float u2 = 1f - Random.value;
+        return Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Cos(2f * Mathf.PI * u2);
     }
 
     int SampleCategorical(float[] probs, bool[] validMask)
     {
+        // Add Dirichlet noise if enabled
+        if (addExplorationNoise)
+            probs = AddDirichletNoise(probs, validMask);
+
         float r = Random.value;
         float cumsum = 0f;
-        for (int i = 0; i < 44; i++)
+        for (int i = 0; i < probs.Length; i++)
         {
             if (!validMask[i]) continue;
             cumsum += probs[i];
@@ -461,7 +569,7 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
     {
         int best = -1;
         float bestProb = -1f;
-        for (int i = 0; i < 44; i++)
+        for (int i = 0; i < probs.Length; i++)
         {
             if (!validMask[i]) continue;
             if (probs[i] > bestProb)

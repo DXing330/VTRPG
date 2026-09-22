@@ -27,6 +27,10 @@ public class AutoChessPrepManager : ClickTileManager
         factionManager.SetDataManager(dataManager);
         factionManager.UpdateActiveFactions();
     }
+    public bool EnoughGold(int amount)
+    {
+        return dataManager.GetGold() >= amount;
+    }
     public bool SpendGold(int amount)
     {
         bool spent = dataManager.SpendGold(amount);
@@ -47,7 +51,7 @@ public class AutoChessPrepManager : ClickTileManager
         bool[] mask = dataManager.encoderLogger.encoder.BuildValidMask(this, dataManager, shopManager, factionManager);
         dataManager.encoderLogger.encoder.DebugLogState(state, mask, this, dataManager, shopManager);
     }
-    public void LogDecision(int action)
+    public void LogPrepDecision(int action)
     {
         if (!logging || !dataManager.EncodeLogs()) return;
         dataManager.encoderLogger.LogDecision(this, dataManager, shopManager, factionManager, action);
@@ -210,7 +214,8 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public void StartBattle()
     {
-        LogDecision(0);
+        LogPrepDecision(0);
+        UpdateBonusSlots();
         ResetBonusSlots();
         fieldSlots.Sort((a, b) =>
         {
@@ -270,21 +275,23 @@ public class AutoChessPrepManager : ClickTileManager
     public AutoChessShopManager shopManager;
     public void Select(int index)
     {
+        ResetSelected();
         shopManager.Select(index);
-        UIManager.UpdateActorDisplay(shopManager.GetSelectedActor());
+        UIManager.UpdateActorDisplay(shopManager.GetSelectedActor(), false);
     }
     public void FastRerollShop(bool PVP = true)
     {
         if (dataManager.GetFreeRerolls() > 0)
         {
-            LogDecision(2);
+            LogPrepDecision(2);
             dataManager.UseFreeReroll();
             shopManager.FastReroll(PVP);
             dataManager.Reroll();
             return;
         }
+        if (!EnoughGold(1)){return;}
+        LogPrepDecision(2);
         if (!SpendGold(1)){return;}
-        LogDecision(2);
         shopManager.FastReroll(PVP);
         dataManager.Reroll();
     }
@@ -297,8 +304,9 @@ public class AutoChessPrepManager : ClickTileManager
     public void BuyExp()
     {
         if (dataManager.MaxLevel()){return;}
+        if (!EnoughGold(expCost)){return;}
+        LogPrepDecision(1);
         if (!SpendGold(expCost)){return;}
-        LogDecision(1);
         dataManager.GainExp(expCost);
         shopManager.shopData.SetShopLevel(dataManager.GetLevel());
         UpdateAllUI();
@@ -389,9 +397,10 @@ public class AutoChessPrepManager : ClickTileManager
         {
             cost--;
         }
-        if (!SpendGold(cost)){return;}
+        if (!EnoughGold(cost)){return;}
         int selectedShopIndex = shopManager.GetSelectedIndex();
-        LogDecision(3 + selectedShopIndex);
+        LogPrepDecision(3 + selectedShopIndex);
+        if (!SpendGold(cost)){return;}
         AutoActorRollUpData boughtActor = shopManager.GetSelectedActor();
         dataManager.AddLog("Bought " + boughtActor.GetName());
         GainActor(boughtActor);
@@ -440,7 +449,7 @@ public class AutoChessPrepManager : ClickTileManager
         int fieldIndex = fieldSlots.IndexOf(soldActor);
         if (benchIndex >= 0)
         {
-            LogDecision(9 + benchIndex);  // HOOK: Sell Bench 0-11
+            LogPrepDecision(9 + benchIndex);  // HOOK: Sell Bench 0-11
             benchSlots.Remove(soldActor);
         }
         // TODO How To Log Sell From Field?
@@ -451,10 +460,15 @@ public class AutoChessPrepManager : ClickTileManager
             if (!benchFull)
             {
                 // Normal case: Return + Sell
-                LogDecision(33 + fieldIndex);// Return
-                MoveFromFieldToBench(soldActor);
+                MoveFromFieldToBench(soldActor); // Logs Return.
                 int newBenchIndex = benchSlots.IndexOf(soldActor);
-                LogDecision(9 + newBenchIndex);// Sell
+                LogPrepDecision(9 + newBenchIndex);// Sell
+                benchSlots.Remove(soldActor);
+                ResetSelected();
+                dataManager.GainGold(1);
+                CommercialPackagingPlan();
+                UpdateBonusSlots();
+                return;
             }
             fieldSlots.Remove(soldActor);
         }
@@ -484,6 +498,13 @@ public class AutoChessPrepManager : ClickTileManager
             shopManager.SellActor(bonusSlots[i]);
             dataManager.GainGold(1);
         }
+        if (benchSlots.Count > maxBenchSlots)
+        {
+            for (int i = benchSlots.Count - 1; i >= maxBenchSlots; i--)
+            {
+                benchSlots.RemoveAt(i);
+            }
+        }
         bonusSlots.Clear();
     }
     public void UpdateBonusSlots()
@@ -501,6 +522,7 @@ public class AutoChessPrepManager : ClickTileManager
     }
     // Spending Gold, Unit Placement (Location/Direction/TurnOrder), Etc.
     protected int maxBenchSlots = 12;
+    public int GetMaxBenchSlots(){return maxBenchSlots;}
     public List<AutoActorRollUpData> benchSlots;
     public AutoActorRollUpData GetBenchSlotActorOnSlot(int slotNumber)
     {
@@ -549,10 +571,10 @@ public class AutoChessPrepManager : ClickTileManager
     {
         int indexOf = benchSlots.IndexOf(benchActor);
         if (indexOf < 0){return;}
-        LogDecision(21 + indexOf);
+        LogPrepDecision(21 + indexOf);
         fieldSlots.Add(benchActor);
-        benchSlots.Remove(benchActor);
-        dataManager.AddLog($"{benchActor.GetName()} moved to bench.");
+        benchSlots.RemoveAt(indexOf);
+        dataManager.AddLog($"{benchActor.GetName()} moved to field.");
     }
     public List<AutoActorRollUpData> fieldSlots;
     public bool UnitExists(AutoActorRollUpData newUnit, bool includeBench = true)
@@ -593,7 +615,7 @@ public class AutoChessPrepManager : ClickTileManager
     {
         int indexOf = fieldSlots.IndexOf(fieldActor);
         if (indexOf < 0){return;}
-        LogDecision(33 + indexOf);
+        LogPrepDecision(33 + indexOf);
         benchSlots.Add(fieldActor);
         fieldSlots.Remove(fieldActor);
         dataManager.AddLog($"{fieldActor.GetName()} moved to bench.");
@@ -609,15 +631,25 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public int GetMaxFieldSlots()
     {
-        int fieldSlotEquipCount = 0;
+        // HR File Works From Anywhere.
+        int HRFileCount = 0;
         for (int i = 0; i < fieldSlots.Count; i++)
         {
             if (fieldSlots[i].EquipmentExists("HR File"))
             {
-                fieldSlotEquipCount++;
+                HRFileCount++;
             }
         }
-        int bonusSlots = Mathf.Min(2, fieldSlotEquipCount);
+        for (int i = 0; i < benchSlots.Count; i++)
+        {
+            if (benchSlots[i].EquipmentExists("HR File"))
+            {
+                HRFileCount++;
+            }
+        }
+        // Check The Equipment Inventory Too.
+        HRFileCount += dataManager.GetEquipmentCount("HR File");
+        int bonusSlots = Mathf.Min(2, HRFileCount);
         return 4 + bonusSlots +(dataManager.GetLevel() / 2);
     }
     public AutoActorRollUpData GetFieldSlotActorOnTileNumber(int tileNumber)

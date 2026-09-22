@@ -1,3 +1,4 @@
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -24,6 +25,18 @@ public class PartyDataManager : MonoBehaviour
     // For quest party members (rescue/escort/etc)
     public PartyData tempPartyData;
     public List<SavedData> otherPartyData;
+    public string partyFolderName;
+    [ContextMenu("Update Folder Names")]
+    public void UpdateFolderNames()
+    {
+        permanentPartyData.foldername = partyFolderName;
+        mainPartyData.foldername = partyFolderName;
+        tempPartyData.foldername = partyFolderName;
+        for (int i = 0; i < otherPartyData.Count; i++)
+        {
+            otherPartyData[i].foldername = partyFolderName;
+        }
+    }
     public Inventory inventory;
     public EquipmentInventory equipmentInventory;
     public DungeonBag dungeonBag;
@@ -41,6 +54,21 @@ public class PartyDataManager : MonoBehaviour
         for (int i = 0; i < allParties.Count; i++) { allParties[i].Load(); }
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].Load(); }
         SetFullParty();
+    }
+    public void DeleteAllSaveData()
+    {
+        string path = Application.persistentDataPath;
+        if (!Directory.Exists(path))
+            return;
+        foreach (string file in Directory.GetFiles(path))
+        {
+            File.Delete(file);
+        }
+        foreach (string directory in Directory.GetDirectories(path))
+        {
+            Directory.Delete(directory, true);
+        }
+        Debug.Log($"Deleted all files from: {path}");
     }
     [ContextMenu("Debug New Game")]
     public void NewGame()

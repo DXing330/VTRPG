@@ -5,7 +5,7 @@ using UnityEngine;
 public class StatusDetailViewer : PassiveDetailViewer
 {
     public StatDatabase allStatuses;
-    public StatDatabase weatherPassives;
+    public TerrainPassivesList weatherPassives;
     public SelectStatTextList statusSelect;
     public PopUpMessage popUp;
     public void SelectStatus()
@@ -17,8 +17,8 @@ public class StatusDetailViewer : PassiveDetailViewer
     {
         string wDetails = weatherName + ":";
         // Kinda a pain to check delimiters every time, should get a master mapping of delimiters later.
-        string[] wPassives = weatherPassives.ReturnValue(weatherName).Split("!");
-        for (int i = 0; i < wPassives.Length; i++)
+        List<string> wPassives = weatherPassives.ReturnPassivesOfAllTimings(weatherName);
+        for (int i = 0; i < wPassives.Count; i++)
         {
             if (wPassives[i].Length < 6){continue;}
             wDetails += "\n";

@@ -374,6 +374,7 @@ public class ActorStats : ActorInitialStats
     }
     public void UpdateBaseDamageResist(string type, int amount)
     {
+        if (type == ""){return;}
         int indexOf = resistDmgTypes.IndexOf(type);
         if (indexOf < 0)
         {

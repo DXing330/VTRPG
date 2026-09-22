@@ -7,14 +7,12 @@ public class ItemValueEntry
     public string name;
     public float value;
 }
-
 [System.Serializable]
 public class ItemValueDatabaseJson
 {
     public int version;
     public List<ItemValueEntry> items;
 }
-
 [System.Serializable]
 public class ItemCombination
 {
@@ -28,7 +26,6 @@ public class ItemCombination
         value = val;
     }
 }
-
 [System.Serializable]
 public class ItemTagValueEntry
 {
@@ -36,24 +33,19 @@ public class ItemTagValueEntry
     public string unitTag;
     public float value;
 }
-
 [System.Serializable]
 public class ItemTagValueDatabaseJson
 {
     public int version;
     public List<ItemTagValueEntry> itemTagValues;
 }
-
 public class AutoChessItemValueDatabase : MonoBehaviour
 {
     public TextAsset itemValueJson;
     public TextAsset itemUnitTagValueJson;
-
     public int expectedVersion = 1;
-
     private Dictionary<string,float> itemValues =
         new Dictionary<string,float>();
-
     private Dictionary<string,float> componentExpectedValues = new();
     public float GetComponentValue(string component)
     {
@@ -63,7 +55,6 @@ public class AutoChessItemValueDatabase : MonoBehaviour
         }
         return 0f;
     }
-
     private Dictionary<(string,string), float> itemTagMatrix = new();
     public float GetTagCompatibility(List<string> itemTags, List<string> unitTags)
     {
@@ -86,38 +77,27 @@ public class AutoChessItemValueDatabase : MonoBehaviour
         }
         return score;
     }
-
     void Awake()
     {
         Load();
         CalculateComponentValue();
     }
-
     public void Load()
     {
         if(itemValueJson == null)
         {
-            Debug.LogWarning(
-                "Missing item value JSON"
-            );
+            Debug.LogWarning("Missing item value JSON");
             return;
         }
-        ItemValueDatabaseJson data =
-            JsonUtility.FromJson<ItemValueDatabaseJson>(
-                itemValueJson.text
-            );
+        ItemValueDatabaseJson data =JsonUtility.FromJson<ItemValueDatabaseJson>(itemValueJson.text);
         if(data == null || data.items == null)
         {
-            Debug.LogWarning(
-                "Invalid item value JSON"
-            );
+            Debug.LogWarning("Invalid item value JSON");
             return;
         }
         if(data.version != expectedVersion)
         {
-            Debug.LogWarning(
-                "Item database version mismatch"
-            );
+            Debug.LogWarning("Item database version mismatch");
         }
         itemValues.Clear();
         foreach(var item in data.items)
@@ -137,7 +117,6 @@ public class AutoChessItemValueDatabase : MonoBehaviour
         }
         BuildCombinationCache();
     }
-
     public float GetItemTrainingScore(string item)
     {
         if(itemValues.TryGetValue(item, out float value))
@@ -148,8 +127,7 @@ public class AutoChessItemValueDatabase : MonoBehaviour
         // Unknown items get low value
         return 0.1f;
     }
-
-    void CalculateComponentValue()
+    public void CalculateComponentValue()
     {
         componentExpectedValues.Clear();
         for (int i = 0; i < itemOrder.Count; i++)
@@ -159,7 +137,6 @@ public class AutoChessItemValueDatabase : MonoBehaviour
             componentExpectedValues[component] = value;
         }
     }
-
     float GetComponentFutureValue(string component)
     {
         float bestValue = 0f;

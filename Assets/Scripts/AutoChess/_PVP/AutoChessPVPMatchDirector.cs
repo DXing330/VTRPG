@@ -13,16 +13,22 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     public AutoChessNeuralNetPrepController neuralNetController;
     void CheckNeuralNetPlacement(List<AutoChessDataManager> rankedTeams)
     {
+        bool won = false;
         for (int i = 0; i < rankedTeams.Count; i++)
         {
             int slot = allPlayers.GetAllTeams().IndexOf(rankedTeams[i]);
             if (slot >= 0 && slot < neuralNetSlots.Length && neuralNetSlots[slot])
             {
                 int placement = i + 1; // 1st = 1, 2nd = 2, etc.
-                bool won = placement <= 4; // Top 4 = win
+                won = (placement <= 1 || won);
                 Debug.Log($"[Benchmark] Neural net (slot {slot}) placed #{placement} — {(won ? "WIN" : "LOSS")}");
                 // Could log to a file here for aggregate stats across many runs
             }
+        }
+        // Don't Record Entries Of Loser Neural Nets.
+        if (!won)
+        {
+            logMatches = false;
         }
     }
     public bool autoAssignAIGenomes = false;
@@ -190,6 +196,7 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         allPlayers.fullAI = true;
         allPlayers.NewGameAllDataManagers();
         allPlayers.Load();
+        AIManager.equipmentController.itemValueDatabase.Load();
     }
     public void SetupNNMatch()
     {
@@ -209,7 +216,7 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         }
         neuralNetController.LoadModel();
         neuralNetController.ResetTimers();
-        allPlayers.AssignMatchAIGenomes();
+        allPlayers.AssignChampionGenomes(neuralNetSlots);
         autoAssignAIGenomes = true;
     }
     [ContextMenu("Test NeuralNet Full Run")]
@@ -242,7 +249,7 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     public void TestAIFullRun()
     {
         autoAssignAIGenomes = true;
-        //EnableLogs();
+        EnableLogs();
         SetupMatch();
         allPlayers.AssignMatchAIGenomes();
         totalAIPrepTime = 0f;
@@ -255,7 +262,7 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         AIManager.LogTimingSummary();
         Debug.Log("Rounds: " + roundCount + "\nAI Prep: " + totalAIPrepTime + "\nBattle: " + totalBattleTime);
         autoAssignAIGenomes = false;
-        //DisableLogs();
+        DisableLogs();
     }
     public void TimedAIPrepPhase()
     {
@@ -317,11 +324,6 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
             }
             AIManager.AIPrepPhase(allTeams[i]);
         }
-        if (autoAssignAIGenomes)
-        {
-            Debug.Log($"PrepTime:{Time.realtimeSinceStartup - start:F2}ms");
-            start = Time.realtimeSinceStartup;
-        }
         PrepareBattleLists();
         if (!fullAI)
         {
@@ -330,10 +332,6 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         else
         {
             AutoRunAllBattles();
-        }
-        if (autoAssignAIGenomes)
-        {
-            Debug.Log($"BattleTime:{Time.realtimeSinceStartup - start:F2}ms");
         }
     }
     public void PrepareBattleLists()

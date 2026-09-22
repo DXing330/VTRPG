@@ -36,7 +36,7 @@ public class AutoActorDisplay : MonoBehaviour
         }
     }
     public SpriteContainer masterSprites;
-    public TMP_Text actorName;
+    public List<TMP_Text> actorNameTexts;
     public TMP_Text HPText;
     public TMP_Text ATKText;
     public TMP_Text DEFText;
@@ -51,7 +51,10 @@ public class AutoActorDisplay : MonoBehaviour
     {
         SetPage(0);
         utility.DisableGameObjects(factionIconObjects);
-        actorName.text = "";
+        for (int i = 0; i < actorNameTexts.Count; i++)
+        {
+            actorNameTexts[i].text = "";
+        }
         traitText.text = "";
         skillText.text = "";
         HPText.text = "";
@@ -62,7 +65,10 @@ public class AutoActorDisplay : MonoBehaviour
     public void DisplayActor(string newName)
     {
         ResetDisplay();
-        actorName.text = newName;
+        for (int i = 0; i < actorNameTexts.Count; i++)
+        {
+            actorNameTexts[i].text = newName;
+        }
         string[] blocks = actorData.ReturnValue(newName).Split("|");
         string[] allFactions = blocks[0].Split(",");
         for (int i = 0; i < allFactions.Length; i++)
