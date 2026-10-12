@@ -107,23 +107,29 @@ public class AutoChessFactionDisplay : MonoBehaviour
             return "All allies take -20% DMG and gain +20% ATK.";
             case "Aegir": // Need a check for defeated ally count.
             return "At the start of battle, Aegir units consume the unit in front, absorbing their ATK. All Aegir units have {+" + (stacks + 40) + "%} health. If there are 5+ Aegir Faction allies, then the first 3 Aegir Faction allies defeated will immediately be revived.";
+            case "Kazimierz":
+            return "Kazimierz allies gain +20% ATK for each ally deployed, up to {" + (50 + stacks) + "%}. If there are 6+ Kazimierz Faction allies, then after attacking Kazimierz Faction allies deal additional Light Damage equal to 30% of their ATK.";
             case "Kjerag": // Implemented
-            return "Kjerag allies deal 130% damage, increased to {" + (130 + stacks) + "%} when attacking enemies that have cold or frozen status. If there are 5+ Kjerag Faction allies, then every {" + (Mathf.Max(1, 6 / Mathf.Max(1, (stacks / 100)))).ToString() + "} rounds, apply [Cold] status to all enemies.";
+            return "Kjerag allies deal 130% damage, increased to {" + (130 + stacks) + "%} when attacking enemies that have cold or frozen status. If there are 6+ Kjerag Faction allies, then every {" + (Mathf.Max(1, 6 / Mathf.Max(1, (stacks / 100)))).ToString() + "} rounds, apply [Cold] status to all enemies.";
             case "Laterano": // Implemented
-            return "After Laterano allies use a skill, Laterano allies' next basic attack deals {" + (40 + stacks) + "%} additonal damage. Additionally, if there are 5+ Laterano Faction allies, then whenever a Laterano unit uses a skill all Laterano Faction allies gain +1% damage with basic attacks";
+            return "Every turn, Laterano allies have {" + ((100 * stacks) / (50 + stacks)) + "%} chance to extend their buffs by 1 turn. If there are 6+ Laterano Faction allies, then whenever a Laterano unit uses a skill all Laterano Faction allies gain +4% ATK (up to +200%)";
             case "Siracusa": // Implemented
-            return "Siracusa allies gain {" + (40 + stacks) + "%} attack speed. If there are 5+ Siracusa Faction allies, then all Siracusa allies deal {" + (stacks / 12) + "} bonus dark damage when attacking.";
+            return "Siracusa allies gain {" + (40 + stacks) + "%} attack speed. If there are 6+ Siracusa Faction allies, then all Siracusa allies have a 5% chance to deal {" + (stacks / 10) + "} bonus Dark Damage when attacking.";
             case "Victoria": // Implemented.
-            return "Victoria allies deal {" + (140 + stacks) + "%} damage. If there are 5+ Victoria Faction allies, then all Victoria Faction allies gain +80% attack.";
+            return "Victoria allies deal {" + (140 + stacks) + "%} damage. If there are 6+ Victoria Faction allies, then all Victoria Faction allies gain +80% ATK.";
             case "Yan": // Summoning Handled At Start.
-            return "Yan allies gain {+" + (40 + stacks) + "%} attack. If there are 6+ Yan Faction allies, then summon an additional powerful Yan ally.";
+            return "Yan allies gain {+" + (40 + stacks) + "%} ATK. If there are 6+ Yan Faction allies, then summon an additional powerful Yan ally.";
             case "Sargon": // Implemented
-            return "After a Sargon ally uses a skill, all Sargon Faction allies gain {+" + (stacks / 6) + "%} attack speed. If there are 5+ Sargon Faction allies, then additionally gain {+" + (stacks / 12) + "%} attack.";
+            return "After a Sargon ally uses a skill, all Sargon Faction allies gain {+" + (stacks / 6) + "%} attack speed (up to +300%). If there are 6+ Sargon Faction allies, then additionally gain the same amount of ATK.";
             // SUB Damage
+            case "Solo":
+            return "If there is 1 Solo Unit on the field, they gain +60% HP and ATK.";
             case "Agile": // Implemented
             return "Agile units and adjacent allies gain {+" + (stacks + 10) + "%} attack speed.";
             case "Precision": // Implemented
             return "Ranged units gain {+" + (stacks + 20) + "%} attack. If there are 3+ Precision Faction allies, then ranged units gain 20% defense penetration.";
+            case "Arcane":
+            return "Arcane units deal {" + (stacks + 20) + "%} more magic damage. If there are 3+ Arcane Faction allies, then additionally deal {" + (stacks + 50) + "%} more damage to targets with less than 50% health";
             case "Swift": // Implemented
             return "After using a skill, swift units have a {+" + ((100 * stacks) / (50 + stacks)) + "%} chance to restore 2 energy. At 40+ stacks, all units have the same chance to restore 1 energy.";
             case "Raid": // Implemented.
@@ -132,16 +138,16 @@ public class AutoChessFactionDisplay : MonoBehaviour
             case "Resilient": // Implemented
             return "Melee units have {~" + ((100 * stacks) / (50 + stacks)) + "%} chance to be instantly revived upon being defeated. If there are 3+ Resilient Faction units, then melee units grant +2 energy to all allies when defeated.";
             case "Durable": // Implemented
-            return "All allies gain {+" + (40 + stacks) + "%} health. If there are 3+ Durable Faction allies, then all allies take 40% less damage from attacks.";
+            return "All allies gain {+" + (30 + stacks) + "%} health. If there are 3+ Durable Faction allies, then all allies reflect {" + (stacks / 10) + "} earth damage when attacked.";
             case "Aid": // Implemented + Not In Battle
-            return "All allies gain {+" + (40 + stacks) + "%} defense. At the start of each battle, all active factions gain 2 stacks. If there are 3+ Aid Faction allies, then instead gain 4 stacks.";
+            return "All allies gain {+" + (30 + stacks) + "%} defense. At the start of each battle, all active factions gain 2 stacks. If there are 3+ Aid Faction allies, then instead gain 4 stacks.";
             // ECON
             case "Marvel": // Not In Battle
-            return "When rerolling, there is {~" + ((20 + stacks) / (100 + stacks)) + "%} chance to gain 1 gold. Every 50 stacks, gain 10 gold next round.";
+            return "When rerolling, there is {~" + (100 * (20 + stacks) / (100 + stacks)) + "%} chance to gain 1 gold. Every 50 stacks, gain 10 gold next round.";
             case "Foresight": // Not In Battle
-            return "Every 10 stacks, gain 2 gold next round. At 80+ stacks, shop units cost -1 gold.";
+            return "Every 10 stacks, gain 2 gold next round. At 100+ stacks, shop units cost -1 gold.";
             case "Investor": // Not In Battle
-            return "Double all [When Obtained] trait effects. At 50+ stacks, triple the effects.";
+            return "Double all [When Obtained] trait effects. At 70+ stacks, triple the effects.";
         }
     }
 }

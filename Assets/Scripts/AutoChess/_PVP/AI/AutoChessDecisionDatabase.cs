@@ -11,6 +11,7 @@ public class DecisionEntry
     public int action;
     public bool[] validMask;
     public float weight;
+    public float value;
     public int actionType;
     public int actionIndex;
     public bool[] actionTypeMask; // 7
@@ -18,6 +19,9 @@ public class DecisionEntry
     public bool[] sellBenchMask; // 12
     public bool[] placeBenchMask; // 12
     public bool[] fieldMask;      // 11
+    public float oldLogProb;
+    public float oldValue;
+    public int finalRank;
 }
 [CreateAssetMenu(fileName = "AutoChessDecisionDatabase", menuName = "ScriptableObjects/AutoChess/AutoChessDecisionDatabase", order = 1)]
 public class AutoChessDecisionDatabase : SavedData
@@ -151,6 +155,7 @@ public class AutoChessDecisionDatabase : SavedData
                 continue;
             }
             float weight = (0.125f * (9 - match.finalRank));
+            float value = 1f - 2f * ((match.finalRank - 1) / 7f);
             foreach (var step in match.steps)
             {
                 if (step?.state == null || step.state.Length == 0) continue;
@@ -160,13 +165,17 @@ public class AutoChessDecisionDatabase : SavedData
                     action = step.action,
                     validMask = step.validMask ?? new bool[44],
                     weight = weight,
+                    value = value,
                     actionType = step.actionType,
                     actionIndex = step.actionIndex,
                     actionTypeMask = step.actionTypeMask ?? new bool[7],
                     buyMask = step.buyMask ?? new bool[6],
                     sellBenchMask = step.sellBenchMask ?? new bool[12],
                     placeBenchMask = step.placeBenchMask ?? new bool[12],
-                    fieldMask = step.fieldMask ?? new bool[11]
+                    fieldMask = step.fieldMask ?? new bool[11],
+                    oldLogProb = step.oldLogProb,
+                    oldValue = step.oldValue,
+                    finalRank = match.finalRank
                 });
             }
         }
@@ -182,7 +191,7 @@ public class AutoChessDecisionDatabase : SavedData
     }
     void SaveBinary(List<DecisionEntry> entries, string path)
     {
-        const int STATE_SIZE = 1619;
+        const int STATE_SIZE = 1918;
         const int MASK_SIZE = 44;
         const int ACTION_TYPE_COUNT = 7;
         const int BUY_COUNT = 6;
@@ -204,6 +213,10 @@ public class AutoChessDecisionDatabase : SavedData
                 writer.Write(e.actionType);
                 writer.Write(e.actionIndex);
                 writer.Write(e.weight);
+                writer.Write(e.value);
+                writer.Write(e.oldLogProb);
+                writer.Write(e.oldValue);
+                writer.Write(e.finalRank);
                 for (int i = 0; i < STATE_SIZE; i++)
                     writer.Write(e.state[i]);
                 for (int i = 0; i < MASK_SIZE; i++)
@@ -296,217 +309,104 @@ public class AutoChessDecisionDatabase : SavedData
             // ========================================
             // HEADER
             // ========================================
-
             int count = reader.ReadInt32();
-
             int stateSize = reader.ReadInt32();
-
             int flatMaskSize = reader.ReadInt32();
-
             int actionTypeCount = reader.ReadInt32();
-
             int buyCount = reader.ReadInt32();
-
             int benchCount = reader.ReadInt32();
-
             int fieldCount = reader.ReadInt32();
-
-
-            Debug.Log(
-                $"Entries: {count}"
-            );
-
-            Debug.Log(
-                $"State: {stateSize}"
-            );
-
-            Debug.Log(
-                $"Flat Mask: {flatMaskSize}"
-            );
-
-            Debug.Log(
-                $"Action Types: {actionTypeCount}"
-            );
-
-            Debug.Log(
-                $"Buy Slots: {buyCount}"
-            );
-
-            Debug.Log(
-                $"Bench Slots: {benchCount}"
-            );
-
-            Debug.Log(
-                $"Field Slots: {fieldCount}"
-            );
-
-
+            Debug.Log($"Entries: {count}");
+            Debug.Log($"State: {stateSize}");
+            Debug.Log($"Flat Mask: {flatMaskSize}");
+            Debug.Log($"Action Types: {actionTypeCount}");
+            Debug.Log($"Buy Slots: {buyCount}");
+            Debug.Log($"Bench Slots: {benchCount}");
+            Debug.Log($"Field Slots: {fieldCount}");
             // ========================================
             // FIRST ENTRY
             // ========================================
-
-            int action =
-                reader.ReadInt32();
-
-            int actionType =
-                reader.ReadInt32();
-
-            int actionIndex =
-                reader.ReadInt32();
-
-            float weight =
-                reader.ReadSingle();
-
-
+            int action = reader.ReadInt32();
+            int actionType = reader.ReadInt32();
+            int actionIndex = reader.ReadInt32();
+            float weight = reader.ReadSingle();
+            float value = reader.ReadSingle();
+            float oldLogProb = reader.ReadSingle();
+            float oldValue = reader.ReadSingle();
+            int finalRank = reader.ReadInt32();
             // ----------------------------------------
             // STATE
             // ----------------------------------------
-
-            float[] state =
-                new float[stateSize];
-
+            float[] state = new float[stateSize];
             for (int i = 0; i < stateSize; i++)
             {
-                state[i] =
-                    reader.ReadSingle();
+                state[i] = reader.ReadSingle();
             }
-
-
             // ----------------------------------------
             // FLAT MASK
             // ----------------------------------------
-
-            bool[] flatMask =
-                new bool[flatMaskSize];
-
+            bool[] flatMask = new bool[flatMaskSize];
             for (int i = 0; i < flatMaskSize; i++)
             {
-                flatMask[i] =
-                    reader.ReadByte() > 0;
+                flatMask[i] = reader.ReadByte() > 0;
             }
-
-
             // ----------------------------------------
             // ACTION TYPE MASK
             // ----------------------------------------
-
-            bool[] actionTypeMask =
-                new bool[actionTypeCount];
-
+            bool[] actionTypeMask = new bool[actionTypeCount];
             for (int i = 0; i < actionTypeCount; i++)
             {
-                actionTypeMask[i] =
-                    reader.ReadByte() > 0;
+                actionTypeMask[i] = reader.ReadByte() > 0;
             }
-
-
             // ----------------------------------------
             // BUY MASK
             // ----------------------------------------
-
-            bool[] buyMask =
-                new bool[buyCount];
-
+            bool[] buyMask = new bool[buyCount];
             for (int i = 0; i < buyCount; i++)
             {
-                buyMask[i] =
-                    reader.ReadByte() > 0;
+                buyMask[i] = reader.ReadByte() > 0;
             }
-
-
             // ----------------------------------------
             // SELL MASK
             // ----------------------------------------
-
-            bool[] sellBenchMask =
-                new bool[benchCount];
-
+            bool[] sellBenchMask = new bool[benchCount];
             for (int i = 0; i < benchCount; i++)
             {
-                sellBenchMask[i] =
-                    reader.ReadByte() > 0;
+                sellBenchMask[i] = reader.ReadByte() > 0;
             }
-
-
             // ----------------------------------------
             // PLACE MASK
             // ----------------------------------------
-
-            bool[] placeBenchMask =
-                new bool[benchCount];
-
+            bool[] placeBenchMask = new bool[benchCount];
             for (int i = 0; i < benchCount; i++)
             {
-                placeBenchMask[i] =
-                    reader.ReadByte() > 0;
+                placeBenchMask[i] = reader.ReadByte() > 0;
             }
-
-
             // ----------------------------------------
             // FIELD MASK
             // ----------------------------------------
-
-            bool[] fieldMask =
-                new bool[fieldCount];
-
+            bool[] fieldMask = new bool[fieldCount];
             for (int i = 0; i < fieldCount; i++)
             {
-                fieldMask[i] =
-                    reader.ReadByte() > 0;
+                fieldMask[i] = reader.ReadByte() > 0;
             }
-
-
-            // ========================================
             // DEBUG OUTPUT
-            // ========================================
-
-            Debug.Log(
-                $"First entry:"
-            );
-
-            Debug.Log(
-                $"  Flat Action: {action}"
-            );
-
-            Debug.Log(
-                $"  Action Type: {actionType}"
-            );
-
-            Debug.Log(
-                $"  Action Index: {actionIndex}"
-            );
-
-            Debug.Log(
-                $"  Weight: {weight:F3}"
-            );
-
-            Debug.Log(
-                $"  Gold: {state[0]:F3}"
-            );
-
-            Debug.Log(
-                $"  Flat Valid: {flatMask.Count(x => x)}"
-            );
-
-            Debug.Log(
-                $"  Valid Action Types: {actionTypeMask.Count(x => x)}"
-            );
-
-            Debug.Log(
-                $"  Valid Buy Slots: {buyMask.Count(x => x)}"
-            );
-
-            Debug.Log(
-                $"  Valid Sell Slots: {sellBenchMask.Count(x => x)}"
-            );
-
-            Debug.Log(
-                $"  Valid Place Slots: {placeBenchMask.Count(x => x)}"
-            );
-
-            Debug.Log(
-                $"  Valid Field Slots: {fieldMask.Count(x => x)}"
-            );
+            Debug.Log($"First entry:");
+            Debug.Log($"  Flat Action: {action}");
+            Debug.Log($"  Action Type: {actionType}");
+            Debug.Log($"  Action Index: {actionIndex}");
+            Debug.Log($"  Weight: {weight:F3}");
+            Debug.Log($"  Value: {value:F3}");
+            Debug.Log($"  Old Log Prob: {oldLogProb:F6}");
+            Debug.Log($"  Old Value: {oldValue:F3}");
+            Debug.Log($"  Final Rank: {finalRank}");
+            Debug.Log($"  Gold: {state[0]:F3}");
+            Debug.Log($"  Flat Valid: {flatMask.Count(x => x)}");
+            Debug.Log($"  Valid Action Types: {actionTypeMask.Count(x => x)}");
+            Debug.Log($"  Valid Buy Slots: {buyMask.Count(x => x)}");
+            Debug.Log($"  Valid Sell Slots: {sellBenchMask.Count(x => x)}");
+            Debug.Log($"  Valid Place Slots: {placeBenchMask.Count(x => x)}");
+            Debug.Log($"  Valid Field Slots: {fieldMask.Count(x => x)}");
         }
     }
 }

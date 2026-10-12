@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-
 [CreateAssetMenu(fileName = "AutoChessFactionEffectManager", menuName = "ScriptableObjects/AutoChess/AutoChessFactionEffectManager", order = 1)]
 public class AutoChessFactionEffectManager : ScriptableObject
 {
@@ -35,11 +34,25 @@ public class AutoChessFactionEffectManager : ScriptableObject
         {
             ApplyFactionEffect(allActors, activeFactions[i], activeFactionCount[i], activeFactionStacks[i]);
         }
+        int eliteCount = 0;
         for (int i = 0; i < allActors.Count; i++)
         {
+            if (allActors[i].GetLevel() > 1){eliteCount++;}
             if (allActors[i].autoChessTrait.timing == "DuringBattle")
             {
                 ApplyScalingFactionTraitToActor(allActors[i], factionData);
+            }
+        }
+        if (eliteCount >= 2)
+        {
+            int eliteLevel = 1;
+            if (eliteCount >= 5){eliteLevel = 2;}
+            for (int i = 0; i < allActors.Count; i++)
+            {
+                if (allActors[i].GetLevel() > 1)
+                {
+                    allActors[i].AddPassiveSkill("AKElite", eliteLevel.ToString());
+                }
             }
         }
     }

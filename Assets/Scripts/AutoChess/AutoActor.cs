@@ -12,6 +12,7 @@ public enum AutoChessFaction
     Laterano, // Light
     Yan, // Fire
     Kjerag, // Ice
+    Kazimierz,
     Aegir, // Water
     Sargon, // Earth
     Siracusa, // Dark
@@ -19,6 +20,8 @@ public enum AutoChessFaction
     // Additional alliances
     Precision,
     Agile,
+    Arcane,
+    Solo,
     Swift,
     Resilient,
     Durable,
@@ -132,14 +135,22 @@ public class AutoActorRollUpData
     public int resist; // Magic Resist.
     public int GetResist(){return resist;}
     public void SetResist(int newData){resist = newData;}
+    public float attackActionCost;
+    public float GetAttackActionCost(){return attackActionCost;}
+    public void SetAttackActionCost(float newData){attackActionCost = newData;}
     public int attackRange;
     public int GetAttackRange(){return attackRange;}
     public void SetAttackRange(int newData){attackRange = newData;}
     public string attackShape;
     public string GetAttackShape(){return attackShape;}
     public void SetAttackShape(string newData){attackShape = newData;}
+    public int respawnTimer;
+    public int GetRespawnTimer(){return respawnTimer;}
+    public void SetRespawnTimer(int newData){respawnTimer = newData;}
     public bool healer = false;
+    public bool HealerUnit(){return healer;}
     public bool AOE = false;
+    public bool AOEUnit(){return AOE;}
     public string GetBaseStatString()
     {
         string baseStatString = GetName();
@@ -215,7 +226,7 @@ public class AutoActorRollUpData
         SetLevel(newLevel);
         string data = autoActorData.ReturnValue(autoChessName);
         string[] blocks = data.Split("|");
-        if (blocks.Length < 18)
+        if (blocks.Length < 19)
         {
             Debug.Log(autoChessName);
             return false;
@@ -228,15 +239,10 @@ public class AutoActorRollUpData
         SetDefense(int.Parse(blocks[9]) + (int.Parse(blocks[9]) * (newLevel - 1) * 3 / 10));
         SetResist(int.Parse(blocks[10]));
         SetAttackRange(int.Parse(blocks[11]));
-        SetAttackShape(blocks[14]);
-        if (int.Parse(blocks[15]) == 1)
-        {
-            healer = true;
-        }
-        if (int.Parse(blocks[17]) == 1)
-        {
-            AOE = true;
-        }
+        SetAttackActionCost(float.Parse(blocks[12]));
+        SetAttackShape(blocks[15]);
+        healer = int.Parse(blocks[16]) == 1;
+        AOE = int.Parse(blocks[18]) == 1;
         return true;
     }
     public void LoadBaseTrait(StatDatabase autoActorData)
@@ -337,7 +343,6 @@ public class AutoActorRollUpData
         }
     }
 }
-
 [System.Serializable]
 public class AutoActor : TacticActor
 {
@@ -378,12 +383,13 @@ public class AutoActor : TacticActor
             UpdateBaseDefense(GetBaseDefense() * scaling / 10);
         }
         SetAttackRange(int.Parse(statBlocks[11]));
-        autoChessAttackRangeShape = statBlocks[14];
-        SetPassiveSkills(statBlocks[12].Split(passiveDelimiter).ToList());
-        SetPassiveLevels(statBlocks[13].Split(passiveDelimiter).ToList());
-        akHealer = int.Parse(statBlocks[15]);
-        baseRespawnTimer = int.Parse(statBlocks[16]);
-        akAOE = int.Parse(statBlocks[17]);
+        autoChessAttackRangeShape = statBlocks[15];
+        SetSubAttackActionCost(float.Parse(statBlocks[12]));
+        SetPassiveSkills(statBlocks[13].Split(passiveDelimiter).ToList());
+        SetPassiveLevels(statBlocks[14].Split(passiveDelimiter).ToList());
+        akHealer = int.Parse(statBlocks[16]);
+        baseRespawnTimer = int.Parse(statBlocks[17]);
+        akAOE = int.Parse(statBlocks[18]);
     }
     public void AutoChessEnemySetInitialStatsFromString(string newStats, int difficultyScaling = 0)
     {

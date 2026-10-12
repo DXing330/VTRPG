@@ -7,6 +7,28 @@ public class PassiveDetailViewerSwitch : ScriptableObject
 {
     public MultiKeyStatDatabase allPassiveGroups;
     public StatDatabase allPassives;
+    public StatDatabase allBuffStatus;
+    public string ReturnBuffStatusDetails(string newName)
+    {
+        string[] data = allBuffStatus.ReturnValue(newName).Split("|");
+        if (data.Length < 6){return "";}
+        string details = "";
+        details += data[0] + ":" + data[3] + "-";
+        if (data[4].Contains(","))
+        {
+            string[] effects = data[4].Split(",");
+            string[] specifics = data[5].Split(",");
+            // Match The Effects And Specifics Together In The Text.
+            for (int i = 0; i < effects.Length; i++)
+            {
+                details += effects[i] + " " + specifics[i];
+                if (i < effects.Length - 1){details += ",";}
+            }
+            return details;
+        }
+        details += data[4] + " " + data[5];
+        return details;
+    }
     public string ReturnPassiveAtLevelDetails(string passiveName, int passiveLevel)
     {
         string allPassiveDetails = "";
@@ -125,6 +147,12 @@ public class PassiveDetailViewerSwitch : ScriptableObject
         {
             return " deal " + specifics + " " + effect + " to " + target;
         }
+        if (target.Contains("AutoTargetEquals"))
+        {
+            string[] eBlocks = target.Split("Equals");
+            if (eBlocks.Length < 3){return "???";}
+            target = "the " + eBlocks[1] + " with the " + eBlocks[2];
+        }
         switch (effect)
         {
             case "Set":
@@ -170,11 +198,19 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "Status":
                 return " inflict " + specifics+" on " + target;
             case "Buff":
-                return " give " + specifics + " to " + target;
+                return " give " + specifics + " (" + ReturnBuffStatusDetails(specifics) + ") to " + target;
+            case "ExtendBuffs":
+                return " extend all buffs by " + specifics + " turns";
+            case "HealingCleanse":
+                return " " + target + " regains up to " + specifics + " health and cleanses 1 status effects";
+            case "Cleanse":
+                return " remove " + specifics + " status effects from " + target;
             case "RemoveStatus":
                 return " remove all " + specifics + " status effects from " + target;
+            case "Heal":
+            case "SelfHeal":
             case "Health":
-                return " " + target + " regain health up to " + specifics;
+                return " " + target + " regain up to " + specifics + " health";
             case "Health%":
                 return " " + target + " regain up to " + specifics + "% health";
             case "MoveType":
@@ -279,11 +315,17 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " change basic attack span to " + specifics;
             case "BasicAttackSpan":
                 return " change basic attack span to " + specifics + " for one turn";
+            case "Unhealable":
+                return " prevent healing from allies";
         }
         return " increase " + effect + " of " + target + " by " + specifics;
     }
     protected string ReturnAdjustedSpecifics(string adjustedSpecifics, string targetString)
     {
+        if (adjustedSpecifics.StartsWith("Meta"))
+        {
+            return "[Output Value of " + adjustedSpecifics.Replace("Meta", "") + "]";
+        }
         switch (adjustedSpecifics)
         {
             default:
@@ -330,7 +372,7 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return "the amount of allies adjacent to " + targetString;
         }
     }
-    protected string AdjustSpecificsText(string specifics)
+    public string AdjustSpecificsText(string specifics)
     {
         string adjustedSpecifics = specifics;
         string targetString = "self";
@@ -352,36 +394,31 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                     adjustedSpecifics = adjustedSpecifics[..^1];
                 }
             }
-            if (scalingBasedOn.Length > 2)
+            if (scalingBasedOn.Length > 3)
             {
+                string coefficent = scalingBasedOn[3];
+                if (coefficent.StartsWith("Meta"))
+                {
+                    coefficent = "[" + coefficent.Replace("Meta", "") + " Output Value]";
+                }
                 multiplier = scalingBasedOn[2] + " times ";
                 // Get The Last Character, Based On MultiBy Or Divided By.
                 if (scalingBasedOn[2].Contains("MultiBy"))
                 {
-                    multiplier = scalingBasedOn[2][^1].ToString() + " times ";
+                    multiplier = coefficent + " times ";
                 }
                 else if (scalingBasedOn[2].Contains("DivideBy"))
                 {
-                    multiplier = "1/" + scalingBasedOn[2][^1].ToString() + " times ";
+                    multiplier = "1/" + coefficent + " times ";
                 }
                 else if (scalingBasedOn[2].Contains("AddTo"))
                 {
-                    multiplier = scalingBasedOn[2].Replace("AddTo", "") + " plus ";
+                    multiplier = coefficent + " plus ";
                 }
                 // Used exclusively by RNG conditions.
                 else if (scalingBasedOn[2].Contains("RationalFunc"))
                 {
-                    return "{x/(x+" + scalingBasedOn[2].Replace("RationalFunc", "") + "); x = " + ReturnAdjustedSpecifics(adjustedSpecifics, targetString) + "}";
-                }
-                else if (scalingBasedOn[2].Contains("AddMulti"))
-                {
-                    string[] AMdetails = scalingBasedOn[3].Split("And");
-                    multiplier = AMdetails[0] + " plus " + AMdetails[1] + " times ";
-                }
-                else if (scalingBasedOn[2].Contains("AddDivide"))
-                {
-                    string[] AMdetails = scalingBasedOn[3].Split("And");
-                    multiplier = AMdetails[0] + " plus 1/" + AMdetails[1] + " times ";
+                    return "{x/(x+" + coefficent + "); x = " + ReturnAdjustedSpecifics(adjustedSpecifics, targetString) + "}";
                 }
             }
         }

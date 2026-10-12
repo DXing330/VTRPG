@@ -47,6 +47,9 @@ public class AutoChessEncoderLogger : SavedData
         public bool[] sellBenchMask; // 12
         public bool[] placeBenchMask; // 12
         public bool[] fieldMask;      // 11
+        // PPO data captured when this action was selected.
+        public float oldLogProb;
+        public float oldValue;
     }
     private string GetActionTypeName(int action)
     {
@@ -81,7 +84,7 @@ public class AutoChessEncoderLogger : SavedData
         };
         Save();
     }
-    private DecisionStep BuildDecisionStep(float[] state, bool[] validMask, int action)
+    private DecisionStep BuildDecisionStep(float[] state, bool[] validMask, int action, float oldLogProb = 0f, float oldValue = 0f)
     {
         encoder.DecodeAction(action, out int actionType, out int actionIndex);
         HierarchicalMask hierarchicalMask = encoder.BuildHierarchicalMask(validMask);
@@ -98,10 +101,12 @@ public class AutoChessEncoderLogger : SavedData
             buyMask = hierarchicalMask.buyMask,
             sellBenchMask = hierarchicalMask.sellBenchMask,
             placeBenchMask = hierarchicalMask.placeBenchMask,
-            fieldMask = hierarchicalMask.fieldMask
+            fieldMask = hierarchicalMask.fieldMask,
+            oldLogProb = oldLogProb,
+            oldValue = oldValue
         };
     }
-    public void LogDecision(float[] state, bool[] validMask, int action)
+    public void LogDecision(float[] state, bool[] validMask, int action, float oldLogProb = 0f, float oldValue = 0f)
     {
         if (!logging) return;
         if (currentMatch == null || currentMatch.steps == null) return;
@@ -114,7 +119,7 @@ public class AutoChessEncoderLogger : SavedData
         {
             Debug.LogError($"AI ACTION/MASK MISMATCH: " + $"action={GetActionTypeName(action)}");
         }
-        currentMatch.steps[writeIndex] = BuildDecisionStep(state, validMask, action);
+        currentMatch.steps[writeIndex] = BuildDecisionStep(state, validMask, action, oldLogProb, oldValue);
         writeIndex = (writeIndex + 1) % MAX_STORED;
     }
     public void LogDecision(AutoChessPrepManager prep, AutoChessDataManager data, AutoChessShopManager shop, AutoChessFactionManager factions, int action)

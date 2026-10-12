@@ -669,9 +669,18 @@ public class BattleManager : ClickTileManager
             if (!attacker.AttackActionsLeft()){return;}
             attacker.PayAttackCost();
         }
-        UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName() + ".");
-        // Show Attack Speed Rolls In The combatLog?
+        UpdateCombatLog(attacker.GetPersonalName() + " targets " + defender.GetPersonalName() + ".");
         attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
+        List<int> basicAttackTargetTiles = map.mapUtility.GetTilesByShapeSpan(defender.GetLocation(), attacker.GetBasicAttackShape(), attacker.GetBasicAttackSpan(), map.mapSize, attacker.GetLocation());
+        List<TacticActor> targetActors = map.GetActorsOnTiles(basicAttackTargetTiles);
+        for (int i = 0; i < targetActors.Count; i++)
+        {
+            // Don't Hit Teammates Or The Target Twice.
+            if (targetActors[i].GetTeam() == attacker.GetTeam() || targetActors[i] == defender){continue;}
+            UpdateCombatLog(attacker.GetPersonalName() + " attacks " + targetActors[i].GetPersonalName() + ".");
+            attackManager.ActorAttacksActorWithAttackSpeed(attacker, targetActors[i], map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
+        }
+        // Show Attack Speed Rolls In The combatLog?
         if (AdjustTurnNumber())
         {
             return;

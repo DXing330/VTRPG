@@ -109,7 +109,11 @@ public class ActiveDetailViewerSwitch : ScriptableObject
             case "Statuses":
                 return "Give the target(s) " + ASD(s) + " for " + APD(p,e) + " turn(s).";
             case "Buff":
-                return "Give the target(s) " + ASD(s) + " for " + APD(p,e) + " turn(s).";
+                return "Give the target(s) " + ASD(s) + " (" + passiveDetails.ReturnBuffStatusDetails(s) + ") for " + APD(p,e) + " turn(s).";
+            case "BuffAndDuration":
+                string[] buffDuration = e.Split("Equals");
+                if (buffDuration.Length < 2){return "???";}
+                return "Give the target(s) " + buffDuration[0] + " (" + passiveDetails.ReturnBuffStatusDetails(s) + ") for " + buffDuration[1] + " turn(s).";
             case "RemoveBuff":
                 if (s == "All")
                 {
@@ -266,7 +270,7 @@ public class ActiveDetailViewerSwitch : ScriptableObject
         }
         return passiveDetails.PassiveEffect(e, s, "Target");
     }
-        protected string TriggerSkillDescription(string triggerData)
+    protected string TriggerSkillDescription(string triggerData)
     {
         string delimiter = "::trig::";
         string legacyDelimiter = "::triggerSkillDelimiter::";
@@ -325,6 +329,10 @@ public class ActiveDetailViewerSwitch : ScriptableObject
         if (power == "-1" && effect.Contains("Status"))
         {
             return "ALL";
+        }
+        if (power.StartsWith("ScalingEquals"))
+        {
+            return passiveDetails.AdjustSpecificsText(power);
         }
         return power;
     }

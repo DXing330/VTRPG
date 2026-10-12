@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 // In charge of managing stacks/determining active factions/assist managing faction effects/assist with trait stacking.
@@ -36,6 +37,7 @@ public class AutoChessFactionManager : MonoBehaviour
             return false;
         }
         int activeCount = allFactionCounts[indexOf];
+        if (factionName == "Solo" && activeCount != 1){return false;}
         // Add A Harmony Bool And Check.
         bool harmony = allFactionsWithUnits.Contains("Harmony");
         if (autoChessMainFactions.Contains(factionName) && harmony)

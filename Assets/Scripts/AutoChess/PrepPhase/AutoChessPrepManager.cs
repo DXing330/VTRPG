@@ -4,16 +4,20 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Diagnostics;
 
 // Main Manager For AutoChess, Since Prep Phase Is Almost All Player Actions.
 public class AutoChessPrepManager : ClickTileManager
 {
     public bool PVP = false;
     public AutoChessDataManager dataManager;
-    public void SetDataManager(AutoChessDataManager newDataManager)
+    public void SetDataManager(AutoChessDataManager newDataManager, bool load = true)
     {
         dataManager = newDataManager;
-        dataManager.Load();
+        if (load)
+        {
+            dataManager.Load();
+        }
         factionManager.SetDataManager(dataManager);
         tactician = dataManager.tactician;
         shopManager.shopData.logData = dataManager.logData;
@@ -200,7 +204,7 @@ public class AutoChessPrepManager : ClickTileManager
             if (timing == "OnPurchase" && factionManager.FactionActive("Investor"))
             {
                 ApplyActorTrait(actor, trait);
-                if (factionManager.GetStacksOfFaction("Investor") >= 50)
+                if (factionManager.GetStacksOfFaction("Investor") >= 70)
                 {
                     ApplyActorTrait(actor, trait);
                 }
@@ -393,7 +397,7 @@ public class AutoChessPrepManager : ClickTileManager
     }
     public void FastBuySelectedActor(int cost, bool PVP = true)
     {
-        if (factionManager.FactionActive("Foresight") && factionManager.GetStacksOfFaction("Foresight") >= 80)
+        if (factionManager.FactionActive("Foresight") && factionManager.GetStacksOfFaction("Foresight") >= 100)
         {
             cost--;
         }

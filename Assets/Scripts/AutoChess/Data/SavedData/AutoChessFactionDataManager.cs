@@ -19,7 +19,7 @@ public class AutoChessFactionDataManager : SavedData
     }
     public RNGUtility RNG;
     public string delimiter2;
-    protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kjerag", "Laterano", "Sargon", "Siracusa", "Victoria", "Yan", "Harmony"};
+    protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kazimierz", "Kjerag", "Laterano", "Sargon", "Siracusa", "Victoria", "Yan", "Harmony"};
     public bool MainFaction(string factionName)
     {
         return autoChessMainFactions.Contains(factionName);
@@ -96,7 +96,7 @@ public class AutoChessFactionDataManager : SavedData
     // This should only be called from a trait trigger during prep/battle.
     public void GainFactionStacks(string faction, int stackAmount)
     {
-        if (faction.Length <= 0 || faction == "Harmony" || faction == "Assist"){return;}
+        if (faction.Length <= 0 || faction == "Harmony" || faction == "Assist" || faction == "Solo"){return;}
         int indexOf = allFactions.IndexOf(faction);
         int oldStacks = 0;
         if (indexOf < 0)

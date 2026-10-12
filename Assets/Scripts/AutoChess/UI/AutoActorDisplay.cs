@@ -18,6 +18,7 @@ public class AutoActorDisplay : MonoBehaviour
     public StatDatabase actorData;
     public StatDatabase actorRarity;
     public ActiveDetailViewerSwitch activeViewer;
+    public SkillRangeViewer skillRangeViewer;
     public List<GameObject> displayPages;
     public List<TMP_Text> displayPageStrings;
     public int currentPage;
@@ -78,6 +79,7 @@ public class AutoActorDisplay : MonoBehaviour
         }
         traitText.text = ReturnTraitDescription(newName, blocks[1], blocks[2], blocks[3]);
         skillText.text = activeViewer.ReturnActiveDescriptionOnlyFromName(blocks[4]) + "\n" + "CD: " + blocks[5];
+        skillRangeViewer.DrawActiveSkill(blocks[4]);
         HPText.text = blocks[7];
         ATKText.text = blocks[8];
         DEFText.text = blocks[9];
@@ -169,7 +171,7 @@ public class AutoActorDisplay : MonoBehaviour
             case "AegirUnit":
             return " gain " + amount + " Skadi/Specter/Andreana.";
             case "HighestActiveUnit":
-            return " gain " + amount + " unit from from the active faction with the highest stacks.";
+            return " gain " + amount + " unit from from the active faction with the most units.";
             case "SelfAndBackActive":
             return " increase active faction stacks by " + amount + " for this unit and the ally behind.";
             case "SelfAndFrontActive":

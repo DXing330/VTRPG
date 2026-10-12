@@ -6,127 +6,14 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Passive", menuName = "ScriptableObjects/BattleLogic/Passive", order = 1)]
 public class PassiveSkill : SkillEffect
 {
-    public string GetEffectSpecifics(TacticActor actor, string specifics, int input = 0, BattleMap map = null)
+    public override void AffectActor(TacticActor target, string effect, string effectSpecifics, int level = 1, CombatLog combatLog = null)
     {
-        // Some are scaling.
-        if (specifics.Contains("ScalingEquals"))
-        {
-            string[] scaling = specifics.Split("Equals");
-            int amount = 0;
-            string scalingSpecifics = scaling[1];
-            if (scalingSpecifics.EndsWith("A") || scalingSpecifics.EndsWith("D"))
-            {
-                scalingSpecifics = scalingSpecifics[..^1];
-            }
-            switch (scalingSpecifics)
-            {
-                // Scaled based on the passive level. 
-                default:
-                amount = actor.GetLevelFromPassive(scalingSpecifics);
-                break;
-                case "DamageDealt":
-                case "DamageTaken":
-                amount = input;
-                break;
-                case "Defense":
-                amount = actor.GetDefense();
-                break;
-                case "Attack":
-                amount = actor.GetAttack();
-                break;
-                case "Actions":
-                amount = actor.GetActions();
-                break;
-                case "RemainingActions":
-                amount = actor.ReturnPreviousRoundRemainingActions();
-                break;
-                case "SkillsUsed":
-                amount = actor.ReturnTotalRoundSkills();
-                break;
-                case "TempSkillCount":
-                amount = actor.GetTempActives().Count;
-                break;
-                case "PassiveSkillCount":
-                amount = actor.GetPassiveSkills().Count;
-                break;
-                case "Attacks":
-                amount = actor.ReturnTotalRoundAttacks();
-                break;
-                case "Defends":
-                amount = actor.ReturnTotalRoundDefends();
-                break;
-                case "Moves":
-                amount = actor.ReturnTotalRoundMoves();
-                break;
-                case "RemainingMovement":
-                amount = actor.ReturnPreviousRoundRemainingMovement();
-                break;
-                case "RoundAttacks":
-                amount = actor.ReturnCurrentRoundAttacks();
-                break;
-                case "MissingHealthPercent":
-                amount = actor.GetMissingHealthPercent();
-                break;
-                case "AdjacentEnemies":
-                if (map == null){return "0";}
-                amount = map.GetAdjacentEnemies(actor).Count;
-                break;
-                case "AdjacentAllies":
-                if (map == null){return "0";}
-                amount = map.GetAdjacentAllies(actor).Count;
-                break;
-            }
-            // Some scaling includes a multiplier.
-            int multiplier = 1;
-            if (scaling.Length > 2)
-            {
-                if (scaling[2].Contains("MultiBy"))
-                {
-                    string multiBy = scaling[2].Replace("MultiBy", "");
-                    multiplier = int.Parse(multiBy);
-                    return (amount * multiplier).ToString();
-                }
-                else if (scaling[2].Contains("DivideBy"))
-                {
-                    string divideBy = scaling[2].Replace("DivideBy", "");
-                    multiplier = int.Parse(divideBy);
-                    if (multiplier == 0){multiplier = 1;}
-                    return Mathf.Max(1, amount / multiplier).ToString();
-                }
-                else if (scaling[2].Contains("AddTo"))
-                {
-                    string addTo = scaling[2].Replace("AddTo", "");
-                    int addAmount = int.Parse(addTo);
-                    return (amount + addAmount).ToString();
-                }
-                // Used Exclusively By RNG Functions For Now, Thus Returning A Percentage < 100.
-                else if (scaling[2].Contains("RationalFunc"))
-                {
-                    string rationalBase = scaling[2].Replace("RationalFunc", "");
-                    multiplier = int.Parse(rationalBase);
-                    // Something went wrong, RNG chance = -1;
-                    if (amount + multiplier <= 0){return "-1";}
-                    return ((100 * amount) / (amount + multiplier)).ToString();
-                }
-                else if (scaling[2].Contains("AddMulti"))
-                {
-                    string[] addMultiDetails = scaling[3].Split("And");
-                    int addDetails = int.Parse(addMultiDetails[0]);
-                    multiplier = int.Parse(addMultiDetails[1]);
-                    return (addDetails + (amount * multiplier)).ToString();
-                }
-                else if (scaling[2].Contains("AddDivide"))
-                {
-                    string[] addMultiDetails = scaling[3].Split("And");
-                    int addDetails = int.Parse(addMultiDetails[0]);
-                    multiplier = int.Parse(addMultiDetails[1]);
-                    if (multiplier == 0){multiplier = 1;}
-                    return Mathf.Max(1, addDetails + (amount / multiplier)).ToString();
-                }
-            }
-            return (amount * multiplier).ToString();
-        }
-        return specifics;
+        base.AffectActor(target, effect, effectSpecifics, level, combatLog);
+    }
+    public EffectSpecificsCalculator effectSpecificsCalculator;
+    public string GetEffectSpecifics(TacticActor actor, string specifics, int input = 0, BattleMap map = null, TacticActor otherActor = null)
+    {
+        return effectSpecificsCalculator.GetEffectSpecifics(actor, specifics, input, map, otherActor);
     }
     public void AffectMap(TacticActor actor, string effect, string specifics, BattleMap map)
     {
@@ -371,6 +258,17 @@ public class PassiveSkill : SkillEffect
                     AffectActor(targets[i], effect, specifics);
                 }
             }
+            return;
+        }
+        // AUTOTARGET PASSIVES.
+        if (target.Contains("AutoTargetEquals"))
+        {
+            string[] targetSpecifics = target.Split("Equals");
+            targets.Add(map.FindActorByTargetSpecifics(actor, targetSpecifics[1], targetSpecifics[2]));
+            if (targets.Count > 0)
+            {
+                AffectActor(targets[0], effect, specifics);
+            }
         }
         switch (target)
         {
@@ -422,7 +320,19 @@ public class PassiveSkill : SkillEffect
                     AffectActor(targets[j], effect, specifics);
                 }
                 break;
+            case "AllAllies":
+                targets = map.AllAllies(actor);
+                for (int j = 0; j < targets.Count; j++)
+                {
+                    AffectActor(targets[j], effect, specifics);
+                }
+                break;
             case "AllEnemies":
+                targets = map.AllEnemies(actor);
+                for (int j = 0; j < targets.Count; j++)
+                {
+                    AffectActor(targets[j], effect, specifics);
+                }
                 break;
             case "AdjacentActors":
                 targets = map.GetAdjacentActors(actor.GetLocation());
@@ -481,7 +391,9 @@ public class PassiveSkill : SkillEffect
         if (effects.Length != effectSpecifics.Length) { return; }
         for (int i = 0; i < effects.Length; i++)
         {
+            Debug.Log(effectSpecifics[i]);
             string specifics = GetEffectSpecifics(actor, effectSpecifics[i], 0, map);
+            Debug.Log(specifics);
             ApplyPassiveEffectToTarget(actor, map, passiveData[3], effects[i], specifics);
         }
     }
@@ -551,6 +463,8 @@ public class PassiveSkill : SkillEffect
                 return counterAttack;
             case "FirstAttack":
                 return attacker.ReturnTotalRoundAttacks() == 1;
+            case "FirstAttackOnTarget":
+                return target.GetHurtCount(attacker) == 1;
             case "FirstDefend":
                 return target.ReturnTotalRoundDefends() == 1;
         }

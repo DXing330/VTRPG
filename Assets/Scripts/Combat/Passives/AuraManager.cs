@@ -41,8 +41,12 @@ public class AuraManager : MonoBehaviour
         }
     }
     public PassiveSkill passive;
-    public string GetAuraSpecifics(AuraEffect aura)
+    public string GetAuraSpecifics(AuraEffect aura, TacticActor auraTarget)
     {
+        if (aura.effectSpecifics.StartsWith("ScalingEquals"))
+        {
+            return passive.GetEffectSpecifics(aura.actor, aura.effectSpecifics, 0, map, auraTarget).ToString();
+        }
         int eSpecifics = utility.SafeParseInt(passive.GetEffectSpecifics(aura.actor, aura.effectSpecifics), 0);
         if (eSpecifics <= 0)
         {
@@ -92,7 +96,7 @@ public class AuraManager : MonoBehaviour
                 aura.ActorTriggersAura(actor);
                 return;
             }
-            passive.AffectActor(actor, aura.effect, GetAuraSpecifics(aura));
+            passive.AffectActor(actor, aura.effect, GetAuraSpecifics(aura, actor));
             aura.ActorTriggersAura(actor);
         }
     }

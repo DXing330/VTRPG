@@ -123,7 +123,49 @@ public class MapUtility : ScriptableObject
             return R;
         }
     }
-
+    public int GetStraightPathIntersection(int start, int end, int size)
+    {
+        int q1 = GetHexQ(start, size);
+        int r1 = GetHexR(start, size);
+        int q2 = GetHexQ(end, size);
+        int r2 = GetHexR(end, size);
+        // Already on a straight line.
+        if (StraightLineBetweenPoints(start, end, size))
+        {
+            return -1;
+        }
+        // Intersection of:
+        // q = q1  and r = r2
+        int intersectionQ1 = q1;
+        int intersectionR1 = r2;
+        int intersectionS1 = -intersectionQ1 - intersectionR1;
+        int intersection1 = ReturnTileNumberFromQRS(intersectionQ1, intersectionR1, intersectionS1, size);
+        // Intersection of:
+        // q = q2  and r = r1
+        int intersectionQ2 = q2;
+        int intersectionR2 = r1;
+        int intersectionS2 = -intersectionQ2 - intersectionR2;
+        int intersection2 = ReturnTileNumberFromQRS(intersectionQ2, intersectionR2, intersectionS2, size);
+        // Neither Intersection Is Valid.
+        if (intersection1 < 0 && intersection2 < 0)
+        {
+            return -1;
+        }
+        // Only intersection 1 is valid.
+        if (intersection1 >= 0 && intersection2 < 0)
+        {
+            return intersection1;
+        }
+        // Only intersection 2 is valid.
+        if (intersection1 < 0 && intersection2 >= 0)
+        {
+            return intersection2;
+        }
+        // Pick whichever gives the shorter total path.
+        int distance1 = DistanceBetweenTiles(start, intersection1, size) + DistanceBetweenTiles(intersection1, end, size);
+        int distance2 = DistanceBetweenTiles(start, intersection2, size) + DistanceBetweenTiles(intersection2, end, size);
+        return distance1 <= distance2 ? intersection1 : intersection2;
+    }
     public bool StraightLineBetweenPoints(int tileOne, int tileTwo, int size)
     {
         int q1 = GetHexQ(tileOne, size);
@@ -752,6 +794,9 @@ public class MapUtility : ScriptableObject
         int direction = DirectionBetweenLocations(start, selected, size);
         switch (shape)
         {
+            default:
+                tiles.Add(selected);
+                return tiles;
             case "Borders":
                 return GetTilesInBorderShape(span, size);
             case "Circle":
@@ -802,8 +847,6 @@ public class MapUtility : ScriptableObject
             case "Wall":
                 return GetTilesInWallShape(selected, direction, span, size);
         }
-        tiles.Add(selected);
-        return tiles;
     }
     public List<int> GetPVPAutoActorAttackTilesByShapeSpan(int selected, string shape, int span, int size, int start)
     {

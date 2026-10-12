@@ -243,8 +243,23 @@ public class ActorStats : ActorInitialStats
         tempHealth += changeAmount;
     }
     public int GetTempHealth() { return tempHealth; }
-    public void Heal(int amount)
+    public int unhealable = 0;
+    public void SetUnhealable(int newValue)
     {
+        unhealable = newValue;
+    }
+    public void SelfHeal(int amount)
+    {
+        if (amount < 0)
+        {
+            amount = Mathf.Abs(amount);
+        }
+        currentHealth += amount;
+        if (currentHealth > GetBaseHealth()) { currentHealth = GetBaseHealth(); }
+    }
+    public virtual void Heal(int amount)
+    {
+        if (unhealable > 0){return;}
         if (amount < 0)
         {
             amount = Mathf.Abs(amount);
@@ -266,6 +281,12 @@ public class ActorStats : ActorInitialStats
     }
     public void UpdateHealth(int changeAmount, bool decrease = true)
     {
+        // Negative Healing? No It's Just Damage Then.
+        if (changeAmount < 0)
+        {
+            decrease = true;
+            changeAmount *= -1;
+        }
         if (decrease)
         {
             if (tempHealth > 0)
@@ -278,7 +299,10 @@ public class ActorStats : ActorInitialStats
             if (changeAmount < 0) { return; }
             currentHealth -= changeAmount;
         }
-        else { currentHealth += changeAmount; }
+        else
+        {
+            Heal(Mathf.Max(0, changeAmount));
+        }
         if (currentHealth > GetBaseHealth()) { currentHealth = GetBaseHealth(); }
         if (GetImmortal() && currentHealth <= 0)
         {
@@ -541,7 +565,8 @@ public class ActorStats : ActorInitialStats
     // Call this before making an actor to ensure that the actor has a fresh start.
     public virtual void InitializeStats()
     {
-        ClearStatuses();
+        // Don't Reset Statuses Since Some Actors Will Load In With Them From Previous Battles
+        //ClearStatuses();
         ClearBuffs();
         resistDmgTypes.Clear();
         baseDmgResists.Clear();
@@ -578,7 +603,6 @@ public class ActorStats : ActorInitialStats
     {
         baseAttackSpeed += amount;
     }
-    
     public string ReturnRandomActiveSkill()
     {
         if (activeSkills.Count <= 0){return "";}
@@ -824,6 +848,13 @@ public class ActorStats : ActorInitialStats
     public bool BuffExists(string buffName)
     {
         return buffs.Contains(buffName);
+    }
+    public void ExtendBuffs(int amount)
+    {
+        for (int i = 0; i < buffs.Count; i++)
+        {
+            AdjustBuffDuration(i, amount);
+        }
     }
     public void AdjustBuffDuration(int index, int amount = -1)
     {

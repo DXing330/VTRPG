@@ -44,7 +44,36 @@ public class HexMapAdjustor : MonoBehaviour
             }
         }
     }
-
+    // Just moves them around, doesn't rely on being a mapTile.
+    [ContextMenu("Simple Initialize")]
+    public void SimpleInitializeTiles()
+    {
+        int tileIndex = 0;
+        float xPivot = 0f;
+        float yPivot = 1f;
+        for (int i = 0; i < gridSize; i++)
+        {
+            // Start from the left every iteration.
+            if (i % 2 == 0)
+            {
+                xPivot = 0f + (offSet / gridSize);
+            }
+            else
+            {
+                xPivot = 1f / (2*gridSize) + (offSet / gridSize);
+            }
+            for (int j = 0; j < gridSize; j++)
+            {
+                // Set the pivot.
+                hexTiles[tileIndex].pivot = new Vector2(xPivot, yPivot);
+                // Move right every step.
+                tileIndex++;
+                xPivot += 1f/(gridSize);
+            }
+            // Move down every iteration.
+            yPivot -= 1f/(gridSize - 1);
+        }
+    }
     protected virtual void InitializePointyTopTiles()
     {
         int tileIndex = 0;
@@ -85,7 +114,6 @@ public class HexMapAdjustor : MonoBehaviour
             yPivot -= 1f/(gridSize - 1);
         }
     }
-
     [ContextMenu("Initialize")]
     protected virtual void InitializeTiles()
     {

@@ -160,6 +160,9 @@ public class AutoChessTactician : SavedData
             case "Warfarin":
             ApplyWarfarinEffect();
             break;
+            case "Suzuran":
+            ApplySuzuranEffect(prepManager);
+            break;
             case "Justin":
             if ((round - 1) % 3 != 0){return;}
             AddLog();
@@ -198,6 +201,40 @@ public class AutoChessTactician : SavedData
                 }
             }
             break;
+        }
+    }
+    protected void ApplySuzuranEffect(AutoChessPrepManager prepManager)
+    {
+        if (prepManager == null){return;}
+        List<string> fieldActors = new List<string>(dataManager.GetFieldActorData());
+        List<AutoActorRollUpData> fieldActorData = new List<AutoActorRollUpData>();
+        for (int i = 0; i < fieldActors.Count; i++)
+        {
+            AutoActorRollUpData newFieldActor = new AutoActorRollUpData();
+            newFieldActor.LoadRollUpData(fieldActors[i]);
+            fieldActorData.Add(newFieldActor);
+        }
+        int highestRarity = -1;
+        int triggeredIndex = -1;
+        // Get The Highest Rarity First.
+        // Later We Can Sort By Location If Needed.
+        for (int i = 0; i < fieldActorData.Count; i++)
+        {
+            AutoChessTrait trait = fieldActorData[i].trait;
+            if (trait != null && trait.timing == "OnPurchase")
+            {
+                int rarity = int.Parse(unitRarity.ReturnValue(fieldActorData[i].GetName()));
+                if (rarity > highestRarity)
+                {
+                    highestRarity = rarity;
+                    triggeredIndex = i;
+                }
+            }
+        }
+        if (triggeredIndex >= 0)
+        {
+            AddLog();
+            prepManager.CheckTraitTiming(fieldActorData[triggeredIndex], "OnPurchase");
         }
     }
     protected void ApplyWarfarinEffect()

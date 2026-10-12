@@ -11,8 +11,8 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
     {
         LoadModel();
         // Create a deterministic test input
-        float[] testState = new float[1619];
-        for (int i = 0; i < 1619; i++)
+        float[] testState = new float[1918];
+        for (int i = 0; i < 1918; i++)
             testState[i] = (i % 10) / 10f;  // 0.0, 0.1, 0.2, ... 0.9, repeat
         bool[] testMask = new bool[44];
         for (int i = 0; i < 44; i++)
@@ -20,7 +20,7 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         // Build hierarchical masks
         BuildHierarchicalMasks(testMask, out var typeMask, out var buyMask, out var sellMask, out var placeMask, out var fieldMask);
         // Run inference
-        int action = PredictAction(testState, typeMask, buyMask, sellMask, placeMask, fieldMask);
+        int action = PredictAction(testState, typeMask, buyMask, sellMask, placeMask, fieldMask, out float testLogProb, out float testValue);
         // Log raw logits for inspection
         var outputs = new Dictionary<string, float[]>();
         _network.Forward(testState, outputs);
@@ -28,30 +28,31 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         Debug.Log($"Test Action: {action}");
         Debug.Log($"Type Logits: {typeLogits}");
     }
-
+    private string FormatFloatArray(float[] values)
+    {
+        return string.Join(",", System.Array.ConvertAll(values, x => x.ToString("R", System.Globalization.CultureInfo.InvariantCulture))
+        );
+    }
     public AutoChessAIPrepController genomeAI;
     public AutoChessStateEncoder stateEncoder;
     public string modelTag = "v1";
-
     // ============================================
     // NEW: Runtime weight loading — no rebuilds!
     // ============================================
     [Tooltip("Path to weights file (relative to StreamingAssets or PersistentDataPath)")]
     public string weightsPath = "autochess_policy_weights.hnn";
-
     // The custom neural network — replaces ONNX InferenceSession
     private RuntimeNeuralNetwork _network;
     private Dictionary<string, float[]> _headOutputs;  // Re-used output dictionary
     private string _lastWeightsPath;
     private long _lastFileSize = -1;
-
-    // ============================================
+    [Header("PPO Collection")]
+    public bool ppoCollectionMode = false;
     // Exploration
     public bool addExplorationNoise = false;
     public float temperature = 1.0f;
     public float dirichletAlpha = 0.3f;
     public float noiseWeight = 0.25f;
-
     // Recording
     private List<AutoActorRollUpData> sortedBench;
     private List<AutoActorRollUpData> sortedField;
@@ -61,7 +62,6 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
     private int inferenceCount = 0;
     private float totalStepTime = 0f;
     private int stepCount = 0;
-
     public void ResetTimers()
     {
         totalInferenceTime = 0f;
@@ -69,7 +69,6 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         totalStepTime = 0f;
         stepCount = 0;
     }
-
     [ContextMenu("Log NN Timing")]
     public void LogTiming()
     {
@@ -78,25 +77,39 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         UnityEngine.Debug.Log($"[NN Timing] Avg inference: {avgInference:F2}ms ({inferenceCount} calls) | Avg full step: {avgStep:F2}ms ({stepCount} calls)");
         ResetTimers();
     }
-
     void Start()
     {
-        LoadModel();
         ResetTimers();
     }
-
     // Only Load Fully Once.
     public bool loaded = false;
-
+    public bool LoadModelFromPath(string fullPath)
+    {
+        if (string.IsNullOrWhiteSpace(fullPath) || !System.IO.File.Exists(fullPath))
+        {
+            Debug.LogError($"NN model file not found: {fullPath}");
+            return false;
+        }
+        // Reuse the existing loader, which initializes the network
+        // and loads weights. An absolute path allows the tournament
+        // to select a specific file from nnhistory.
+        weightsPath = fullPath;
+        loaded = false;
+        LoadModel();
+        if (!loaded)
+        {
+            Debug.LogError($"Failed to load NN model: {fullPath}");
+            return false;
+        }
+        return true;
+    }
     public void LoadModel()
     {
         if (_network == null) { loaded = false; }
         if (loaded) return;
-
         // Initialize the custom network
         _network = new RuntimeNeuralNetwork();
         _headOutputs = new Dictionary<string, float[]>();
-
         // Try multiple paths for flexibility
         string[] possiblePaths = new string[]
         {
@@ -104,7 +117,6 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
             Path.Combine(Application.streamingAssetsPath, weightsPath),
             weightsPath  // Absolute path
         };
-
         bool loadedWeights = false;
         foreach (var path in possiblePaths)
         {
@@ -125,13 +137,11 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
                 }
             }
         }
-
         if (!loadedWeights)
         {
             UnityEngine.Debug.LogError($"[NN] Could not find weights file: {weightsPath}. Searched in:" + string.Join("\n", possiblePaths.Select(p => "  - " + p)));
             return;
         }
-
         loaded = true;
     }
 
@@ -170,6 +180,10 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
     // ============================================
     public void RunAIPrepPhase(AutoChessDataManager dataManager)
     {
+        if (!loaded || _network == null || _headOutputs == null)
+        {
+            LoadModel();
+        }
         // Setup
         genomeAI.prepManager.SetDataManager(dataManager);
         genomeAI.prepManager.DisableUI();
@@ -192,42 +206,33 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         {
             var stepTimer = System.Diagnostics.Stopwatch.StartNew();
             UpdateSortedLists();
-
             // Encode current state
             float[] state = stateEncoder.Encode(genomeAI.prepManager, dataManager, genomeAI.shopManager, genomeAI.factionManager);
             bool[] validMask = stateEncoder.BuildValidMask(genomeAI.prepManager, dataManager, genomeAI.shopManager, genomeAI.factionManager);
-
             // Derive hierarchical masks
             BuildHierarchicalMasks(validMask, out var typeMask, out var buyMask, out var sellMask, out var placeMask, out var fieldMask);
-
             // Run inference
-            int action = PredictAction(state, typeMask, buyMask, sellMask, placeMask, fieldMask);
-
+            int action = PredictAction(state, typeMask, buyMask, sellMask, placeMask, fieldMask, out float oldLogProb, out float oldValue);
             // Record for training (log flat mask + flat action for backwards compat)
-            dataManager.encoderLogger.LogDecision(state, validMask, action);
-
+            dataManager.encoderLogger.LogDecision(state, validMask, action, oldLogProb, oldValue);
             // Execute
             ExecuteAction(action, dataManager);
             steps++;
-
             stepTimer.Stop();
             totalStepTime += (float)stepTimer.Elapsed.TotalMilliseconds;
             stepCount++;
-
             // Stop conditions
             if (action == 0) break;  // Done
             // If only Done is valid, stop
             if (!HasNonDoneValidActions(validMask)) break;
         }
     }
-
     bool HasNonDoneValidActions(bool[] mask)
     {
         for (int i = 1; i < mask.Length; i++)
             if (mask[i]) return true;
         return false;
     }
-
     // ============================================
     // HIERARCHICAL MASK BUILDER
     // ============================================
@@ -260,7 +265,6 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         actionTypeMask[5] = placeMask.Any(b => b); // PlaceBench
         actionTypeMask[6] = fieldMask.Any(b => b); // ReturnField
     }
-
     // ============================================
     // ACTION EXECUTION (unchanged)
     // ============================================
@@ -333,12 +337,10 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
                 break;
         }
     }
-
     int FindEmptyBenchSlot()
     {
         return genomeAI.prepManager.AvailableBenchSlot();
     }
-
     // ============================================
     // POST-PROCESSING (unchanged)
     // ============================================
@@ -349,7 +351,6 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         genomeAI.aegirPlacement.AegirPlaceFieldUnits();
         genomeAI.prepManager.StartBattle();
     }
-
     void PlaceFieldUnitsGeneric()
     {
         foreach (var unit in genomeAI.prepManager.fieldSlots.ToList())
@@ -367,32 +368,41 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         }
         genomeAI.prepManager.SaveToDataManager();
     }
-
     // ============================================
     // INFERENCE — HIERARCHICAL POLICY
     // ============================================
-    int PredictAction(float[] state,
-        bool[] actionTypeMask, bool[] buyMask,
-        bool[] sellMask, bool[] placeMask, bool[] fieldMask)
+    int PredictAction(float[] state, bool[] actionTypeMask, bool[] buyMask, bool[] sellMask, bool[] placeMask, bool[] fieldMask, out float oldLogProb, out float oldValue)
     {
+        if (!loaded || _network == null || _headOutputs == null)
+        {
+            LoadModel();
+        }
         var inferenceTimer = System.Diagnostics.Stopwatch.StartNew();
         // Run forward pass — all heads computed in one call
         _network.Forward(state, _headOutputs);
         inferenceTimer.Stop();
         totalInferenceTime += (float)inferenceTimer.Elapsed.TotalMilliseconds;
         inferenceCount++;
-        // 1. Sample action type from masked policy
+        oldLogProb = 0f;
+        oldValue = _headOutputs["value"][0];
+        // PPO must use temperature 1 and no Dirichlet noise
+        // so Python can reproduce the behavior probabilities.
+        float samplingTemperature = ppoCollectionMode ? 1f : temperature;
         float[] typeLogits = _headOutputs["policy_type"];
+        float[] typeProbs = ApplyTemperatureAndSoftmax(typeLogits, actionTypeMask, samplingTemperature);
         int actionType = 0;
-        if (temperature > 0f)
+        if (ppoCollectionMode || temperature > 0f)
         {
-            float[] typeProbs = ApplyTemperatureAndSoftmax(typeLogits, actionTypeMask);
-            actionType = SampleCategorical(typeProbs, actionTypeMask);
+            actionType = SampleCategorical(typeProbs, actionTypeMask, !ppoCollectionMode);
         }
+        // 1. Sample action type from masked policy
         else
         {
             actionType = ArgMax(typeLogits, actionTypeMask);
         }
+        if (actionType < 0)
+        return 0;
+        oldLogProb = Mathf.Log(Mathf.Max(typeProbs[actionType], 1e-30f));
         // 2. Route to child head and sample child index
         float[] childLogits;
         bool[] childMask;
@@ -425,15 +435,21 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
             default:
                 return 0; // Fallback to Done
         }
-
-        childLogits = ApplyMask(childLogits, childMask);
-        int childIndex = temperature > 0f
-            ? SampleCategorical(childLogits, childMask)
-            : ArgMax(childLogits, childMask);
-
+        float[] childProbs = ApplyTemperatureAndSoftmax(childLogits, childMask, samplingTemperature);
+        int childIndex;
+        if (ppoCollectionMode || temperature > 0f)
+        {
+            childIndex = SampleCategorical(childProbs, childMask, !ppoCollectionMode);
+        }
+        else
+        {
+            childIndex = ArgMax(childLogits, childMask);
+        }
+        if (childIndex < 0)
+            return 0;
+        oldLogProb += Mathf.Log(Mathf.Max(childProbs[childIndex], 1e-30f));
         return flatOffset + childIndex;
     }
-
     // ============================================
     // MASKING & SAMPLING UTILITIES
     // ============================================
@@ -445,25 +461,24 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         return masked;
     }
 
-    float[] ApplyTemperatureAndSoftmax(float[] logits, bool[] mask)
+    float[] ApplyTemperatureAndSoftmax(float[] logits, bool[] mask, float temperatureOverride = -1f)
     {
         float[] probs = new float[logits.Length];
-
+        float effectiveTemperature = temperatureOverride > 0f ? temperatureOverride : temperature;
+        effectiveTemperature = Mathf.Max(0.0001f, effectiveTemperature);
         // Apply temperature
         float maxLogit = float.NegativeInfinity;
         for (int i = 0; i < logits.Length; i++)
         {
             if (!mask[i])
             {
-                probs[i] = float.NegativeInfinity;
+                probs[i] = 0f;
+                continue;
             }
-            else
-            {
-                probs[i] = logits[i] / Mathf.Max(0.0001f, temperature);
-                if (probs[i] > maxLogit) maxLogit = probs[i];
-            }
+            probs[i] = logits[i] / effectiveTemperature;
+            if (probs[i] > maxLogit)
+                maxLogit = probs[i];
         }
-
         // Stable softmax
         float sum = 0f;
         for (int i = 0; i < logits.Length; i++)
@@ -474,9 +489,16 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
                 sum += probs[i];
             }
         }
-        for (int i = 0; i < logits.Length; i++)
-            if (mask[i]) probs[i] /= sum;
-
+        if (sum > 0f)
+        {
+            for (int i = 0; i < logits.Length; i++)
+            {
+                if (mask[i])
+                {
+                    probs[i] /= sum;
+                }
+            }
+        }
         return probs;
     }
 
@@ -548,12 +570,11 @@ public class AutoChessNeuralNetPrepController : MonoBehaviour
         return Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Cos(2f * Mathf.PI * u2);
     }
 
-    int SampleCategorical(float[] probs, bool[] validMask)
+    int SampleCategorical(float[] probs, bool[] validMask, bool allowNoise = true)
     {
         // Add Dirichlet noise if enabled
-        if (addExplorationNoise)
+        if (allowNoise && addExplorationNoise)
             probs = AddDirichletNoise(probs, validMask);
-
         float r = Random.value;
         float cumsum = 0f;
         for (int i = 0; i < probs.Length; i++)

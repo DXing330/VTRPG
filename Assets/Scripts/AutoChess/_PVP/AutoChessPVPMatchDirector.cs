@@ -8,9 +8,10 @@ using UnityEngine;
 public class AutoChessPVPMatchDirector : MonoBehaviour
 {
     public bool useNeuralNet = false;
+    public bool neuralNetWon = false;
     public int neuralNetCount = 8;
     public bool[] neuralNetSlots = new bool[8];
-    public AutoChessNeuralNetPrepController neuralNetController;
+    public AutoChessNeuralNetPrepController[] neuralNetControllers = new AutoChessNeuralNetPrepController[8];
     void CheckNeuralNetPlacement(List<AutoChessDataManager> rankedTeams)
     {
         bool won = false;
@@ -21,15 +22,22 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
             {
                 int placement = i + 1; // 1st = 1, 2nd = 2, etc.
                 won = (placement <= 1 || won);
-                Debug.Log($"[Benchmark] Neural net (slot {slot}) placed #{placement} — {(won ? "WIN" : "LOSS")}");
+                if (placement <= 1)
+                {
+                    Debug.Log($"[Benchmark] Neural net (slot {slot}) placed #{placement} — {(won ? "WIN" : "LOSS")}");
+                }
                 // Could log to a file here for aggregate stats across many runs
             }
         }
-        // Don't Record Entries Of Loser Neural Nets.
+        if (won)
+        {
+            neuralNetWon = true;
+        }
+        /* Don't Record Entries Of Loser Neural Nets?
         if (!won)
         {
             logMatches = false;
-        }
+        }*/
     }
     public bool autoAssignAIGenomes = false;
     public bool matchOver = false;
@@ -202,20 +210,22 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     {
         SetupMatch();
         useNeuralNet = true;
+        neuralNetWon = false;
         neuralNetSlots = new bool[8];
         for (int i = 0; i < neuralNetSlots.Length; i++)
         {
-            if (i < neuralNetCount)
+            neuralNetSlots[i] = i < neuralNetCount;
+            if (neuralNetSlots[i])
             {
-                neuralNetSlots[i] = true;
-            }
-            else
-            {
-                neuralNetSlots[i] = false;
+                if (neuralNetControllers == null || i >= neuralNetControllers.Length || neuralNetControllers[i] == null)
+                {
+                    Debug.LogError($"Missing neural network controller for slot {i}.");
+                    return;
+                }
+                neuralNetControllers[i].LoadModel();
+                neuralNetControllers[i].ResetTimers();
             }
         }
-        neuralNetController.LoadModel();
-        neuralNetController.ResetTimers();
         allPlayers.AssignChampionGenomes(neuralNetSlots);
         autoAssignAIGenomes = true;
     }
@@ -231,9 +241,7 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
             TimedAIPrepPhase();
         }
         Debug.Log("Rounds: " + roundCount + "\nAI Prep: " + totalAIPrepTime + "\nBattle: " + totalBattleTime);
-        neuralNetController.LogTiming();
         autoAssignAIGenomes = false;
-        neuralNetController.loaded = false;
         useNeuralNet = false;
         DisableLogs();
     }
@@ -273,7 +281,14 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
             if (allTeams[i].PlayerData() || allTeams[i].GetHealth() <= 0){continue;}
             if (useNeuralNet && neuralNetSlots[i])
             {
-                neuralNetController.RunAIPrepPhase(allTeams[i]);
+                if (neuralNetControllers != null && i < neuralNetControllers.Length && neuralNetControllers[i] != null)
+                {
+                    neuralNetControllers[i].RunAIPrepPhase(allTeams[i]);
+                }
+                else
+                {
+                    Debug.LogError($"Missing neural network controller for team slot {i}.");
+                }
                 continue;
             }
             var entry = GenomeProvider.Get(allTeams[i]);
@@ -306,7 +321,15 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
             if (allTeams[i].PlayerData() || allTeams[i].GetHealth() <= 0){continue;}
             if (useNeuralNet && neuralNetSlots[i])
             {
-                neuralNetController.RunAIPrepPhase(allTeams[i]);
+                if (neuralNetControllers != null && i < neuralNetControllers.Length && neuralNetControllers[i] != null)
+                {
+                    neuralNetControllers[i].RunAIPrepPhase(allTeams[i]);
+                }
+                else
+                {
+                    Debug.LogError($"Missing neural network controller for team slot {i}.");
+                }
+
                 continue;
             }
             var entry = GenomeProvider.Get(allTeams[i]);
@@ -437,8 +460,7 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     protected void CheckMatchOver()
     {
         matchOver = false;
-        List<AutoChessDataManager> allTeams = allPlayers.GetAllTeams();
-        if (GetAliveTeams().Count <= 1)
+        if (GetAliveTeams().Count <= 1 || roundCount >= 30)
         {
             MatchOver();
         }

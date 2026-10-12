@@ -43,6 +43,12 @@ public class ActorMaker : MonoBehaviour
     {
         actor.SetInitialStatsFromString(actorStats.ReturnValue(actorName));
     }
+    public void AddInnatePassives(TacticActor actor)
+    {
+        AddElementPassives(actor);
+        AddAttributePassives(actor);
+        AddSpeciesPassives(actor);
+    }
     protected void AddElementPassive(TacticActor actor, string element)
     {
         if (element == "")
@@ -103,9 +109,7 @@ public class ActorMaker : MonoBehaviour
     public virtual TacticActor SummonActor(int location, string actorName, int team = 0)
     {
         TacticActor newActor = SpawnActor(location, actorName, team);
-        AddElementPassives(newActor);
-        AddAttributePassives(newActor);
-        AddSpeciesPassives(newActor);
+        AddInnatePassives(newActor);
         ReorganizeActorPassives(newActor);
         newActor.StartTurnResetStats();
         return newActor;
@@ -164,25 +168,22 @@ public class ActorMaker : MonoBehaviour
         SetActorName(actor, actorName);
         ResetActor(actor);
         ApplyEquipmentToActor(actor, equipment);
-        AddElementPassives(actor);
-        AddAttributePassives(actor);
-        AddSpeciesPassives(actor);
+        AddInnatePassives(actor);
         ReorganizeActorPassives(actor);
         actor.StartTurnResetStats();
         return actor;
     }
-    public List<TacticActor> SpawnTeamInPattern(string pattern, int team, List<string> teamNames, List<string> teamStats = null, List<string> teamPersonalNames = null, List<string> teamEquipment = null, List<string> teamIDs = null)
+    public List<TacticActor> SpawnTeam(int team, List<string> teamNames, List<string> teamStats = null, List<string> teamPersonalNames = null, List<string> teamEquipment = null, List<string> teamIDs = null)
     {
         if (teamStats == null) { teamStats = new List<string>(); }
         if (teamPersonalNames == null) { teamPersonalNames = new List<string>(); }
         if (teamEquipment == null) { teamEquipment = new List<string>(); }
         if (teamIDs == null) { teamIDs = new List<string>(); }
         List<TacticActor> actors = new List<TacticActor>();
-        // Randomize the team name order to randomize their spawn locations?
-        List<int> patternLocations = mapPatterns.ReturnTilesOfPattern(pattern, teamNames.Count, mapSize);
         for (int i = 0; i < teamNames.Count; i++)
         {
-            actors.Add(SpawnActor(patternLocations[i], teamNames[i], team));
+            // 0 Is The Default Location, Unless Determined By Some Other Method, Normally Spawn Patterns.
+            actors.Add(SpawnActor(0, teamNames[i], team));
             if (i < teamStats.Count)
             {
                 actors[i].SetInitialStatsFromString(teamStats[i]);
@@ -205,11 +206,19 @@ public class ActorMaker : MonoBehaviour
                 actors[i].ResetID();
             }
             // Add the elemental passives at the end.
-            AddElementPassives(actors[i]);
-            AddAttributePassives(actors[i]);
-            AddSpeciesPassives(actors[i]);
+            AddInnatePassives(actors[i]);
             ReorganizeActorPassives(actors[i]);
             actors[i].StartTurnResetStats();
+        }
+        return actors;
+    }
+    public List<TacticActor> SpawnTeamInPattern(string pattern, int team, List<string> teamNames, List<string> teamStats = null, List<string> teamPersonalNames = null, List<string> teamEquipment = null, List<string> teamIDs = null)
+    {
+        List<int> patternLocations = mapPatterns.ReturnTilesOfPattern(pattern, teamNames.Count, mapSize);
+        List<TacticActor> actors = SpawnTeam(team, teamNames, teamStats, teamPersonalNames, teamEquipment, teamIDs);
+        for (int i = 0; i < actors.Count; i++)
+        {
+            actors[i].SetLocation(patternLocations[i]);
         }
         return actors;
     }
@@ -220,9 +229,7 @@ public class ActorMaker : MonoBehaviour
         actor.SetSpriteName((newForm));
         actor.ResetElements();
         actor.ChangeFormFromString(actorStats.ReturnValue(newForm));
-        AddElementPassives(actor);
-        AddAttributePassives(actor);
-        AddSpeciesPassives(actor);
+        AddInnatePassives(actor);
         // Set the new base health equal to the current health.
         actor.SetBaseHealth(actor.GetHealth());
         ReorganizeActorPassives(actor);

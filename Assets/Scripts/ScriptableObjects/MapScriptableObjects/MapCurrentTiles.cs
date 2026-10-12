@@ -5,15 +5,20 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "CurrentTiles", menuName = "ScriptableObjects/Utility/CurrentTiles", order = 1)]
 public class MapCurrentTiles : ScriptableObject
 {
+    public bool pointyTop = true;
     public MapUtility mapUtility;
-
     public int CheckCol(int col)
     {
         if (col%2 == 0){return col;}
         if (col < 0){return col + 1;}
         return col - 1;
     }
-
+    public int CheckRow(int row)
+    {
+        if (row%2 == 0){return row;}
+        if (row < 0){return row + 1;}
+        return row - 1;   
+    }
     protected List<int> ReturnMapSizeTiles(int mapSize)
     {
         List<int> mapSizeTiles = new List<int>();
@@ -23,7 +28,6 @@ public class MapCurrentTiles : ScriptableObject
         }
         return mapSizeTiles;
     }
-    
     public List<int> GetCurrentTilesFromStart(int start, int mapSize, int gridSize)
     {
         if (mapSize <= gridSize)
@@ -32,10 +36,16 @@ public class MapCurrentTiles : ScriptableObject
         }
         int row = mapUtility.GetRow(start, mapSize);
         int col = mapUtility.GetColumn(start, mapSize);
-        col = CheckCol(col);
+        if (!pointyTop)
+        {
+            col = CheckCol(col);
+        }
+        else
+        {
+            row = CheckRow(row);
+        }
         return CurrentTilesFromRowCol(row, col, mapSize, gridSize);
     }
-
     public List<int> GetCurrentTilesFromCenter(int center, int mapSize, int gridSize)
     {
         if (mapSize <= gridSize)
@@ -46,7 +56,14 @@ public class MapCurrentTiles : ScriptableObject
         int col = mapUtility.GetColumn(center, mapSize);
         row -= gridSize/2;
         col -= gridSize/2;
-        col = CheckCol(col);
+        if (!pointyTop)
+        {
+            col = CheckCol(col);
+        }
+        else
+        {
+            row = CheckRow(row);
+        }
         return CurrentTilesFromRowCol(row, col, mapSize, gridSize);
     }
 

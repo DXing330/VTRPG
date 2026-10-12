@@ -246,7 +246,7 @@ public class AutoBattleManager : MonoBehaviour
         // Continue
         return -1;
     }
-    public void SpawnPhase()
+    public virtual void RespawnPhase()
     {
         // Update Any Dead Allies That Are Ready And Have Open Tiles.
         List<TacticActor> defeatedActors = map.GetDefeatedActors();
@@ -262,6 +262,10 @@ public class AutoBattleManager : MonoBehaviour
                 ResilientCheckResurrectedAlly(defeatedActors[i]);
             }
         }
+    }
+    public void SpawnPhase()
+    {
+        RespawnPhase();
         if (enemyPool.Count <= 0){return;}
         // for each spawn zone, spawn a random enemy from the pool
         List<int> spawnZones = GetSpawnTiles();

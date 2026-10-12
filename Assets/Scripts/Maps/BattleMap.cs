@@ -42,6 +42,7 @@ public class BattleMap : MapManager
     public int actorLayer = 2;
     public int tEffectLayer = 3;
     public int highlightLayer = 4;
+    public int auraLayer = 5;
     protected bool DisplayLayerExists(int layer)
     {
         return layer >= 0 && layer < mapDisplayers.Count && mapDisplayers[layer] != null;
@@ -434,6 +435,7 @@ public class BattleMap : MapManager
     }
     public void AddActorToBattle(TacticActor actor)
     {
+        actor.IncrementDeployCount();
         battlingActors.Add(actor);
         UpdateMap();
     }
@@ -629,6 +631,7 @@ public class BattleMap : MapManager
             int akRaidTile = battleMapUtility.AKRaidMove(actor, this);
             if (akRaidTile >= 0)
             {
+                actor.IncrementDeployCount();
                 MoveActorToTile(actor, akRaidTile, true);
             }
             // Else return, don't try to move if there's no valid target.
@@ -810,6 +813,7 @@ public class BattleMap : MapManager
     public void ResurrectActor(TacticActor actor)
     {
         actor.FullRestore();
+        actor.IncrementDeployCount();
         ReviveActor(actor);
     }
     public List<TacticActor> RemoveActorsFromBattle()
@@ -879,7 +883,10 @@ public class BattleMap : MapManager
         if (target == "Ally")
         {
             targets = AllAllies(finder);
-            targets.Remove(finder);
+        }
+        else if (target == "AdjacentAllies")
+        {
+            targets = GetAdjacentAllies(finder);
         }
         else if (target == "Enemy")
         {
@@ -887,7 +894,7 @@ public class BattleMap : MapManager
         }
         else if (target == "ALL")
         {
-            targets = battlingActors;
+            targets = new List<TacticActor>(battlingActors);
             targets.Remove(finder);
         }
         if (targets.Count <= 0){return null;}
@@ -1895,6 +1902,7 @@ public class BattleMap : MapManager
         if (!attackable.Contains(selectedTile)){return;}
         List<int> selected = new List<int>();
         selected.Add(selectedTile);
+        selected.AddRange(mapUtility.GetTilesByShapeSpan(selectedTile, actor.GetBasicAttackShape(), actor.GetBasicAttackSpan(), mapSize, actor.GetLocation()));
         UpdateHighlightsWithoutReseting(selected, "Green");
     }
     public List<TacticActor> GetAttackableEnemies(TacticActor actor)
@@ -2277,9 +2285,15 @@ public class BattleMap : MapManager
     // MOVEMENT UTILITIES.
     public void GrabSkill(TacticActor grabber, string target, string specifics)
     {
+        // Ideally get them right in front.
         int targetTile = mapUtility.PointInDirection(grabber.GetLocation(), grabber.GetDirection(), mapSize);
-        if (targetTile < 0) return;
-        if (GetActorOnTile(targetTile) != null){return;}
+        if (targetTile < 0 || GetActorOnTile(targetTile) != null)
+        {
+            // Get An Empty Adjacent Tile.
+            List<int> emptyAdjacent = ReturnEmptyAdjacentTiles(grabber.GetLocation());
+            if (emptyAdjacent.Count <= 0){return;}
+            targetTile = emptyAdjacent[UnityEngine.Random.Range(0, emptyAdjacent.Count)];
+        }
         TacticActor targetActor = FindActorByTargetSpecifics(grabber, target, specifics);
         if (targetActor == null){return;}
         MoveActorToTile(targetActor, targetTile, true);

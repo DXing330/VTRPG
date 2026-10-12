@@ -24,6 +24,7 @@ public static class GenomeProvider
 }
 public class AutoChessPVPEvolutionTrainer : MonoBehaviour
 {
+    public GameObject thisGO;
     public enum TrainingMode
     {
         Master,
@@ -37,11 +38,32 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     public int targetGenerations = 100;
     public bool quitWhenDone = false;
     public int trainingWorker = 0;
+    [Header("Neural Net Worker Control")]
+    public bool neuralNetMasterMode = false;
+    public bool neuralNetWorkerMode = false;
     void NeuralNetTraining()
     {
         benchmarkNeuralNet = true;
         autoStartTraining = false;
         autoStartEloTournament = false;
+    }
+    void NeuralNetMasterTraining()
+    {
+        neuralNetMasterMode = true;
+        neuralNetWorkerMode = false;
+        benchmarkNeuralNet = false;
+        autoStartTraining = false;
+        autoStartEloTournament = false;
+        trainingMode = TrainingMode.Master;
+    }
+    void NeuralNetWorkerTraining()
+    {
+        neuralNetMasterMode = false;
+        neuralNetWorkerMode = true;
+        benchmarkNeuralNet = false;
+        autoStartTraining = false;
+        autoStartEloTournament = false;
+        trainingMode = TrainingMode.Worker;
     }
     void GenomeTraining()
     {
@@ -58,10 +80,21 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     void Awake()
     {
         string[] args = System.Environment.GetCommandLineArgs();
+        if (args.Contains("--nn-tournament-master") || args.Contains("--nn-tournament-worker"))
+        {
+            thisGO.SetActive(false);
+            return;
+        }
         for (int i = 0; i < args.Length; i++)
         {
             switch (args[i])
             {
+                case "--train-master-nn":
+                    NeuralNetMasterTraining();
+                    break;
+                case "--train-worker-nn":
+                    NeuralNetWorkerTraining();
+                    break;
                 case "--benchmark-neural-net":
                     NeuralNetTraining();
                     break;
@@ -226,6 +259,16 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             }
             LoadDB();
             Debug.Log("LoadDB finished.");
+            if (neuralNetWorkerMode)
+            {
+                StartCoroutine(RunNeuralNetWorkerLoop());
+                return;
+            }
+            if (neuralNetMasterMode)
+            {
+                StartCoroutine(RunNeuralNetMasterLoop());
+                return;
+            }
             if (autoStartEloTournament)
             {
                 if (tournamentMatchData != null)
@@ -233,11 +276,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                     tournamentMatchData.ClearHistory();
                 }
                 StartChampionEloTournament();
-                return;
-            }
-            if (benchmarkNeuralNet)
-            {
-                StartCoroutine(RunNeuralNetBenchmark());
                 return;
             }
         }
@@ -550,61 +588,69 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     public bool benchmarkNeuralNet = false;
     public int placementWinThreshold = 1; // Adjustable, Could Be 4th place or higher is considered a "Win".
     public int neuralNetBenchmarkMatches = 100;
-    [ContextMenu("Benchmark Neural Net vs Champions")]
-    public void StartNeuralNetBenchmark()
+    IEnumerator RunNeuralNetMasterLoop()
     {
-        if (!benchmarkNeuralNet || director.neuralNetController == null)
+        Application.targetFrameRate = 5;
+        if (workerCount < 1)
         {
-            Debug.Log("Neural net benchmark disabled or controller missing.");
-            return;
+            Debug.LogError("NN Master: Worker count must be at least 1.");
+            yield break;
         }
-        StartCoroutine(RunNeuralNetBenchmark());
-    }
-    public IEnumerator RunNeuralNetBenchmark()
-    {
-        int winCount = 0;
-        Debug.Log($"=== Neural Net Benchmark: {neuralNetBenchmarkMatches} matches ===");
-        for (int i = 0; i < neuralNetBenchmarkMatches; i++)
+        if (decisionDB == null)
         {
-            Application.targetFrameRate = -1;
-            director.EnableLogs(); // Create Logs For More Training.
-            // Setup: 7 neural nets, 1 champion
-            director.neuralNetCount = 7;
-            director.SetupNNMatch();
-            // Run match
-            director.matchOver = false;
-            director.roundCount = 0;
-            while (!director.matchOver && director.roundCount < 30)
+            Debug.LogError("NN Master: decisionDB is null.");
+            yield break;
+        }
+        int matchesPerWorker = neuralNetBenchmarkMatches;
+        Debug.Log("=== NN Collection Master Starting ===");
+        Debug.Log($"Workers: {workerCount}");
+        Debug.Log($"Matches per worker: {matchesPerWorker}");
+        Debug.Log($"Planned total matches: {workerCount * matchesPerWorker}");
+        // Remove stale signals from previous runs.
+        CleanupNNWorkerSignals();
+        // Each worker receives its own match count.
+        for (int i = 1; i <= workerCount; i++)
+        {
+            string workerDir = TrainingWorkerStorage.GetWorkerPath(i);
+            Directory.CreateDirectory(workerDir);
+            string startPath = Path.Combine(workerDir, "nn_start.txt");
+            File.WriteAllText(startPath, matchesPerWorker.ToString());
+        }
+        // Wait for every worker to report completion.
+        yield return StartCoroutine(WaitForNNWorkers());
+        bool allWorkersCompleted = true;
+        for (int i = 1; i <= workerCount; i++)
+        {
+            string donePath = Path.Combine(
+                TrainingWorkerStorage.GetWorkerPath(i), "nn_done.txt");
+            if (!File.Exists(donePath))
             {
-                director.AIPrepPhase(true);
-                yield return null;
+                Debug.LogError($"NN Master: Worker {i} did not complete.");
+                allWorkersCompleted = false;
+                continue;
             }
-            // If Log Matches Is True Then A Neural Net Has Won The Round.
-            if (director.logMatches)
+            string result = File.ReadAllText(donePath).Trim();
+            if (!int.TryParse(result, out int completed) ||
+                completed != matchesPerWorker)
             {
-                winCount++;
-            }
-            // Log per-match summary
-            if ((i + 1) % 10 == 0 || i == 0)
-            {
-                float currentWinRate = (float)winCount / (i + 1);
-                Debug.Log($"  Match {i + 1}/{neuralNetBenchmarkMatches}: Cumulative win rate = {currentWinRate:P1}");
+                Debug.LogWarning(
+                    $"NN Master: Worker {i} completed {result} of " +
+                    $"{matchesPerWorker} planned matches.");
+                allWorkersCompleted = false;
             }
         }
-        float winRate = (float)winCount / neuralNetBenchmarkMatches;
-        Debug.Log($"=== Benchmark Complete ===");
-        if (winRate > 0.55f)
+        if (!allWorkersCompleted)
         {
-            Debug.Log("Neural nets are competitive — consider for promotion");
+            Debug.LogError(
+                "NN Master: Collection was incomplete. " +
+                "Not starting dataset aggregation.");
+            yield break;
         }
-        else if (winRate > 0.20f)
-        {
-            Debug.Log("Neural nets showing promise — continue curriculum training");
-        }
-        else
-        {
-            Debug.Log("Neural nets need more training (stick to champion imitation)");
-        }
+        Debug.Log("NN Master: All workers completed. Gathering datasets...");
+        // Reuse the existing aggregation pipeline.
+        decisionDB.GatherWorkerDatasets();
+        Debug.Log("=== NN Collection Master Complete ===");
+        CleanupNNWorkerSignals();
         if (quitWhenDone)
         {
             #if UNITY_EDITOR
@@ -612,6 +658,128 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
             #else
             Application.Quit();
             #endif
+        }
+    }
+    IEnumerator RunNeuralNetWorkerLoop()
+    {
+        Debug.Log($"=== NN Worker {trainingWorker} starting ===");
+        string workerDir = TrainingWorkerStorage.GetPersistentPath();
+        string startPath = Path.Combine(workerDir, "nn_start.txt");
+        string donePath = Path.Combine(workerDir, "nn_done.txt");
+        // Wait for the master to assign this worker's match count.
+        while (!File.Exists(startPath))
+        {
+            yield return new WaitForSeconds(1f);
+        }
+        string countStr = File.ReadAllText(startPath).Trim();
+        if (!int.TryParse(countStr, out int matchesToRun) || matchesToRun < 1)
+        {
+            Debug.LogError($"NN Worker {trainingWorker}: Invalid match count '{countStr}'.");
+            yield break;
+        }
+        try { File.Delete(startPath); } catch { }
+        // Clear this worker's previous decision data before collecting.
+        decisionDB.ClearWorkerDecisionData();
+        Debug.Log($"NN Worker {trainingWorker}: Collecting {matchesToRun} matches.");
+        int winCount = 0;
+        int completedMatches = 0;
+        float startTime = Time.realtimeSinceStartup;
+        for (int i = 0; i < matchesToRun; i++)
+        {
+            Application.targetFrameRate = -1;
+            director.EnableLogs();
+            director.neuralNetCount = 7;
+            director.SetupNNMatch();
+            director.matchOver = false;
+            director.roundCount = 0;
+            while (!director.matchOver && director.roundCount < 30)
+            {
+                director.AIPrepPhase(true);
+                yield return null;
+            }
+            if (director.neuralNetWon)
+            {
+                winCount++;
+            }
+            completedMatches++;
+            if (completedMatches % 10 == 0 ||
+                completedMatches == matchesToRun)
+            {
+                Debug.Log($"NN Worker {trainingWorker}: " + $"{completedMatches}/{matchesToRun} matches completed.");
+            }
+        }
+        // Publish completion only after the worker has finished its match loop.
+        float elapsed = Time.realtimeSinceStartup - startTime;
+        Debug.Log(
+            $"NN Worker {trainingWorker}: Finished {completedMatches} matches " +
+            $"in {elapsed:F1}s. NN wins: {winCount}.");
+        try
+        {
+            File.WriteAllText(donePath, completedMatches.ToString());
+        }
+        catch (Exception e)
+        {
+            Debug.LogError(
+                $"NN Worker {trainingWorker}: Could not write completion signal: {e.Message}");
+        }
+        #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+        #else
+        Application.Quit();
+        #endif
+    }
+    IEnumerator WaitForNNWorkers()
+    {
+        float startTime = Time.realtimeSinceStartup;
+        bool[] workerDone = new bool[workerCount + 1];
+        while (true)
+        {
+            bool allDone = true;
+            for (int i = 1; i <= workerCount; i++)
+            {
+                if (workerDone[i])
+                    continue;
+                string donePath = Path.Combine(TrainingWorkerStorage.GetWorkerPath(i), "nn_done.txt");
+                if (File.Exists(donePath))
+                {
+                    workerDone[i] = true;
+                    Debug.Log($"NN Master: Worker {i} complete.");
+                }
+                else
+                {
+                    allDone = false;
+                }
+            }
+            if (allDone)
+                break;
+            if (Time.realtimeSinceStartup - startTime > workerTimeoutSeconds)
+            {
+                Debug.LogError("NN Master: Timed out waiting for workers.");
+                break;
+            }
+            yield return new WaitForSeconds(2f);
+        }
+    }
+    void CleanupNNWorkerSignals()
+    {
+        for (int i = 1; i <= workerCount; i++)
+        {
+            string workerDir = TrainingWorkerStorage.GetWorkerPath(i);
+
+            foreach (string file in new[] { "nn_start.txt", "nn_done.txt" })
+            {
+                string path = Path.Combine(workerDir, file);
+
+                if (File.Exists(path))
+                {
+                    try { File.Delete(path); }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning(
+                            $"NN Master: Could not remove {path}: {e.Message}");
+                    }
+                }
+            }
         }
     }
     [Header("Master Worker Control")]

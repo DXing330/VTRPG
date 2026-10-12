@@ -245,11 +245,11 @@ public class AutoChessPVPBattleManager : AutoBattleManager
     public void InitializeFactionEffects()
     {
         // Track special faction effects here: Aegir/Yan/Kjerag
-        if (leftTeam.factionData.GetCountOfFaction("Kjerag") >= 5)
+        if (leftTeam.factionData.GetCountOfFaction("Kjerag") >= 6)
         {
             kjeragWindCD = (Mathf.Max(1, 6 / Mathf.Max(1, (int.Parse(leftTeam.factionData.GetStacksOfFaction("Kjerag")) / 100))));
         }
-        if (leftTeam.factionData.GetCountOfFaction("Yan") >= 5)
+        if (leftTeam.factionData.GetCountOfFaction("Yan") >= 6)
         {
             yanDragon = 1;
             int totalYanAttack = 0;
@@ -279,11 +279,11 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             }
         }
         // Track special right team faction effects here: Aegir/Yan/Kjerag
-        if (rightTeam.factionData.GetCountOfFaction("Kjerag") >= 5)
+        if (rightTeam.factionData.GetCountOfFaction("Kjerag") >= 6)
         {
             kjeragWindCD2 = (Mathf.Max(1, 6 / Mathf.Max(1, (int.Parse(rightTeam.factionData.GetStacksOfFaction("Kjerag")) / 100))));
         }
-        if (rightTeam.factionData.GetCountOfFaction("Yan") >= 5)
+        if (rightTeam.factionData.GetCountOfFaction("Yan") >= 6)
         {
             yanDragon2 = 1;
             int totalYanAttack = 0;
@@ -319,6 +319,24 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         InitializeActors();
         InitializeFactionEffects();
         StartRound();
+    }
+    public override void RespawnPhase()
+    {
+        // Update Any Dead Allies That Are Ready And Have Open Tiles.
+        List<TacticActor> defeatedActors = map.GetDefeatedActors();
+        for (int i = 0; i < defeatedActors.Count; i++)
+        {
+            if (defeatedActors[i].ReadyToRespawn())
+            {
+                // Check If The Tile Is Open.
+                if (map.GetActorOnTile(defeatedActors[i].GetLocation()) != null){continue;}
+                // Revive Them.
+                TacticActor respawnedActor = defeatedActors[i];
+                respawnedActor.ResetRespawnTimer();
+                map.ResurrectActor(respawnedActor);
+                ResilientCheckResurrectedAlly(respawnedActor);
+            }
+        }
     }
     public override void StartRound()
     {
@@ -378,14 +396,20 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         actor.StartTurn();
         actor.UpdateEnergy(1);
         effectManager.StartTurn(actor, map);
-        // If Stunned Then Stop.
+        // If Stunned/Sleeping Then Stop.
         if (actor.StatusExists("Stun"))
         {
             map.UpdateCombatLog(actor.GetPersonalName() + " is stunned");
             EndTurn(actor);
             return;
         }
-        PVPTurn(actor);
+        else if (actor.GetSleeping())
+        {
+            map.UpdateCombatLog(actor.GetPersonalName() + " is asleep");
+            EndTurn(actor);
+            return;
+        }
+        PVPTurn(actor, (float) actor.GetActions());
     }
     public override List<int> GetPlayerActorAttackRangeTiles(TacticActor actor)
     {
@@ -408,8 +432,14 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         }
         return false;
     }
-    protected void MoveAction(TacticActor actor)
+    // Always Decreases Actions So Can't Infinitely Loop.
+    protected void MoveAction(TacticActor actor, float remainingActions)
     {
+        if (remainingActions < 1.0f)
+        {
+            EndTurn(actor);
+            return;
+        }
         if (actor.StatusExists("Frozen"))
         {
             map.UpdateCombatLog(actor.GetPersonalName() + " is frozen");
@@ -433,13 +463,21 @@ public class AutoChessPVPBattleManager : AutoBattleManager
                 }
             }
         }
-        EndTurn(actor);
+        PVPTurn(actor, remainingActions - 1.0f);
     }
     // Kinda Similar To EnemyTurn
-    public void PVPTurn(TacticActor actor)
+    public void PVPTurn(TacticActor actor, float remainingActions = 4.0f)
     {
+        if (remainingActions <= 0f)
+        {
+            EndTurn(actor);
+            return;
+        }
+        // Max 20 Attacks/Round Usually?
+        float attackCost = Mathf.Max(0.2f, actor.GetSubAttackActionCostAfterAttackSpeed());
         List<int> attackable = GetPlayerActorAttackRangeTiles(actor);
         int targetTile = PrepareSkill(actor);
+        // Skill Used Up Whole Turn Immediately.
         bool skillReady = (targetTile >= 0);
         if (targetTile == SKILLUSEDALREADY)
         {
@@ -455,20 +493,20 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             {
                 for (int i = 0; i < hurtAllies.Count; i++)
                 {
-                    hurtAllies[i].Heal(actor.GetAttack() * (actor.GetAttackSpeed() + 100) / 100);
+                    hurtAllies[i].Heal(actor.GetAttack());
                 }
             }
             else if (hurtAllies.Count <= 0)
             {
-                MoveAction(actor);
+                MoveAction(actor, remainingActions);
                 return;
             }
             else if (!actor.AKAOE() && hurtAllies.Count > 0)
             {
                 TacticActor healTarget = map.FindActorByStat(hurtAllies, "Health", false);
-                healTarget.Heal(actor.GetAttack() * (actor.GetAttackSpeed() + 100) / 100);
+                healTarget.Heal(actor.GetAttack());
             }
-            EndTurn(actor);
+            PVPTurn(actor, remainingActions - attackCost);
             return;
         }
         List<TacticActor> enemies = map.ReturnEnemiesInTiles(actor, attackable);
@@ -486,10 +524,10 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             // Move
             else
             {
-                MoveAction(actor);
+                MoveAction(actor, remainingActions);
                 return;
             }
-            EndTurn(actor);
+            PVPTurn(actor, remainingActions - attackCost);
             return;
         }
         // Normal.
@@ -502,15 +540,21 @@ public class AutoChessPVPBattleManager : AutoBattleManager
                 return;
             }
             TacticActor target = map.GetClosestActor(actor, enemies);
-            ActorAttacksActor(actor, target);
+            // Update Targets Based On Attack Shape + Span.
+            List<TacticActor> targets = map.GetActorsOnTiles(map.mapUtility.GetTilesByShapeSpan(target.GetLocation(), actor.GetBasicAttackShape(), actor.GetBasicAttackSpan(), map.mapSize, actor.GetLocation()));
+            for (int i = 0; i < targets.Count; i++)
+            {
+                if (targets[i].GetTeam() == actor.GetTeam()){continue;}
+                ActorAttacksActor(actor, targets[i]);
+            }
         }
         // Move
         else
         {
-            MoveAction(actor);
+            MoveAction(actor, remainingActions);
             return;
         }
-        EndTurn(actor);
+        PVPTurn(actor, remainingActions - attackCost);
     }
     public override int EndBattle()
     {
@@ -595,28 +639,18 @@ public class AutoChessPVPBattleManager : AutoBattleManager
             return;
         }
         currentRound++;
+        RespawnPhase();
         StartRound();
     }
+    // DON'T USE ATTACKSPEED HERE, FOR THIS GAME MODE ATKSPD AFFECTS ATK ACTION COST INSTEAD.
     protected override void ActorAttacksActor(TacticActor attacker, TacticActor defender)
     {
         TriggerTrait(attacker, "OnAttack");
-        List<TacticActor> behindActors = map.GetActorsBehindActor(attacker);
-        for (int i = 0; i < behindActors.Count; i++)
-        {
-            if (behindActors[i] != null && behindActors[i].GetTeam() == attacker.GetTeam())
-            {
-                TriggerTrait(behindActors[i], "OnForwardAttack", attacker);
-            }
-        }
         if (!instantBattle)
         {
             map.UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName());
         }
-        attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
-        if (defender.GetHealth() <= 0)
-        {
-            TriggerTrait(attacker, "OnKill");
-        }
+        attackManager.ActorAttacksActor(attacker, defender, map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
     }
     public override void ActivateSkill(string skillName, TacticActor actor = null)
     {

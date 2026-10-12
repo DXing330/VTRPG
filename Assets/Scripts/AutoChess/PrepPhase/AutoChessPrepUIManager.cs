@@ -153,7 +153,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
         // Determine Attack Range + Type.
         string[] blocks = prepManager.actorData.ReturnValue(actor.GetName()).Split("|");
         string range = blocks[11];
-        string rangeType = blocks[14];
+        string rangeType = blocks[15];
         int location = actor.GetLocation();
         int direction = actor.GetDirection();
         int selectedTile = prepManager.mapUtility.PointInDirection(location, direction, prepManager.mapSize);

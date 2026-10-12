@@ -31,7 +31,7 @@ public class PassiveEffectTester : MonoBehaviour
         map.combatLog.ForceStart();
         map.combatLog.AddNewLog();
         // Set up the actors.
-        dummyActor.InitializeStats();
+        //dummyActor.InitializeStats();
         dummyActor.SetInitialStatsFromString(actorStats);
         dummyActor.InitializeStats();
         passiveOrganizer.OrganizeActorPassives(dummyActor);
@@ -108,5 +108,32 @@ public class PassiveEffectTester : MonoBehaviour
     public void TestTestStatus()
     {
         TestStatus(testStatus);
+    }
+    public List<string> testScalingPassiveNames;
+    public List<string> testScalingPassiveLevels;
+    public string testScalingPassiveData;
+    public void TestScalingPassive(string scalingPassiveData)
+    {
+        InitializeMap();
+        string original = dummyActor.ReturnTestStatsString();
+        for (int i = 0; i < testScalingPassiveNames.Count; i++)
+        {
+            dummyActor.AddPassiveSkill(testScalingPassiveNames[i], testScalingPassiveLevels[i]);
+        }
+        passiveOrganizer.OrganizeActorPassives(dummyActor);
+        passive.ForceApplyPassiveEffect(dummyActor, map, scalingPassiveData);
+        string final = dummyActor.ReturnTestStatsString();
+        Debug.Log(original + "\n" + final);
+    }
+    public string metaPassiveName;
+    [ContextMenu("Test Meta Effect Specifics")]
+    public void TestMetaEffectSpecifics()
+    {
+        Debug.Log(passive.effectSpecificsCalculator.GetEffectSpecificsFromPassiveName(dummyActor, metaPassiveName, 0, map));
+    }
+    [ContextMenu("Test Single Scaling Passive")]
+    public void TestSingleScalingPassive()
+    {
+        TestScalingPassive(testScalingPassiveData);
     }
 }

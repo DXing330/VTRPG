@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+// DEPRECATED + REPLACED BY MYSTERYDUNGEONBATTLEMAP AND MYSTERYDUNGEONSTATE
 // Stores the dungeon information for persistance.
 [CreateAssetMenu(fileName = "Dungeon", menuName = "ScriptableObjects/Dungeons/Dungeon", order = 1)]
 public class Dungeon : ScriptableObject
@@ -45,7 +46,7 @@ public class Dungeon : ScriptableObject
     // Called whenever starting a new floor.
     public void MakeDungeon()
     {
-        dungeonGenerator.SetTreasureCount(1 + (currentFloor / 2));
+        /*dungeonGenerator.SetTreasureCount(1 + (currentFloor / 2));
         List<string> newDungeon = dungeonGenerator.GenerateDungeon(averageSize + Random.Range(-sizeVariance, sizeVariance + 1));
         SetDungeonSize(dungeonGenerator.GetSize());
         SetFloorTiles(newDungeon[0].Split("|").ToList());
@@ -72,7 +73,7 @@ public class Dungeon : ScriptableObject
         {
             GenerateQuestGoal();
         }
-        InitializeViewedTiles();
+        InitializeViewedTiles();*/
     }
     protected void GenerateQuestGoal()
     {

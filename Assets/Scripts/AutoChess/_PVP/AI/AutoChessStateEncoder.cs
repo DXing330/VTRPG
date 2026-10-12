@@ -69,13 +69,14 @@ public class AutoChessStateEncoder : ScriptableObject
     [SerializeField] private int maxBench = 12;
     [SerializeField] private int maxField = 11; // 9 base + 2 from HR File
     [SerializeField] private int maxShop = 6;
-    [SerializeField] private int maxFactionsPerUnit = 2;
+    [SerializeField] private int maxFactionsPerUnit = 3;
     // Fixed faction order - MUST match Python
     private readonly List<string> factionOrder = new List<string>
     {
         // MAIN.
         "Aegir",
         "Kjerag",
+        "Kazimierz",
         "Laterano",
         "Sargon",
         "Siracusa",
@@ -89,11 +90,13 @@ public class AutoChessStateEncoder : ScriptableObject
         // SUB.
         "Agile",
         "Aid",
+        "Arcane",
         "Assist",
         "Durable",
         "Precision",
         "Raid",
         "Resilient",
+        "Solo",
         "Swift"
     };
     // Fixed Trait Timings
@@ -101,7 +104,6 @@ public class AutoChessStateEncoder : ScriptableObject
     {
         "DuringBattle",
         "None",
-        "OnAttack",
         "OnDeath",
         "OnPurchase",
         "OnSkill",
@@ -126,16 +128,28 @@ public class AutoChessStateEncoder : ScriptableObject
         "SelfActive",
         "SelfAndBackActive",
         "SelfAndFrontActive",
-        "SelfAndFrontLineActive",
         "Unit"
     };
     // Fixed Trait Specifics (Might Be Too Much, Leave It Out For Now)
     public int StateSize => CalculateStateSize();
     // Feature counts per slot type
     private const int SCALAR_COUNT = 13;
-    private const int BENCH_FEATURES = 52;
-    private const int FIELD_FEATURES = 54;
-    private const int SHOP_FEATURES = 52;
+    private const int UNIT_FEATURES = 60;
+    private const int BENCH_FEATURES = UNIT_FEATURES + 3;
+    private const int FIELD_FEATURES = UNIT_FEATURES + 1;
+    private const int SHOP_FEATURES = UNIT_FEATURES + 5;
+    // Bench contextual features
+    private const int BENCH_PRESENT = UNIT_FEATURES;
+    private const int BENCH_COPIES = UNIT_FEATURES + 1;
+    private const int BENCH_TRAIT_ACTIVE = UNIT_FEATURES + 2;
+    // Field contextual features
+    private const int FIELD_PRESENT = UNIT_FEATURES;
+    // Shop contextual features
+    private const int SHOP_PRESENT = UNIT_FEATURES;
+    private const int SHOP_COST = UNIT_FEATURES + 1;
+    private const int SHOP_CAN_AFFORD = UNIT_FEATURES + 2;
+    private const int SHOP_COMPLETES_MERGE = UNIT_FEATURES + 3;
+    private const int SHOP_EXISTS = UNIT_FEATURES + 4;
     private const int FACTION_FEATURES = 4;
     private int CalculateStateSize()
     {
@@ -155,7 +169,7 @@ public class AutoChessStateEncoder : ScriptableObject
         int benchCount = prep.benchSlots.Count;
         int fieldCount = prep.fieldSlots.Count;
         int maxField = prep.GetMaxFieldSlots();
-        bool benchFull = benchCount >= prep.GetMaxBenchSlots();
+        bool benchFull = benchCount >= maxBench;
         bool fieldFull = fieldCount >= maxField;
         // 0: Done
         valid[0] = true;
@@ -168,7 +182,7 @@ public class AutoChessStateEncoder : ScriptableObject
         {
             bool slotExists = shop.shopActors.Count > i && shop.shopActors[i] != null;
             int cost = slotExists ? shop.ReturnActorCost(shop.shopActors[i].GetName()) : int.MaxValue;
-            if (factions.FactionActive("Foresight") && factions.GetStacksOfFaction("Foresight") >= 80)
+            if (factions.FactionActive("Foresight") && factions.GetStacksOfFaction("Foresight") >= 100)
             {
                 cost--;
             }
@@ -289,7 +303,7 @@ public class AutoChessStateEncoder : ScriptableObject
         s.Add(Norm(prep.GetMaxFieldSlots(), 11f)); // Max Field
         s.Add(Norm(prep.fieldSlots.Count, 11f)); // Current Field
         s.Add(Norm(prep.benchSlots.Count, 12f)); // Current Bench
-        s.Add(Norm(prep.GetMaxBenchSlots() - prep.benchSlots.Count, 12f));  // bench space remaining
+        s.Add(Norm(maxBench - prep.benchSlots.Count, 12f));  // bench space remaining
         // Econ faction indicators
         bool investorActive = factions.factionData.FactionActive("Investor");
         s.Add(investorActive ? 1f : 0f);
@@ -312,18 +326,18 @@ public class AutoChessStateEncoder : ScriptableObject
             bool oneAway = IsOneAwayFromThreshold(factions, faction);
             s.Add(Norm(count, 10f));
             s.Add(active ? 1f : 0f);
-            s.Add(Norm(stacks, 100f));
+            s.Add(Norm(stacks, 300f));
             s.Add(oneAway ? 1f : 0f);
         }
     }
     // ============================================
-    // BENCH UNITS (12 floats each, 12 slots)
+    // BENCH UNITS (12 slots)
     // Focus: econ value, merge potential, trait value
     // ============================================
     private void EncodeBench(List<float> s, AutoChessPrepManager prep, AutoChessFactionManager factions)
     {
         var bench = prep.benchSlots.Select(u => (unit: u, score: GetUnitTier(u.GetName()))).OrderByDescending(x => x.score).ToList();
-        for (int i = 0; i < prep.GetMaxBenchSlots(); i++)
+        for (int i = 0; i < maxBench; i++)
         {
             if (i < bench.Count)
                 EncodeBenchUnit(s, bench[i].unit, prep, factions);
@@ -333,29 +347,21 @@ public class AutoChessStateEncoder : ScriptableObject
     }
     private void EncodeBenchUnit(List<float> s, AutoActorRollUpData unit, AutoChessPrepManager prep, AutoChessFactionManager factions)
     {
-        string name = unit.GetName();
-        var unitFactions = unit.GetFactions();
+        // Canonical unit information
+        EncodeUnit(s, unit, factions);
         s.Add(1f); // present
-        s.Add(Norm(GetUnitTier(name), 5f)); // Tier
-        s.Add(Norm(unit.GetLevel(), 3f)); // Level
-        // Merge potential: how close to 3 copies?
-        int copies = prep.GetLevelOneActorsWithName(name);
+        int copies = prep.GetLevelOneActorsWithName(unit.GetName());
         s.Add(Norm(copies, 2f));  // 0-2 copies
         // Bench trait active?
         bool benchTraitActive = (prep.traitManager != null &&  prep.traitManager.BenchTraitActive(prep, unit));
         s.Add(benchTraitActive ? 1f : 0f);
-        // Has equipment (can be moved to field unit)
-        // Moving To Field Unit Requires Selling This Bench Unit Though.
-        s.Add(unit.GetEquipmentNames().Count > 0 ? 1f : 0f);
-        EncodeUnitFactions(s, unit.GetFactions(), factions); // 21
-        EncodeUnitTrait(s, unit); // 25 floats
     }
     private void EncodeEmptyBenchUnit(List<float> s)
     {
         for (int i = 0; i < BENCH_FEATURES; i++) s.Add(0f);
     }
     // ============================================
-    // FIELD UNITS (16 floats each, 11 slots)
+    // FIELD UNITS (11 slots)
     // Focus: combat power, positioning, active synergies
     // ============================================
     private void EncodeField(List<float> s, AutoChessPrepManager prep, AutoChessFactionManager factions)
@@ -373,23 +379,34 @@ public class AutoChessStateEncoder : ScriptableObject
             }
         }
     }
-    private void EncodeFieldUnit(List<float> s, AutoActorRollUpData unit, AutoChessPrepManager prep, AutoChessFactionManager factions)
+    private void EncodeUnit(List<float> s, AutoActorRollUpData unit, AutoChessFactionManager factions)
     {
-        string name = unit.GetName();
-        var unitFactions = unit.GetFactions();
-        s.Add(1f); // present
-        s.Add(Norm(GetUnitTier(name), 5f));
+        // Identity / progression
+        s.Add(Norm(GetUnitTier(unit.GetName()), 6f));
         s.Add(Norm(unit.GetLevel(), 3f));
         // Combat stats
         s.Add(Norm(unit.GetHealth(), 200f));
         s.Add(Norm(unit.GetAttack(), 100f));
         s.Add(Norm(unit.GetDefense(), 100f));
         s.Add(Norm(unit.GetResist(), 100f));
+        s.Add(Norm(unit.GetAttackRange(), 5f));
+        s.Add(Norm(unit.GetAttackActionCost(), 3f));
+        s.Add(Norm(unit.GetRespawnTimer(), 8f));
+        s.Add(unit.HealerUnit() ? 1f : 0f);
+        s.Add(unit.AOEUnit() ? 1f : 0f);
         // Equipment
         s.Add(unit.GetEquipmentNames().Count > 0 ? 1f : 0f);
-        // Faction + Trait
-        EncodeUnitFactions(s, unit.GetFactions(), factions); // 21
-        EncodeUnitTrait(s, unit); // 25
+        // Factions
+        EncodeUnitFactions(s, unit.GetFactions(), factions);
+        // Trait
+        EncodeUnitTrait(s, unit);
+        // Unit properties
+        // 12 + 25 + 23 = 60
+    }
+    private void EncodeFieldUnit(List<float> s, AutoActorRollUpData unit, AutoChessPrepManager prep, AutoChessFactionManager factions)
+    {
+        EncodeUnit(s, unit, factions);
+        s.Add(1f); // Present
     }
     private void EncodeEmptyFieldUnit(List<float> s)
     {
@@ -414,21 +431,22 @@ public class AutoChessStateEncoder : ScriptableObject
     }
     private void EncodeShopUnit(List<float> s, AutoActorRollUpData unit, int gold, AutoChessFactionManager factions, AutoChessPrepManager prep, AutoChessShopManager shop)
     {
-        string name = unit.GetName();
-        int cost = shop.ReturnActorCost(name);
-        var unitFactions = unit.GetFactions();
+        // Present
+        // Canonical unit information
+        EncodeUnit(s, unit, factions);
         s.Add(1f);
-        s.Add(Norm(GetUnitTier(name), 5f));
+        // Shop-specific information
+        int cost = shop.ReturnActorCost(unit.GetName(), factions);
+        // Cost
         s.Add(Norm(cost, 5f));
+        // Can afford
         s.Add(gold >= cost ? 1f : 0f);
-        bool completesMerge = prep.GetLevelOneActorsWithName(name) >= 2;
+        // Would complete a merge
+        bool completesMerge = prep.GetLevelOneActorsWithName(unit.GetName()) >= 2;
         s.Add(completesMerge ? 1f : 0f);
-        // Duplicate Check.
+        // Unit already exists on bench/field
         bool unitExists = prep.UnitExists(unit);
         s.Add(unitExists ? 1f : 0f);
-        // Total 6 Shop Checks.
-        EncodeUnitFactions(s, unit.GetFactions(), factions); // 21
-        EncodeUnitTrait(s, unit); // 25
     }
     private void EncodeEmptyShopUnit(List<float> s)
     {
@@ -455,8 +473,8 @@ public class AutoChessStateEncoder : ScriptableObject
                 activeFlags[i] = 0f;
             }
         }
-        s.AddRange(oneHot); // 19
-        s.AddRange(activeFlags); // 2
+        s.AddRange(oneHot); // 22
+        s.AddRange(activeFlags); // 3
     }
     private void EncodeUnitTrait(List<float> s, AutoActorRollUpData unit)
     {
@@ -470,8 +488,8 @@ public class AutoChessStateEncoder : ScriptableObject
             int eIdx = traitEffects.IndexOf(trait.effect);
             if (eIdx >= 0) effectOneHot[eIdx] = 1f;
         }
-        s.AddRange(timingOneHot); // 8
-        s.AddRange(effectOneHot); // 17
+        s.AddRange(timingOneHot); // 7
+        s.AddRange(effectOneHot); // 16
     }
     private bool IsOneAwayFromThreshold(AutoChessFactionManager factions, string faction)
     {
@@ -501,75 +519,168 @@ public class AutoChessStateEncoder : ScriptableObject
     {
         Debug.Log("========== ENCODER DEBUG ==========");
         Debug.Log($"State: {state.Length} (want {StateSize}) | Mask: {mask.Length} (want 44) | Non-zero: {state.Count(f => f != 0f)}");
-
         int idx = 0;
-
-        // --- SCALARS ---
-        Debug.Log($"--- SCALARS [0-12] ---");
+        // SCALARS
+        int scalarStart = idx;
+        Debug.Log($"--- SCALARS [{scalarStart}-{scalarStart + SCALAR_COUNT - 1}] ---");
         Debug.Log($"  gold={state[idx]:F3}({data.GetGold()}) lvl={state[idx+1]:F3}({data.GetLevel()}) hp={state[idx+2]:F3}({data.GetHealth()})");
         Debug.Log($"  round={state[idx+3]:F3}({data.GetRound()}) win={state[idx+4]:F3} loss={state[idx+5]:F3}");
         Debug.Log($"  interest={state[idx+6]:F3} rerolls={state[idx+7]:F3}({data.GetFreeRerolls()})");
         Debug.Log($"  maxField={state[idx+8]:F3}({prep.GetMaxFieldSlots()}) curField={state[idx+9]:F3}({prep.fieldSlots.Count})");
         Debug.Log($"  curBench={state[idx+10]:F3}({prep.benchSlots.Count}) benchSpace={state[idx+11]:F3} investor={state[idx+12]:F3}");
-        idx += 13;
-
-        // --- FACTIONS ---
-        Debug.Log($"--- FACTIONS [13-88] (19×4) ---");
+        idx += SCALAR_COUNT;
+        // FACTIONS
+        int factionStart = idx;
+        int factionCount = factionOrder.Count * FACTION_FEATURES;
+        Debug.Log($"--- FACTIONS [{factionStart}-{factionStart + factionCount - 1}] ({factionOrder.Count}×{FACTION_FEATURES}) ---");
         for (int i = 0; i < factionOrder.Count; i++)
         {
-            int f = idx + i * 4;
+            int f = factionStart + i * FACTION_FEATURES;
             int count = Mathf.RoundToInt(state[f] * 10f);
             bool active = state[f + 1] > 0.5f;
             if (count > 0 || active)
-                Debug.Log($"  {factionOrder[i]}: count={count} active={active} stacks={state[f+2]*100f:F0} oneAway={state[f+3]>0.5f}");
-        }
-        idx += 76;
-
-        // --- BENCH ---
-        Debug.Log($"--- BENCH [89-712] ({prep.GetMaxBenchSlots()}×{BENCH_FEATURES}) ---");
-        for (int i = 0; i < prep.GetMaxBenchSlots(); i++)
-        {
-            int b = idx + i * BENCH_FEATURES;
-            if (state[b] > 0.5f)
-                Debug.Log($"  [{i}] present tier={state[b+1]*5f:F0} lvl={state[b+2]*3f:F0} copies={state[b+3]*2f:F0} traitActive={state[b+4]>0.5f} equip={state[b+5]>0.5f}");
-        }
-        idx += prep.GetMaxBenchSlots() * BENCH_FEATURES;
-
-        // --- FIELD ---
-        Debug.Log($"--- FIELD [713-1306] ({maxField}×{FIELD_FEATURES}) ---");
-        for (int i = 0; i < maxField; i++)
-        {
-            int f = idx + i * FIELD_FEATURES;
-            if (state[f] > 0.5f)
-                Debug.Log($"  [{i}] present tier={state[f+1]*5f:F0} lvl={state[f+2]*3f:F0} hp={state[f+3]*200f:F0} atk={state[f+4]*100f:F0} def={state[f+5]*100f:F0} res={state[f+6]*100f:F0} equip={state[f+7]>0.5f}");
-        }
-        idx += maxField * FIELD_FEATURES;
-
-        // --- SHOP ---
-        Debug.Log($"--- SHOP [1307-1618] ({maxShop}×{SHOP_FEATURES}) ---");
-        for (int i = 0; i < maxShop; i++)
-        {
-            int s = idx + i * SHOP_FEATURES;
-            if (state[s] > 0.5f)
             {
-                string name = (i < shop.shopActors.Count && shop.shopActors[i] != null) ? shop.shopActors[i].GetName() : "?";
-                Debug.Log($"  [{i}] {name}: present tier={state[s+1]*5f:F0} cost={state[s+2]*5f:F0} afford={state[s+3]>0.5f} merge={state[s+4]>0.5f} exists={state[s+5]>0.5f}");
+                Debug.Log(
+                    $"  {factionOrder[i]}: " +
+                    $"count={count} " +
+                    $"active={active} " +
+                    $"stacks={state[f+2] * 300f:F0} " +
+                    $"oneAway={state[f+3] > 0.5f}"
+                );
             }
         }
-
-        // --- MASK ---
+        idx += factionCount;
+        // BENCH
+        int benchStart = idx;
+        int benchCount = maxBench * BENCH_FEATURES;
+        Debug.Log($"--- BENCH [{benchStart}-{benchStart + benchCount - 1}] ({maxBench}×{BENCH_FEATURES}) ---");
+        for (int i = 0; i < maxBench; i++)
+        {
+            int b = benchStart + i * BENCH_FEATURES;
+            if (state[b + BENCH_PRESENT] > 0.5f)
+            {
+                // Canonical unit starts at b.
+                Debug.Log(
+                    $"       " +
+                    $"tier={state[b + 0] * 6f:F0} " +
+                    $"lvl={state[b + 1] * 3f:F0} " +
+                    $"hp={state[b + 2] * 200f:F0} " +
+                    $"atk={state[b + 3] * 100f:F0} " +
+                    $"def={state[b + 4] * 100f:F0} " +
+                    $"res={state[b + 5] * 100f:F0} " +
+                    $"range={state[b + 6] * 5f:F0} " +
+                    $"actionCost={state[b + 7] * 3f:F2} " +
+                    $"respawn={state[b + 8] * 8f:F0} " +
+                    $"healer={state[b + 9] > 0.5f} " +
+                    $"AOE={state[b + 10] > 0.5f} " +
+                    $"equip={state[b + 11] > 0.5f}"
+                );
+                // After the canonical unit features:
+                Debug.Log($"present={state[b + BENCH_PRESENT] > 0.5f} " + $"copies={state[b + BENCH_COPIES] * 2f:F0} " + $"traitActive={state[b + BENCH_TRAIT_ACTIVE] > 0.5f}");
+            }
+        }
+        idx += benchCount;
+        // FIELD
+        int fieldStart = idx;
+        int fieldCount = maxField * FIELD_FEATURES;
+        Debug.Log($"--- FIELD [{fieldStart}-{fieldStart + fieldCount - 1}] ({maxField}×{FIELD_FEATURES}) ---");
+        for (int i = 0; i < maxField; i++)
+        {
+            int f = fieldStart + i * FIELD_FEATURES;
+            if (state[f + FIELD_PRESENT] > 0.5f)
+            {
+                Debug.Log(
+                    $"  [{i}] " +
+                    $"tier={state[f + 0] * 6f:F0} " +
+                    $"lvl={state[f + 1] * 3f:F0} " +
+                    $"hp={state[f + 2] * 200f:F0} " +
+                    $"atk={state[f + 3] * 100f:F0} " +
+                    $"def={state[f + 4] * 100f:F0} " +
+                    $"res={state[f + 5] * 100f:F0} " +
+                    $"range={state[f + 6] * 5f:F0} " +
+                    $"actionCost={state[f + 7] * 3f:F2} " +
+                    $"respawn={state[f + 8] * 8f:F0} " +
+                    $"healer={state[f + 9] > 0.5f} " +
+                    $"AOE={state[f + 10] > 0.5f} " +
+                    $"equip={state[f + 11] > 0.5f} " +
+                    $"present={state[f + FIELD_PRESENT] > 0.5f}"
+                );
+            }
+        }
+        idx += fieldCount;
+        // SHOP
+        int shopStart = idx;
+        int shopCount = maxShop * SHOP_FEATURES;
+        Debug.Log($"--- SHOP [{shopStart}-{shopStart + shopCount - 1}] ({maxShop}×{SHOP_FEATURES}) ---");
+        for (int i = 0; i < maxShop; i++)
+        {
+            int s = shopStart + i * SHOP_FEATURES;
+            if (state[s + SHOP_PRESENT] > 0.5f)
+            {
+                string name = (i < shop.shopActors.Count && shop.shopActors[i] != null) ? shop.shopActors[i].GetName() : "?";
+                Debug.Log(
+                    $"  [{i}] {name}: " +
+                    $"tier={state[s + 0] * 6f:F0} " +
+                    $"lvl={state[s + 1] * 3f:F0} " +
+                    $"hp={state[s + 2] * 200f:F0} " +
+                    $"atk={state[s + 3] * 100f:F0} " +
+                    $"def={state[s + 4] * 100f:F0} " +
+                    $"res={state[s + 5] * 100f:F0} " +
+                    $"range={state[s + 6] * 5f:F0} " +
+                    $"actionCost={state[s + 7] * 3f:F2} " +
+                    $"respawn={state[s + 8] * 8f:F0} " +
+                    $"healer={state[s + 9] > 0.5f} " +
+                    $"AOE={state[s + 10] > 0.5f} " +
+                    $"equip={state[s + 11] > 0.5f} " +
+                    $"present={state[s + SHOP_PRESENT] > 0.5f} " +
+                    $"cost={state[s + SHOP_COST] * 5f:F0} " +
+                    $"afford={state[s + SHOP_CAN_AFFORD] > 0.5f} " +
+                    $"merge={state[s + SHOP_COMPLETES_MERGE] > 0.5f} " +
+                    $"exists={state[s + SHOP_EXISTS] > 0.5f}"
+                );
+            }
+        }
+        idx += shopCount;
+        // MASK
         Debug.Log("--- MASK ---");
-        string[] names = { "Done", "LvlUp", "Reroll", "Buy0", "Buy1", "Buy2", "Buy3", "Buy4", "Buy5",
-            "SellB0", "SellB1", "SellB2", "SellB3", "SellB4", "SellB5", "SellB6", "SellB7", "SellB8", "SellB9", "SellB10", "SellB11",
-            "PlaceB0", "PlaceB1", "PlaceB2", "PlaceB3", "PlaceB4", "PlaceB5", "PlaceB6", "PlaceB7", "PlaceB8", "PlaceB9", "PlaceB10", "PlaceB11",
-            "RetF0", "RetF1", "RetF2", "RetF3", "RetF4", "RetF5", "RetF6", "RetF7", "RetF8", "RetF9", "RetF10" };
-        for (int i = 0; i < 44; i++) if (mask[i]) Debug.Log($"  [{i}] {names[i]} = TRUE");
-
-        // --- ASSERTIONS ---
+        string[] names =
+        {
+            "Done", "LvlUp", "Reroll",
+            "Buy0", "Buy1", "Buy2", "Buy3", "Buy4", "Buy5",
+            "SellB0", "SellB1", "SellB2", "SellB3", "SellB4", "SellB5",
+            "SellB6", "SellB7", "SellB8", "SellB9", "SellB10", "SellB11",
+            "PlaceB0", "PlaceB1", "PlaceB2", "PlaceB3", "PlaceB4", "PlaceB5",
+            "PlaceB6", "PlaceB7", "PlaceB8", "PlaceB9", "PlaceB10", "PlaceB11",
+            "RetF0", "RetF1", "RetF2", "RetF3", "RetF4", "RetF5",
+            "RetF6", "RetF7", "RetF8", "RetF9", "RetF10"
+        };
+        for (int i = 0; i < 44; i++)
+        {
+            if (mask[i])
+                Debug.Log($"  [{i}] {names[i]} = TRUE");
+        }
+        // ASSERTIONS
         bool ok = state.Length == StateSize;
-        if (prep.benchSlots.Count > 0 && state[13 + 76] < 0.5f) { Debug.LogError("Bench has actors but slot 0 empty!"); ok = false; }
-        if (prep.fieldSlots.Count > 0 && state[13 + 76 + prep.GetMaxBenchSlots() * BENCH_FEATURES] < 0.5f) { Debug.LogError("Field has actors but slot 0 empty!"); ok = false; }
-        if (shop.shopActors.Count > 0 && state[13 + 76 + prep.GetMaxBenchSlots() * BENCH_FEATURES + maxField * FIELD_FEATURES] < 0.5f) { Debug.LogError("Shop has actors but slot 0 empty!"); ok = false; }
+        if (prep.benchSlots.Count > 0 && state[benchStart + BENCH_PRESENT] < 0.5f)
+        {
+            Debug.LogError("Bench has actors but slot 0 empty!");
+            ok = false;
+        }
+        if (prep.fieldSlots.Count > 0 && state[fieldStart + FIELD_PRESENT] < 0.5f)
+        {
+            Debug.LogError("Field has actors but slot 0 empty!");
+            ok = false;
+        }
+        if (shop.shopActors.Count > 0 && state[shopStart + SHOP_PRESENT] < 0.5f)
+        {
+            Debug.LogError("Shop has actors but slot 0 empty!");
+            ok = false;
+        }
+        if (idx != state.Length)
+        {
+            Debug.LogError($"Debug parser ended at {idx}, but state has {state.Length} values!");
+            ok = false;
+        }
         Debug.Log(ok ? "PASS" : "FAIL");
         Debug.Log("========== END ==========");
     }

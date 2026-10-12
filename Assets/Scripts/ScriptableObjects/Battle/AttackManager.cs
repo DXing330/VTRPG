@@ -302,7 +302,7 @@ public class AttackManager : ScriptableObject
         finalDamageCalculation = "";
         // Only the defender gets passive bonuses(?) from tile/teffects
         CheckMapPassives(attacker, attackTarget, map, target.GetLocation(), false, true);
-        ApplyPassives(attackTarget.GetDefendingPassives(), attackTarget, attacker, map);
+        ApplyActorPassives(attackTarget.GetDefendingPassives(), attackTarget, attacker, map, attackTarget);
         if (!RollToHit(attacker, attackTarget, map)){return;}
         baseDamage = Advantage(baseDamage, advantage);
         finalDamageCalculation += "Subtract Defense: " + baseDamage + " - " + attackTarget.GetDefense() + " = ";
@@ -336,7 +336,7 @@ public class AttackManager : ScriptableObject
         baseDamage = attackValue;
         // True damage ignores defender/terrain passives, making it even stronger than it should be.
         CheckMapPassives(attacker, defender, map, defender.GetLocation(), true, false);
-        ApplyPassives(attacker.GetAttackingPassives(buffStatusData), defender, attacker, map);
+        ApplyActorPassives(attacker.GetAttackingPassives(buffStatusData), defender, attacker, map, attacker);
         switch (type)
         {
             case "Health":
@@ -430,9 +430,9 @@ public class AttackManager : ScriptableObject
         passiveEffectString = "Applied Passives: ";
         finalDamageCalculation = "";
         CheckMapPassives(attacker, attackTarget, map, target.GetLocation(), true, true);
-        // Bonus damage can be calculated here and triggers regardless of hit/miss.
-        ApplyPassives(attacker.GetAttackingPassives(buffStatusData), attackTarget, attacker, map);
-        ApplyPassives(attackTarget.GetDefendingPassives(buffStatusData), attackTarget, attacker, map);
+        // Bonus damage can be calculated here and triggers regardless of hit/miss, this automatically includes buffs/status with Attack/Defend timing.
+        ApplyActorPassives(attacker.GetAttackingPassives(buffStatusData), attackTarget, attacker, map, attacker);
+        ApplyActorPassives(attackTarget.GetDefendingPassives(buffStatusData), attackTarget, attacker, map, attackTarget);
         // TODO Check any buffs/statuses that apply.
         // Determine if you miss or not.
         if (!RollToHit(attacker, attackTarget, map))
@@ -483,7 +483,7 @@ public class AttackManager : ScriptableObject
         baseDamage = damageMultiplier * baseDamage / baseMultiplier;
         finalDamageCalculation += baseDamage;
         // Check if the passive affects damage.
-        baseDamage = CheckTakeDamagePassives(attackTarget.GetTakeDamagePassives(), baseDamage, damageType, attacker, attackTarget);
+        baseDamage = CheckTakeDamagePassives(attackTarget.GetTakeDamagePassives(), baseDamage, damageType, attacker, attackTarget, map);
         // Show the resistance calculation.
         ElementalResistance(attackTarget, baseDamage, damageType);
         if (damageType == "Physical")
@@ -564,20 +564,20 @@ public class AttackManager : ScriptableObject
         damageRolls += ") - "+disadvantage.ToString();
         return damage - disadvantage;
     }
-    protected void ActivatePassiveEffect(string passiveName, List<string> passiveStats, TacticActor target, TacticActor attacker, BattleMap map)
+    protected void ActivatePassiveEffect(string passiveName, string targetString, string effect, string specifics, TacticActor target, TacticActor attacker, BattleMap map)
     {
-        switch (passiveStats[3])
+        switch (targetString)
         {
             case "Advantage":
             passiveEffectString += "\n";
-            passiveEffectString += passiveName + " : " + passiveStats[3] + " : " + advantage+"->";
-            advantage = passive.AffectInt(advantage, passiveStats[4], passiveStats[5]);
+            passiveEffectString += passiveName + " : " + targetString + " : " + advantage+"->";
+            advantage = passive.AffectInt(advantage, effect, specifics);
             passiveEffectString += advantage;
             break;
             case "Damage%":
             passiveEffectString += "\n";
-            passiveEffectString += passiveName + " : " + passiveStats[3] + " : " + damageMultiplier + "->";
-            damageMultiplier = passive.AffectInt(damageMultiplier, passiveStats[4], passiveStats[5]);
+            passiveEffectString += passiveName + " : " + targetString + " : " + damageMultiplier + "->";
+            damageMultiplier = passive.AffectInt(damageMultiplier, effect, specifics);
             if (damageMultiplier < 0)
             {
                 damageMultiplier = 0;
@@ -587,71 +587,63 @@ public class AttackManager : ScriptableObject
             case "AttackValue":
             passiveEffectString += "\n";
             passiveEffectString += passiveName + " : " + "Bonus Damage" + " : " + bonusDamage + "->";
-            bonusDamage = passive.AffectInt(bonusDamage, passiveStats[4], passiveStats[5], attacker, target);
+            bonusDamage = passive.AffectInt(bonusDamage, effect, specifics, attacker, target);
             passiveEffectString += bonusDamage;
             break;
             case "DefenseValue":
             passiveEffectString += "\n";
             passiveEffectString += passiveName + " : " + "Bonus Defense" + " : " + bonusDefense + "->";
-            bonusDefense = passive.AffectInt(bonusDefense, passiveStats[4], passiveStats[5], attacker, target);
+            bonusDefense = passive.AffectInt(bonusDefense, effect, specifics, attacker, target);
             passiveEffectString += bonusDefense;
             break;
             case "AttackValue%":
             passiveEffectString += "\n";
             passiveEffectString += passiveName + " : " + "Attack Multiplier" + " : " + attackDamageMultiplier + "->";
-            attackDamageMultiplier = passive.AffectInt(attackDamageMultiplier, passiveStats[4], passiveStats[5]);
+            attackDamageMultiplier = passive.AffectInt(attackDamageMultiplier, effect, specifics);
             passiveEffectString += attackDamageMultiplier;
             break;
             case "DefenseValue%":
             passiveEffectString += "\n";
             passiveEffectString += passiveName + " : " + "Defense Multiplier" + " : " + defenseMultiplier + "->";
-            defenseMultiplier = passive.AffectInt(defenseMultiplier, passiveStats[4], passiveStats[5]);
+            defenseMultiplier = passive.AffectInt(defenseMultiplier, effect, specifics);
             passiveEffectString += defenseMultiplier;
             break;
             case "HitChance":
             passiveEffectString += "\n";
-            passiveEffectString += passiveName + " : " + passiveStats[3] + " : " + hitChance+"->";
-            hitChance = passive.AffectInt(hitChance, passiveStats[4], passiveStats[5], attacker, target);
+            passiveEffectString += passiveName + " : " + targetString + " : " + hitChance+"->";
+            hitChance = passive.AffectInt(hitChance, effect, specifics, attacker, target);
             passiveEffectString += hitChance;
             break;
             case "Dodge":
             passiveEffectString += "\n";
-            passiveEffectString += passiveName + " : " + passiveStats[3] + " : " + dodgeChance+"->";
-            dodgeChance = passive.AffectInt(dodgeChance, passiveStats[4], passiveStats[5], attacker, target);
+            passiveEffectString += passiveName + " : " + targetString + " : " + dodgeChance+"->";
+            dodgeChance = passive.AffectInt(dodgeChance, effect, specifics, attacker, target);
             passiveEffectString += dodgeChance;
             break;
             case "CritChance":
             passiveEffectString += "\n";
-            passiveEffectString += passiveName + " : " + passiveStats[3] + " : " + critChance+"->";
-            critChance = passive.AffectInt(critChance, passiveStats[4], passiveStats[5], attacker, target);
+            passiveEffectString += passiveName + " : " + targetString + " : " + critChance+"->";
+            critChance = passive.AffectInt(critChance, effect, specifics, attacker, target);
             passiveEffectString += critChance;
             break;
             case "CritDamage":
             passiveEffectString += "\n";
-            passiveEffectString += passiveName + " : " + passiveStats[3] + " : " + critDamage+"->";
-            critDamage = passive.AffectInt(critDamage, passiveStats[4], passiveStats[5]);
+            passiveEffectString += passiveName + " : " + targetString + " : " + critDamage+"->";
+            critDamage = passive.AffectInt(critDamage, effect, specifics);
             passiveEffectString += critDamage;
             break;
             case "Target":
-            passive.AffectActor(target, passiveStats[4], passiveStats[5]);
+            passive.AffectActor(target, effect, specifics);
             break;
             case "Attacker":
-            passive.AffectActor(attacker, passiveStats[4], passiveStats[5]);
+            passive.AffectActor(attacker, effect, specifics);
             break;
             case "Map":
-            map.ChangeTile(target.GetLocation(), passiveStats[4], passiveStats[5]);
-            break;
-            case "ElementalBonusDamage":
-            string[] eBD = passiveStats[5].Split(">>");
-            ElementalBonusDamage(attacker, target, int.Parse(eBD[1]), eBD[0], map);
-            break;
-            case "ElementalReflectDamage":
-            string[] eRD = passiveStats[5].Split(">>");
-            ElementalBonusDamage(target, attacker, int.Parse(eRD[1]), eRD[0], map);
+            map.ChangeTile(target.GetLocation(), effect, specifics);
             break;
         }
     }
-    protected void ApplyPassiveEffect(string pData, TacticActor target, TacticActor attacker, BattleMap map, string passiveName = "")
+    protected void ApplyPassiveEffect(string pData, TacticActor target, TacticActor attacker, BattleMap map, string passiveName = "", TacticActor actorPassiveSource = null)
     {
         if (pData.Length < 6 || !pData.Contains("|"))
         {
@@ -669,7 +661,19 @@ public class AttackManager : ScriptableObject
         }
         if (passive.CheckBattleConditions(pStats[1], pStats[2], target, attacker, map, damageType))
         {
-            ActivatePassiveEffect(passiveName, pStats, target, attacker, map);
+            string effectSpecifics = pStats[5];
+            if (actorPassiveSource != null)
+            {
+                if (actorPassiveSource == target)
+                {
+                    effectSpecifics = passive.GetEffectSpecifics(target, pStats[5], 0, map, attacker);
+                }
+                else
+                {
+                    effectSpecifics = passive.GetEffectSpecifics(attacker, pStats[5], 0, map, target);
+                }
+            }
+            ActivatePassiveEffect(passiveName, pStats[3], pStats[4], effectSpecifics, target, attacker, map);
         }
     }
     protected void ApplyAuraEffect(AuraEffect aura, TacticActor target, TacticActor attacker, BattleMap map)
@@ -677,10 +681,12 @@ public class AttackManager : ScriptableObject
         List<string> pStats = aura.ReturnPassiveStats();
         if (passive.CheckBattleConditions(pStats[1], pStats[2], target, attacker, map, damageType))
         {
-            ActivatePassiveEffect(pStats[0], pStats, target, attacker, map);
+            string auraSpecifics = pStats[5];
+            auraSpecifics = passive.GetEffectSpecifics(aura.actor, auraSpecifics, 0, map);
+            ActivatePassiveEffect(pStats[0], pStats[3], pStats[4], auraSpecifics, target, attacker, map);
         }
     }
-    protected int CheckTakeDamagePassives(List<string> passives, int damage, string damageType, TacticActor attacker, TacticActor target)
+    protected int CheckTakeDamagePassives(List<string> passives, int damage, string damageType, TacticActor attacker, TacticActor target, BattleMap map)
     {
         int originalDamage = damage;
         for (int i = 0; i < passives.Count; i++)
@@ -688,20 +694,26 @@ public class AttackManager : ScriptableObject
             List<string> passiveStats = passives[i].Split("|").ToList();
             if (passive.CheckTakeDamageCondition(passiveStats[1], passiveStats[2], originalDamage, damageType, attacker, target))
             {
+                string effectSpecifics = passiveStats[5];
+                effectSpecifics = passive.GetEffectSpecifics(target, effectSpecifics, damage, map, attacker);
                 string passiveName = passiveData.ReturnKeyFromValue(passives[i]);
                 finalDamageCalculation += "\n" + passiveName + "; Damage : " + damage;
-                damage = passive.AffectInt(damage, passiveStats[4], passiveStats[5]);
+                damage = passive.AffectInt(damage, passiveStats[4], effectSpecifics);
                 finalDamageCalculation += " > " + damage;
             }
         }
         return damage;
     }
-    public void ApplyPassives(List<string> bonusPassives, TacticActor target, TacticActor attacker, BattleMap map, string passiveSource = "")
+    public void ApplyActorPassives(List<string> actorPassives, TacticActor target, TacticActor attacker, BattleMap map, TacticActor passiveActor)
+    {
+        ApplyPassives(actorPassives, target, attacker, map, "", passiveActor);
+    }
+    public void ApplyPassives(List<string> bonusPassives, TacticActor target, TacticActor attacker, BattleMap map, string passiveSource = "", TacticActor actorPassiveSource = null)
     {
         for (int i = 0; i < bonusPassives.Count; i++)
         {
             if (bonusPassives[i].Length <= 0){continue;}
-            ApplyPassiveEffect(bonusPassives[i], target, attacker, map, passiveSource);
+            ApplyPassiveEffect(bonusPassives[i], target, attacker, map, passiveSource, actorPassiveSource);
         }
     }
     protected void CheckWeatherPassives(TacticActor target, TacticActor attacker, BattleMap map, bool forAttacker = true, bool forTarget = true)

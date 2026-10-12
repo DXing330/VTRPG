@@ -108,16 +108,33 @@ public class AutoChessAIPrepController : MonoBehaviour
         }
         UnityEngine.Debug.Log("======================================");
     }
+    void TimeSetupStep(string label, System.Action action)
+    {
+        if (!timeTracking)
+        {
+            action();
+            return;
+        }
+        Stopwatch stepTimer = Stopwatch.StartNew();
+        action();
+        LogTiming("Setup/" + label, stepTimer);
+    }
     public virtual void AIPrepPhase(AutoChessDataManager dataManager, bool timed = false)
     {
         timeTracking = timed;
         if (timeTracking){timer = Stopwatch.StartNew();}
-        prepManager.SetDataManager(dataManager);
-        prepManager.DisableUI();
-        shopManager.shopData.GeneratePVPCurrentListing();
-        shopManager.PVPRefreshData();
-        BuildStackCache();
-        ClearScoreCaches();
+        //prepManager.SetDataManager(dataManager);
+        //prepManager.DisableUI();
+        //shopManager.shopData.GeneratePVPCurrentListing();
+        //shopManager.PVPRefreshData();
+        //BuildStackCache();
+        //ClearScoreCaches();
+        TimeSetupStep("SetDataManager", () => prepManager.SetDataManager(dataManager, !timed));
+        TimeSetupStep("DisableUI", () => prepManager.DisableUI());
+        TimeSetupStep("GenerateListing", () => shopManager.shopData.GeneratePVPCurrentListing());
+        TimeSetupStep("RefreshShop", () => shopManager.PVPRefreshData());
+        TimeSetupStep("BuildStackCache", () => BuildStackCache());
+        TimeSetupStep("ClearScoreCaches", () => ClearScoreCaches());
         if (recordAIDecisions)
         {
             dataManager.AddLog(dataManager.GetEconState());

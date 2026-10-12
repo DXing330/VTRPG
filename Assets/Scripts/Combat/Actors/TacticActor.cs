@@ -906,6 +906,20 @@ public class TacticActor : ActorSubGameStats
         hurtCount.RemoveAt(index);
         hurtAmount.RemoveAt(index);
     }
+    // How Many Times Were You Hit By Someone.
+    public int GetHurtCount(TacticActor actor)
+    {
+        int indexOf = hurtByList.IndexOf(actor);
+        if (indexOf < 0){return 0;}
+        return hurtCount[indexOf];
+    }
+    // How Much You Were Hurt.
+    public int GetHurtAmount(TacticActor actor)
+    {
+        int indexOf = hurtByList.IndexOf(actor);
+        if (indexOf < 0){return 0;}
+        return hurtAmount[indexOf];
+    }
     public void HurtBy(TacticActor actor, int amount)
     {
         // Ignore those who don't deal any damage.

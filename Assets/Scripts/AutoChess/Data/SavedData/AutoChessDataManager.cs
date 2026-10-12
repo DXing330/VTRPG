@@ -425,7 +425,7 @@ public class AutoChessDataManager : SavedData
         if (factionData.FactionActive("Marvel"))
         {
             int stacks = int.Parse(factionData.GetStacksOfFaction("Marvel"));
-            int chance = ((20 + stacks) / (100 + stacks));
+            int chance = (100 * (20 + stacks) / (100 + stacks));
             int roll = RNG.SeedRange(0, 100);
             if (roll < chance)
             {

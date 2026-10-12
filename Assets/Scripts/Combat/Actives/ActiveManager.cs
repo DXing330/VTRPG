@@ -136,6 +136,12 @@ public class ActiveManager : MonoBehaviour
     {
         int targetTile = -1;
         int power = utility.SafeParseInt(powerString, 1);
+        TacticActor defaultTarget = targets.Count > 0 ? targets[0] : null;
+        if (powerString.StartsWith("Scaling"))
+        {
+            power = int.Parse(passive.GetEffectSpecifics(skillUser, powerString, 0, map, defaultTarget));
+            powerString = power.ToString();
+        }
         // There are some effects that naturally target a specific group of actors.
         if (effect.Contains("AllSpritesEquals"))
         {
@@ -365,7 +371,7 @@ public class ActiveManager : MonoBehaviour
             case "Attack+Grapple":
                 if (targets.Count <= 0) { return; }
                 // Grapple the first target if there are multiple.
-                skillUser.GrappleActor(targets[0]);
+                skillUser.GrappleActor(defaultTarget);
                 for (int i = 0; i < targets.Count; i++)
                 {
                     for (int j = 0; j < int.Parse(specifics); j++)
@@ -377,7 +383,7 @@ public class ActiveManager : MonoBehaviour
             case "Grapple":
                 if (targets.Count <= 0) { return; }
                 // Grapple the first target if there are multiple.
-                skillUser.GrappleActor(targets[0]);
+                skillUser.GrappleActor(defaultTarget);
                 return;
             case "ThrowGrappled":
                 if (!skillUser.Grappling()){return;}
@@ -613,7 +619,7 @@ public class ActiveManager : MonoBehaviour
                 {
                     case "Location":
                         if (targets.Count <= 0) { break; }
-                        map.SwitchActorLocations(targets[0], skillUser);
+                        map.SwitchActorLocations(defaultTarget, skillUser);
                         break;
                     case "TerrainEffect":
                         map.SwitchTerrainEffect(targetedTiles[0], skillUser.GetLocation());
@@ -671,13 +677,19 @@ public class ActiveManager : MonoBehaviour
                 for (int i = 0; i < targets.Count; i++)
                 {
                     if (targets[i].GetTeam() != skillUser.GetTeam()){continue;}
-                    // Grant them your weight and defense.
                     active.AffectActor(targets[i], specifics, powerString, 1);
                 }
                 return;
             case "AllEnemies":
                 targets = map.AllEnemies(skillUser);
                 active.AffectActors(targets, specifics, powerString, 1);
+                return;
+            case "TargetEnemies":
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    if (targets[i].GetTeam() == skillUser.GetTeam()){continue;}
+                    active.AffectActor(targets[i], specifics, powerString, 1);
+                }
                 return;
             case "Command":
                 for (int i = 0; i < targets.Count; i++)

@@ -127,9 +127,6 @@ public class RuntimeNeuralNetwork
         _headOutputBuffers = new float[heads.Length][];
         for (int i = 0; i < heads.Length; i++)
             _headOutputBuffers[i] = new float[heads[i].outputSize];
-        Debug.Log($"[RuntimeNN] Loaded v{CURRENT_VERSION} hierarchical model. " +
-                  $"Encoder: {numEncoderLayers} layers ({InputSize} → {EncoderOutputSize}). " +
-                  $"Heads: {string.Join(", ", Array.ConvertAll(heads, h => $"{h.name}({h.outputSize})"))}");
     }
     private Layer ReadLayer(BinaryReader reader)
     {
@@ -318,60 +315,5 @@ public class RuntimeNeuralNetwork
                 for (int j = 0; j < size; j++) target[j] = layer.preActivationCache[j];
                 break;
         }
-    }
-
-    // ============================================================
-    // LEGACY FLAT-MODEL LOADER (for backwards compatibility)
-    // ============================================================
-    /// <summary>
-    /// Loads the old flat sequential format and treats it as a single-head model.
-    /// The single head is named "policy_flat".
-    /// </summary>
-    public void LoadWeightsLegacy(string binaryPath)
-    {
-        int numLayers = 0;
-        using (var fs = new FileStream(binaryPath, FileMode.Open, FileAccess.Read))
-        using (var reader = new BinaryReader(fs))
-        {
-            numLayers = reader.ReadInt32();
-            encoder = new Layer[numLayers];
-            for (int i = 0; i < numLayers; i++)
-                encoder[i] = ReadLayer(reader);
-
-            for (int i = 0; i < numLayers; i++)
-                encoder[i].activation = (ActivationType)reader.ReadByte();
-        }
-
-        // Treat entire network as encoder with one flat head
-        EncoderOutputSize = encoder[numLayers - 1].weights.Length;
-        
-        // Remove last layer from encoder, make it the head
-        Layer lastLayer = encoder[numLayers - 1];
-        Array.Resize(ref encoder, numLayers - 1);
-
-        heads = new Head[1];
-        heads[0] = new Head
-        {
-            name = "policy_flat",
-            outputSize = lastLayer.weights.Length,
-            layer = lastLayer
-        };
-
-        // Allocate caches
-        foreach (var layer in encoder)
-        {
-            int outSize = layer.weights.Length;
-            layer.outputCache = new float[outSize];
-            layer.preActivationCache = new float[outSize];
-        }
-        heads[0].layer.outputCache = new float[heads[0].outputSize];
-        heads[0].layer.preActivationCache = new float[heads[0].outputSize];
-
-        _currentInput = new float[InputSize];
-        _encodedOutput = new float[EncoderOutputSize];
-        _headOutputBuffers = new float[1][];
-        _headOutputBuffers[0] = new float[heads[0].outputSize];
-
-        Debug.Log($"[RuntimeNN] Loaded legacy flat model ({numLayers} layers, {heads[0].outputSize} outputs) as single-head 'policy_flat'.");
     }
 }

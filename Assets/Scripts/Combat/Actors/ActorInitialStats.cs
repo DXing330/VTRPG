@@ -8,7 +8,6 @@ using UnityEngine;
 // Stats that are saved outside of battle + current health/mana/statuses
 public class ActorInitialStats : ActorPassives
 {
-
     public int SafeParseInt(string intString, int defaultValue = 0)
     {
         try
@@ -85,6 +84,7 @@ public class ActorInitialStats : ActorPassives
     }
     public virtual void SetInitialStatsFromString(string newStats)
     {
+        LoadStatNames();
         SetInitialStats(newStats.Split(delimiter).ToList());
     }
     // Make sure the ordering and naming is correct based on the statNames.
@@ -296,7 +296,7 @@ public class ActorInitialStats : ActorPassives
                 List<string> curses = newStat.Split(",").ToList();
                 for (int i = 0; i < curses.Count; i++)
                 {
-                    AddStatus(curses[i], -1);
+                    AddCurse(curses[i]);
                 }
                 break;
         }
@@ -694,6 +694,15 @@ public class ActorInitialStats : ActorPassives
             return;
         }
         RemoveStatus(specifics);
+    }
+    public void Cleanse(int amount = 1)
+    {
+        for (int i = 0; i < amount; i++)
+        {
+            if (statuses.Count <= 0){return;}
+            statuses.RemoveAt(0);
+            statusDurations.RemoveAt(0);
+        }
     }
     public void RemoveStatus(string statusName)
     {

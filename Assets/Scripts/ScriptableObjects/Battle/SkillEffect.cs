@@ -11,7 +11,7 @@ public class SkillEffect : ScriptableObject
     public StatDatabase standardSpells;
     public int basicDenominator = 100;
     public int baseStatusDuration = 1;
-    public void AffectActor(TacticActor target, string effect, string effectSpecifics, int level = 1, CombatLog combatLog = null)
+    public virtual void AffectActor(TacticActor target, string effect, string effectSpecifics, int level = 1, CombatLog combatLog = null)
     {
         if (target == null){return;}
         if (effect.EndsWith("Damage"))
@@ -112,8 +112,23 @@ public class SkillEffect : ScriptableObject
                 }
                 target.AddBuff(effectSpecifics, bDuration);
                 break;
+            case "BuffAndDuration":
+                string[] buffDuration = effectSpecifics.Split("Equals");
+                if (buffDuration.Length < 2){return;}
+                AffectActor(target, "Buff", buffDuration[0], SafeParseInt(buffDuration[1]), combatLog);
+                break;
             case "RemoveBuff":
                 target.RemoveBuff(effectSpecifics);
+                break;
+            case "ExtendBuffs":
+                target.ExtendBuffs(int.Parse(effectSpecifics));
+                break;
+            case "HealingCleanse":
+                target.Heal(int.Parse(effectSpecifics));
+                target.Cleanse(1);
+                break;
+            case "Cleanse":
+                target.Cleanse(int.Parse(effectSpecifics));
                 break;
             case "RemoveStatus":
                 target.RemoveStatus(effectSpecifics);
@@ -131,6 +146,12 @@ public class SkillEffect : ScriptableObject
                 break;
             case "DoubleTempHealthStacks":
                 target.DoubleTempHealthGained(int.Parse(effectSpecifics));
+                break;
+            case "SelfHeal":
+                target.SelfHeal(int.Parse(effectSpecifics));
+                break;
+            case "Heal":
+                target.Heal(int.Parse(effectSpecifics));
                 break;
             // Default is increasing health.
             case "Health":
@@ -234,7 +255,7 @@ public class SkillEffect : ScriptableObject
                 // Positive boosts always increase stat by at least 1.
                 if (int.Parse(effectSpecifics) > 0)
                 {
-                    bDefChange = Mathf.Max(1, bDefPChange);
+                    bDefPChange = Mathf.Max(1, bDefPChange);
                 }
                 target.UpdateBaseDefense(bDefPChange);
                 target.UpdateDefense(bDefPChange);
@@ -559,6 +580,9 @@ public class SkillEffect : ScriptableObject
                     break;
                 }
                 break;
+            case "Unhealable":
+                target.SetUnhealable(1);
+                break;
             case "AKRespawnTimer":
                 target.ChangeRespawnTimer(int.Parse(effectSpecifics));
                 break;
@@ -573,6 +597,10 @@ public class SkillEffect : ScriptableObject
             case "Damage":
                 damage = target.TakeEffectDamage(damage);
                 break;
+            // Just In Case.
+            case "PhysicalDamage":
+                target.TakeEffectDamage(damage, "Physical");
+                break;
             case "TrueDamage":
                 target.currentHealth -= damage;
                 break;
@@ -586,6 +614,11 @@ public class SkillEffect : ScriptableObject
                 }
                 damage = target.ApplyMagicResist(damage);
                 damage = target.TakeEffectDamage(damage, "Lightning");
+                int stunChance = Mathf.Min(100, damage / 4);
+                if (Random.Range(0, 100) < stunChance)
+                {
+                    target.AddStatus("Stun", 1);
+                }
                 break;
             case "FireDamage":
                 // Fire removes bleeds/freeze.
@@ -596,23 +629,42 @@ public class SkillEffect : ScriptableObject
                 // Bonus Damage For Each Burn Stack, Penetrates Magic Resist.
                 damage += target.StatusStacks("Burn");
                 damage = target.TakeEffectDamage(damage, "Fire");
+                // Apply Burn Randomly If The Damage Is Very High.
+                int burnChance = Mathf.Min(100, damage / 2);
+                if (Random.Range(0, 100) < burnChance)
+                {
+                    target.AddStatus("Burn", -1);
+                }
                 break;
             case "WaterDamage":
                 damage = target.ApplyMagicResist(damage);
                 // Bonus Damage Based On Wet Duration, Penetrates Magic Resist.
                 damage += target.ReturnStatusDuration("Wet");
                 damage = target.TakeEffectDamage(damage, "Water");
+                target.AddStatus("Wet", Mathf.Max(1, target.GetWeight()));
                 break;
             case "IceDamage":
                 // Ice removes bleeds/burns.
                 target.RemoveStatus("Bleed");
                 target.RemoveStatus("Burn");
-                // Freeze If Wet.
+                // Wet -> Freeze.
                 if (target.StatusExists("Wet"))
                 {
                     int freezeDuration = target.ReturnStatusDuration("Wet");
                     target.RemoveStatus("Wet");
                     target.AddStatus("Frozen", freezeDuration);
+                }
+                // !Wet + !Cold -> Cold
+                else if (!target.StatusExists("Cold"))
+                {
+                    target.AddStatus("Cold", 1);
+                }
+                // !Wet + Already Cold -> Freeze
+                else
+                {
+                    int coldToFreezeDuration = target.ReturnStatusDuration("Cold");
+                    target.RemoveStatus("Cold");
+                    target.AddStatus("Frozen", coldToFreezeDuration);
                 }
                 damage = target.ApplyMagicResist(damage);
                 damage = target.TakeEffectDamage(damage, "Ice");
@@ -622,6 +674,11 @@ public class SkillEffect : ScriptableObject
                 damage *= Mathf.Max(1, target.GetWeight());
                 damage = target.ApplyMagicResist(damage);
                 damage = target.TakeEffectDamage(damage, "Earth");
+                int bleedChance = Mathf.Min(100, damage / 2);
+                if (Random.Range(0, 100) < bleedChance)
+                {
+                    target.AddStatus("Bleed", -1);
+                }
                 break;
             case "LightDamage":
                 // Remove Poison.
@@ -636,12 +693,22 @@ public class SkillEffect : ScriptableObject
                 // Bonus Damage For Each Unique Status, Penetrates Magic Resist.
                 damage += target.GetUniqueStatuses().Count;
                 damage = target.TakeEffectDamage(damage, "Dark");
+                int poisonChance = Mathf.Min(100, damage / 2);
+                if (Random.Range(0, 100) < poisonChance)
+                {
+                    target.AddStatus("Poison", -1);
+                }
                 break;
             case "AirDamage":
                 // Decrease weight.
                 target.UpdateWeight(-1);
                 damage = target.ApplyMagicResist(damage);
                 damage = target.TakeEffectDamage(damage, "Air");
+                int airBleedChance = Mathf.Min(100, damage / 2);
+                if (Random.Range(0, 100) < airBleedChance)
+                {
+                    target.AddStatus("Bleed", -1);
+                }
                 break;
         }
         if (map != null && damage > 0)

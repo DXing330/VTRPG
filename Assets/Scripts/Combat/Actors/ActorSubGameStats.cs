@@ -16,6 +16,7 @@ public class ActorSubGameStats : ActorStats
         ResetFactions();
         autoChessTrait = new AutoChessTrait();
         akHealer = 0;
+        totalDeployCount = 0;
         baseRespawnTimer = 99;
         currentRespawnTimer = 0;
         autoChessTemporaryTraits.Clear();
@@ -46,6 +47,24 @@ public class ActorSubGameStats : ActorStats
         if (AutoChessMaxEquipCount()){return;}
         autoChessEquipment.Add(newEquip);
     }
+    public int totalDeployCount = 0;
+    public void IncrementDeployCount(){totalDeployCount++;}
+    public int GetDeployCount(){return totalDeployCount;}
+    public float subAttackActionCost = 2f;
+    public void SetSubAttackActionCost(float newCost)
+    {
+        subAttackActionCost = newCost;
+    }
+    public float GetSubAttackActionCost()
+    {
+        return subAttackActionCost;
+    }
+    public float GetSubAttackActionCostAfterAttackSpeed()
+    {
+        float attackSpeed = (float) GetAttackSpeed();
+        if (attackSpeed <= 0f){return GetSubAttackActionCost();}
+        return subAttackActionCost / (1f + (attackSpeed / 100f));
+    }
     public string autoSkill;
     public string GetAutoSkill(){return autoSkill;}
     public int autoSkillCooldown;
@@ -71,7 +90,7 @@ public class ActorSubGameStats : ActorStats
         if (autoChessFactions.Contains(newFaction)){return;}
         autoChessFactions.Add(newFaction);
     }
-    protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kjerag", "Laterano", "Sargon", "Siracusa", "Victoria", "Yan", "Harmony"};
+    protected readonly HashSet<string> autoChessMainFactions = new(){"Aegir", "Kazimierz", "Kjerag", "Laterano", "Sargon", "Siracusa", "Victoria", "Yan", "Harmony"};
     public bool AutoChessFaction(string factionName)
     {
         for (int i = 0; i < autoChessFactions.Count; i++)

@@ -17,9 +17,11 @@ public class AutoChessShopManager : MonoBehaviour
         return blocks[0];
     }
     public StatDatabase actorCost;
-    public int ReturnActorCost(string actorName)
+    public int ReturnActorCost(string actorName, AutoChessFactionManager factions = null)
     {
-        return int.Parse(actorCost.ReturnValue(actorName));
+        int currentCost = int.Parse(actorCost.ReturnValue(actorName));
+        if (factions != null && factions.GetStacksOfFaction("Foresight") >= 100){currentCost--;}
+        return currentCost;
     }
     public int ReturnActorCost(AutoActorRollUpData actor)
     {
