@@ -24,8 +24,6 @@ public class ActorPathfinderTester : MapManager
         InitializeElevations();
         moveManager.SetMapElevations(mapElevations);
         // Randomize Borders.
-        RandomizeBorders();
-        moveManager.SetBorders(borderDetails);
         // Set the move manager which will set the pathfinder.
         UpdateMap();
     }

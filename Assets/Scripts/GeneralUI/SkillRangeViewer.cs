@@ -34,6 +34,14 @@ public class SkillRangeViewer : MaskableGraphic
         targetShape = activeSkill.GetShape();
         SetVerticesDirty();
     }
+    public void DrawActiveSpell(MagicSpell spell, TacticActor skillActor = null)
+    {
+        range = spell.GetRange(skillActor);
+        rangeShape = spell.GetRangeShape();
+        span = spell.GetSpan(skillActor);
+        targetShape = spell.GetShape();
+        SetVerticesDirty();
+    }
     public void ClearSkill()
     {
         range = 0;

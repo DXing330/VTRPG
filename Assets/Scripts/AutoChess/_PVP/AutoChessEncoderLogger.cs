@@ -112,12 +112,12 @@ public class AutoChessEncoderLogger : SavedData
         if (currentMatch == null || currentMatch.steps == null) return;
         if (action < 0 || action >= validMask.Length)
         {
-            Debug.LogError($"INVALID AI ACTION INDEX: action={action}, " + $"maskLength={validMask.Length}");
+            Debug.LogError($"[NN] INVALID AI ACTION INDEX: action={action}, " + $"maskLength={validMask.Length}");
             return;
         }
         if (!validMask[action])
         {
-            Debug.LogError($"AI ACTION/MASK MISMATCH: " + $"action={GetActionTypeName(action)}");
+            Debug.Log($"[NN] AI ACTION/MASK MISMATCH: " + $"action={GetActionTypeName(action)}");
         }
         currentMatch.steps[writeIndex] = BuildDecisionStep(state, validMask, action, oldLogProb, oldValue);
         writeIndex = (writeIndex + 1) % MAX_STORED;
@@ -130,13 +130,13 @@ public class AutoChessEncoderLogger : SavedData
         bool[] validMask = encoder.BuildValidMask(prep, data, shop, factions);
         if (action < 0 || action >= validMask.Length)
         {
-            Debug.LogError($"INVALID AI ACTION INDEX: " + $"action={action}, " + $"maskLength={validMask.Length}");
+            Debug.LogError($"[PREP] INVALID AI ACTION INDEX: " + $"action={action}, " + $"maskLength={validMask.Length}");
             return;
         }
         if (!validMask[action])
         {
             string actionTypeName = GetActionTypeName(action);
-            Debug.LogError($"AI ACTION/MASK MISMATCH: " + $"action={action}, " +$"actionType={actionTypeName}" + $" | benchCount={prep.benchSlots.Count}" + $" | fieldCount={prep.fieldSlots.Count}" + $" | maxField={prep.GetMaxFieldSlots()}" + $" | maxBench={prep.GetMaxBenchSlots()}");
+            Debug.LogError($"[PREP] AI ACTION/MASK MISMATCH: " + $"action={action}, " +$"actionType={actionTypeName}" + $" | benchCount={prep.benchSlots.Count}" + $" | fieldCount={prep.fieldSlots.Count}" + $" | maxField={prep.GetMaxFieldSlots()}" + $" | maxBench={prep.GetMaxBenchSlots()}");
             Debug.LogError($"Full validMask: [{string.Join(", ", validMask)}]");
             Debug.LogError($"Bench=[{string.Join(", ", prep.benchSlots.ConvertAll(x => x.GetName()))}]");
             Debug.LogError($"Field=[{string.Join(", ", prep.fieldSlots.ConvertAll(x => x.GetName()))}]");

@@ -8,6 +8,9 @@ public class DungeonSelectList : MonoBehaviour
     public GeneralUtility utility;
     public MainCampaignState mainStory;
     public PartyDataManager partyData;
+    public PartyDataManager mysteryDungeonParty;
+    public MysteryDungeonState dungeonState;
+    public PartyDungeonState partyDungeonState;
     public List<GameObject> dungeonSelectObjects;
     public int page = 0;
     public void ChangePage(bool right)
@@ -22,8 +25,8 @@ public class DungeonSelectList : MonoBehaviour
     }
     public void SelectDungeon()
     {
-        dungeon.SetDungeonName(currentDungeons[selected]);
-        // If it's a story quest then do things differently.
+        dungeonState.InitializeDungeonByName(currentDungeons[selected]);
+        /* If it's a story quest then do things differently.
         if (currentDungeons[selected] == mainStory.GetRequestLocation() && mainStory.GetCurrentChapter() != 1)
         {
             dungeon.SetStoryQuest();
@@ -48,9 +51,14 @@ public class DungeonSelectList : MonoBehaviour
                     partyData.AddTempPartyMember(dungeon.GetEscortName());
                 }
             }
-        }
-        partyData.Save();
-        dungeon.MakeDungeon();
+        }*/
+        // TODO Copy The Current Party Into The Mystery Dungeon Party.
+        partyData.Load();
+        mysteryDungeonParty.CombineIntoMainParty(partyData);
+        mysteryDungeonParty.Save();
+        partyDungeonState.SetLeaderID(mysteryDungeonParty.GetLeaderID());
+        partyDungeonState.Save();
+        dungeonState.Save();
         // Move Scene.
         sceneMover.MoveToDungeon();
     }
@@ -60,7 +68,6 @@ public class DungeonSelectList : MonoBehaviour
     public List<TMP_Text> difficultyTexts;
     public List<TMP_Text> questCountTexts;
     public List<TMP_Text> dungeonNames;
-    public Dungeon dungeon;
     public SceneMover sceneMover;
     void Start()
     {

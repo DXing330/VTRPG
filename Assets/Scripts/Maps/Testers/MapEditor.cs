@@ -188,8 +188,7 @@ public class MapEditor : MapManager
             //TEffects.
             terrainEffects.Add("");
             // Borders.
-            mapTiles[i].ResetBorders();
-            borders.Add(mapTiles[i].ReturnBorderString());
+            mapTileBorders.Add("|||||");
             // Buildings.
             buildings.Add("");
         }
@@ -205,15 +204,9 @@ public class MapEditor : MapManager
         mapDisplayers[3].DisplayCurrentTiles(mapTiles, cTerrainEffects, currentTiles);
         for (int i = 0; i < cTileElevations.Count; i++)
         {
-            mapTiles[i].SetElevation(int.Parse(cTileElevations[i]));
-            mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E"+mapTiles[i].GetElevation().ToString()));
+            mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E" + mapElevations[i]), mapElevations[i]);
         }
-        // Borders.
-        for (int i = 0; i < cBorders.Count; i++)
-        {
-            mapTiles[i].SetBorders(cBorders[i].Split("|").ToList());
-            UpdateTileBorderSprites(i);
-        }
+        // TODO Borders.
     }
     public void UpdateMapWithActors(List<string> actors, List<string> actorLocations, List<string> allyLocations)
     {
@@ -480,6 +473,7 @@ public class MapEditor : MapManager
     public List<int> dirInts;
     protected void ChangeBorders(List<int> tileNumbers, string change)
     {
+        /*
         if (change == "Outer")
         {
             for (int i = 0; i < tileNumbers.Count; i++)
@@ -490,7 +484,6 @@ public class MapEditor : MapManager
                     if (!tileNumbers.Contains(mapUtility.PointInDirection(tileNumbers[i], j, mapSize)))
                     {
                         // Add the border in that direction.
-                        mapTiles[tileNumbers[i]].ChangeBorder(defaultBorder, j);
                     }
                 }
                 cBorders[tileNumbers[i]] = mapTiles[tileNumbers[i]].ReturnBorderString();
@@ -514,6 +507,6 @@ public class MapEditor : MapManager
                 mapTiles[tileNumbers[i]].ChangeBorder(defaultBorder, direction);
             }
             cBorders[tileNumbers[i]] = mapTiles[tileNumbers[i]].ReturnBorderString();
-        }
+        }*/
     }
 }

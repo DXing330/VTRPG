@@ -11,7 +11,8 @@ public class SimpleMapManager : ClickTileManager
     {
         mapSize = Mathf.RoundToInt(Mathf.Sqrt(mapInfo.Count));
     }
-    public List<string> mapInfo;
+    [System.NonSerialized]
+    public List<string> mapInfo = new();
     public virtual List<int> GetRoomTiles(int startTile)
     {
         List<int> roomTiles = new List<int>();

@@ -441,20 +441,28 @@ public class AutoChessPrepManager : ClickTileManager
             }
         }
     }
-    public void FastSellSelectedActor(AutoActorRollUpData soldActor)
+    protected void CompleteSale(AutoActorRollUpData soldActor)
     {
-        if (soldActor == null){return;}
+        dataManager.SellActor();
+        shopManager.SellActor(soldActor);
+        ResetSelected();
+        dataManager.GainGold(1);
         dataManager.AddLog("Sold " + soldActor.GetName());
         CheckTraitTiming(soldActor, "OnSold");
         dataManager.ReclaimEquipmentFromActor(soldActor);
-        dataManager.SellActor();
-        shopManager.SellActor(soldActor);
+        CommercialPackagingPlan();
+        UpdateBonusSlots();
+    }
+    public void FastSellSelectedActor(AutoActorRollUpData soldActor)
+    {
+        if (soldActor == null){return;}
         int benchIndex = benchSlots.IndexOf(soldActor);
         int fieldIndex = fieldSlots.IndexOf(soldActor);
         if (benchIndex >= 0)
         {
             LogPrepDecision(9 + benchIndex);  // HOOK: Sell Bench 0-11
             benchSlots.Remove(soldActor);
+            CompleteSale(soldActor);
         }
         // TODO How To Log Sell From Field?
         // Maybe Move It Back To Bench Then Log Sell From Bench?
@@ -468,18 +476,12 @@ public class AutoChessPrepManager : ClickTileManager
                 int newBenchIndex = benchSlots.IndexOf(soldActor);
                 LogPrepDecision(9 + newBenchIndex);// Sell
                 benchSlots.Remove(soldActor);
-                ResetSelected();
-                dataManager.GainGold(1);
-                CommercialPackagingPlan();
-                UpdateBonusSlots();
+                CompleteSale(soldActor);
                 return;
             }
             fieldSlots.Remove(soldActor);
+            CompleteSale(soldActor);
         }
-        ResetSelected();
-        dataManager.GainGold(1);
-        CommercialPackagingPlan();
-        UpdateBonusSlots();
     }
     public void FastSellSelectedActor()
     {

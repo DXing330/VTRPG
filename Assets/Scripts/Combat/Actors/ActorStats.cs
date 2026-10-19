@@ -457,6 +457,10 @@ public class ActorStats : ActorInitialStats
     {
         currentEnergy = amount;
     }
+    public void RestoreEnergy()
+    {
+        currentEnergy = GetBaseEnergy();
+    }
     public void UpdateEnergy(int changeAmount, bool decrease = false)
     {
         if (decrease) { LoseEnergy(changeAmount); }
@@ -830,7 +834,7 @@ public class ActorStats : ActorInitialStats
     }
     public void RemoveBuff(string buffName)
     {
-        if (buffName == "All")
+        if (string.Equals(buffName, "All", StringComparison.OrdinalIgnoreCase))
         {
             buffs.Clear();
             buffDurations.Clear();

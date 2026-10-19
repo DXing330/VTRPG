@@ -15,7 +15,7 @@ public class MoveCostManager : ScriptableObject
         SetMapInfo(map.mapInfo);
         SetMapTerrainEffects(map.terrainEffectTiles);
         SetMapElevations(map.mapElevations);
-        SetBorders(map.borderDetails);
+        SetBorders(map.mapTileBorders);
         SetBuildings(map.buildings, map.buildingLocations);
     }
     public List<string> mapInfo;
@@ -30,8 +30,22 @@ public class MoveCostManager : ScriptableObject
         mapTerrainEffects = newInfo;
     }
     public List<int> mapElevations;
+    protected void ResetMapElevations()
+    {
+        mapElevations.Clear();
+        for (int i = 0; i < mapInfo.Count; i++)
+        {
+            mapElevations.Add(0);
+        }
+    }
     public void SetMapElevations(List<int> newInfo)
     {
+        if (newInfo == null)
+        {
+            ResetMapElevations();
+            actorPathfinder.SetElevations(mapElevations);
+            return;
+        }
         mapElevations = new List<int>(newInfo);
         actorPathfinder.SetElevations(mapElevations);
     }
@@ -47,8 +61,17 @@ public class MoveCostManager : ScriptableObject
     public StatDatabase borderMoveCosts;
     public void SetBorders(List<string> newInfo)
     {
-        borders = new List<string>(newInfo);
         List<string> borderCosts = new List<string>();
+        if (newInfo == null)
+        {
+            for (int i = 0; i < mapInfo.Count; i++)
+            {
+                borderCosts.Add("0|0|0|0|0|0");
+            }
+            actorPathfinder.SetBorders(borderCosts);
+            return;
+        }
+        borders = new List<string>(newInfo);
         for (int i = 0; i < borders.Count; i++)
         {
             string cost = "";

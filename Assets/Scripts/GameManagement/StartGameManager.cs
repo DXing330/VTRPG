@@ -5,6 +5,7 @@ using UnityEngine;
 public class StartGameManager : MonoBehaviour
 {
     public PartyDataManager partyManager;
+    public PartyDataManager mysteryDungeonParty;
     public List<SavedData> gameData;
     public List<References> allReferences;
     public PartyDataManager roguelikeParty;

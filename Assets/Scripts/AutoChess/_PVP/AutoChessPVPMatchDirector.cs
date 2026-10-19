@@ -91,13 +91,11 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
     {
         logMatches = true;
         allPlayers.EnableLogs();
-        prepManager.logging = true;
     }
     public void DisableLogs()
     {
         logMatches = false;
         allPlayers.DisableLogs();
-        prepManager.logging = false;
     }
     public List<AutoChessDataManager> GetAliveTeams()
     {
@@ -151,6 +149,13 @@ public class AutoChessPVPMatchDirector : MonoBehaviour
         // Only Start For Player Matches, Else Do Nothing Until Called.
         if (autoAssignAIGenomes)
         {
+            if (useNeuralNet)
+            {
+                for (int i = 0; i < neuralNetSlots.Length; i++)
+                {
+                    neuralNetControllers[i].LoadModel();
+                }
+            }
             allPlayers.Load();
             if (logMatches)
             {

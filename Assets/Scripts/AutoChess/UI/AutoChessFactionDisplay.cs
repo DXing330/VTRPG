@@ -106,7 +106,7 @@ public class AutoChessFactionDisplay : MonoBehaviour
             case "Assist": // Need a check for upgraded allies.
             return "All allies take -20% DMG and gain +20% ATK.";
             case "Aegir": // Need a check for defeated ally count.
-            return "At the start of battle, Aegir units consume the unit in front, absorbing their ATK. All Aegir units have {+" + (stacks + 40) + "%} health. If there are 5+ Aegir Faction allies, then the first 3 Aegir Faction allies defeated will immediately be revived.";
+            return "At the start of battle, Aegir units consume the unit in front, absorbing their ATK. All Aegir units have {+" + (stacks + 40) + "%} health. If there are 6+ Aegir Faction allies, then the first 3 Aegir Faction allies defeated will immediately be revived.";
             case "Kazimierz":
             return "Kazimierz allies gain +20% ATK for each ally deployed, up to {" + (50 + stacks) + "%}. If there are 6+ Kazimierz Faction allies, then after attacking Kazimierz Faction allies deal additional Light Damage equal to 30% of their ATK.";
             case "Kjerag": // Implemented
@@ -143,7 +143,7 @@ public class AutoChessFactionDisplay : MonoBehaviour
             return "All allies gain {+" + (30 + stacks) + "%} defense. At the start of each battle, all active factions gain 2 stacks. If there are 3+ Aid Faction allies, then instead gain 4 stacks.";
             // ECON
             case "Marvel": // Not In Battle
-            return "When rerolling, there is {~" + (100 * (20 + stacks) / (100 + stacks)) + "%} chance to gain 1 gold. Every 50 stacks, gain 10 gold next round.";
+            return "When rerolling, there is {~" + (100 * (40 + stacks) / (200 + stacks)) + "%} chance to gain 1 gold. Every 50 stacks, gain 10 gold next round.";
             case "Foresight": // Not In Battle
             return "Every 10 stacks, gain 2 gold next round. At 100+ stacks, shop units cost -1 gold.";
             case "Investor": // Not In Battle

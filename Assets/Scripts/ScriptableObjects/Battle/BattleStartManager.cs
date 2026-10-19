@@ -111,15 +111,7 @@ public class BattleStartManager : ScriptableObject
         map.SetMapInfo(savedMapInfo);
         map.terrainEffectTiles = new List<string>(savedTerrainEffects);
         map.mapElevations = new List<int>(savedElevations);
-        for (int i = 0; i < Mathf.Min(map.mapTiles.Count, savedBorders.Count); i++)
-        {
-            map.mapTiles[i].SetBorders(savedBorders[i].Split("|").ToList());
-            map.UpdateTileBorderSprites(i);
-        }
-        for (int i = 0; i < Mathf.Min(map.mapTiles.Count, savedElevations.Count); i++)
-        {
-            map.ChangeTileElevation(i, savedElevations[i]);
-        }
+        map.SetBorders(savedBorders);
         for (int i = 0; i < savedBuildings.Count; i++)
         {
             if (savedBuildings[i].Length <= 0){continue;}

@@ -43,7 +43,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     public bool neuralNetWorkerMode = false;
     void NeuralNetTraining()
     {
-        benchmarkNeuralNet = true;
         autoStartTraining = false;
         autoStartEloTournament = false;
     }
@@ -51,7 +50,6 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     {
         neuralNetMasterMode = true;
         neuralNetWorkerMode = false;
-        benchmarkNeuralNet = false;
         autoStartTraining = false;
         autoStartEloTournament = false;
         trainingMode = TrainingMode.Master;
@@ -60,20 +58,17 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     {
         neuralNetMasterMode = false;
         neuralNetWorkerMode = true;
-        benchmarkNeuralNet = false;
         autoStartTraining = false;
         autoStartEloTournament = false;
         trainingMode = TrainingMode.Worker;
     }
     void GenomeTraining()
     {
-        benchmarkNeuralNet = false;
         autoStartTraining = true;
         autoStartEloTournament = false;
     }
     void GenomeElo()
     {
-        benchmarkNeuralNet = false;
         autoStartTraining = false;
         autoStartEloTournament = true;
     }
@@ -585,8 +580,7 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
     }
     [Header("Neural Net Config")]
     public AutoChessDecisionDatabase decisionDB;
-    public bool benchmarkNeuralNet = false;
-    public int placementWinThreshold = 1; // Adjustable, Could Be 4th place or higher is considered a "Win".
+    public int neuralNetCount = 8;
     public int neuralNetBenchmarkMatches = 100;
     IEnumerator RunNeuralNetMasterLoop()
     {
@@ -681,14 +675,13 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
         // Clear this worker's previous decision data before collecting.
         decisionDB.ClearWorkerDecisionData();
         Debug.Log($"NN Worker {trainingWorker}: Collecting {matchesToRun} matches.");
-        int winCount = 0;
         int completedMatches = 0;
         float startTime = Time.realtimeSinceStartup;
         for (int i = 0; i < matchesToRun; i++)
         {
             Application.targetFrameRate = -1;
             director.EnableLogs();
-            director.neuralNetCount = 7;
+            director.neuralNetCount = neuralNetCount;
             director.SetupNNMatch();
             director.matchOver = false;
             director.roundCount = 0;
@@ -697,30 +690,22 @@ public class AutoChessPVPEvolutionTrainer : MonoBehaviour
                 director.AIPrepPhase(true);
                 yield return null;
             }
-            if (director.neuralNetWon)
-            {
-                winCount++;
-            }
             completedMatches++;
-            if (completedMatches % 10 == 0 ||
-                completedMatches == matchesToRun)
+            if (completedMatches % 10 == 0 || completedMatches == matchesToRun)
             {
                 Debug.Log($"NN Worker {trainingWorker}: " + $"{completedMatches}/{matchesToRun} matches completed.");
             }
         }
         // Publish completion only after the worker has finished its match loop.
         float elapsed = Time.realtimeSinceStartup - startTime;
-        Debug.Log(
-            $"NN Worker {trainingWorker}: Finished {completedMatches} matches " +
-            $"in {elapsed:F1}s. NN wins: {winCount}.");
+        Debug.Log($"NN Worker {trainingWorker}: Finished {completedMatches} matches " + $"in {elapsed:F1}s.");
         try
         {
             File.WriteAllText(donePath, completedMatches.ToString());
         }
         catch (Exception e)
         {
-            Debug.LogError(
-                $"NN Worker {trainingWorker}: Could not write completion signal: {e.Message}");
+            Debug.LogError($"NN Worker {trainingWorker}: Could not write completion signal: {e.Message}");
         }
         #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;

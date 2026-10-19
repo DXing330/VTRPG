@@ -53,6 +53,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
     public TMP_Text roundText;
     public TMP_Text levelText;
     public TMP_Text goldText;
+    public TMP_Text rerollText;
     public TMP_Text castleHealthText;
     public TMP_Text deployLimitText;
     public void UpdateAutoChessUI(AutoChessPrepManager prepManager)
@@ -81,6 +82,7 @@ public class AutoChessPrepUIManager : MonoBehaviour
         }
         goldText.text = dataManager.GetGold().ToString();
         castleHealthText.text = dataManager.GetHealth().ToString();
+        rerollText.text = dataManager.GetFreeRerolls() > 0 ? "Reroll"+$"\n({dataManager.GetFreeRerolls()} Free)" : "Reroll"+"\n(1 Gold)";
         deployLimitText.text = prepManager.fieldSlots.Count + "/" + (prepManager.GetMaxFieldSlots()).ToString();
         equipDisplay.UpdateDisplay();
     }

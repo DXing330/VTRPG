@@ -273,7 +273,7 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         if (leftTeam.factionData.FactionActive("Aegir"))
         {
             aegirManager.ApplyAegirFactionEffect(map.battlingActors, map, this);
-            if (leftTeam.factionData.GetCountOfFaction("Aegir") >= 5)
+            if (leftTeam.factionData.GetCountOfFaction("Aegir") >= 6)
             {
                 aegirRevives = 2;
             }
@@ -307,7 +307,7 @@ public class AutoChessPVPBattleManager : AutoBattleManager
         if (rightTeam.factionData.FactionActive("Aegir"))
         {
             aegirManager.ApplyAegirFactionEffect(map.battlingActors, map, this, 1);
-            if (rightTeam.factionData.GetCountOfFaction("Aegir") >= 5)
+            if (rightTeam.factionData.GetCountOfFaction("Aegir") >= 6)
             {
                 aegirRevives2 = 2;
             }

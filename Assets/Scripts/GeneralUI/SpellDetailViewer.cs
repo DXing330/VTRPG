@@ -18,6 +18,10 @@ public class SpellDetailViewer : ActiveDescriptionViewer
         if (activeSelect.GetSelected() < 0){return;}
         dummySpell.LoadSkillFromString(divineSpellData.ReturnValue(activeSelect.GetSelectedStat()));
         popUp.SetMessage(ReturnSpellDescription(dummySpell));
+        if (skillRangeViewer != null)
+        {
+            skillRangeViewer.DrawActiveSpell(dummySpell);
+        }
     }
     public string testActiveName;
     [ContextMenu("Debug Active Description From Name")]

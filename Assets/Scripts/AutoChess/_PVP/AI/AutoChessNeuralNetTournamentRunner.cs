@@ -24,6 +24,10 @@ public class AutoChessNeuralNetTournamentRunner : MonoBehaviour
     private void Awake()
     {
         string[] args = Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length; i++)
+        {
+            Debug.Log(args[i]);
+        }
         if (args.Contains("--train-master-nn") || args.Contains("--train-worker-nn") || args.Contains("--benchmark-neural-net") || args.Contains("--train-master") || args.Contains("--train-worker") || args.Contains("--train-master-elo") || args.Contains("--train-worker-elo"))
         {
             thisGO.SetActive(false);
@@ -87,6 +91,8 @@ public class AutoChessNeuralNetTournamentRunner : MonoBehaviour
             isRunning = false;
             yield break;
         }
+        if (string.IsNullOrWhiteSpace(modelFolder))
+        modelFolder = Path.Combine(Application.persistentDataPath, modelFolderName);
         Directory.CreateDirectory(modelFolder);
         resultsPath = Path.Combine(modelFolder, "tournament_results.csv");
         summaryPath = Path.Combine(modelFolder, "tournament_summary.csv");
@@ -182,9 +188,7 @@ public class AutoChessNeuralNetTournamentRunner : MonoBehaviour
             isRunning = false;
             yield break;
         }
-        if (!int.TryParse(File.ReadAllText(workerStartPath).Trim(),
-            NumberStyles.Integer, CultureInfo.InvariantCulture, out int count) ||
-            count < 1)
+        if (!int.TryParse(File.ReadAllText(workerStartPath).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int count) || count < 1)
         {
             Debug.LogError($"Worker {trainingWorker}: invalid start signal.");
             isRunning = false;
@@ -415,25 +419,75 @@ public class AutoChessNeuralNetTournamentRunner : MonoBehaviour
     {
         modelPaths.Clear();
         modelPaths.AddRange(Directory.GetFiles(modelFolder, "*.hnn").OrderBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase));
+        LoadModelAppearancesFromCsv();
     }
     private readonly Dictionary<string, int> modelAppearances = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    private string modelStatsCsvPath = @"C:\Users\duke\AppData\LocalLow\DefaultCompany\VectorTRPG\nn_history\policy_leaderboard.csv";
+    private void LoadModelAppearancesFromCsv()
+    {
+        // Initialize all loaded models to zero appearances.
+        modelAppearances.Clear();
+        foreach (string model in modelPaths)
+        {
+            string name = Path.GetFileName(model);
+            modelAppearances[name] = 0;
+        }
+        // Default CSV location if no path was configured.
+        string csvPath = string.IsNullOrWhiteSpace(modelStatsCsvPath) ? Path.Combine(Application.persistentDataPath, "model_stats.csv") : modelStatsCsvPath;
+        if (!File.Exists(csvPath))
+        {
+            Debug.Log($"No model statistics CSV found at: {csvPath}");
+            return;
+        }
+        string[] lines = File.ReadAllLines(csvPath);
+        if (lines.Length < 2)
+            return;
+        string[] headers = lines[0].Split(',');
+        int nameIndex = Array.IndexOf(headers, "Name");
+        int matchesIndex = Array.IndexOf(headers, "MatchesPlayed");
+        if (nameIndex < 0 || matchesIndex < 0)
+        {
+            Debug.LogError("CSV must contain Name and MatchesPlayed columns.");
+            return;
+        }
+        for (int i = 1; i < lines.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i])){continue;}
+            string[] columns = lines[i].Split(',');
+            if (columns.Length <= Math.Max(nameIndex, matchesIndex)){continue;}
+            string name = Path.GetFileName(columns[nameIndex].Trim());
+            if (!int.TryParse(columns[matchesIndex].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int matches))
+            {
+                Debug.LogWarning($"Invalid MatchesPlayed value on CSV line {i + 1}");
+                continue;
+            }
+            // Only use entries for models that are currently loaded.
+            if (modelAppearances.ContainsKey(name))
+            {
+                modelAppearances[name] = Math.Max(0, matches);
+            }
+        }
+        Debug.Log($"Loaded model appearances from: {csvPath}");
+    }
     private List<string> SelectModelsForMatch(int matchIndex)
     {
         var shuffled = new List<string>(modelPaths);
         // Randomize tie-breaking.
-        for (int i = shuffled.Count - 1; i > 0; i--)
-        {
-            int j = rng.Next(i + 1);
-            (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
-        }
+        Shuffle(shuffled);
+        int priorityCount = Math.Min(2, Math.Min(modelsPerMatch, shuffled.Count));
         // Least-played models first.
-        shuffled.Sort((a, b) =>
+        var selected = shuffled.OrderBy(model =>
         {
-            int countA = modelAppearances.TryGetValue(a, out int ca) ? ca : 0;
-            int countB = modelAppearances.TryGetValue(b, out int cb) ? cb : 0;
-            return countA.CompareTo(countB);
-        });
-        var selected = shuffled.Take(modelsPerMatch).ToList();
+            string name = Path.GetFileName(model);
+            return modelAppearances.TryGetValue(name, out int count) ? count : 0;
+        }).Take(priorityCount).ToList();
+        var remaining = shuffled.Where(model => !selected.Contains(model)).ToList();
+        for (int i = selected.Count; i < modelsPerMatch; i++)
+        {
+            int index = rng.Next(remaining.Count);
+            selected.Add(remaining[index]);
+            remaining.RemoveAt(index);
+        }
         // Count appearances immediately.
         foreach (string model in selected)
         {

@@ -425,7 +425,7 @@ public class AutoChessDataManager : SavedData
         if (factionData.FactionActive("Marvel"))
         {
             int stacks = int.Parse(factionData.GetStacksOfFaction("Marvel"));
-            int chance = (100 * (20 + stacks) / (100 + stacks));
+            int chance = (100 * (40 + stacks) / (200 + stacks));
             int roll = RNG.SeedRange(0, 100);
             if (roll < chance)
             {
@@ -607,6 +607,7 @@ public class AutoChessDataManager : SavedData
         roundSpentGold = 0;
         totalSpentGold = 0;
         roundRerolls = 0;
+        freeRerolls = 0;
         roundGainedActors = 0;
         roundSoldActors = 0;
         benchActorData.Clear();

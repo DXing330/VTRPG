@@ -8,16 +8,21 @@ using UnityEngine;
 public class BattleMap : MapManager
 {
     public bool fast = false;
-    [ContextMenu("ForceStart")]
-    public virtual void ForceStart()
+    protected void ResetAll()
     {
         InitializeEmptyList();
         terrainEffectTiles = new List<string>(emptyList);
         interactables.Clear();
         // Reset Everything.
         InitializeBorders();
+        ResetElevations();
         ResetBuildings();
         ResetAuras();
+    }
+    [ContextMenu("ForceStart")]
+    public virtual void ForceStart()
+    {
+        ResetAll();
         ResetActors();
         if (combatLog != null)
         {
@@ -320,7 +325,7 @@ public class BattleMap : MapManager
     {
         // Get The Border In The New Tile, Based On The Actor's Incoming Direction.
         int incomingDirection = (actor.GetDirection() + 3) % 6;
-        string border = mapTiles[tileNumber].GetBorderInDirection(incomingDirection);
+        string border = mapTileBorders[tileNumber].Split("|")[incomingDirection];
         if (border.Length < 1) { return; }
         // Apply The Effect.
         List<string> borderP = borderEffectData.ReturnMovingPassive(border);
@@ -404,6 +409,17 @@ public class BattleMap : MapManager
     }
     public ActorMaker actorMaker;
     public List<TacticActor> battlingActors;
+    // Called By Moving To A New Floor In A Dungeon.
+    public void RemoveNonTeamMembers(int team = 0)
+    {
+        for (int i = battlingActors.Count - 1; i >= 0; i--)
+        {
+            if (battlingActors[i].GetTeam() != team)
+            {
+                battlingActors.RemoveAt(i);
+            }
+        }
+    }
     // All Summoning Should Go Through Here?
     public void SpawnAndAddActor(int location, string actorName, int team = 0, TacticActor summoner = null)
     {
@@ -997,6 +1013,7 @@ public class BattleMap : MapManager
         return false;
     }
     // List of actor names on tiles.
+    [System.NonSerialized]
     public List<string> actorTiles;
     public bool TileNotEmpty(int tileNumber)
     {
@@ -1080,16 +1097,21 @@ public class BattleMap : MapManager
     public StatDatabase tileTileInteractions;
     public void ChangeBorder(int tileNumber, int direction, string effect)
     {
-        mapTiles[tileNumber].ChangeBorder(effect, direction);
-        UpdateTileBorderSprites(tileNumber);
-        UpdateBorders();
+        List<string> currentBorders = mapTileBorders[tileNumber].Split("|").ToList();
+        currentBorders[direction] = effect;
+        mapTileBorders[tileNumber] = String.Join("|", currentBorders);
+        UpdateMap();
         UpdateMoveCostManager();
     }
     public void ChangeAllBorders(int tileNumber, string effect)
     {
-        mapTiles[tileNumber].ChangeAllBorders(effect);
-        UpdateTileBorderSprites(tileNumber);
-        UpdateBorders();
+        List<string> currentBorders = mapTileBorders[tileNumber].Split("|").ToList();
+        for (int i = 0; i < 6; i++)
+        {
+            currentBorders[i] = effect;
+        }
+        mapTileBorders[tileNumber] = String.Join("|", currentBorders);
+        UpdateMap();
         UpdateMoveCostManager();
     }
     // Called during some battle passives.
@@ -1137,9 +1159,9 @@ public class BattleMap : MapManager
                 int random = adjacent[UnityEngine.Random.Range(0, adjacent.Count)];
                 SwitchTile(tileNumber, random);
                 break;
+            // TODO Fix This.
             case "Borders":
-                mapTiles[tileNumber].SetBorders(specifics.Split("|").ToList());
-                UpdateTileBorderSprites(tileNumber);
+                mapTileBorders[tileNumber] = specifics;
                 break;
             // Direction Key?
             case "Border":
@@ -1152,8 +1174,7 @@ public class BattleMap : MapManager
     public void ChangeTileElevation(int tileNumber, int newElevation)
     {
         mapElevations[tileNumber] = newElevation;
-        mapTiles[tileNumber].SetElevation(mapElevations[tileNumber]);
-        mapTiles[tileNumber].UpdateElevationSprite(elevationSprites.SpriteDictionary("E"+mapTiles[tileNumber].GetElevation().ToString()));
+        mapTiles[tileNumber].UpdateElevationSprite(elevationSprites.SpriteDictionary("E"+newElevation.ToString()), newElevation);
         UpdateMoveCostManager();
         UpdateMap();
     }
@@ -1197,10 +1218,11 @@ public class BattleMap : MapManager
     public int GetTileElevation(int tileNumber)
     {
         if (tileNumber < 0 || tileNumber >= mapTiles.Count){return 0;}
-        return mapTiles[tileNumber].GetElevation();
+        return mapElevations[tileNumber];
     }
     public StatDatabase terrainTerrainInteractions;
-    public List<string> terrainEffectTiles;
+    [System.NonSerialized]
+    public List<string> terrainEffectTiles = new();
     public void SetTerrainEffectTiles(List<string> newInfo)
     {
         terrainEffectTiles = new List<string>(newInfo);
@@ -1527,6 +1549,7 @@ public class BattleMap : MapManager
         // Display.
         UpdateHighlights(auraTiles);
     }
+    [System.NonSerialized]
     public List<string> highlightedTiles;
     public ColorDictionary colorDictionary;
     protected virtual void GetActorTiles()
@@ -1567,7 +1590,7 @@ public class BattleMap : MapManager
         UpdateTerrain();
     }
 
-    public void UpdateActors()
+    public virtual void UpdateActors()
     {
         GetActorTiles();
         if (!DisplayLayerExists(actorLayer)){return;}

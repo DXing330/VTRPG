@@ -17,33 +17,6 @@ public class HexMapAdjustor : MonoBehaviour
     public List<RectTransform> hexTiles;
     public List<MapTile> mapTiles;
 
-    [ContextMenu("InitializeElevations")]
-    public virtual void InitializeElevations()
-    {
-        int tileIndex = 0;
-        for (int i = 0; i < gridSize; i++)
-        {
-            for (int j = 0; j < gridSize; j++)
-            {
-                mapTiles[tileIndex].SetElevation(tileIndex % (maxElevation + 1));
-                tileIndex++;
-            }
-        }
-    }
-
-    [ContextMenu("ResetElevations")]
-    public virtual void ResetElevations()
-    {
-        int tileIndex = 0;
-        for (int i = 0; i < gridSize; i++)
-        {
-            for (int j = 0; j < gridSize; j++)
-            {
-                mapTiles[tileIndex].SetElevation(0);
-                tileIndex++;
-            }
-        }
-    }
     // Just moves them around, doesn't rely on being a mapTile.
     [ContextMenu("Simple Initialize")]
     public void SimpleInitializeTiles()
@@ -96,10 +69,6 @@ public class HexMapAdjustor : MonoBehaviour
                 hexTiles[tileIndex].pivot = new Vector2(xPivot, yPivot);
                 mapTiles[tileIndex].SetTileNumber(tileIndex);
                 mapTiles[tileIndex].UpdateLayerSprite(defaultSprite);
-                if (adjustElevation)
-                {
-                    mapTiles[tileIndex].SetElevation(Random.Range(minElevation, maxElevation + 1));
-                }
                 if (showText)
                 {
                     //mapTiles[tileIndex].UpdateText("("+mapUtility.GetHexQ(tileIndex, gridSize)+","+mapUtility.GetHexR(tileIndex, gridSize)+","+mapUtility.GetHexS(tileIndex, gridSize)+")");
@@ -143,10 +112,6 @@ public class HexMapAdjustor : MonoBehaviour
                 hexTiles[tileIndex].pivot = new Vector2(xPivot, yPivot);
                 mapTiles[tileIndex].SetTileNumber(tileIndex);
                 mapTiles[tileIndex].UpdateLayerSprite(defaultSprite);
-                if (adjustElevation)
-                {
-                    mapTiles[tileIndex].SetElevation(Random.Range(minElevation, maxElevation + 1));
-                }
                 //mapTiles[tileIndex].UpdateText(tileIndex.ToString());
                 //tiles[tileIndex].SetTileText("("+GetHexQ(tileIndex)+","+GetHexR(tileIndex)+","+GetHexS(tileIndex)+")");
                 tileIndex++;

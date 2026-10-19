@@ -15,15 +15,6 @@ public class MapMakerTester : MonoBehaviour
     public MapDisplayer mapDisplayer;
     public List<MapTile> mapTiles;
     public List<string> mapInfo;
-    public List<string> ReturnMapInfoPlusElevation()
-    {
-        List<string> infoAndElevation = new List<string>(mapInfo);
-        for (int i = 0; i < mapInfo.Count; i++)
-        {
-            infoAndElevation[i] += "E"+mapTiles[i].GetElevation();
-        }
-        return infoAndElevation;
-    }
     public int testCases;
     public int testSize;
     public int gridSize = 9;

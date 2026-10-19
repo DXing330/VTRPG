@@ -9,10 +9,15 @@ public class ActiveDescriptionViewer : MonoBehaviour
     public StatDatabase activeData;
     public SelectStatTextList activeSelect;
     public PopUpMessage popUp;
+    public SkillRangeViewer skillRangeViewer;
     public void SelectActive(TacticActor actor = null)
     {
         if (activeSelect.GetSelected() < 0){return;}
         popUp.SetMessage(ReturnActiveDescriptionFromName(activeSelect.GetSelectedStat(), actor));
+        if (skillRangeViewer != null)
+        {
+            skillRangeViewer.DrawActiveSkill(activeSelect.GetSelectedStat(), actor);
+        }
     }
     public string ReturnSpellDescription(MagicSpell spell, TacticActor caster = null)
     {

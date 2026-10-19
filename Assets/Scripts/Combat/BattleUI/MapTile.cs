@@ -15,17 +15,12 @@ public class MapTile : MonoBehaviour
     }
     public ClickTileManager cMap;
     public GameObject mainObject;
-    public int elevation = 0;
     public Image elevationImage;
     public GameObject elevationObject;
     public Image highlightImage;
     public GameObject highlightObject;
     public Color defaultColor;
-    public void SetElevation(int newInfo)
-    {
-        elevation = newInfo;
-    }
-    public void UpdateElevationSprite(Sprite newSprite)
+    public void UpdateElevationSprite(Sprite newSprite, int elevation)
     {
         if (elevation == 0)
         {
@@ -35,10 +30,6 @@ public class MapTile : MonoBehaviour
         elevationObject.SetActive(true);
         elevationImage.sprite = newSprite;
     }
-    public int GetElevation()
-    {
-        return elevation;
-    }
     public List<GameObject> layerObjects;
     // Tile, Character, Tile Effect, Highlight
     public List<Image> layers;
@@ -46,79 +37,18 @@ public class MapTile : MonoBehaviour
     protected List<Vector3> defaultLayerScales;
     protected bool layerAppearanceInitialized = false;
     public List<GameObject> directionObjects;
-    public List<string> borderDetails;
     public List<GameObject> borderObjects;
     public List<Image> borderImages;
     public void ResetBorders()
     {
-        borderDetails.Clear();
         for (int i = 0; i < borderObjects.Count; i++)
         {
             borderObjects[i].SetActive(false);
-            borderDetails.Add("");
-        }
-    }
-    [ContextMenu("Show Borders")]
-    public void ShowBorders()
-    {
-        for (int i = 0; i < borderObjects.Count; i++)
-        {
-            borderObjects[i].SetActive(true);
         }
     }
     public void AddBorder(int direction)
     {
-        borderDetails[direction] = "Border";
         borderObjects[direction].SetActive(true);
-    }
-    public void SetBordersFromString(string newInfo)
-    {
-        borderDetails = newInfo.Split("|").ToList();
-    }
-    public string ReturnBorderString()
-    {
-        return String.Join("|", borderDetails);
-    }
-    public void SetBorders(List<string> newInfo)
-    {
-        borderDetails = new List<string>(newInfo);
-        for (int i = 0; i < borderObjects.Count; i++)
-        {
-            if (borderDetails[i] != "")
-            {
-                borderObjects[i].SetActive(true);
-            }
-        }
-    }
-    public void SetAllBorders(string newBorder, Sprite borderSprite = null)
-    {
-        for (int i = 0; i < borderObjects.Count; i++)
-        {
-            SetBorder(newBorder, i ,borderSprite);
-        }
-    }
-    public void ChangeBorder(string newBorder, int direction)
-    {
-        if (direction < 0 || direction >= borderDetails.Count){return;}
-        borderDetails[direction] = newBorder;
-        if (newBorder == "")
-        {
-            borderObjects[direction].SetActive(false);
-            return;
-        }
-        borderObjects[direction].SetActive(true);
-    }
-    public void ChangeAllBorders(string newBorder)
-    {
-        for (int i = 0; i < borderDetails.Count; i++)
-        {
-            ChangeBorder(newBorder, i);
-        }
-    }
-    public void SetBorder(string newBorder, int direction, Sprite borderSprite = null)
-    {
-        ChangeBorder(newBorder, direction);
-        borderImages[direction].sprite = borderSprite;
     }
     public void UpdateBorderImage(int direction, Sprite borderSprite)
     {
@@ -129,27 +59,6 @@ public class MapTile : MonoBehaviour
         }
         borderObjects[direction].SetActive(true);
         borderImages[direction].sprite = borderSprite;
-    }
-    public List<string> GetBorders()
-    {
-        return borderDetails;
-    }
-    public string GetBorderInDirection(int direction)
-    {
-        if (direction < 0 || direction >= borderDetails.Count)
-        {
-            return "";
-        }
-        return borderDetails[direction];
-    }
-    public bool BorderInDirection(int direction)
-    {
-        if (direction < 0 || direction >= borderDetails.Count)
-        {
-            return false;
-        }
-        // Anything besides blank is a border.
-        return borderDetails[direction] != "";
     }
     public GameObject healthBarObject;
     public void ResetHealthBar()

@@ -200,11 +200,6 @@ public class CustomMapEditor : ClickTileManager
     }
     protected void UpdateTileBorderSprites(int tileNumber)
     {
-        List<string> borders = mapTiles[tileNumber].GetBorders();
-        for (int i = 0; i < borders.Count; i++)
-        {
-            mapTiles[tileNumber].UpdateBorderImage(i, borderSprites.SpriteDictionary(borders[i]));
-        }
     }
     protected void RefreshDisplayLists()
     {
@@ -224,14 +219,11 @@ public class CustomMapEditor : ClickTileManager
         mapDisplayers[3].DisplayCurrentTiles(mapTiles, effectInfo, currentTiles);
         for (int i = 0; i < elevations.Count; i++)
         {
-            mapTiles[i].SetElevation(elevations[i]);
-            mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E" + mapTiles[i].GetElevation().ToString()));
+            mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E" + elevations[i].ToString()), elevations[i]);
         }
         // Borders.
         for (int i = 0; i < borders.Count; i++)
         {
-            mapTiles[i].SetBorders(borders[i].Split("|").ToList());
-            UpdateTileBorderSprites(i);
         }
     }
 }

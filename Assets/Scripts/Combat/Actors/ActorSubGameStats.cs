@@ -138,4 +138,27 @@ public class ActorSubGameStats : ActorStats
     }
     public void PrepareToRespawn(){currentRespawnTimer++;}
     public List<AutoChessTrait> autoChessTemporaryTraits = new();
+    // MYSTERY DUNGEON
+    protected int maxFullness;
+    protected int currentFullness;
+    public void EatAll()
+    {
+        currentFullness = maxFullness;
+    }
+    public void Eat(int amount)
+    {
+        currentFullness += amount;
+    }
+    public void Hunger()
+    {
+        if (currentFullness > 0)
+        {
+            currentFullness--;
+        }
+        else
+        {
+            currentHealth--;
+        }
+    }
+    public int GetFullness(){return currentFullness;}
 }

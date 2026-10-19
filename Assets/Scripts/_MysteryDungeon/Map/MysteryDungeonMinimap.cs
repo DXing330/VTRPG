@@ -13,35 +13,23 @@ public class MysteryDungeonMinimap : MaskableGraphic
     protected override void OnPopulateMesh(VertexHelper vh)
     {
         vh.Clear();
-        if (map == null ||
-            map.mapInfo == null ||
-            map.mapInfo.Count == 0)
+        if (map == null || map.mapInfo == null || map.mapInfo.Count == 0)
         {
             return;
         }
-        int mapSize = Mathf.RoundToInt(
-            Mathf.Sqrt(map.mapInfo.Count)
-        );
+        int mapSize = Mathf.RoundToInt(Mathf.Sqrt(map.mapInfo.Count));
         // Maximum display size of the minimap.
         int displaySize = 96;
         float panelWidth = rectTransform.rect.width;
         float panelHeight = rectTransform.rect.height;
-        // --------------------------------------------------
         // Pointy-top hex dimensions.
-        // --------------------------------------------------
         float hexWidth = Mathf.Sqrt(3f);
         float hexHeight = 2f;
         float horizontalSpacing = hexWidth;
         float verticalSpacing = hexHeight * 0.75f;
-        // --------------------------------------------------
         // Calculate the size of the FULL 128x128 display.
-        // --------------------------------------------------
-        float displayWidth =
-            (displaySize - 1) * horizontalSpacing +
-            hexWidth * 1.5f;
-        float displayHeight =
-            (displaySize - 1) * verticalSpacing +
-            hexHeight;
+        float displayWidth = (displaySize - 1) * horizontalSpacing + hexWidth * 1.5f;
+        float displayHeight = (displaySize - 1) * verticalSpacing + hexHeight;
         float scaleX = panelWidth / displayWidth;
         float scaleY = panelHeight / displayHeight;
         float scale = Mathf.Min(scaleX, scaleY);
@@ -49,45 +37,29 @@ public class MysteryDungeonMinimap : MaskableGraphic
         hexHeight *= scale;
         horizontalSpacing *= scale;
         verticalSpacing *= scale;
-        // --------------------------------------------------
-        // Calculate the size of the full display again
-        // after scaling.
-        // --------------------------------------------------
+        // Calculate the size of the full display again after scaling.
         displayWidth =
             (displaySize - 1) * horizontalSpacing +
             hexWidth * 1.5f;
         displayHeight =
             (displaySize - 1) * verticalSpacing +
             hexHeight;
-        // --------------------------------------------------
         // Center the 128x128 display in the panel.
-        // --------------------------------------------------
-        float offsetX =
-            -displayWidth * 0.5f;
-        float offsetY =
-            -displayHeight * 0.5f;
-        // --------------------------------------------------
+        float offsetX = -displayWidth * 0.5f;
+        float offsetY = -displayHeight * 0.5f;
         // Center the actual map inside the 128x128 display.
-        // --------------------------------------------------
-        int tileOffset =
-            (displaySize - mapSize) / 2;
-        // --------------------------------------------------
+        int tileOffset = (displaySize - mapSize) / 2;
         // Draw the actual map.
-        // --------------------------------------------------
-        for (int tile = 0;
-            tile < map.mapInfo.Count;
-            tile++)
+        for (int tile = 0; tile < map.mapInfo.Count; tile++)
         {
             int row = tile / mapSize;
             int col = tile % mapSize;
             // Move the actual map into the center.
-            int displayRow =
-                row + tileOffset;
-            int displayCol =
-                col + tileOffset;
+            int displayRow = row + tileOffset;
+            int displayCol = col + tileOffset;
             float x = displayCol * horizontalSpacing;
             // Pointy-top odd-row offset.
-            if ((displayRow & 1) == 1)
+            if ((row & 1) == 1)
             {
                 x += hexWidth * 0.5f;
             }
@@ -127,8 +99,7 @@ public class MysteryDungeonMinimap : MaskableGraphic
         if (tile == map.playerLocation)
             return Color.green;
         // Unexplored.
-        if (map.tileExplored == null ||
-            map.tileExplored[tile] == 0 && !showUnexplored)
+        if (map.tileExplored == null || tile < 0 || tile >= map.tileExplored.Count || map.tileExplored[tile] == 0 && !showUnexplored)
         {
             return Color.clear;
         }

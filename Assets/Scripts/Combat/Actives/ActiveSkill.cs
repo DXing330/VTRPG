@@ -401,7 +401,7 @@ public class ActiveSkill : SkillEffect
     }
     public int GetRange(TacticActor skillUser = null, BattleMap map = null)
     {
-        if (range == "") { return 0; }
+        if (range == ""){return 0;}
         int plusCount = 0;
         string rangeString = range;
         for (int i = range.Length - 1; i >= 0; i--)

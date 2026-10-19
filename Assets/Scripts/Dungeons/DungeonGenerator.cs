@@ -8,32 +8,21 @@ public class DungeonGenerator : ScriptableObject
 {
     public GeneralUtility utility;
     public MapUtility mapUtility;
-
-    // ============================================================
     // TEMPORARY GENERATION CONSTANTS
-    // ============================================================
-    // These will eventually come from the dungeon-generation data
-    // structure supplied to this generator.
-
+    // These will eventually come from the dungeon-generation data structure supplied to this generator.
+    public MysteryDungeonState dungeonState;
     protected const int FLOOR_TILE = 0;
     protected const int WALL_TILE = 1;
-
     protected const int DEFAULT_BASE_SIZE = 32;
     protected const int DEFAULT_SIZE_VARIANCE = 6;
-
     protected const int DEFAULT_MIN_ROOM_SIZE = 6;
     protected const int DEFAULT_MAX_ROOMS = 6;
-
     // Chance to add additional connections after the main room graph.
     protected const float EXTRA_CONNECTION_CHANCE = 0.05f;
-
     // Chance for a rectangular room to have its corners removed.
     protected const float IRREGULAR_ROOM_CHANCE = 0.35f;
-
     // Important locations should not be immediately adjacent.
     protected const int MIN_IMPORTANT_LOCATION_DISTANCE = 3;
-
-
     // ============================================================
     // BASIC SETTINGS
     // ============================================================

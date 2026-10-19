@@ -318,7 +318,7 @@ public class TacticActor : ActorSubGameStats
     public override void InitializeStats()
     {
         base.InitializeStats();
-        currentEnergy = GetBaseEnergy();
+        RestoreEnergy();
         ClearNextSkillMods();
         ResetMentalState();
         ResetTarget();
@@ -1179,5 +1179,21 @@ public class TacticActor : ActorSubGameStats
         string curses = GetCurseString();
         string mana = GetMana().ToString();
         return healthString + delimiter + curses + delimiter + mana;
+    }
+    public void LoadPersistentStats(string pStat, string delimiter = "|")
+    {
+        string[] stats = pStat.Split(delimiter);
+        if (stats.Length < 3)
+        {
+            Debug.Log("ERROR LOADING STATS");
+            return;
+        }
+        SetCurrentHealth(int.Parse(stats[0]));
+        if (GetHealth() <= 0)
+        {
+            SetCurrentHealth(GetBaseHealth());
+        }
+        SetCurses(stats[1]);
+        SetMana(int.Parse(stats[2]));
     }
 }

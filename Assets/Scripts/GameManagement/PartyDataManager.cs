@@ -22,6 +22,16 @@ public class PartyDataManager : MonoBehaviour
     public PartyData permanentPartyData;
     // For hirelings + allies.
     public PartyData mainPartyData;
+    public void CombineIntoMainParty(PartyDataManager newPartyDataManager)
+    {
+        mainPartyData.ClearAllStats();
+        mainPartyData.AddPartyData(newPartyDataManager.permanentPartyData);
+        mainPartyData.AddPartyData(newPartyDataManager.mainPartyData);
+    }
+    public int GetLeaderID()
+    {
+        return mainPartyData.GetIDAtIndex(0);
+    }
     // For quest party members (rescue/escort/etc)
     public PartyData tempPartyData;
     public List<SavedData> otherPartyData;
@@ -40,6 +50,7 @@ public class PartyDataManager : MonoBehaviour
     public Inventory inventory;
     public EquipmentInventory equipmentInventory;
     public DungeonBag dungeonBag;
+    public PartyDungeonState dungeonState;
     public GuildCard guildCard;
     public SpellBook spellBook;
     public void Save()

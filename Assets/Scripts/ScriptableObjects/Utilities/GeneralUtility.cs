@@ -305,7 +305,48 @@ public class GeneralUtility : ScriptableObject
         }
         return newOrder;
     }
-
+    public string IntIntDictionaryToString(Dictionary<int, int> dict)
+    {
+        return string.Join(";", dict.Select(kvp => $"{kvp.Key}:{kvp.Value}"));
+    }
+    public Dictionary<int, int> StringToIntIntDictionary(string str)
+    {
+        var dict = new Dictionary<int, int>();
+        if (string.IsNullOrEmpty(str))
+        {
+            return dict;
+        }
+        foreach (string entry in str.Split(';'))
+        {
+            string[] parts = entry.Split(new[] { ':' }, 2);
+            if (parts.Length == 2 && int.TryParse(parts[0], out int key) && int.TryParse(parts[1], out int value))
+            {
+                dict[key] = value;
+            }
+        }
+        return dict;
+    }
+    public string IntStringDictionaryToString(Dictionary<int, string> dict)
+    {
+        return string.Join(";", dict.Select(kvp => $"{kvp.Key}:{kvp.Value}"));
+    }
+    public Dictionary<int, string> StringToIntStringDictionary(string str)
+    {
+        var dict = new Dictionary<int, string>();
+        if (string.IsNullOrEmpty(str))
+        {
+            return dict;
+        }
+        foreach (string entry in str.Split(';'))
+        {
+            string[] parts = entry.Split(new[] { ':' }, 2);
+            if (parts.Length == 2 && int.TryParse(parts[0], out int key))
+            {
+                dict[key] = parts[1];
+            }
+        }
+        return dict;
+    }
     public string ConvertIntListToString(List<int> int_list, string delimiter = "|")
     {
         List<string> string_list = ConvertIntListToStringList(int_list);

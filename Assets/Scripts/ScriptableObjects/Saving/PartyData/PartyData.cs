@@ -399,6 +399,14 @@ public class PartyData : SavedData
             break;
         }
     }
+    public void AddPartyData(PartyData newPartyData)
+    {
+        partyNames.AddRange(newPartyData.partyNames);
+        partyIDs.AddRange(newPartyData.partyIDs);
+        partyStats.AddRange(newPartyData.partyStats);
+        partyEquipment.AddRange(newPartyData.partyEquipment);
+        partyEquipmentIDs.AddRange(newPartyData.partyEquipmentIDs);
+    }
     public List<string> GetStats(string joiner = "|")
     {
         return partyStats;

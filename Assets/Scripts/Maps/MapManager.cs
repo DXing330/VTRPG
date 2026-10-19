@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+// Tiles + Terrain + Borders + Elevations
 public class MapManager : SimpleMapManager
 {
     public GeneralUtility utility;
@@ -38,7 +39,24 @@ public class MapManager : SimpleMapManager
     public bool showElevationSprite = false;
     public StatDatabase tileElevationMappings;
     public SpriteContainer elevationSprites;
-    public List<int> mapElevations;
+    [System.NonSerialized]
+    public List<int> mapElevations = new();
+    public void UpdateElevationSprites()
+    {
+        for (int i = 0; i < currentTiles.Count; i++)
+        {
+            if (currentTiles[i] < 0 || currentTiles[i] > mapInfo.Count)
+            {
+                mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E0"), 0);
+                continue;
+            }
+            mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E" + mapElevations[currentTiles[i]].ToString()), mapElevations[currentTiles[i]]);
+        }
+    }
+    public void SetElevations(List<int> newElevations)
+    {
+        mapElevations = newElevations;
+    }
     // If the elevation difference is too large then basic melee attacks don't work.
     public int ReturnElevation(int tileNumber)
     {
@@ -50,11 +68,11 @@ public class MapManager : SimpleMapManager
     }
     public int ReturnElevationDifference(int tileOne, int tileTwo)
     {
-        return Mathf.Abs(mapTiles[tileOne].GetElevation() - mapTiles[tileTwo].GetElevation());
+        return Mathf.Abs(mapElevations[tileOne] - mapElevations[tileTwo]);
     }
     public int ReturnPosNegElvDiff(int tileOne, int tileTwo)
     {
-        return mapTiles[tileOne].GetElevation() - mapTiles[tileTwo].GetElevation();
+        return mapElevations[tileOne] - mapElevations[tileTwo];
     }
     public virtual int ReturnClosestTileWithinElevationDifference(int start, int end, int maxElvDiff, List<int> moveCosts)
     {
@@ -114,67 +132,71 @@ public class MapManager : SimpleMapManager
         if (possibleElevations.Count < 2){return 0;}
         return int.Parse(possibleElevations[possibleElevations.Count / 2]);
     }
+    public void ResetElevations()
+    {
+        mapElevations = new List<int>();
+        for (int i = 0; i < (mapSize * mapSize); i++)
+        {
+            mapElevations.Add(0);
+        }
+    }
     public void InitializeElevations()
     {
         mapElevations = new List<int>();
         // Maybe make a pattern for elevations later.
-        for (int i = 0; i < mapTiles.Count; i++)
+        for (int i = 0; i < (mapSize * mapSize); i++)
         {
             mapElevations.Add(RandomElevation(mapInfo[i]));
-            mapTiles[i].SetElevation(mapElevations[i]);
             if (showElevationSprite)
             {
-                mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E"+mapTiles[i].GetElevation().ToString()));
+                mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E" + mapElevations[i].ToString()), mapElevations[i]);
             }
         }
     }
     public SpriteContainer borderSprites;
-    public void UpdateTileBorderSprites(int tileNumber)
+    [System.NonSerialized]
+    public List<string> mapTileBorders;
+    public void UpdateBorderSprites()
     {
-        List<string> borders = mapTiles[tileNumber].GetBorders();
+        for (int i = 0; i < currentTiles.Count; i++)
+        {
+            if (currentTiles[i] < 0 || currentTiles[i] > mapInfo.Count)
+            {
+                mapTiles[i].ResetBorders();
+                continue;
+            }
+            UpdateTileBorderSprites(i, currentTiles[i]);
+        }
+    }
+    protected void UpdateTileBorderSprites(int currentTile, int tileNumber)
+    {
+        if (tileNumber < 0 || tileNumber >= mapTileBorders.Count){return;}
+        if (currentTile < 0 || currentTile >= mapTiles.Count){return;}
+        List<string> borders = mapTileBorders[tileNumber].Split("|").ToList();
         for (int i = 0; i < borders.Count; i++)
         {
-            mapTiles[tileNumber].UpdateBorderImage(i, borderSprites.SpriteDictionary(borders[i]));
+            mapTiles[currentTile].UpdateBorderImage(i, borderSprites.SpriteDictionary(borders[i]));
         }
     }
-    public List<string> borderDetails;
+    public void SetBorders(List<string> newBorders)
+    {
+        mapTileBorders = newBorders;
+    }
     public void InitializeBorders()
     {
-        borderDetails = new List<string>();
-        for (int i = 0; i < mapTiles.Count; i++)
+        mapTileBorders = new List<string>();
+        for (int i = 0; i < (mapSize * mapSize); i++)
         {
-            // For now just reset borders, we need to deal with making borders later.
-            mapTiles[i].ResetBorders();
-            borderDetails.Add(mapTiles[i].ReturnBorderString());
+            mapTileBorders.Add("|||||");
         }
-    }
-    public void UpdateBorders()
-    {
-        borderDetails = new List<string>();
         for (int i = 0; i < mapTiles.Count; i++)
         {
-            // For now just reset borders, we need to deal with making borders later.
-            borderDetails.Add(mapTiles[i].ReturnBorderString());
-            UpdateTileBorderSprites(i);
+            mapTiles[i].ResetBorders();
         }
     }
     public string ReturnBorderFromTileDirection(int tile, int direction)
     {
-        return mapTiles[tile].GetBorderInDirection(direction);
-    }
-    public int bordersPerTile = 2;
-    [ContextMenu("Randomize Borders")]
-    public void RandomizeBorders()
-    {
-        for (int i = 0; i < mapTiles.Count; i++)
-        {
-            mapTiles[i].ResetBorders();
-            for (int j = 0; j < bordersPerTile; j++)
-            {
-                mapTiles[i].AddBorder(Random.Range(0, 6));
-            }
-        }
-        UpdateBorders();
+        return mapTileBorders[tile].Split("|")[direction];
     }
     protected virtual void ResetAllLayers()
     {
@@ -374,32 +396,17 @@ public class MapManager : SimpleMapManager
     {
         currentTiles = currentTileManager.GetCurrentTilesFromCenter(centerTile, mapSize, gridSize);
     }
-    public List<string> ReturnMapInfoPlusElevation()
-    {
-        List<string> infoAndElevation = new List<string>(mapInfo);
-        for (int i = 0; i < mapInfo.Count; i++)
-        {
-            infoAndElevation[i] += "E"+mapTiles[i].GetElevation();
-        }
-        return infoAndElevation;
-    }
     [ContextMenu("Test Update Map")]
     public void TestUpdateMap()
     {
         UpdateMap();
     }
-    [ContextMenu("Test Show Elevation")]
-    public void TestShowElevation()
-    {
-        for (int i = 0; i < mapTiles.Count; i++)
-        {
-            mapTiles[i].UpdateElevationSprite(elevationSprites.SpriteDictionary("E"+mapTiles[i].GetElevation().ToString()));
-        }
-    }
     public void BaseUpdateMap()
     {
         UpdateCurrentTiles();
         mapDisplayers[0].DisplayCurrentTiles(mapTiles, mapInfo, currentTiles);
+        UpdateBorderSprites();
+        UpdateElevationSprites();
     }
     public virtual void UpdateMap()
     {

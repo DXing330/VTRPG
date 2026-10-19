@@ -64,6 +64,11 @@ public class BattleManager : ClickTileManager
     public EffectManager effectManager;
     public ActiveManager activeManager;
     public MoveCostManager moveManager;
+    // Refresh Move Costs For The Turn Actors Whenever Needed.
+    public void GetAllMoveCosts()
+    {
+        moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+    }
     public AttackManager attackManager;
     public BattleEndManager battleEndManager;
     public int FindWinningTeam()
@@ -990,7 +995,6 @@ public class BattleManager : ClickTileManager
         // Preserve the same battle-end / actor-death handling order.
         return true;
     }
-
     protected void NPCSkillAction(int actionsLeft, string skill = "")
     {
         for (int i = 0; i < actionsLeft; i++)
@@ -1008,13 +1012,12 @@ public class BattleManager : ClickTileManager
         }
         EndTurn();
     }
-
     protected void TerrifiedTurn(int actionsLeft)
     {
         for (int i = 0; i < actionsLeft; i++)
         {
             // Get the closest enemy.
-            moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+            GetAllMoveCosts();
             TacticActor closestEnemy = actorAI.GetClosestEnemy(map.battlingActors, turnActor, moveManager);
             if (closestEnemy == null)
             {
@@ -1023,7 +1026,7 @@ public class BattleManager : ClickTileManager
             }
             turnActor.SetTarget(closestEnemy);
             // Move away from them the target.
-            moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+            GetAllMoveCosts();
             List<int> path = actorAI.FindPathAwayFromTarget(turnActor, map, moveManager);
             MoveAlongPath(turnActor, path);
             if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
@@ -1033,13 +1036,12 @@ public class BattleManager : ClickTileManager
         }
         EndTurn();
     }
-
     protected void EnragedTurn(int actionsLeft)
     {
         for (int i = 0; i < actionsLeft; i++)
         {
             // Pick the closest target no matter what.
-            moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+            GetAllMoveCosts();
             TacticActor newTarget = actorAI.GetClosestEnemy(map.battlingActors, turnActor, moveManager, true);
             if (newTarget == null)
             {
@@ -1067,14 +1069,13 @@ public class BattleManager : ClickTileManager
         turnActor.ResetTarget();
         EndTurn();
     }
-
     protected void CharmedTurn(int actionsLeft)
     {
         for (int i = 0; i < actionsLeft; i++)
         {
             if (turnActor.GetTarget() == null || turnActor.GetTarget().GetHealth() <= 0)
             {
-                moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+                GetAllMoveCosts();
                 TacticActor closestEnemy = actorAI.GetClosestEnemy(map.battlingActors, turnActor, moveManager);
                 if (closestEnemy == null)
                 {
@@ -1084,7 +1085,7 @@ public class BattleManager : ClickTileManager
                 turnActor.SetTarget(closestEnemy);
             }
             // Move towards the target.
-            moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+            GetAllMoveCosts();
             if (AIPathToTarget())
             {
                 EndTurn();
@@ -1097,12 +1098,11 @@ public class BattleManager : ClickTileManager
         }
         EndTurn();
     }
-
     protected void TauntedTurn(int actionsLeft)
     {
         for (int i = 0; i < actionsLeft; i++)
         {
-            moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+            GetAllMoveCosts();
             // Find a new target if needed.
             if (turnActor.GetTarget() == null || turnActor.GetTarget().GetHealth() <= 0)
             {
@@ -1122,7 +1122,7 @@ public class BattleManager : ClickTileManager
             // Otherwise move.
             else
             {
-                moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+                GetAllMoveCosts();
                 if (AIPathToTarget())
                 {
                     EndTurn();
@@ -1136,7 +1136,6 @@ public class BattleManager : ClickTileManager
         }
         EndTurn();
     }
-
     protected void ConfusedTurn(int actionsLeft)
     {
         // Pretend to be a random other status.
@@ -1155,7 +1154,6 @@ public class BattleManager : ClickTileManager
         }
         EndTurn();
     }
-
     protected void BasicNPCAction()
     {
         // Summons break command on their first turn, then act normally.
@@ -1164,7 +1162,7 @@ public class BattleManager : ClickTileManager
             turnActor.ResetSummonedBy();
         }
         // This will make sure the path costs are up to date for AI action calculations.
-        moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+        GetAllMoveCosts();
         // Find a new target if needed.
         // Don't hit your allies even if they hit you.
         if (turnActor.GetTarget() == null || turnActor.GetTarget().GetHealth() <= 0 || turnActor.GetTarget().invisible || turnActor.GetTarget().GetTeam() == turnActor.GetTeam())
@@ -1306,7 +1304,6 @@ public class BattleManager : ClickTileManager
         map.UpdateActors();
         ResetState();
     }
-
     protected void MoveAlongPath(TacticActor actor, List<int> path)
     {
         if (path.Count <= 0){return;}
@@ -1331,7 +1328,6 @@ public class BattleManager : ClickTileManager
         map.UpdateActors();
         ResetState();
     }
-
     public bool AdjustTurnNumber()
     {
         ActivateDeathPassives(map.RemoveActorsFromBattle());

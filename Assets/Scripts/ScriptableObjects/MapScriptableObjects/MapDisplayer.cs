@@ -88,10 +88,15 @@ public class MapDisplayer : ScriptableObject
             }
             mapTiles[i].UpdateStyledLayerSprite(layerSprites[layer].SpriteDictionary(mapInfo[nextTile]), layerSprites[layer].GetColor(mapInfo[nextTile], mapTiles[i].GetDefaultLayerColor(layer)), spriteScale, layer);
         }
-        if (updateDirections)
+        if (updateDirections && actorDirections != null)
         {
             for (int i = 0; i < (mapTiles.Count); i++)
             {
+                if (currentTiles[i] < 0 || currentTiles[i] >= actorDirections.Count)
+                {
+                    mapTiles[i].ResetDirectionArrows();
+                    continue;
+                }
                 mapTiles[i].UpdateDirectionArrow((actorDirections[currentTiles[i]]));
             }
         }

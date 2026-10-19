@@ -31,7 +31,6 @@ public class SceneMover : MonoBehaviour
     public DayTracker dayTracker;
     public string hubSceneName = "Hub";
     public string dungeonSceneName = "Dungeon";
-    public DungeonState dungeonState;
     public string battleSceneName = "BattleScene";
     public BattleState battleState;
     public PartyData permanentParty;
@@ -49,24 +48,6 @@ public class SceneMover : MonoBehaviour
         if (currentScene == battleSceneName)
         {
             battleState.Load();
-            if (sceneTracker.GetPreviousScene() == dungeonSceneName)
-            {
-                dungeonState.Load();
-                battleState.SetBattleDetailsFromDungeon(dungeonState);
-                battleState.Save();
-            }
-            if (loadingRequired)
-            {
-                StartCoroutine(LoadingScreenMoveScene(currentScene));
-            }
-            else
-            {
-                StartCoroutine(LoadAsyncScene(currentScene));
-            }
-        }
-        else if (currentScene == dungeonSceneName)
-        {
-            dungeonState.Load();
             if (loadingRequired)
             {
                 StartCoroutine(LoadingScreenMoveScene(currentScene));
@@ -130,8 +111,6 @@ public class SceneMover : MonoBehaviour
         sceneTracker.Save();
         // Only set when first moving to the dungeon.
         dayTracker.DayTrackerNewDay();
-        dungeonState.UpdatePreviousScene();
-        dungeonState.Save();
         if (loadingRequired)
         {
             StartCoroutine(LoadingScreenMoveScene(dungeonSceneName));
@@ -171,15 +150,6 @@ public class SceneMover : MonoBehaviour
         battleState.SetNewAlternateWinCondition();
         battleState.UpdateEnemyNames();
         battleState.Save();
-        if (SceneManager.GetActiveScene().name == dungeonSceneName)
-        {
-            // Only save the dungeon state if entering a battle from the dungeon.
-            dungeonState.Save();
-            battleState.SetBattleDetailsFromDungeon(dungeonState);
-            battleState.ForceTerrainType(dungeonState.dungeon.GenerateTerrain());
-            // Set the spawning conditions and alternate win conditions based on the dungeon state.
-            battleState.Save();
-        }
         if (loadingRequired)
         {
             StartCoroutine(LoadingScreenMoveScene(battleSceneName));
@@ -192,8 +162,7 @@ public class SceneMover : MonoBehaviour
     // Only used in the dungeon rewards scene
     public void ReturnFromDungeonRewards()
     {
-        sceneTracker.SetPreviousScene(dungeonState.GetPreviousScene());
-        LoadScene(dungeonState.GetPreviousScene());
+        ReturnToHub();
     }
     public void ReturnFromDungeon(bool clear = true)
     {
@@ -210,8 +179,7 @@ public class SceneMover : MonoBehaviour
         }
         else
         {
-            sceneTracker.SetPreviousScene(dungeonState.GetPreviousScene());
-            sceneTracker.SetCurrentScene(dungeonState.GetPreviousScene());
+            ReturnToHub();
             // Otherwise just go back to the previous scene.
             if (loadingRequired)
             {
@@ -255,10 +223,6 @@ public class SceneMover : MonoBehaviour
         {
             ReturnToHub();
             return;
-        }
-        else if (sceneTracker.GetPreviousScene() == dungeonSceneName)
-        {
-            dungeonState.Load();
         }
         sceneTracker.SetCurrentScene(sceneTracker.GetPreviousScene());
         sceneTracker.Save();

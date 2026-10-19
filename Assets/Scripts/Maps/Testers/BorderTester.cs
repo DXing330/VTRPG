@@ -10,9 +10,5 @@ public class BorderTester : MonoBehaviour
     [ContextMenu("Set Borders")]
     public void SetBorders()
     {
-        for (int i = 0; i < mapTiles.Count; i++)
-        {
-            mapTiles[i].SetAllBorders(testBorder, borderSprites.SpriteDictionary(testBorder));
-        }
     }
 }
