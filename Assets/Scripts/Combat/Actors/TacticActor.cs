@@ -245,6 +245,7 @@ public class TacticActor : ActorSubGameStats
     public void GainBonusActions(int amount){bonusActions += amount;}
     public int GetActions(){return actions + bonusActions;}
     public int attackActionCost = 2;
+    public int GetAttackActionCost(){return attackActionCost;}
     public void SetAttackActionCost(int newCost)
     {
         attackActionCost = Mathf.Max(1, newCost);
@@ -342,9 +343,10 @@ public class TacticActor : ActorSubGameStats
         // Some passives use previous round, some use recent round.
         AddToRoundTrackers();
         StartTurnResetStats();
-        if (sleeping)
+        if (GetSleeping())
         {
             actions = 0;
+            SelfHeal(1);
         }
         else
         {
@@ -444,7 +446,7 @@ public class TacticActor : ActorSubGameStats
     {
         if (duration < 1){duration = 1;}
         // Can't change to a weaker mental state.
-        if (duration < mentalStateDuration){return;}
+        if (duration < mentalStateDuration && newInfo != immuneMentalState){return;}
         // Can change to immune no matter what.
         if (newInfo == immuneMentalState)
         {
@@ -466,7 +468,6 @@ public class TacticActor : ActorSubGameStats
         mentalStateDuration = duration;
     }
     public string GetMentalState(){ return mentalState; }
-
     // Keep track of skills/spells used, movement and attacks.
     protected void ResetRoundTrackers()
     {

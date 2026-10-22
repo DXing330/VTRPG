@@ -15,10 +15,23 @@ public enum ClickTileState
     Item
 }
 // Takes In Player Inputs And Calls Changes To Game State.
+// Also Updates UI.
 public class MysteryDungeonUIManager : ClickTileManager
 {
     // UI Objects.
     public TMP_Text fastMoveText;
+    public TMP_Text ATKText;
+    public TMP_Text HITText;
+    public TMP_Text CRITText;
+    public TMP_Text SPDText;
+    protected void UpdateAttackStats(TacticActor actor)
+    {
+        ATKText.text = actor.GetAttack().ToString();
+        HITText.text = actor.GetHitChance() + "%";
+        CRITText.text = actor.GetCritChance() + "%";
+        SPDText.text = (100 + actor.GetAttackSpeed()) + "%";
+    }
+    public MysteryDungeonStatCardList statCards;
     void Start()
     {
         UpdateUI();
@@ -28,7 +41,9 @@ public class MysteryDungeonUIManager : ClickTileManager
         utility.DisableGameObjects(actionStateObjects);
         int stateIndex = actionStateList.IndexOf(actionState);
         if (stateIndex >= 0){actionStateObjects[stateIndex].SetActive(true);}
-        fastMoveText.text = fastMove ? "ON" : "OFF";
+        UpdateFastMoveText();
+        statCards.UpdateTeamActors(battleManager.map.battlingActors, 0);
+        UpdateAttackStats(battleManager.GetTurnActor(0));
         switch (actionState)
         {
             // None/Skill/Item
@@ -41,13 +56,19 @@ public class MysteryDungeonUIManager : ClickTileManager
             break;
             // Highlight Attack Range.
             case ClickTileState.Attack:
+            battleManager.PlayerStartAttacking();
             break;
         }
     }
     public GeneralUtility utility;
     public MysteryDungeonBattleManager battleManager;
+    public MysteryDungeonBattleMap map;
     public PartyDataManager partyData;
     public bool fastMove = false;
+    protected void UpdateFastMoveText()
+    {
+        fastMoveText.text = fastMove ? "ON" : "OFF";
+    }
     public void ToggleFastMove()
     {
         fastMove = !fastMove;
@@ -91,14 +112,26 @@ public class MysteryDungeonUIManager : ClickTileManager
                     battleManager.PlayerStartMoving();
                 }
             }
+            else
+            {
+                ChangeState("None");
+            }
             break;
-            // Highlight Attack Range.
             case ClickTileState.Attack:
+            if (!battleManager.PlayerAttackTile(tileNumber))
+            {
+                ChangeState("None");
+            }
             break;
         }
+        UpdateUI();
     }
     public void MoveInDirection(int direction)
     {
+        if (fastMove)
+        {
+            map.updateMap = false;
+        }
         if (fastMove && battleManager.PlayerMoveInDirection(direction))
         {
             // If In Danger Then ???
@@ -108,14 +141,30 @@ public class MysteryDungeonUIManager : ClickTileManager
                 ChangeState("None");
                 return;
             }
+            else if (battleManager.RoomHallBorder(direction))
+            {
+                fastMove = false;
+                UpdateFastMoveText();
+                map.updateMap = true;
+                map.UpdateMap();
+            }
             else
             {
                 MoveInDirection(direction);
             }
         }
+        else if (fastMove && !battleManager.PlayerMoveInDirection(direction))
+        {
+            map.updateMap = true;
+            map.UpdateMap();
+        }
         else if (!fastMove && battleManager.PlayerMoveInDirection(direction))
         {
             battleManager.PlayerStartMoving();
         }
+    }
+    public void ChangeDirection(int direction)
+    {
+        battleManager.PlayerChangeDirection(direction);
     }
 }

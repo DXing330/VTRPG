@@ -24,6 +24,7 @@ public class ActorAI : ScriptableObject
     public string ReturnAIActiveSkill() { return activeSkillName; }
     public ActiveSkill active;
     public StatDatabase activeData;
+    public AttackManager attackManager;
     public StatDatabase actorAttackSkills;
     public StatDatabase actorSkillRotation;
     public StatDatabase spriteToBossRotation;
@@ -74,6 +75,110 @@ public class ActorAI : ScriptableObject
         active.LoadSkillFromString(activeData.ReturnValue(activeSkillName), actor);
         return false;
     }
+    public bool MentalStateTurn(TacticActor actor, BattleMap map)
+    {
+        string mentalState = actor.GetMentalState();
+        switch (mentalState)
+        {
+            // Move Away From Closest Enemy.
+            case "Terrified":
+                TerrifiedTurn(actor, map);
+                return true;
+            // Attack Closest Actor.
+            case "Enraged":
+                EnragedTurn(actor, map);
+                actor.ResetTarget();
+                return true;
+            // Move Toward Closest Enemy.
+            case "Charmed":
+                CharmedTurn(actor, map);
+                return true;
+            // Move Toward + Attack Closest Enemy.
+            case "Taunted":
+                TauntedTurn(actor, map);
+                return true;
+            // Randomly Charmed/Enraged/Terrified.
+            case "Confused":
+                ConfusedTurn(actor, map);
+                return true;
+        }
+        return false;
+    }
+    public void TerrifiedTurn(TacticActor turnActor, BattleMap map)
+    {
+        map.moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+        TacticActor closestEnemy = GetClosestEnemy(map.battlingActors, turnActor, map.moveManager);
+        if (closestEnemy == null){return;}
+        map.moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+        turnActor.SetTarget(closestEnemy);
+        List<int> path = FindPathAwayFromTarget(turnActor, map, map.moveManager);
+        MoveAlongPath(turnActor, map, path);
+    }
+    public void EnragedTurn(TacticActor turnActor, BattleMap map, int depth = 0)
+    {
+        if (depth > 6){return;}
+        map.moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+        TacticActor newTarget = GetClosestEnemy(map.battlingActors, turnActor, map.moveManager, true);
+        if (newTarget == null){return;}
+        turnActor.SetTarget(newTarget);
+        if (EnemyInAttackRange(turnActor, turnActor.GetTarget(), map))
+        {
+            attackManager.ActorAttacksActorWithAttackSpeed(turnActor, turnActor.GetTarget(), map, turnActor.GetBasicAttackMultiplier(), turnActor.GetBasicAttackDamageType());
+        }
+        else
+        {
+            List<int> path = FindPathToTarget(turnActor, map, map.moveManager);
+            MoveAlongPath(turnActor, map, path);
+        }
+        // Repeatedly Attack.
+        if (turnActor.GetActions() >= turnActor.GetAttackActionCost()){EnragedTurn(turnActor, map, depth + 1);}
+    }
+    public void CharmedTurn(TacticActor turnActor, BattleMap map)
+    {
+        map.moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+        TacticActor closestEnemy = GetClosestEnemy(map.battlingActors, turnActor, map.moveManager);
+        if (closestEnemy == null){return;}
+        map.moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+        turnActor.SetTarget(closestEnemy);
+        List<int> path = FindPathToTarget(turnActor, map, map.moveManager);
+        MoveAlongPath(turnActor, map, path);
+    }
+    public void TauntedTurn(TacticActor turnActor, BattleMap map, int depth = 0)
+    {
+        if (depth > 6){return;}
+        map.moveManager.GetAllMoveCosts(turnActor, map.battlingActors);
+        TacticActor newTarget = GetClosestEnemy(map.battlingActors, turnActor, map.moveManager);
+        if (newTarget == null){return;}
+        turnActor.SetTarget(newTarget);
+        if (EnemyInAttackRange(turnActor, turnActor.GetTarget(), map))
+        {
+            attackManager.ActorAttacksActorWithAttackSpeed(turnActor, turnActor.GetTarget(), map, turnActor.GetBasicAttackMultiplier(), turnActor.GetBasicAttackDamageType());
+        }
+        else
+        {
+            List<int> path = FindPathToTarget(turnActor, map, map.moveManager);
+            MoveAlongPath(turnActor, map, path);
+        }
+        // Repeatedly Attack.
+        if (turnActor.GetActions() >= turnActor.GetAttackActionCost()){TauntedTurn(turnActor, map, depth + 1);}
+    }
+    public void ConfusedTurn(TacticActor turnActor, BattleMap map)
+    {
+        // Pretend to be a random other status.
+        int randomTurnType = Random.Range(0, 3);
+        switch (randomTurnType)
+        {
+            case 0:
+                TerrifiedTurn(turnActor, map);
+                return;
+            case 1:
+                EnragedTurn(turnActor, map);
+                return;
+            case 2:
+                CharmedTurn(turnActor, map);
+                return;
+        }
+    }
     public string ReturnAIAttackSkill(TacticActor actor)
     {
         string attackSkill = actorAttackSkills.ReturnValue(actor.GetSpriteName());
@@ -101,6 +206,18 @@ public class ActorAI : ScriptableObject
     public string ReturnSpellWithEffect(TacticActor actor, BattleMap map, string spellEffect)
     {
         return conditionChecker.GetAvailableSpellWithEffect(actor, map, spellEffect);
+    }
+    public void MoveAlongPath(TacticActor actor, BattleMap map, List<int> path)
+    {
+        if (path.Count <= 0){return;}
+        for (int i = path.Count - 1; i >= 0; i--)
+        {
+            int prevLoc = actor.GetLocation();
+            map.moveManager.MoveActorToTile(actor, path[i], map);
+            actor.PayMoveCost(map.moveManager.MoveCostOfTile(path[i]));
+            if (actor.GetMovement() < 0){break;}
+        }
+        map.UpdateActors();
     }
     public List<int> FindPathAwayFromTarget(TacticActor currentActor, BattleMap map, MoveCostManager moveManager)
     {
@@ -249,7 +366,7 @@ public class ActorAI : ScriptableObject
             for (int i = 0; i < battlingActors.Count; i++)
             {
                 // Enemies is everyone on a different team? But maybe some teams can be allied in some fights?
-                if (battlingActors[i].GetTeam() != currentActor.GetTeam() && !battlingActors[i].invisible)
+                if (battlingActors[i].GetHealth() > 0 && battlingActors[i].GetTeam() != currentActor.GetTeam() && !battlingActors[i].invisible)
                 {
                     enemies.Add(battlingActors[i]);
                 }
@@ -260,7 +377,7 @@ public class ActorAI : ScriptableObject
             for (int i = 0; i < battlingActors.Count; i++)
             {
                 // Ignore invisible enemies when selecting targets.
-                if (battlingActors[i] != currentActor && !battlingActors[i].invisible)
+                if (battlingActors[i].GetHealth() > 0 && battlingActors[i] != currentActor && !battlingActors[i].invisible)
                 {
                     enemies.Add(battlingActors[i]);
                 }
@@ -291,21 +408,18 @@ public class ActorAI : ScriptableObject
         if (possibleIndices.Count <= 0) { return null; }
         return enemies[possibleIndices[Random.Range(0, possibleIndices.Count)]];
     }
-
     public bool EnemyInAttackableRange(TacticActor currentActor, TacticActor target, BattleMap map, MoveCostManager moveManager)
     {
         if (target == null) { return false; }
         if (target.GetHealth() <= 0) { return false; }
         return moveManager.TileInAttackableRange(currentActor, map, target.GetLocation());
     }
-
     public bool EnemyAttackableFromTile(TacticActor actor, int tile, BattleMap map)
     {
         if (!actor.TargetValid()){return false;}
         List<int> attackableTiles = map.GetAttackableTiles(actor, false, tile);
         return attackableTiles.Contains(actor.GetTarget().GetLocation());
     }
-
     public bool EnemyInAttackRange(TacticActor currentActor, TacticActor target, BattleMap map)
     {
         if (target == null) { return false; }

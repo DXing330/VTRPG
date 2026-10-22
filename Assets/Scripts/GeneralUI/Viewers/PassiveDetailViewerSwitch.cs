@@ -175,6 +175,7 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " increase maximum health% of " + target + " by " + specifics + "%";
             case "MaxHealth%":
                 return " change maximum health% of " + target + " by " + specifics + "%";
+            case "PADGravity":
             case "CurrentHealth%":
                 return " decrease current health by " + specifics + "%";
             case "BaseEnergy%":
@@ -195,6 +196,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " gain the " + specifics + " spell";
             case "TemporarySpell":
                 return " gain the " + specifics + " spell once";
+            case "CursedStatus":
+                return " curse " + target + " with " + specifics;
             case "Status":
                 return " inflict " + specifics+" on " + target;
             case "Buff":
@@ -243,6 +246,10 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " the next " + specifics + " time(s) " + target + " gains a status, double that status";
             case "MentalState":
                 return " change mental state to " + specifics;
+            case "MentalStateAndDuration":
+                string[] mentalStateDur = specifics.Split("Equals");
+                if (mentalStateDur.Length < 2){return "???";}
+                return " change mental state to " + mentalStateDur[0] + " for " + mentalStateDur[1] + " turns";
             case "Amnesia":
                 return " make " + target + " forget 1 active skill";
             case "Active":

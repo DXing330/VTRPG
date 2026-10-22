@@ -56,7 +56,8 @@ public class DungeonSelectList : MonoBehaviour
         partyData.Load();
         mysteryDungeonParty.CombineIntoMainParty(partyData);
         mysteryDungeonParty.Save();
-        partyDungeonState.SetLeaderID(mysteryDungeonParty.GetLeaderID());
+        partyDungeonState.PartyEnterDungeon(mysteryDungeonParty);
+        // Set The Starting Stats.
         partyDungeonState.Save();
         dungeonState.Save();
         // Move Scene.
@@ -74,7 +75,6 @@ public class DungeonSelectList : MonoBehaviour
         allDungeons = new List<string>(dungeonData.GetAllKeys());
         UpdateCurrentPage();
     }
-
     protected void ResetPage()
     {
         for (int i = 0; i < dungeonNames.Count; i++)
@@ -85,7 +85,6 @@ public class DungeonSelectList : MonoBehaviour
         }
         utility.DisableGameObjects(dungeonSelectObjects);
     }
-
     protected void UpdateCurrentPage()
     {
         ResetPage();

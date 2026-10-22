@@ -270,7 +270,7 @@ public class BattleMapUtility : ScriptableObject
         }
         return direction;
     }
-    protected void DisplaceActor(TacticActor actor, int direction, int force, BattleMap map)
+    public void DisplaceActor(TacticActor actor, int direction, int force, BattleMap map)
     {
         int displaceDamage = Mathf.Max(actor.GetWeight(), 1) * force * 6;
         int nextTile = actor.GetLocation();

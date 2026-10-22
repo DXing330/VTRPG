@@ -257,7 +257,7 @@ public class MapUtility : ScriptableObject
         int direction = DirectionBetweenLocations(location, otherPoint, size);
         return PointInDirection(location, (direction + 3) % 6, size);
     }
-
+    // This Returns -1 If Out Of Bounds, And Same Location If Wrong Direction.
     public int PointInDirection(int location, int direction, int size)
     {
         int hexQ = GetHexQ(location, size);
@@ -678,6 +678,7 @@ public class MapUtility : ScriptableObject
     public List<int> AdjacentTiles(int location, int size)
     {
         List<int> adjacent = new List<int>();
+        if (location < 0){return adjacent;}
         int adjacentTile = -1;
         for (int i = 0; i < 6; i++)
         {

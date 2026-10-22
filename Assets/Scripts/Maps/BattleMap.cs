@@ -8,7 +8,7 @@ using UnityEngine;
 public class BattleMap : MapManager
 {
     public bool fast = false;
-    protected void ResetAll()
+    protected virtual void ResetAll()
     {
         InitializeEmptyList();
         terrainEffectTiles = new List<string>(emptyList);
@@ -455,6 +455,12 @@ public class BattleMap : MapManager
         battlingActors.Add(actor);
         UpdateMap();
     }
+    public bool AllyOnTile(int tileNumber, int team = 0)
+    {
+        TacticActor possible = GetActorOnTile(tileNumber);
+        if (possible == null){return false;}
+        return (possible.GetTeam() == team);
+    }
     public bool AllyExists(string spriteName, int team = 0)
     {
         for (int i = 0; i < battlingActors.Count; i++)
@@ -463,6 +469,12 @@ public class BattleMap : MapManager
             if (battlingActors[i].GetSpriteName() == spriteName){return true;}
         }
         return false;
+    }
+    public bool EnemyOnTile(int tileNumber, int team = 0)
+    {
+        TacticActor possible = GetActorOnTile(tileNumber);
+        if (possible == null){return false;}
+        return (possible.GetTeam() != team);
     }
     public bool EnemyExists(string spriteName, int team = 0)
     {
@@ -1093,6 +1105,7 @@ public class BattleMap : MapManager
         return newTiles;
     }
     // List of actor directions on tiles.
+    [System.NonSerialized]
     public List<string> actorDirections;
     public StatDatabase tileTileInteractions;
     public void ChangeBorder(int tileNumber, int direction, string effect)
@@ -1613,7 +1626,7 @@ public class BattleMap : MapManager
         if (!DisplayLayerExists(buildingLayer)){return;}
         mapDisplayers[buildingLayer].DisplayCurrentTiles(mapTiles, buildingTiles, currentTiles);
     }
-    public void UpdateMovingHighlights(TacticActor selectedActor, bool current = true)
+    public virtual void UpdateMovingHighlights(TacticActor selectedActor, bool current = true)
     {
         if (emptyList.Count < mapSize * mapSize)
         {
@@ -1665,7 +1678,6 @@ public class BattleMap : MapManager
             HighlightTileWithoutReseting(selectedTile, "Blue", 4);
         }
     }
-
     public void UpdateHighlights(List<int> newTiles, string colorKey = "MoveClose", int layer = 4)
     {
         if (!DisplayLayerExists(layer)){return;}
@@ -1679,7 +1691,6 @@ public class BattleMap : MapManager
         }
         mapDisplayers[layer].HighlightCurrentTiles(mapTiles, highlightedTiles, currentTiles);
     }
-
     [ContextMenu("Reset Highlights")]
     public void ResetHighlights()
     {

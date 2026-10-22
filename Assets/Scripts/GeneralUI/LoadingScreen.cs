@@ -30,7 +30,7 @@ public class LoadingScreen : MonoBehaviour
     IEnumerator FadeToBlack()
     {
         thisObject.SetActive(true);
-        float fadeTime = totalFadeTime/fadeFrames;
+        float fadeTime = totalFadeTime / fadeFrames;
         for (int i = 0; i < fadeFrames; i++)
         {
             loadingScreen.color = new Color(fadeColors[i].r,fadeColors[i].g,fadeColors[i].b,fadeColors[i].a);
@@ -41,7 +41,7 @@ public class LoadingScreen : MonoBehaviour
     IEnumerator FadeFromBlack()
     {
         thisObject.SetActive(true);
-        float fadeTime = totalFadeTime/fadeFrames;
+        float fadeTime = totalFadeTime / fadeFrames;
         for (int i = fadeFrames - 1; i >= 0; i--)
         {
             loadingScreen.color = new Color(fadeColors[i].r,fadeColors[i].g,fadeColors[i].b,fadeColors[i].a);

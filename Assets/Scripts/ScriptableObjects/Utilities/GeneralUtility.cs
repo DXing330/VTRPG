@@ -352,7 +352,6 @@ public class GeneralUtility : ScriptableObject
         List<string> string_list = ConvertIntListToStringList(int_list);
         return ConvertListToString(string_list, delimiter);
     }
-
     public List<string> ConvertIntListToStringList(List<int> int_list)
     {
         List<string> string_list = new List<string>();
@@ -362,7 +361,6 @@ public class GeneralUtility : ScriptableObject
         }
         return string_list;
     }
-
     public List<int> ConvertStringListToIntList(List<string> string_list, int safeParseValue = 0)
     {
         List<int> int_list = new List<int>();
@@ -372,25 +370,21 @@ public class GeneralUtility : ScriptableObject
         }
         return int_list;
     }
-
     public string ConvertListToString(List<string> string_list, string delimiter = "|")
     {
         return String.Join(delimiter, string_list);
     }
-
     public List<string> ConvertStringToList(string stringList, string delimiter = "|")
     {
         if (string.IsNullOrEmpty(stringList)){return new List<string>();}
         if (string.IsNullOrEmpty(delimiter)){delimiter = "|";}
         return stringList.Split(new string[] { delimiter }, StringSplitOptions.None).ToList();
     }
-
     public string ConvertArrayToString(string[] string_array, string delimiter = "|")
     {
         List<string> string_list = string_array.ToList();
         return ConvertListToString(string_list, delimiter);
     }
-
     public int CountStringsInList(List<string> list, string specifics)
     {
         int count = 0;
@@ -400,7 +394,6 @@ public class GeneralUtility : ScriptableObject
         }
         return count;
     }
-
     public int CountStringsInArray(string[] array, string s)
     {
         int count = 0;
@@ -410,7 +403,6 @@ public class GeneralUtility : ScriptableObject
         }
         return count;
     }
-
     public int CountCharactersInString(string dummyString, char specifics = ' ')
     {
         int count = 0;
@@ -423,7 +415,6 @@ public class GeneralUtility : ScriptableObject
         }
         return count;
     }
-
     public bool IntListContainsIntList(List<int> fullList, List<int> partialList)
     {
         for (int i = 0; i < partialList.Count; i++)
@@ -435,7 +426,6 @@ public class GeneralUtility : ScriptableObject
         }
         return true;
     }
-
     public bool ListContainsList(List<string> fList, List<string> pList)
     {
         for (int i = 0; i < pList.Count; i++)
@@ -447,7 +437,6 @@ public class GeneralUtility : ScriptableObject
         }
         return true;
     }
-
     public int SafeParseInt(string intString, int defaultValue = 0)
     {
         try
@@ -459,7 +448,6 @@ public class GeneralUtility : ScriptableObject
             return defaultValue;
         }
     }
-
     public int SumDescending(int lastValue)
     {
         return (lastValue) * (lastValue + 1) / 2;
@@ -474,7 +462,6 @@ public class GeneralUtility : ScriptableObject
         }
         return value;
     }
-
     public int Root(int rBase, int root = 2)
     {
         // The most retarded, hard coded and slow method possible.
@@ -490,13 +477,11 @@ public class GeneralUtility : ScriptableObject
         // Not sure how to get here.
         return -1;
     }
-
     public int Roll(int modifier, int diceSize = 100)
     {
         if (diceSize <= 1){return 0;}
         return UnityEngine.Random.Range(0, diceSize) + modifier;
     }
-
     public int RollRarity(int maxRarity, int rollBonus = 0)
     {
         int rarity = 0;
@@ -507,7 +492,6 @@ public class GeneralUtility : ScriptableObject
         }
         return rarity;
     }
-
     public string RandomStringBasedOnWeight(List<string> strings, List<int> weights)
     {
         int totalWeight = 0;
@@ -529,7 +513,14 @@ public class GeneralUtility : ScriptableObject
         }
         return strings[0];
     }
-
+    public string ReturnRandomValueBasedOnWeights(List<string> values, List<int> valueWeights)
+    {
+        if (values.Count <= 0){return "";}
+        int totalWeight = valueWeights.Sum();
+        if (totalWeight <= 0){return "";}
+        int weight = UnityEngine.Random.Range(0, totalWeight);
+        return ReturnValueBasedOnWeight(values, valueWeights, weight);
+    }
     public string ReturnValueBasedOnWeight(List<string> values, List<int> valueWeights, int weight)
     {
         if (values.Count <= 0){return "";}
@@ -541,7 +532,6 @@ public class GeneralUtility : ScriptableObject
         }
         return "";
     }
-
     public int ReturnIndexBasedOnWeight(List<int> valueWeights, int weight)
     {
         if (valueWeights.Count <= 0){return -1;}
@@ -553,7 +543,6 @@ public class GeneralUtility : ScriptableObject
         }
         return 0;
     }
-
     public List<int> ShuffleIntList(List<int> intList)
     {
         for (int i = 0; i < intList.Count; i++)

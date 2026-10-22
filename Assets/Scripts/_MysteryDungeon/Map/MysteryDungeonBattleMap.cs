@@ -9,10 +9,82 @@ using UnityEngine;
 // Use Start/End For Tile/Effect/Weather/Etc. Each Turn.
 public class MysteryDungeonBattleMap : BattleMap
 {
+    protected override void ResetAll()
+    {
+        base.ResetAll();
+        revealLayout = false;
+        revealTraps = false;
+        revealItems = false;
+        revealEnemies = false;
+        revealStairs = false;
+    }
+    [Header("Mystery Dungeon Map Stats")]
+    public bool updateMap = true;
+    public int floor = 0;
+    public void SetFloor(int newFloor){floor = newFloor;}
+    public void NewFloor(){floor++;}
+    protected string dungeonType = "Forest";
+    public void SetDungeonType(string newType){dungeonType = newType;}
+    public bool revealLayout = false;
+    public bool revealTraps = false;
+    public bool revealItems = false;
+    public bool revealEnemies = false;
+    public bool revealStairs = false;
+    public void Reveal(string specifics)
+    {
+        switch (specifics)
+        {
+            case "All":
+            revealLayout = true;
+            revealTraps = true;
+            revealItems = true;
+            revealEnemies = true;
+            revealStairs = true;
+            break;
+            case "Layout":
+            revealLayout = true;
+            break;
+            case "Traps":
+            revealTraps = true;
+            break;
+            case "Items":
+            revealItems = true;
+            break;
+            case "Enemies":
+            revealEnemies = true;
+            break;
+            case "Stairs":
+            revealStairs = true;
+            break;
+        }
+        UpdateMap();
+    }
     public MysteryDungeonManager MDGeneralManager;
+    public PartyDungeonState partyDungeonState;
     public MysteryDungeonMapUtility MDMapUtility;
     public StatDatabase dungeonTypeSubTerrains;
     public StatDatabase dungeonTypeWeathers;
+    // Takes In The Floor + Type And Returns A Pool Of Items.
+    public StatDatabase dungeonTypeItemPool;
+    public string GenerateItemFromPool()
+    {
+        List<string> allItems = dungeonTypeItemPool.GetAllKeys();
+        List<int> allItemWeights = new List<int>();
+        for (int i = allItems.Count - 1; i >= 0; i--)
+        {
+            string[] itemData = dungeonTypeItemPool.ReturnValue(allItems[i]).Split("|");
+            // Min Floor > Current Floor OR Excluded Type
+            if (int.Parse(itemData[1]) > floor || itemData[2].Contains(dungeonType))
+            {
+                allItems.RemoveAt(i);
+                continue;
+            }
+            allItemWeights.Insert(0, int.Parse(itemData[0]));
+        }
+        // TODO Roll For An Item.
+        string randomItem = utility.ReturnRandomValueBasedOnWeights(allItems, allItemWeights);
+        return randomItem == "" ? "Apple" : randomItem;
+    }
     public StatDatabase dungeonItems;
     // Each Tile Is Either A Room (Room #) Or Not (-1).
     [System.NonSerialized]
@@ -30,6 +102,7 @@ public class MysteryDungeonBattleMap : BattleMap
         }
         return roomTiles;
     }
+    public int GetRoomOfTile(int tileNumber){return tileRooms[tileNumber];}
     // Track Which Tiles Were Explored, So The Map Is Built While Exploring.
     [System.NonSerialized]
     public List<int> tileExplored = new();
@@ -45,24 +118,46 @@ public class MysteryDungeonBattleMap : BattleMap
         // TODO Get Tiles In A Squared Based On Grid Size / 2.
         int playerRow = mapUtility.GetRow(playerLocation, mapSize);
         int playerCol = mapUtility.GetColumn(playerLocation, mapSize);
-        // 9x9 around player.
-        for (int row = playerRow - 4; row <= playerRow + 4; row++)
-        {
-            for (int col = playerCol - 4; col <= playerCol + 4; col++)
-            {
-                if (row < 0 || row >= mapSize ||
-                    col < 0 || col >= mapSize)
-                {
-                    continue;
-                }
-                int tile = row * mapSize + col;
-                visibleTiles.Add(tile);
-            }
-        }
         int room = tileRooms[playerLocation];
+        // Room, See Whole Room + Adjacent Tiles.
         if (room >= 0)
         {
             visibleTiles.AddRange(GetRoomTiles(playerLocation));
+            List<int> borders = mapUtility.AdjacentBorders(visibleTiles, mapSize);
+            visibleTiles.AddRange(borders);
+        }
+        // Hallway, See 9x9 + Hide Rooms
+        else
+        {
+            for (int row = playerRow - 4; row <= playerRow + 4; row++)
+            {
+                for (int col = playerCol - 4; col <= playerCol + 4; col++)
+                {
+                    if (row < 0 || row >= mapSize || col < 0 || col >= mapSize)
+                    {
+                        continue;
+                    }
+                    int tile = row * mapSize + col;
+                    visibleTiles.Add(tile);
+                }
+            }
+            // Hide Rooms
+            for (int i = visibleTiles.Count - 1; i >= 0; i--)
+            {
+                if (tileRooms[visibleTiles[i]] >= 0)
+                {
+                    visibleTiles.RemoveAt(i);
+                }
+            }
+            // Reveal Room Tiles Close To Center.
+            List<int> borders = mapUtility.AdjacentBorders(visibleTiles, mapSize);
+            foreach (int tile in borders)
+            {
+                if (tileRooms[tile] >= 0)
+                {
+                    visibleTiles.Add(tile);
+                }
+            }
         }
         visibleTiles = visibleTiles.Distinct().ToList();
         foreach (int tile in visibleTiles)
@@ -70,8 +165,25 @@ public class MysteryDungeonBattleMap : BattleMap
             tileExplored[tile] = 1;
         }
     }
+    public override void UpdateMovingHighlights(TacticActor selectedActor, bool current = true)
+    {
+        base.UpdateMovingHighlights(selectedActor, current);
+        ApplyFogOfWar();
+    }
     // Track Player Location.
     public int playerLocation;
+    public void RefreshPlayerLocation()
+    {
+        int leaderID = partyDungeonState.GetLeaderID();
+        for (int i = 0; i < battlingActors.Count; i++)
+        {
+            if (battlingActors[i].GetID() == leaderID)
+            {
+                UpdatePlayerLocation(battlingActors[i].GetLocation());
+                return;
+            }
+        }
+    }
     public void UpdatePlayerLocation(int newLocation)
     {
         playerLocation = newLocation;
@@ -80,6 +192,8 @@ public class MysteryDungeonBattleMap : BattleMap
             MDGeneralManager.NewFloor();
             return;
         }
+        // TODO If Trap
+        // TODO If Item
         UpdateMap();
     }
     public int GetPlayerLocation(){return playerLocation;}
@@ -88,13 +202,21 @@ public class MysteryDungeonBattleMap : BattleMap
     public int GetStairsLocations(){return stairsLocation;}
     // Track Traps.
     public List<string> traps;
+    // Traps Are Normally Hidden Until Triggered.
+    public List<bool> trapTriggered;
     public List<int> trapLocations;
+    public bool TrapTriggered(int tileNumber)
+    {
+        int indexOf = trapLocations.IndexOf(tileNumber);
+        return indexOf >= 0 ? trapTriggered[indexOf] : false;
+    }
     // Track Treasures.
     public List<string> items;
     public List<int> itemLocations;
-    public void InitializeMapFromGenerator(MysteryDungeonGenerator generator, string dungeonType)
+    public void InitializeMapFromGenerator(MysteryDungeonGenerator generator, string newType)
     {
         mapInfo.Clear();
+        SetDungeonType(newType);
         tileRooms = new List<int>(generator.tileRooms);
         for (int i = 0; i < generator.allTiles.Count; i++)
         {
@@ -115,8 +237,13 @@ public class MysteryDungeonBattleMap : BattleMap
         stairsLocation = generator.stairsLocation;
         itemLocations = new List<int>(generator.itemLocations);
         trapLocations = new List<int>(generator.trapLocations);
+        trapTriggered = Enumerable.Repeat(false, trapLocations.Count).ToList();
         // TODO Decide What Items/Traps Exist.
         items = new List<string>();
+        for (int i = 0; i < itemLocations.Count; i++)
+        {
+            items.Add(GenerateItemFromPool());
+        }
         traps = new List<string>();
         tileExplored = Enumerable.Repeat(0, mapInfo.Count).ToList();
         int timeRNG = UnityEngine.Random.Range(0, 24);
@@ -241,6 +368,12 @@ public class MysteryDungeonBattleMap : BattleMap
             string value = keyValue[1];
             switch (key)
             {
+                case "Floor":
+                    floor = int.Parse(value);
+                    break;
+                case "Type":
+                    dungeonType = value;
+                    break;
                 case "Tiles":
                     mapInfo = value.Split(",").ToList();
                     break;
@@ -273,6 +406,7 @@ public class MysteryDungeonBattleMap : BattleMap
                     break;
                 case "TrapLocations":
                     trapLocations = string.IsNullOrEmpty(value) ? new List<int>() : value.Split(',').Select(int.Parse).ToList();
+                    trapTriggered = Enumerable.Repeat(false, trapLocations.Count).ToList();
                     break;
                 case "Items":
                     items = string.IsNullOrEmpty(value) ? new List<string>() : value.Split(',').ToList();
@@ -289,6 +423,8 @@ public class MysteryDungeonBattleMap : BattleMap
     public string ReturnMapStateString()
     {
         string mapState = "";
+        mapState += "Floor=" + floor + "|";
+        mapState += "Type=" + dungeonType + "|";
         mapState += "Tiles=" + String.Join(",", mapInfo) + "|";
         mapState += "MapSize=" + mapSize + "|";
         mapState += "TileRooms=" + String.Join(",", tileRooms) + "|";
@@ -315,20 +451,122 @@ public class MysteryDungeonBattleMap : BattleMap
         GetActorTiles();
         if (!DisplayLayerExists(actorLayer)){return;}
         actorTiles[stairsLocation] = "Stairs";
+        for (int i = 0; i < itemLocations.Count; i++)
+        {
+            if (actorTiles[itemLocations[i]] == "")
+            {
+                actorTiles[itemLocations[i]] = items[i];
+            }
+        }
         mapDisplayers[actorLayer].DisplayCurrentStyledTiles(mapTiles, actorTiles, currentTiles, true, actorDirections);
+    }
+    public void ApplyFogOfWar()
+    {
+        for (int i = 0; i < currentTiles.Count; i++)
+        {
+            if (!visibleTiles.Contains(currentTiles[i]))
+            {
+                mapTiles[i].ResetAllLayers();
+                mapTiles[i].ResetHighlight();
+            }
+        }
     }
     public override void UpdateMap()
     {
+        if (!updateMap){return;}
+        RefreshPlayerLocation();
         // Tile Layer.
         BaseUpdateMap();
-        // TODO Item Layer (Replaced Building Layer).
-        // TODO Actor Layer (Includes Stairs).
+        // TODO Trap Layer (Replaces Building Layer)
+        // TODO Item Layer On ActorLayer
         UpdateActors();
         // TODO Terrain Layer.
         UpdateTerrain();
         // TODO Highlight Layer.
         // TODO Aura Layer.
+        // TODO Add Fog Of War For Hidden Tiles.
+        ApplyFogOfWar();
         // Update The Minimap Based On Explored/Visible Tiles.
         miniMap.CreateMinimap();
+    }
+    public void MoveEffect(TacticActor moved, string effect, string specifics, TacticActor mover = null)
+    {
+        int currentLocation = moved.GetLocation();
+        List<int> possibleLocations = new List<int>();
+        switch (effect)
+        {
+            case "Warp":
+            // Add All Room Tiles, Ignore Hallways.
+            for (int i = 0; i < tileRooms.Count; i++)
+            {
+                if (tileRooms[i] >= 0)
+                {
+                    possibleLocations.Add(i);
+                }
+            }
+            break;
+            case "WarpStairs":
+            // Stairs + Adjacent Tiles
+            possibleLocations = mapUtility.AdjacentTiles(stairsLocation, mapSize);
+            possibleLocations.Add(stairsLocation);
+            break;
+            case "WarpLeader":
+            // Adjacent To Party Leader.
+            possibleLocations = mapUtility.AdjacentTiles(playerLocation, mapSize);
+            break;
+            // Get The First Unit In A Line.
+            case "Swap":
+            possibleLocations = mapUtility.GetTilesInLineDirection(moved.GetLocation(), moved.GetDirection(), int.Parse(specifics), mapSize);
+            for (int i = 0; i < possibleLocations.Count; i++)
+            {
+                if (possibleLocations[i] != currentLocation && GetActorOnTile(possibleLocations[i]) != null && MDMapUtility.IsTilePassable(mapInfo[possibleLocations[i]]))
+                {
+                    TacticActor swapped = GetActorOnTile(possibleLocations[i]);
+                    moved.SetLocation(swapped.GetLocation());
+                    swapped.SetLocation(currentLocation);
+                    UpdateMap();
+                    return;
+                }
+            }
+            return;
+            case "Push":
+            battleMapUtility.DisplaceActor(moved, DirectionBetweenActors(mover, moved), int.Parse(specifics), this);
+            break;
+            case "Forward":
+            List<int> forwardMoveTiles = MDMapUtility.GetPassableTilesInDirection(mover, this, mover.GetDirection(), int.Parse(specifics));
+            for (int i = 0; i < forwardMoveTiles.Count; i++)
+            {
+                MoveActorToTile(mover, forwardMoveTiles[i], true);
+            }
+            break;
+            // Throw At Nearest Ally If Possible.
+            case "Hurl":
+            List<TacticActor> allAllies = AllAllies(moved);
+            allAllies.Remove(moved);
+            TacticActor closestAlly = GetClosestActor(moved, allAllies);
+            // No Ally / Ally Too Far > Thrown Backward If Possible Else Don't Move.
+            moved.TakeEffectDamage(mover.GetAttack() * Mathf.Max(1, moved.GetWeight()));
+            if (closestAlly == null || DistanceBetweenActors(closestAlly, moved) > int.Parse(specifics))
+            {
+                possibleLocations = mapUtility.AdjacentTiles(mapUtility.PointInDirection(moved.GetLocation(), DirectionBetweenActors(mover, moved), mapSize), mapSize);
+            }
+            else
+            {
+                possibleLocations = mapUtility.AdjacentTiles(closestAlly.GetLocation(), mapSize);
+                closestAlly.TakeEffectDamage(mover.GetAttack() * Mathf.Max(1, moved.GetWeight()));
+            }
+            break;
+        }
+        if (possibleLocations.Count > 0)
+        {
+            utility.ShuffleIntList(possibleLocations);
+            for (int i = 0; i < possibleLocations.Count; i++)
+            {
+                // Don't Move To Unpassable/Occupied Tiles.
+                if (GetActorOnTile(possibleLocations[i]) != null || !MDMapUtility.IsTilePassable(mapInfo[possibleLocations[i]])){continue;}
+                moved.SetLocation(possibleLocations[i]);
+                return;
+            }
+        }
     }
 }

@@ -241,7 +241,13 @@ public class PassiveSkill : SkillEffect
             }
         }
     }
-    // 
+    protected void ApplyEffectToTargets(List<TacticActor> actors, BattleMap map, string effect, string specifics)
+    {
+        for (int i = 0; i < actors.Count; i++)
+        {
+            AffectActor(actors[i], effect, specifics);
+        }
+    }
     public void ApplyPassiveEffectToTarget(TacticActor actor, BattleMap map, string target, string effect, string specifics)
     {
         List<TacticActor> targets = new List<TacticActor>();
@@ -269,6 +275,7 @@ public class PassiveSkill : SkillEffect
             {
                 AffectActor(targets[0], effect, specifics);
             }
+            return;
         }
         switch (target)
         {
@@ -300,72 +307,40 @@ public class PassiveSkill : SkillEffect
                 for (int j = 0; j < targets.Count; j++)
                 {
                     // Don't let allies double dip on agile stacks.
-                    if (targets[j].AutoChessFaction("Agile")){return;}
-                    if (targets[j].GetBaseAttackSpeed() >= int.Parse(specifics)){return;}
+                    if (targets[j].AutoChessFaction("Agile")){continue;}
+                    if (targets[j].GetBaseAttackSpeed() >= int.Parse(specifics)){continue;}
                     AffectActor(targets[j], effect, specifics);
                 }
-                break;
+                return;
             case "AdjacentAllies":
                 AffectActor(actor, effect, specifics);
                 targets = map.GetAdjacentAllies(actor);
-                for (int j = 0; j < targets.Count; j++)
-                {
-                    AffectActor(targets[j], effect, specifics);
-                }
                 break;
             case "AdjacentEnemies":
                 targets = map.GetAdjacentEnemies(actor);
-                for (int j = 0; j < targets.Count; j++)
-                {
-                    AffectActor(targets[j], effect, specifics);
-                }
                 break;
             case "AllAllies":
                 targets = map.AllAllies(actor);
-                for (int j = 0; j < targets.Count; j++)
-                {
-                    AffectActor(targets[j], effect, specifics);
-                }
                 break;
             case "AllEnemies":
                 targets = map.AllEnemies(actor);
-                for (int j = 0; j < targets.Count; j++)
-                {
-                    AffectActor(targets[j], effect, specifics);
-                }
                 break;
             case "AdjacentActors":
                 targets = map.GetAdjacentActors(actor.GetLocation());
-                for (int j = 0; j < targets.Count; j++)
-                {
-                    AffectActor(targets[j], effect, specifics);
-                }
                 break;
             // Get the allies of the target, since they are the enemy of the attacker.
             case "TargetAdjacentEnemies":
                 targets = map.GetAdjacentAllies(actor);
-                for (int j = 0; j < targets.Count; j++)
-                {
-                    AffectActor(targets[j], effect, specifics);
-                }
                 break;
             case "BackAllies":
                 tiles.Add(map.ReturnTileInRelativeDirection(actor, 2));
                 tiles.Add(map.ReturnTileInRelativeDirection(actor, 3));
                 tiles.Add(map.ReturnTileInRelativeDirection(actor, 4));
                 targets = map.ReturnAlliesInTiles(actor, tiles);
-                for (int j = 0; j < targets.Count; j++)
-                {
-                    AffectActor(targets[j], effect, specifics);
-                }
                 break;
             case "BackAlly":
                 tiles.Add(map.ReturnTileInRelativeDirection(actor, 3));
                 targets = map.ReturnAlliesInTiles(actor,tiles);
-                for (int j = 0; j < targets.Count; j++)
-                {
-                    AffectActor(targets[j], effect, specifics);
-                }
                 break;
             case "Map":
                 AffectMap(actor, effect, specifics, map);
@@ -379,6 +354,10 @@ public class PassiveSkill : SkillEffect
                 break;
             case "AutoSpell":
                 break;
+        }
+        if (targets.Count > 0)
+        {
+            ApplyEffectToTargets(targets, map, effect, specifics);
         }
     }
     // For Testing

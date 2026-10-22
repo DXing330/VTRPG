@@ -321,33 +321,15 @@ public class BattleManager : ClickTileManager
         ResetState();
         // Check for mental conditions.
         string mentalState = turnActor.GetMentalState();
-        switch (mentalState)
+        if (mentalState.Length > 0 && mentalState != "Calm")
         {
-            case "Terrified":
-                UpdateCombatLog(turnActor.GetPersonalName() + " is Terrified.");
-                UI.NPCTurn();
-                TerrifiedTurn(turnActor.GetActions());
-                return;
-            case "Enraged":
-                UpdateCombatLog(turnActor.GetPersonalName() + " is Enraged.");
-                UI.NPCTurn();
-                EnragedTurn(turnActor.GetActions());
-                return;
-            case "Charmed":
-                UpdateCombatLog(turnActor.GetPersonalName() + " is Charmed.");
-                UI.NPCTurn();
-                CharmedTurn(turnActor.GetActions());
-                return;
-            case "Taunted":
-                UpdateCombatLog(turnActor.GetPersonalName() + " is Taunted.");
-                UI.NPCTurn();
-                TauntedTurn(turnActor.GetActions());
-                return;
-            case "Confused":
-                UpdateCombatLog(turnActor.GetPersonalName() + " is Confused.");
-                UI.NPCTurn();
-                ConfusedTurn(turnActor.GetActions());
-                return;
+            UpdateCombatLog(turnActor.GetPersonalName() + " is " + mentalState);
+        }
+        if (actorAI.MentalStateTurn(turnActor, map))
+        {
+            UI.NPCTurn();
+            EndTurn();
+            return;
         }
         if (autoBattle || turnActor.UncontrolledSummon() || turnActor.GetTeam() > 0 && !controlAI){NPCTurn();}
     }
@@ -596,21 +578,18 @@ public class BattleManager : ClickTileManager
         }
         RefreshUI();
     }
-
     public void ViewActorFromTurnOrder(int index)
     {
         selectedActor = roundTurnOrder[index + turnNumber];
         if (selectedActor == null){return;}
         ViewActorOnTile(selectedActor.GetLocation());
     }
-
     public void ViewTargetedActorFromTurnOrder(int index)
     {
         selectedActor = roundTurnOrder[index + turnNumber].GetTarget();
         if (selectedActor == null){return;}
         ViewActorOnTile(selectedActor.GetLocation());
     }
-
     protected void ViewActorOnTile(int tileNumber)
     {
         selectedActor = map.GetActorOnTile(tileNumber);
@@ -621,21 +600,18 @@ public class BattleManager : ClickTileManager
             map.UpdateMovingHighlights(selectedActor, selectedActor == turnActor);
         }
     }
-
     protected void StartTargeting()
     {
         map.ResetHighlights();
         UI.PreviewTarget();
         map.UpdateSelectedAttackTile(turnActor, selectedTile);
     }
-
     protected void StartAttacking()
     {
         map.ResetHighlights();
         UI.PreviewBattleStats(turnActor);
         map.UpdateSelectedAttackTile(turnActor, selectedTile);
     }
-
     protected void AttackTile(int tileNumber)
     {
         List<int> attackableTiles = map.GetAttackableTiles(turnActor);
@@ -699,14 +675,12 @@ public class BattleManager : ClickTileManager
         map.UpdateMap();
         RefreshUI();
     }
-    
     protected void StartMoving()
     {
         map.ResetHighlights();
         map.UpdateMovingHighlights(turnActor, moveManager);
         moveManager.GetAllReachableTiles(turnActor, map.battlingActors);
     }
-
     protected void MoveToTile(int tileNumber)
     {
         int indexOf = moveManager.reachableTiles.IndexOf(tileNumber);
@@ -950,7 +924,6 @@ public class BattleManager : ClickTileManager
         ActivateSpell();
         return true;
     }
-
     protected void NPCSpellAction(int actionsLeft, string spell)
     {
         for (int i = 0; i < actionsLeft; i++)
@@ -967,7 +940,6 @@ public class BattleManager : ClickTileManager
         }
         EndTurn();
     }
-
     protected bool TryNPCSkillOnce(string skill)
     {
         // Get the active and the targeted tile.
@@ -1009,148 +981,6 @@ public class BattleManager : ClickTileManager
             {
                 break;
             }
-        }
-        EndTurn();
-    }
-    protected void TerrifiedTurn(int actionsLeft)
-    {
-        for (int i = 0; i < actionsLeft; i++)
-        {
-            // Get the closest enemy.
-            GetAllMoveCosts();
-            TacticActor closestEnemy = actorAI.GetClosestEnemy(map.battlingActors, turnActor, moveManager);
-            if (closestEnemy == null)
-            {
-                // No more enemies, just end turn.
-                break;
-            }
-            turnActor.SetTarget(closestEnemy);
-            // Move away from them the target.
-            GetAllMoveCosts();
-            List<int> path = actorAI.FindPathAwayFromTarget(turnActor, map, moveManager);
-            MoveAlongPath(turnActor, path);
-            if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
-            {
-                break;
-            }
-        }
-        EndTurn();
-    }
-    protected void EnragedTurn(int actionsLeft)
-    {
-        for (int i = 0; i < actionsLeft; i++)
-        {
-            // Pick the closest target no matter what.
-            GetAllMoveCosts();
-            TacticActor newTarget = actorAI.GetClosestEnemy(map.battlingActors, turnActor, moveManager, true);
-            if (newTarget == null)
-            {
-                // No more enemies, just end turn.
-                break;
-            }
-            turnActor.SetTarget(newTarget);
-            // Attack them if you can.
-            // You can use a random skill if possible.
-            if (actorAI.EnemyInAttackRange(turnActor, turnActor.GetTarget(), map)) { NPCAttackAction(true); }
-            // Else move towards the target.
-            else
-            {
-                if (AIPathToTarget())
-                {
-                    break;
-                }
-            }
-            if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
-            {
-                break;
-            }
-        }
-        // Reset targets after you stop raging.
-        turnActor.ResetTarget();
-        EndTurn();
-    }
-    protected void CharmedTurn(int actionsLeft)
-    {
-        for (int i = 0; i < actionsLeft; i++)
-        {
-            if (turnActor.GetTarget() == null || turnActor.GetTarget().GetHealth() <= 0)
-            {
-                GetAllMoveCosts();
-                TacticActor closestEnemy = actorAI.GetClosestEnemy(map.battlingActors, turnActor, moveManager);
-                if (closestEnemy == null)
-                {
-                    // No more enemies, just end turn.
-                    break;
-                }
-                turnActor.SetTarget(closestEnemy);
-            }
-            // Move towards the target.
-            GetAllMoveCosts();
-            if (AIPathToTarget())
-            {
-                EndTurn();
-                return;
-            }
-            if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
-            {
-                break;
-            }
-        }
-        EndTurn();
-    }
-    protected void TauntedTurn(int actionsLeft)
-    {
-        for (int i = 0; i < actionsLeft; i++)
-        {
-            GetAllMoveCosts();
-            // Find a new target if needed.
-            if (turnActor.GetTarget() == null || turnActor.GetTarget().GetHealth() <= 0)
-            {
-                TacticActor closestEnemy = actorAI.GetClosestEnemy(map.battlingActors, turnActor, moveManager);
-                if (closestEnemy == null)
-                {
-                    // No more enemies, just end turn.
-                    break;
-                }
-                turnActor.SetTarget(closestEnemy);
-            }
-            // If they can be attacked without moving then attack.
-            if (actorAI.EnemyInAttackRange(turnActor, turnActor.GetTarget(), map))
-            {
-                ActorAttacksActor(turnActor, turnActor.GetTarget());
-            }
-            // Otherwise move.
-            else
-            {
-                GetAllMoveCosts();
-                if (AIPathToTarget())
-                {
-                    EndTurn();
-                    return;
-                }
-            }
-            if (turnActor.GetActions() <= 0 || turnActor.GetHealth() <= 0)
-            {
-                break;
-            }
-        }
-        EndTurn();
-    }
-    protected void ConfusedTurn(int actionsLeft)
-    {
-        // Pretend to be a random other status.
-        int randomTurnType = Random.Range(0, 3);
-        switch (randomTurnType)
-        {
-            case 0:
-                TerrifiedTurn(actionsLeft);
-                return;
-            case 1:
-                EnragedTurn(actionsLeft);
-                return;
-            case 2:
-                CharmedTurn(actionsLeft);
-                return;
         }
         EndTurn();
     }
@@ -1199,8 +1029,7 @@ public class BattleManager : ClickTileManager
         // Always end turn at the end.
         EndTurn();
     }
-
-    protected void NPCAttackAction(bool randomSkill = false)
+    public void NPCAttackAction(bool randomSkill = false)
     {
         string attackActive = actorAI.ReturnAIAttackSkill(turnActor);
         if (randomSkill && turnActor.GetActiveSkills().Count > 0)
@@ -1244,7 +1073,6 @@ public class BattleManager : ClickTileManager
             NPCAttackAction(randomSkill);
         }
     }
-
     protected void DragGrappledActor(TacticActor grappled, int tile)
     {
         int prevLoc = grappled.GetLocation();
@@ -1304,7 +1132,7 @@ public class BattleManager : ClickTileManager
         map.UpdateActors();
         ResetState();
     }
-    protected void MoveAlongPath(TacticActor actor, List<int> path)
+    public void MoveAlongPath(TacticActor actor, List<int> path)
     {
         if (path.Count <= 0){return;}
         for (int i = path.Count - 1; i >= 0; i--)

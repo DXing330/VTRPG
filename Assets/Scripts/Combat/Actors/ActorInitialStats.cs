@@ -706,7 +706,7 @@ public class ActorInitialStats : ActorPassives
     }
     public void RemoveStatus(string statusName)
     {
-        if (statusName == "All")
+        if (string.Equals(statusName, "All", StringComparison.OrdinalIgnoreCase))
         {
             statusDurations.Clear();
             statuses.Clear();

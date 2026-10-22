@@ -52,6 +52,7 @@ public class MysteryDungeonManager : MonoBehaviour
         }
         loadingScreen.EnableLoading();
         loadingScreen.FinishLoadingScreen();
+        map.NewFloor();
         GenerateDungeon();
         // Remove All Enemies Since They Are On A Different Floor Now.
         map.RemoveNonTeamMembers();

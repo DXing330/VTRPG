@@ -28,6 +28,7 @@ public class PartyDungeonState : SavedData
     }
     // Only 1 Member Can Be The Leader Inside A Dungeon At A Time.
     public int leaderID;
+    public int GetLeaderID(){return leaderID;}
     public void SetLeaderID(int newID){leaderID = newID;}
     public int maxFullness;
     // Restores Starting Each Dungeon + Eating.
@@ -43,15 +44,18 @@ public class PartyDungeonState : SavedData
         // Default Is Full Health And No Mana.
         return "-1||0";
     }
-    public void EnterDungeon(int newLeader, List<int> partyIDs, PartyDataManager partyData)
+    public void PartyEnterDungeon(PartyDataManager partyData)
     {
-        leaderID = newLeader;
-        maxFullness = 600;
+        SetLeaderID(partyData.GetLeaderID());
+        List<string> partyIDs = partyData.mainPartyData.GetPartyIDs();
+        maxFullness = 300;
         currentFullness = maxFullness;
         currentPartyStats.Clear();
         for (int i = 0; i < partyIDs.Count; i++)
         {
-            currentPartyStats[partyIDs[i]] = partyData.ReturnActorFromID(partyIDs[i]).ReturnPersistentStats();
+            if (string.IsNullOrEmpty(partyIDs[i])){continue;}
+            int partyID = int.Parse(partyIDs[i]);
+            currentPartyStats[partyID] = partyData.ReturnActorFromID(partyID).ReturnPersistentStats();
         }
         Save(); 
     }

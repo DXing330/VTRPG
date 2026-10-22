@@ -2,6 +2,9 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+    using UnityEditor;
+#endif
 
 public class PartyDataManager : MonoBehaviour
 {
@@ -42,9 +45,17 @@ public class PartyDataManager : MonoBehaviour
         permanentPartyData.foldername = partyFolderName;
         mainPartyData.foldername = partyFolderName;
         tempPartyData.foldername = partyFolderName;
+        #if UNITY_EDITOR
+            EditorUtility.SetDirty(permanentPartyData);
+            EditorUtility.SetDirty(mainPartyData);
+            EditorUtility.SetDirty(tempPartyData);
+        #endif
         for (int i = 0; i < otherPartyData.Count; i++)
         {
             otherPartyData[i].foldername = partyFolderName;
+            #if UNITY_EDITOR
+                EditorUtility.SetDirty(otherPartyData[i]);
+            #endif
         }
     }
     public Inventory inventory;

@@ -68,6 +68,10 @@ public class SkillEffect : ScriptableObject
             case "SkillMod":
                 target.AddActiveMod(effectSpecifics);
                 break;
+            // Permanent Status
+            case "CursedStatus":
+                target.AddStatus(effectSpecifics, -1);
+                break;
             case "Status":
                 int duration = level;
                 if (level <= baseStatusDuration && level >= 0) { duration = baseStatusDuration; }
@@ -88,6 +92,11 @@ public class SkillEffect : ScriptableObject
                         break;
                 }
                 target.AddStatus(effectSpecifics, duration);
+                break;
+            case "StatusAndDuration":
+                string[] statusDuration = effectSpecifics.Split("Equals");
+                if (statusDuration.Length < 2){return;}
+                AffectActor(target, "Status", statusDuration[0], SafeParseInt(statusDuration[1]), combatLog);
                 break;
             case "Statuses":
                 int durations = level;
@@ -179,6 +188,16 @@ public class SkillEffect : ScriptableObject
                 target.UpdateDefense(allStatChange);
                 break;
             case "AllStats%":
+                AffectActor(target, "Health%", effectSpecifics, level);
+                AffectActor(target, "Attack%", effectSpecifics, level);
+                AffectActor(target, "Defense%", effectSpecifics, level);
+                break;
+            case "AllBaseStats":
+                AffectActor(target, "BaseHealth", effectSpecifics, level);
+                AffectActor(target, "BaseAttack", effectSpecifics, level);
+                AffectActor(target, "BaseDefense", effectSpecifics, level);
+                break;
+            case "AllBaseStats%":
                 AffectActor(target, "BaseHealth%", effectSpecifics, level);
                 AffectActor(target, "BaseAttack%", effectSpecifics, level);
                 AffectActor(target, "BaseDefense%", effectSpecifics, level);
@@ -200,6 +219,7 @@ public class SkillEffect : ScriptableObject
                 }
                 break;
             case "CurrentHealth%":
+            case "PADGravity":
                 int currentHealth = target.GetHealth();
                 target.UpdateHealth(int.Parse(effectSpecifics) * currentHealth / basicDenominator);
                 break;
@@ -413,6 +433,11 @@ public class SkillEffect : ScriptableObject
                 break;
             case "MentalState":
                 target.SetMentalState(effectSpecifics, level);
+                break;
+            case "MentalStateAndDuration":
+                string[] mentalStateDur = effectSpecifics.Split("Equals");
+                if (mentalStateDur.Length < 2){break;}
+                target.SetMentalState(mentalStateDur[0], int.Parse(mentalStateDur[1]));
                 break;
             case "Amnesia":
                 target.RemoveRandomActiveSkill();

@@ -3,7 +3,6 @@ using UnityEngine.UI;
 
 public class MysteryDungeonMinimap : MaskableGraphic
 {
-    public bool showUnexplored = false;
     public MysteryDungeonBattleMap map;
     [ContextMenu("Create Minimap")]
     public void CreateMinimap()
@@ -93,28 +92,39 @@ public class MysteryDungeonMinimap : MaskableGraphic
             vh.AddTriangle(startIndex, startIndex + i + 1, startIndex + next + 1);
         }
     }
+    // TODO Add Enemies/Items Traps
     private Color GetTileColor(int tile)
     {
         // Player always visible.
         if (tile == map.playerLocation)
             return Color.green;
+        if (map.AllyOnTile(tile))
+            return new Color(0.56f, 0.93f, 0.56f, 1f);
         // Unexplored.
-        if (map.tileExplored == null || tile < 0 || tile >= map.tileExplored.Count || map.tileExplored[tile] == 0 && !showUnexplored)
+        if (map.tileExplored == null || tile < 0 || tile >= map.tileExplored.Count || map.tileExplored[tile] == 0 && !map.revealLayout)
         {
             return Color.clear;
         }
-        if (tile == map.stairsLocation)
-            return Color.grey;
         // Temporary terrain check.
-        // We can replace this with your actual
-        // topology/movement system later.
         if (!IsPassable(map.mapInfo[tile]))
             return Color.clear;
         bool visible = map.visibleTiles.Contains(tile);
-        /*if (visible && IsEnemyAtTile(tile))
-            return Color.red;*/
-        if (map.itemLocations.Contains(tile))
+        bool stairs = map.stairsLocation == tile;
+        bool enemy = map.EnemyOnTile(tile);
+        bool item = map.itemLocations.Contains(tile);
+        bool trap = map.trapLocations.Contains(tile);
+        if (enemy && (visible || map.revealEnemies))
+        {
+            return Color.red;
+        }
+        if (stairs && (visible || map.revealStairs))
+        {
+            return Color.grey;
+        }
+        if (item && (visible || map.revealItems))
             return Color.blue;
+        if ((trap && map.revealTraps) || trap && map.TrapTriggered(tile))
+            return new Color(0.5450981f, 0f, 0f, 1f);
         if (visible)
             return Color.white;
         return new Color(1f, 1f, 1f, 0.35f);
