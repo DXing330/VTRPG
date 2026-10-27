@@ -14,18 +14,17 @@ public class DungeonGenerator : ScriptableObject
     protected const int FLOOR_TILE = 0;
     protected const int WALL_TILE = 1;
     protected const int DEFAULT_BASE_SIZE = 32;
+    protected const int DEFAULT_MAX_SIZE = 96;
     protected const int DEFAULT_SIZE_VARIANCE = 6;
     protected const int DEFAULT_MIN_ROOM_SIZE = 6;
     protected const int DEFAULT_MAX_ROOMS = 6;
     // Chance to add additional connections after the main room graph.
     protected const float EXTRA_CONNECTION_CHANCE = 0.05f;
     // Chance for a rectangular room to have its corners removed.
-    protected const float IRREGULAR_ROOM_CHANCE = 0.35f;
+    protected const float IRREGULAR_ROOM_CHANCE = 0.3f;
     // Important locations should not be immediately adjacent.
     protected const int MIN_IMPORTANT_LOCATION_DISTANCE = 3;
-    // ============================================================
     // BASIC SETTINGS
-    // ============================================================
     public int treasureCount = 1;
     public void SetTreasureCount(int newAmount)
     {
@@ -44,17 +43,13 @@ public class DungeonGenerator : ScriptableObject
     }
     public int minRoomSize = DEFAULT_MIN_ROOM_SIZE;
     public int maxRooms = DEFAULT_MAX_ROOMS;
-
     // These are now independent from treasureCount.
     // Set to 0 when a floor should have none.
-    public int minItems = 0;
-    public int maxItems = 4;
+    public int minItems = 1;
+    public int maxItems = 12;
     public int minTraps = 0;
-    public int maxTraps = 2;
-
-    // ============================================================
+    public int maxTraps = 12;
     // GENERATED DATA
-    // ============================================================
     public List<int> allTiles = new List<int>();
     public List<int> tileRooms = new List<int>();
     public int startLocation;
@@ -63,9 +58,7 @@ public class DungeonGenerator : ScriptableObject
     public List<int> trapLocations;
     // start|direction|width|height
     public List<string> roomDetails = new List<string>();
-    // ============================================================
     // INTERNAL ROOM DATA
-    // ============================================================
     protected enum RoomType
     {
         Normal,
@@ -85,39 +78,17 @@ public class DungeonGenerator : ScriptableObject
         public List<int> interiorTiles = new List<int>();
         public List<int> allTiles = new List<int>();
     }
-    // ============================================================
     // MAIN GENERATION
-    // ============================================================
-    public void GenerateDungeon(int newSize = -1, int newMaxRooms = -1)
+    public void GenerateDungeon(int newSize = -1, int floor = 0)
     {
-        // --------------------------------------------------------
         // Size
-        // --------------------------------------------------------
-        if (newSize < baseSize - sizeVariance)
-        {
-            size = baseSize + Random.Range(-sizeVariance, sizeVariance + 1);
-        }
-        else
-        {
-            size = newSize;
-        }
-        size = Mathf.Max(size, minRoomSize + 2);
-        if (newMaxRooms >= 0)
-        {
-            maxRooms = newMaxRooms;
-        }
-        else
-        {
-            maxRooms = Mathf.Max(2, size / minRoomSize);
-        }
+        size = Mathf.Min(Mathf.Max(newSize, baseSize), DEFAULT_MAX_SIZE);
+        size = size + Random.Range(-sizeVariance, sizeVariance + floor);
+        maxRooms = Mathf.Max(2, size / minRoomSize);
         Reset();
-        // --------------------------------------------------------
         // Generate base map
-        // --------------------------------------------------------
         GetTiles();
-        // --------------------------------------------------------
         // Generate rooms
-        // --------------------------------------------------------
         MakeRooms();
         // Extremely unlikely fallback, but guarantees that we have
         // something usable.
@@ -125,13 +96,9 @@ public class DungeonGenerator : ScriptableObject
         {
             MakeFallbackRoom();
         }
-        // --------------------------------------------------------
         // Build room connectivity
-        // --------------------------------------------------------
         ConnectRoomGraph();
-        // --------------------------------------------------------
         // Choose important locations
-        // --------------------------------------------------------
         int startRoom = Random.Range(0, roomDetails.Count);
         int stairsRoom = Random.Range(0, roomDetails.Count);
         startLocation = GetRandomPointInRoom(startRoom);
@@ -139,14 +106,10 @@ public class DungeonGenerator : ScriptableObject
         // Mark important rooms.
         // This is currently only internal information; eventually this can become part of your serialized floor structure.
         // Start/stairs themselves are just tile locations for now.
-        // --------------------------------------------------------
         // Make absolutely certain the main route exists.
-        // --------------------------------------------------------
         ConnectPoints(startLocation, stairsLocation);
-        // --------------------------------------------------------
         // Generate item locations.
-        // --------------------------------------------------------
-        int actualMinItems = Mathf.Max(0, minItems);
+        int actualMinItems = Mathf.Max(floor / 3, minItems);
         int actualMaxItems = Mathf.Max(actualMinItems, maxItems);
         int itemCount = Random.Range(actualMinItems, actualMaxItems + 1);
         List<int> takenLocations = new List<int>();
@@ -163,10 +126,8 @@ public class DungeonGenerator : ScriptableObject
             takenLocations.Add(location);
             itemLocations.Add(location);
         }
-        // --------------------------------------------------------
         // Generate traps.
-        // --------------------------------------------------------
-        int actualMinTraps = Mathf.Max(0, minTraps);
+        int actualMinTraps = Mathf.Max(floor / 5, minTraps);
         int actualMaxTraps = Mathf.Max(actualMinTraps, maxTraps);
         int trapCount = Random.Range(actualMinTraps, actualMaxTraps + 1);
         trapLocations = new List<int>();
@@ -180,14 +141,10 @@ public class DungeonGenerator : ScriptableObject
             takenLocations.Add(location);
             trapLocations.Add(location);
         }
-        // --------------------------------------------------------
         // Final connectivity validation.
-        // --------------------------------------------------------
         if (!IsReachable(startLocation, stairsLocation))
         {
-            // This should almost never happen because the main
-            // connection was explicitly carved.
-            //
+            // This should almost never happen because the main connection was explicitly carved.
             // Repair rather than silently returning an invalid floor.
             ConnectPoints(startLocation, stairsLocation);
         }

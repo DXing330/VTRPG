@@ -58,6 +58,10 @@ public class MysteryDungeonUIManager : ClickTileManager
             case ClickTileState.Attack:
             battleManager.PlayerStartAttacking();
             break;
+            case ClickTileState.Item:
+            selectItemList.SetSelectables(partyData.dungeonBag.GetItems());
+            useItemObject.SetActive(false);
+            break;
         }
     }
     public GeneralUtility utility;
@@ -166,5 +170,35 @@ public class MysteryDungeonUIManager : ClickTileManager
     public void ChangeDirection(int direction)
     {
         battleManager.PlayerChangeDirection(direction);
+    }
+    public SelectList selectItemList;
+    public GameObject useItemObject;
+    public TMP_Text useItemDescription;
+    public MysteryDungeonItemDetailSwitch itemDescriptions;
+    public void SelectItem()
+    {
+        useItemObject.SetActive(true);
+        UpdateItemDescription(selectItemList.GetSelectedString());
+    }
+    public void UpdateItemDescription(string itemName)
+    {
+        useItemDescription.text = itemDescriptions.ReturnItemDescriptionFromName(itemName);
+    }
+    public void UseItem()
+    {
+        battleManager.ActorUseItem(selectItemList.GetSelectedString());
+        ChangeState("Item");
+    }
+    // Removes The Item.
+    public void DropItem()
+    {
+        partyData.dungeonBag.UseItem(selectItemList.GetSelectedString());
+        ChangeState("Item");
+    }
+    // If Throwable?
+    public void ThrowItem()
+    {
+        battleManager.ActorThrowItem(selectItemList.GetSelectedString());
+        ChangeState("Item");
     }
 }

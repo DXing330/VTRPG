@@ -13,7 +13,7 @@ public class PassiveDetailViewerSwitch : ScriptableObject
         string[] data = allBuffStatus.ReturnValue(newName).Split("|");
         if (data.Length < 6){return "";}
         string details = "";
-        details += data[0] + ":" + data[3] + "-";
+        details += data[0] + ": " + data[3] + ": ";
         if (data[4].Contains(","))
         {
             string[] effects = data[4].Split(",");
@@ -54,11 +54,12 @@ public class PassiveDetailViewerSwitch : ScriptableObject
         string[] dataBlocks = newInfo.Split("|");
         string description = "";
         description += PassiveTiming(dataBlocks[0]);
+        string target = dataBlocks[3];
         string[] effects = dataBlocks[4].Split(",");
         string[] effectSpecifics = dataBlocks[5].Split(",");
         for (int i = 0; i < effects.Length; i++)
         {
-            description += PassiveEffect(effects[i], effectSpecifics[i], dataBlocks[3]);
+            description += PassiveEffect(effects[i], effectSpecifics[i], target);
             if (i < effects.Length - 1)
             {
                 description += " and";
@@ -177,7 +178,7 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " change maximum health% of " + target + " by " + specifics + "%";
             case "PADGravity":
             case "CurrentHealth%":
-                return " decrease current health by " + specifics + "%";
+                return " decrease current health of " + target + " by " + specifics + "%";
             case "BaseEnergy%":
                 return " change base energy of " + target + " by " + specifics + "%";
             case "Movement":
@@ -197,9 +198,13 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "TemporarySpell":
                 return " gain the " + specifics + " spell once";
             case "CursedStatus":
-                return " curse " + target + " with " + specifics;
+                return " curse " + target + " with " + specifics + " (" + ReturnBuffStatusDetails(specifics) + ")";
             case "Status":
-                return " inflict " + specifics+" on " + target;
+                return " inflict " + specifics + " (" + ReturnBuffStatusDetails(specifics) + ")" + " on " + target;
+            case "StatusAndDuration":
+                string[] statusDuration = specifics.Split("Equals");
+                if (statusDuration.Length < 2){return "???";}
+                return "Give the target(s) " + statusDuration[0] + " (" + ReturnBuffStatusDetails(statusDuration[0]) + ") for " + statusDuration[1] + " turn(s).";
             case "Buff":
                 return " give " + specifics + " (" + ReturnBuffStatusDetails(specifics) + ") to " + target;
             case "ExtendBuffs":
@@ -210,6 +215,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " remove " + specifics + " status effects from " + target;
             case "RemoveStatus":
                 return " remove all " + specifics + " status effects from " + target;
+            case "AllBaseStats":
+                return " increase base health/attack/defense of " + target + " by " + " specifics"; 
             case "Heal":
             case "SelfHeal":
             case "Health":
@@ -219,7 +226,7 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "MoveType":
                 return " change movement type of " + target + " to " + specifics;
             case "PassThroughMoving":
-                return " allow moving through other actors";
+                return " allow moving through other actors and ignoring most terrain";
             case "AttackRange":
                 return " increase Attack Range of " + target + " by up to " + specifics;
             case "TempRange":
@@ -324,6 +331,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " change basic attack span to " + specifics + " for one turn";
             case "Unhealable":
                 return " prevent healing from allies";
+            case "Stomach":
+                return " increase fullness by " + specifics;
         }
         return " increase " + effect + " of " + target + " by " + specifics;
     }
@@ -598,9 +607,16 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "Time<>":
                 return " if the time of day is not " + specifics + "";
             case "MoveType":
-                return " if movement type of " + conTarget + " equals " + specifics;
+                return " if movement type of " + conTarget + " is " + specifics;
             case "MoveType<>":
                 return " if movement type of " + conTarget + " is not " + specifics;
+            // Intentionally Blank For Now, Will Let Those With This Enabled Know They Are Special Somehow.
+            case "WaterImmune<>":
+                return "";
+            case "PassThroughMoving":
+                return "";
+            case "PassThroughMoving<>":
+                return "";
             case "MentalState":
                 return " if " + conTarget + " is " + specifics;
             case "Buff":

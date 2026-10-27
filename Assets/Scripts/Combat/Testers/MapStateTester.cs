@@ -222,7 +222,7 @@ public class MapStateTester : MonoBehaviour
         List<int> tiles = new List<int>();
         for (int i = 0; i < map.mapInfo.Count; i++)
         {
-            if (actor.GetMoveType() != "Flying" && map.excludedTileTypesForNonFlying.Contains(map.mapInfo[i])) { continue; }
+            if (!actor.PassThroughMoving() && map.excludedTileTypesForNonFlying.Contains(map.mapInfo[i])) { continue; }
             if (map.mapInfo[i].Contains(tileType) && map.GetActorOnTile(i) == null) { tiles.Add(i); }
         }
         return tiles;

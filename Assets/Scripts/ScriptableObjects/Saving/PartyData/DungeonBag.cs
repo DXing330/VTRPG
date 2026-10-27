@@ -32,9 +32,12 @@ public class DungeonBag : SavedData
         }
     }
     public List<string> items;
+    public List<string> GetItems()
+    {
+        return new List<string>(items);
+    }
     public int GetItemCount(){return items.Count;}
     public void DropItems(){items.Clear();}
-    public List<string> GetItems(){return items;}
     public void SetItems(List<string> newInfo)
     {
         utility.RemoveEmptyListItems(newInfo);

@@ -611,6 +611,9 @@ public class SkillEffect : ScriptableObject
             case "AKRespawnTimer":
                 target.ChangeRespawnTimer(int.Parse(effectSpecifics));
                 break;
+            case "Stomach":
+                target.Eat(int.Parse(effectSpecifics));
+                break;
         }
     }
     public int ApplyElementalDamageToTarget(TacticActor target, string damageType, int damageAmount, BattleMap map = null)

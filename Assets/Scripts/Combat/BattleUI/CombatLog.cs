@@ -7,12 +7,11 @@ using TMPro;
 // Both Tracks And Displays Combat Logs, Maybe Split Into Two Later.
 public class CombatLog : MonoBehaviour
 {
-    protected void ResetLists()
+    protected virtual void ResetLists()
     {
         combatRoundTracker.Clear();
         combatTurnTracker.Clear();
         allLogs.Clear();
-        currentLogs.Clear();
         detailKeys.Clear();
         detailedLogs.Clear();
         round = 0;
@@ -114,7 +113,6 @@ public class CombatLog : MonoBehaviour
         }
         Debug.Log(allLogsDebug);
     }
-    public List<string> currentLogs;
     public List<string> detailKeys;
     public List<string> detailedLogs;
     public void DebugLatestDetailsLog()
@@ -122,7 +120,7 @@ public class CombatLog : MonoBehaviour
         if (detailedLogs.Count <= 0){return;}
         Debug.Log(detailedLogs[detailedLogs.Count - 1]);
     }
-    public void AddDetailedLogs(string newDetail)
+    public virtual void AddDetailedLogs(string newDetail)
     {
         string key = GetLatestRound() + "|" + GetLatestTurn() + "|" + GetLatestLogCount();
         int indexOf = detailKeys.IndexOf(key);
@@ -137,7 +135,7 @@ public class CombatLog : MonoBehaviour
             detailedLogs[indexOf] += "\n"+newDetail;
         }
     }
-    public string ReturnDetailedLog(int round, int turn, int index)
+    public virtual string ReturnDetailedLog(int round, int turn, int index)
     {
         string key = round+"|"+turn+"|"+index;
         int indexOf = detailKeys.IndexOf(key);
@@ -151,25 +149,25 @@ public class CombatLog : MonoBehaviour
         combatTurnTracker.Add(turn);
         allLogs.Add("");
     }
-    public void UpdateNewestLog(string newText)
+    public virtual void UpdateNewestLog(string newLog)
     {
         if (allLogs.Count <= 0)
         {
-            allLogs.Add(newText);
+            allLogs.Add(newLog);
             combatRoundTracker.Add(round);
             combatTurnTracker.Add(turn);
         }
         else if (allLogs[allLogs.Count - 1] == "")
         {
-            allLogs[allLogs.Count - 1] = newText;
+            allLogs[allLogs.Count - 1] = newLog;
         }
         else
         {
-            allLogs[allLogs.Count - 1] = allLogs[allLogs.Count - 1]+"|"+newText;
+            allLogs[allLogs.Count - 1] = allLogs[allLogs.Count - 1] + "|" + newLog;
         }
         UpdateLog(false);
     }
-    public string GetLatestLog()
+    public virtual string GetLatestLog()
     {
         return allLogs[allLogs.Count - 1];
     }

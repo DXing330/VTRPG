@@ -30,6 +30,7 @@ public class PartyDungeonState : SavedData
     public int leaderID;
     public int GetLeaderID(){return leaderID;}
     public void SetLeaderID(int newID){leaderID = newID;}
+    // TODO Save/Load To/From The Leader When NewFloor/Spawn
     public int maxFullness;
     // Restores Starting Each Dungeon + Eating.
     public int currentFullness;

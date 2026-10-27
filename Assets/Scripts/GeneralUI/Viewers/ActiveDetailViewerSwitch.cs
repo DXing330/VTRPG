@@ -111,7 +111,7 @@ public class ActiveDetailViewerSwitch : ScriptableObject
             case "StatusAndDuration":
                 string[] statusDuration = e.Split("Equals");
                 if (statusDuration.Length < 2){return "???";}
-                return "Give the target(s) " + statusDuration[0] + " (" + passiveDetails.ReturnBuffStatusDetails(s) + ") for " + statusDuration[1] + " turn(s).";
+                return "Give the target(s) " + statusDuration[0] + " (" + passiveDetails.ReturnBuffStatusDetails(statusDuration[0]) + ") for " + statusDuration[1] + " turn(s).";
             case "Buff":
                 return "Give the target(s) " + ASD(s) + " (" + passiveDetails.ReturnBuffStatusDetails(s) + ") for " + APD(p,e) + " turn(s).";
             case "BuffAndDuration":

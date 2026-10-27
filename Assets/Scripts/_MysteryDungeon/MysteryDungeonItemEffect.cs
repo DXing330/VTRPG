@@ -7,13 +7,43 @@ using UnityEngine;
 public class MysteryDungeonItemEffect : PassiveSkill
 {
     public StatDatabase MDItemData;
+    public void ThrowItem(TacticActor thrownTo, MysteryDungeonBattleMap map, string itemName, PartyDataManager partyData)
+    {
+        // Check If The Item Is Throwable (Usable When Thrown).
+        string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
+        if (itemData.Length < 5){return;}
+        bool throwable = int.Parse(itemData[4]) == 1;
+        // If Throwable, The Actor Thrown To AutoUses.
+        if (throwable)
+        {
+            // TESTED 10/26/26
+            UseItem(thrownTo, map, itemName, partyData);
+        }
+        // Else If Possible The Actor Picks It Up.
+        else if (thrownTo.GetDungeonHeldItem() == "")
+        {
+            // TESTED 10/26/26
+            thrownTo.SetDungeonHeldItem(itemName);
+        }
+        // Else It Drops To The Tile
+        else
+        {
+            map.AddItemToLocation(itemName, thrownTo.GetLocation());
+        }
+    }
     public void UseItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, PartyDataManager partyData)
     {
         string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
-        if (itemData.Length < 3){return;}
+        if (itemData.Length < 5){return;}
         string target = itemData[0];
         string effect = itemData[1];
         string specifics = itemData[2];
+        bool consumable = int.Parse(itemData[3]) == 1;
+        // If Edible Then Increase Fullness.
+        if (consumable && effect != "Stomach")
+        {
+            user.Eat(10);
+        }
         if (target.StartsWith("User"))
         {
             UserItems(user, map, target, effect, specifics, partyData);
@@ -34,10 +64,15 @@ public class MysteryDungeonItemEffect : PassiveSkill
             case "MapReveal":
             map.Reveal(specifics);
             break;
+            case "Map":
+            MapItems(user, map, target, effect, specifics, partyData);
+            break;
         }
     }
     protected void UserItems(TacticActor user, MysteryDungeonBattleMap map, string target, string effect, string specifics, PartyDataManager partyData)
     {
+        List<TacticActor> targets = new List<TacticActor>();
+        List<int> tiles = new List<int>();
         switch (target)
         {
             default:
@@ -48,6 +83,17 @@ public class MysteryDungeonItemEffect : PassiveSkill
             // Apply The Permanent Change To The Party Stats.
             partyData.ApplyEffectToPartyID(effect, specifics, "1", user.GetID());
             break;
+            case "UserTeam":
+            targets = map.AllAllies(user);
+            break;
+            case "UserRoom":
+            tiles = map.GetRoomTiles(user.GetLocation());
+            targets = map.GetActorsOnTiles(tiles);
+            break;
+        }
+        if (targets.Count > 0)
+        {
+            ApplyEffectToTargets(targets, map, effect, specifics);
         }
     }
     protected void EnemyItems(TacticActor user, MysteryDungeonBattleMap map, string target, string effect, string specifics, PartyDataManager partyData)
@@ -63,7 +109,7 @@ public class MysteryDungeonItemEffect : PassiveSkill
             tiles.Add(map.ReturnTileInRelativeDirection(user, 0));
             targets = map.ReturnEnemiesInTiles(user, tiles, true);
             break;
-            case "LineEnemy":
+            case "EnemyLine":
             TacticActor firstLineTarget = null;
             tiles = map.mapUtility.GetTilesInLineDirection(user.GetLocation(), user.GetDirection(), map.mapSize, map.mapSize);
             for (int i = 0; i < tiles.Count; i++)
@@ -76,6 +122,13 @@ public class MysteryDungeonItemEffect : PassiveSkill
                 }
             }
             return;
+            case "EnemyRoom":
+            tiles = map.GetRoomTiles(user.GetLocation());
+            targets = map.ReturnEnemiesInTiles(user, tiles, true);
+            break;
+            case "EnemyFloor":
+            targets = map.AllEnemies(user);
+            break;
         }
         if (targets.Count > 0)
         {
@@ -84,11 +137,35 @@ public class MysteryDungeonItemEffect : PassiveSkill
     }
     protected void MovementItems(TacticActor user, MysteryDungeonBattleMap map, string target, string effect, string specifics, PartyDataManager partyData)
     {
+        List<TacticActor> targets = new List<TacticActor>();
+        List<int> tiles = new List<int>();
         switch (target)
         {
             default:
             map.MoveEffect(user, effect, specifics);
             break;
+            case "MoveFront":
+            map.MoveEffect(map.GetActorOnTile(map.mapUtility.PointInDirection(user.GetLocation(), user.GetDirection(), map.mapSize)), effect, specifics, user);
+            break;
+            case "MoveTeam":
+            targets = map.AllAllies(user);
+            targets.Remove(user);
+            break;
+            case "MoveRoom":
+            tiles = map.GetRoomTiles(user.GetLocation());
+            targets = map.GetActorsOnTiles(tiles);
+            break;
         }
+        if (targets.Count > 0)
+        {
+            for (int i = 0; i < targets.Count; i++)
+            {
+                map.MoveEffect(targets[i], effect, specifics, user);
+            }
+        }
+    }
+    protected void MapItems(TacticActor user, MysteryDungeonBattleMap map, string target, string effect, string specifics, PartyDataManager partyData)
+    {
+        map.MDChangeMap(user, effect, specifics);
     }
 }

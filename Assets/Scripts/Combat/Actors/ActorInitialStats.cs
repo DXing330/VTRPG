@@ -5,6 +5,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum MoveType
+{
+    Walking,
+    Riding,
+    Swimming,
+    Flying,
+    Ethereal
+}
 // Stats that are saved outside of battle + current health/mana/statuses
 public class ActorInitialStats : ActorPassives
 {
@@ -425,13 +433,19 @@ public class ActorInitialStats : ActorPassives
     }
     public void UpdateBaseSpeed(int changeAmount) { moveSpeed += changeAmount; }
     public int GetMoveSpeed() { return moveSpeed; }
-    public string moveType;
-    public void SetMoveType(string newMoveType) { moveType = newMoveType; }
-    public string GetMoveType() { return moveType; }
+    public MoveType moveType;
+    public void SetMoveType(string newMoveType)
+    {
+        moveType = Enum.Parse<MoveType>(newMoveType);
+    }
+    public string GetMoveType()
+    {
+        return moveType.ToString();
+    }
     public bool passThroughMoving = false;
     public bool PassThroughMoving()
     {
-        if (moveType == "Flying"){return true;}
+        if (moveType == MoveType.Flying || moveType == MoveType.Ethereal){return true;}
         return passThroughMoving;
     }
     public void EnablePassThroughMoving()

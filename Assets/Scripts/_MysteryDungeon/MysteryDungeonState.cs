@@ -40,7 +40,17 @@ public class MysteryDungeonState : SavedData
         }
         return dungeonSpecifics[1];
     }
+    public int GetDungeonSize()
+    {
+        UpdateDungeonSpecifics();
+        if (dungeonSpecifics.Count < 3)
+        {
+            return -1;
+        }
+        return int.Parse(dungeonSpecifics[2]);
+    }
     public int floor;
+    public int GetFloor(){return floor;}
     public bool NewFloor()
     {
         floor++;

@@ -66,6 +66,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
             count++;
             actors[i].LoadPersistentStats(partyData.dungeonState.GetCurrentStats(actors[i].GetID()));
         }
+        map.UpdateMap();
     }
     protected void SpawnParty()
     {
@@ -137,12 +138,17 @@ public class MysteryDungeonBattleManager : ClickTileManager
         currentTurn = 0;
         roundActors[currentTurn].StartTurn();
         effectManager.StartTurn(roundActors[currentTurn], map);
+        if (roundActors[currentTurn].GetHealth() <= 0)
+        {
+            // Leader Dead, Owari Da, Check For Reviver Seeds?
+            // MDGeneralManager.OwariDa();
+        }
         map.UpdateMap();
         // Wait For Player To Finish Before Doing Anything.
         // TODO MentalState Turns For Player.
         if (actorAI.MentalStateTurn(roundActors[currentTurn], map))
         {
-            EndPlayerTurn();
+            EndActorTurn();
         }
     }
     // TODO Add The Player Action Stuff.
@@ -175,7 +181,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         // End The Turn If The Actor Can't Attack Anymore.
         if (roundActors[currentTurn].GetActions() < roundActors[currentTurn].GetAttackActionCost())
         {
-            EndPlayerTurn();
+            EndActorTurn();
         }
         return true;
     }
@@ -218,7 +224,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
             MoveActorToTile(targetLocation);
             MoveActorToTile(currentLocation, actorOnTile);
             map.RefreshPlayerLocation();
-            EndPlayerTurn();
+            EndActorTurn();
             return true;
         }
         List<int> reachableTiles = GetTurnActorReachableTiles();
@@ -226,7 +232,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         {
             MoveActorToTile(targetLocation);
             map.RefreshPlayerLocation();
-            EndPlayerTurn();
+            EndActorTurn();
             return true;
         }
         return false;
@@ -246,15 +252,55 @@ public class MysteryDungeonBattleManager : ClickTileManager
             List<int> path = moveManager.GetPrecomputedPath(currentLocation, clickedTileNumber);
             MoveAlongPath(roundActors[currentTurn], path);
             map.RefreshPlayerLocation();
-            EndPlayerTurn();
+            EndActorTurn();
             return true;
         }
         return false;
     }
-    protected void EndPlayerTurn()
+    public MysteryDungeonItemEffect itemEffect;
+    public void ActorUseItem(string itemName, TacticActor actor = null)
     {
-        if (currentTurn != 0){return;}
+        if (actor == null)
+        {
+            actor = roundActors[currentTurn];
+        }
+        itemEffect.UseItem(actor, map, itemName, partyData);
+        if (actor.GetTeam() == 0)
+        {
+            // Remove The Item.
+            partyData.dungeonBag.UseItem(itemName);
+        }
+        EndActorTurn();
+    }
+    public void ActorThrowItem(string itemName, TacticActor actor = null)
+    {
+        if (actor == null)
+        {
+            actor = roundActors[currentTurn];
+        }
+        int thrownToTile = map.MDMapUtility.GetThrownToTile(actor, map);
+        // If No Actor Then It Hits A Wall And Lands In Adjacent Empty Tile.
+        if (map.GetActorOnTile(thrownToTile) == null)
+        {
+            // TESTED 10/26/26
+            map.AddItemToLocation(itemName, thrownToTile);
+        }
+        else
+        {
+            itemEffect.ThrowItem(map.GetActorOnTile(thrownToTile), map, itemName, partyData);
+        }
+        if (actor.GetTeam() == 0)
+        {
+            // Remove The Item.
+            partyData.dungeonBag.UseItem(itemName);
+        }
+        EndActorTurn();
+    }
+    protected void EndActorTurn()
+    {
         effectManager.EndTurn(roundActors[currentTurn], map);
+        roundActors[currentTurn].EndTurn();
+        map.ApplyEndTerrainEffect(roundActors[currentTurn]);
         UpdateDanger();
         NextTurn();
     }
@@ -272,13 +318,16 @@ public class MysteryDungeonBattleManager : ClickTileManager
         }
         roundActors[currentTurn].StartTurn();
         effectManager.StartTurn(roundActors[currentTurn], map);
-        // Skip Dead/Stunned/Etc.
+        // Skip Dead/Stunned/Etc Do Nothing.
         if (roundActors[currentTurn].GetHealth() <= 0 || roundActors[currentTurn].GetActions() <= 0)
         {
-            NextTurn();
-            return;
         }
-        if (roundActors[currentTurn].GetTeam() == 0)
+        // Next Priority Is Mental States
+        else if (actorAI.MentalStateTurn(roundActors[currentTurn], map))
+        {
+        }
+        // Then Team Checks.
+        else if (roundActors[currentTurn].GetTeam() == 0)
         {
             AllyTurn();
         }
@@ -286,15 +335,17 @@ public class MysteryDungeonBattleManager : ClickTileManager
         {
             EnemyTurn();
         }
+        // Always Reach Here.
         if (TurnActorAlive())
         {
-            effectManager.EndTurn(roundActors[currentTurn], map);
+            // This Calls NextTurn();
+            EndActorTurn();
         }
         else
         {
-            // TODO Apply Death Skills.
+            ActivateDeathPassive(roundActors[currentTurn]);
+            NextTurn();
         }
-        NextTurn();
     }
     protected void FollowTheLeader()
     {
@@ -338,6 +389,8 @@ public class MysteryDungeonBattleManager : ClickTileManager
     {
         // Move Randomly In A Single Direction.
         // If In Range Then Become Regular AI.
+        // Use Items If Applicable?
+        // Pick Up Items?
     }
     protected void MoveAlongPath(TacticActor actor, List<int> path)
     {

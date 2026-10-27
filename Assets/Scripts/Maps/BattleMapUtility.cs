@@ -330,7 +330,7 @@ public class BattleMapUtility : ScriptableObject
         List<int> tiles = new List<int>();
         for (int i = 0; i < map.mapInfo.Count; i++)
         {
-            if (actor.GetMoveType() != "Flying" && map.excludedTileTypesForNonFlying.Contains(map.mapInfo[i]))
+            if (!actor.PassThroughMoving() && map.excludedTileTypesForNonFlying.Contains(map.mapInfo[i]))
             {
                 continue;
             }

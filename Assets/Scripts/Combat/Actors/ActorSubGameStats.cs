@@ -140,14 +140,29 @@ public class ActorSubGameStats : ActorStats
     public List<AutoChessTrait> autoChessTemporaryTraits = new();
     // MYSTERY DUNGEON
     protected int maxFullness;
+    public void SetMaxFullness(int newInfo){maxFullness = newInfo;}
+    public int GetMaxFullness(){return maxFullness;}
     protected int currentFullness;
+    public void SetCurrentFullness(int newInfo){currentFullness = newInfo;}
     public void EatAll()
     {
         currentFullness = maxFullness;
     }
     public void Eat(int amount)
     {
+        if (currentFullness >= maxFullness)
+        {
+            maxFullness += amount / 2;
+            currentFullness = maxFullness;
+            return;
+        }
         currentFullness += amount;
+        if (currentFullness > maxFullness)
+        {
+            int difference = currentFullness - maxFullness;
+            maxFullness += difference / 2;
+            currentFullness = maxFullness;
+        }
     }
     public void Hunger()
     {
@@ -161,4 +176,9 @@ public class ActorSubGameStats : ActorStats
         }
     }
     public int GetFullness(){return currentFullness;}
+    // For Use By Enemies?
+    // Party Members Can Assign Held Items Through The Bag.
+    protected string dungeonHeldItem = "";
+    public string GetDungeonHeldItem(){return dungeonHeldItem;}
+    public void SetDungeonHeldItem(string newItem){dungeonHeldItem = newItem;}
 }

@@ -37,12 +37,8 @@ public class MysteryDungeonMinimap : MaskableGraphic
         horizontalSpacing *= scale;
         verticalSpacing *= scale;
         // Calculate the size of the full display again after scaling.
-        displayWidth =
-            (displaySize - 1) * horizontalSpacing +
-            hexWidth * 1.5f;
-        displayHeight =
-            (displaySize - 1) * verticalSpacing +
-            hexHeight;
+        displayWidth = (displaySize - 1) * horizontalSpacing + hexWidth * 1.5f;
+        displayHeight = (displaySize - 1) * verticalSpacing + hexHeight;
         // Center the 128x128 display in the panel.
         float offsetX = -displayWidth * 0.5f;
         float offsetY = -displayHeight * 0.5f;
@@ -100,14 +96,8 @@ public class MysteryDungeonMinimap : MaskableGraphic
             return Color.green;
         if (map.AllyOnTile(tile))
             return new Color(0.56f, 0.93f, 0.56f, 1f);
-        // Unexplored.
-        if (map.tileExplored == null || tile < 0 || tile >= map.tileExplored.Count || map.tileExplored[tile] == 0 && !map.revealLayout)
-        {
-            return Color.clear;
-        }
         // Temporary terrain check.
-        if (!IsPassable(map.mapInfo[tile]))
-            return Color.clear;
+        if (!IsPassable(map.mapInfo[tile])){return Color.clear;}
         bool visible = map.visibleTiles.Contains(tile);
         bool stairs = map.stairsLocation == tile;
         bool enemy = map.EnemyOnTile(tile);
@@ -119,7 +109,7 @@ public class MysteryDungeonMinimap : MaskableGraphic
         }
         if (stairs && (visible || map.revealStairs))
         {
-            return Color.grey;
+            return Color.black;
         }
         if (item && (visible || map.revealItems))
             return Color.blue;
@@ -127,6 +117,11 @@ public class MysteryDungeonMinimap : MaskableGraphic
             return new Color(0.5450981f, 0f, 0f, 1f);
         if (visible)
             return Color.white;
+        // Unexplored.
+        if (map.tileExplored == null || tile < 0 || tile >= map.tileExplored.Count || map.tileExplored[tile] == 0 && !map.revealLayout)
+        {
+            return Color.clear;
+        }
         return new Color(1f, 1f, 1f, 0.35f);
     }
     private bool IsPassable(string terrain)

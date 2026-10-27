@@ -45,7 +45,7 @@ public class BattleManager : ClickTileManager
     public InitiativeTracker initiativeTracker;
     public TurnOrderManager turnOrderManager;
     public CombatLog combatLog;
-    public void UpdateCombatLog(string newLog, bool detailed = false)
+    public virtual void UpdateCombatLog(string newLog, bool detailed = false)
     {
         if (combatLog == null){return;}
         if (detailed)

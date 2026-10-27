@@ -179,7 +179,7 @@ public class PassiveDetailViewer : MonoBehaviour
         passiveGroupText.SetText(customPassives.Count.ToString());
         for (int i = 0; i < customPassives.Count; i++)
         {
-            passiveNames.Add("Custom "+(i+1));
+            passiveNames.Add("Custom " + (i + 1));
             passiveDescription.Add(ReturnPassiveDetails(customPassives[i]));
         }
         passiveStatTextList.SetStatsAndData(passiveNames, passiveDescription);

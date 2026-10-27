@@ -7,6 +7,10 @@ public class MysteryDungeonManager : MonoBehaviour
 {
     void Start()
     {
+        InitializeMysteryDungeon();
+    }
+    public void InitializeMysteryDungeon()
+    {
         // Load Party.
         partyData.Load();
         // Load Map, If Floor One Then You Need To Generate.
@@ -37,10 +41,16 @@ public class MysteryDungeonManager : MonoBehaviour
     }
     protected void GenerateDungeon()
     {
-        generator.GenerateDungeon();
+        generator.GenerateDungeon(state.GetDungeonSize(), state.GetFloor());
         map.InitializeMapFromGenerator(generator, state.GetDungeonType());
         state.SaveFromMysteryDungeonMap(map);
         map.UpdateVisibleTiles();
+    }
+    public bool PickUpItem(string item)
+    {
+        if (partyData.dungeonBag.BagFull()){return false;}
+        partyData.dungeonBag.GainItem(item);
+        return true;
     }
     public void NewFloor()
     {

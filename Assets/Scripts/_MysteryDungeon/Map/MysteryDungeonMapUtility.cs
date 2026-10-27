@@ -23,6 +23,7 @@ public class MysteryDungeonMapUtility : ScriptableObject
             case "Pit":
             case "Wall":
             case "DeepWater":
+            case "Lava":
                 return false;
         }
         return false;
@@ -87,5 +88,29 @@ public class MysteryDungeonMapUtility : ScriptableObject
             currentTile = nextTile;
         }
         return passableTiles;
+    }
+    // When Throwing Something Give The First Actor Tile Or The Tile Before The First Wall Tile.
+    public int GetThrownToTile(TacticActor actor, MysteryDungeonBattleMap map)
+    {
+        int start = actor.GetLocation();
+        int direction = actor.GetDirection();
+        int currentTile = start;
+        int nextTile = -1;
+        for (int i = 0; i < map.mapSize; i++)
+        {
+            nextTile = map.mapUtility.PointInDirection(currentTile, direction, map.mapSize);
+            // Out Of Bounds Or Edge Of Map.
+            if (nextTile < 0 || nextTile == currentTile || !IsTilePassable(map.mapInfo[nextTile]))
+            {
+                return currentTile;
+            }
+            // Hit The First Actor.
+            else if (map.GetActorOnTile(nextTile) != null)
+            {
+                return nextTile;
+            }
+            currentTile = nextTile;
+        }
+        return nextTile;
     }
 }

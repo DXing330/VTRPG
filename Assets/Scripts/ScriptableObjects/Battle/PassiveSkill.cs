@@ -203,7 +203,7 @@ public class PassiveSkill : SkillEffect
             if (effects.Length != effectSpecifics.Length) { continue; }
             for (int h = 0; h < effects.Length; h++)
             {
-                string specificDetails = GetEffectSpecifics(attackTarget, effectSpecifics[h], 0, map);
+                string specificDetails = GetEffectSpecifics(attackTarget, effectSpecifics[h], damage, map);
                 ApplyPassiveEffectToTarget(target, map, passiveData[3], effects[h], specificDetails);
             }
         }
@@ -531,6 +531,12 @@ public class PassiveSkill : SkillEffect
                 return conditionSpecifics == actor.GetMoveType();
             case "MoveType<>":
                 return conditionSpecifics != actor.GetMoveType();
+            case "WaterImmune<>":
+                return (actor.PassThroughMoving() || actor.GetMoveType() == "Swimming");
+            case "PassThroughMoving":
+                return actor.PassThroughMoving();
+            case "PassThroughMoving<>":
+                return !actor.PassThroughMoving();
             case "Range>":
                 return actor.GetAttackRange() > int.Parse(conditionSpecifics);
             case "Range<":

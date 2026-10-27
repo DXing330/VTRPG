@@ -167,7 +167,7 @@ public class BattleMap : MapManager
         if (combatLog == null){return;}
         combatLog.ForceStart();
     }
-    public void UpdateCombatLog(string newLog, bool detailed = false)
+    public virtual void UpdateCombatLog(string newLog, bool detailed = false)
     {
         if (combatLog == null){return;}
         if (detailed)
@@ -1773,7 +1773,7 @@ public class BattleMap : MapManager
     public List<string> excludedTileTypesForNonFlying;
     public bool TileExcluded(TacticActor actor, string tile)
     {
-        if (actor.GetMoveType() == "Flying"){return false;}
+        if (actor.PassThroughMoving()){return false;}
         return excludedTileTypesForNonFlying.Contains(tile);
     }
     public bool TileSandwiched(TacticActor actor, string tileType)
@@ -2366,7 +2366,7 @@ public class BattleMap : MapManager
     public void FallingDamage(TacticActor actor, int fallHeight)
     {
         //Flyers don't take falling damage.
-        if (actor.GetMoveType() == "Flying"){return;}
+        if (actor.PassThroughMoving()){return;}
         int potentiaFallDamage = Mathf.Max(actor.GetWeight(), 1) * fallHeight * fallHeight * 6;
         int fallDamage = actor.TakeEffectDamage(potentiaFallDamage);
         UpdateCombatLog(actor.GetPersonalName() + " takes " + fallDamage + " damage from falling.");

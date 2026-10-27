@@ -683,7 +683,7 @@ public class MapUtility : ScriptableObject
         for (int i = 0; i < 6; i++)
         {
             adjacentTile = PointInDirection(location, i, size);
-            if (adjacentTile < 0) { continue; }
+            if (adjacentTile < 0 || adjacentTile == location) { continue; }
             adjacent.Add(adjacentTile);
         }
         return adjacent;
