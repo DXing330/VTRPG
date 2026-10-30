@@ -60,10 +60,52 @@ public class MysteryDungeonBattleMap : BattleMap
         UpdateMap();
     }
     public MysteryDungeonManager MDGeneralManager;
-    // Get The Enemy Pool From The State In The Manager.
-    public void GenerateRandomEnemy()
+    // Monster Houses Ignore This.
+    public int GetMaxEnemyCount()
     {
-        //
+        return 3 + Mathf.RoundToInt(Mathf.Sqrt(floor));
+    }
+    public int GetEnemyCount()
+    {
+        int count = 0;
+        for (int i = 0; i < battlingActors.Count; i++)
+        {
+            if (battlingActors[i].GetTeam() != 0){count++;}
+        }
+        return count;
+    }
+    // Get The Enemy Pool From The State In The Manager.
+    public void GenerateStartingEnemy()
+    {
+        string enemy = GenerateRandomEnemy();
+        if (enemy == ""){return;}
+        int location = GenerateEnemyLocation();
+        if (startingEnemyLocations.Contains(location)){return;}
+        startingEnemies.Add(enemy);
+        startingEnemyLocations.Add(location);
+    }
+    public void SpawnStartingEnemies()
+    {
+        for (int i = 0; i < startingEnemies.Count; i++)
+        {
+            SpawnAndAddActor(startingEnemyLocations[i], startingEnemies[i], 1);
+        }
+    }
+    public string GenerateRandomEnemy()
+    {
+        if (GetEnemyCount() >= GetMaxEnemyCount()){return "";}
+        if (possibleEnemies.Count <= 0){return "";}
+        return possibleEnemies[UnityEngine.Random.Range(0, possibleEnemies.Count)];
+    }
+    public int GenerateEnemyLocation()
+    {
+        // Pick A Random Tile In A Room That Is Not Visible.
+        UpdateVisibleTiles();
+        List<int> allRoomTiles = GetAllRoomTiles();
+        List<int> allVisible = GetVisibleTiles();
+        List<int> availableTiles = allRoomTiles.Except(allVisible).ToList();
+        if (availableTiles.Count == 0){return -1;}
+        return availableTiles[UnityEngine.Random.Range(0, availableTiles.Count)];
     }
     public PartyDungeonState partyDungeonState;
     public MysteryDungeonMapUtility MDMapUtility;
@@ -107,63 +149,77 @@ public class MysteryDungeonBattleMap : BattleMap
         }
         return roomTiles;
     }
+    public List<int> GetAllRoomTiles()
+    {
+        List<int> allRoomTiles = new List<int>();
+        for (int i = 0; i < tileRooms.Count; i++)
+        {
+            if (tileRooms[i] >= 0){allRoomTiles.Add(i);}
+        }
+        return allRoomTiles;
+    }
     public int GetRoomOfTile(int tileNumber){return tileRooms[tileNumber];}
     // Track Which Tiles Were Explored, So The Map Is Built While Exploring.
     [System.NonSerialized]
     public List<int> tileExplored = new();
     public List<int> visibleTiles;
     public List<int> GetVisibleTiles(){return visibleTiles;}
-    public void UpdateVisibleTiles()
+    // For Use For Enemy Targeting.
+    public List<int> GetActorVisibleTiles(int actorLocation)
     {
-        visibleTiles = new List<int>();
-        if (tileExplored.Count < mapInfo.Count)
-        {
-            tileExplored = Enumerable.Repeat(0, mapInfo.Count).ToList();
-        }
-        // TODO Get Tiles In A Squared Based On Grid Size / 2.
-        int playerRow = mapUtility.GetRow(playerLocation, mapSize);
-        int playerCol = mapUtility.GetColumn(playerLocation, mapSize);
-        int room = tileRooms[playerLocation];
+        List<int> actorVisible = new List<int>();
+        int room = tileRooms[actorLocation];
+        int aRow = mapUtility.GetRow(actorLocation, mapSize);
+        int aCol = mapUtility.GetColumn(actorLocation, mapSize);
         // Room, See Whole Room + Adjacent Tiles.
         if (room >= 0)
         {
-            visibleTiles.AddRange(GetRoomTiles(playerLocation));
-            List<int> borders = mapUtility.AdjacentBorders(visibleTiles, mapSize);
-            visibleTiles.AddRange(borders);
+            actorVisible.AddRange(GetRoomTiles(actorLocation));
+            List<int> borders = mapUtility.AdjacentBorders(actorVisible, mapSize);
+            actorVisible.AddRange(borders);
         }
         // Hallway, See 9x9 + Hide Rooms
         else
         {
-            for (int row = playerRow - 4; row <= playerRow + 4; row++)
+            for (int row = aRow - 4; row <= aRow + 4; row++)
             {
-                for (int col = playerCol - 4; col <= playerCol + 4; col++)
+                for (int col = aCol - 4; col <= aCol + 4; col++)
                 {
                     if (row < 0 || row >= mapSize || col < 0 || col >= mapSize)
                     {
                         continue;
                     }
                     int tile = row * mapSize + col;
-                    visibleTiles.Add(tile);
+                    actorVisible.Add(tile);
                 }
             }
             // Hide Rooms
-            for (int i = visibleTiles.Count - 1; i >= 0; i--)
+            for (int i = actorVisible.Count - 1; i >= 0; i--)
             {
-                if (tileRooms[visibleTiles[i]] >= 0)
+                if (tileRooms[actorVisible[i]] >= 0)
                 {
-                    visibleTiles.RemoveAt(i);
+                    actorVisible.RemoveAt(i);
                 }
             }
             // Reveal Room Tiles Close To Center.
-            List<int> borders = mapUtility.AdjacentBorders(visibleTiles, mapSize);
+            List<int> borders = mapUtility.AdjacentBorders(actorVisible, mapSize);
             foreach (int tile in borders)
             {
                 if (tileRooms[tile] >= 0)
                 {
-                    visibleTiles.Add(tile);
+                    actorVisible.Add(tile);
                 }
             }
         }
+        return actorVisible;
+    }
+    public void UpdateVisibleTiles()
+    {
+        if (tileExplored.Count < mapInfo.Count)
+        {
+            tileExplored = Enumerable.Repeat(0, mapInfo.Count).ToList();
+        }
+        visibleTiles = GetActorVisibleTiles(playerLocation);
         visibleTiles = visibleTiles.Distinct().ToList();
         foreach (int tile in visibleTiles)
         {
@@ -200,11 +256,6 @@ public class MysteryDungeonBattleMap : BattleMap
         {
             MDGeneralManager.NewFloor();
             return;
-        }
-        // TODO If Trap
-        if (itemLocations.Contains(playerLocation))
-        {
-            PartyPickUpItem();
         }
     }
     public int GetPlayerLocation(){return playerLocation;}
@@ -243,13 +294,21 @@ public class MysteryDungeonBattleMap : BattleMap
     // Track Treasures.
     public List<string> items;
     public List<int> itemLocations;
-    public void PartyPickUpItem()
+    public void ActorPickUpItem(TacticActor actor)
     {
-        int indexOf = itemLocations.IndexOf(GetPlayerLocation());
+        int indexOf = itemLocations.IndexOf(actor.GetLocation());
         if (indexOf < 0){return;}
-        if (MDGeneralManager.PickUpItem(items[indexOf]))
+        // Enemies/Allies Pick Up Items Automatically.
+        if (actor.GetTeam() != 0 && actor.GetDungeonHeldItem() == "")
         {
-            RemoveItemAtLocation(GetPlayerLocation());
+            UpdateCombatLog(actor.GetPersonalName() + " picked up " + items[indexOf]);
+            actor.SetDungeonHeldItem(items[indexOf]);
+            RemoveItemAtLocation(actor.GetLocation());
+        }
+        else if (actor.GetTeam() == 0 && MDGeneralManager.PickUpItem(items[indexOf]))
+        {
+            UpdateCombatLog(actor.GetPersonalName() + " picked up " + items[indexOf]);
+            RemoveItemAtLocation(actor.GetLocation());
         }
     }
     public void RemoveItemAtLocation(int location)
@@ -267,9 +326,14 @@ public class MysteryDungeonBattleMap : BattleMap
         itemLocations.Add(location);
         UpdateMap();
     }
-    public void InitializeMapFromGenerator(MysteryDungeonGenerator generator, string newType)
+    public List<string> possibleEnemies;
+    public List<string> startingEnemies;
+    public List<int> startingEnemyLocations;
+    public void InitializeMapFromGenerator(MysteryDungeonGenerator generator, string newType, List<string> newPossibleEnemies)
     {
+        combatLog.ForceStart();
         mapInfo.Clear();
+        possibleEnemies = newPossibleEnemies;
         SetDungeonType(newType);
         tileRooms = new List<int>(generator.tileRooms);
         for (int i = 0; i < generator.allTiles.Count; i++)
@@ -337,6 +401,14 @@ public class MysteryDungeonBattleMap : BattleMap
         {
             CreateRoomBiome(dungeonType, room.Value);
         }
+        // Determine Starting Enemies.
+        startingEnemies.Clear();
+        startingEnemyLocations.Clear();
+        for (int i = 0; i < Mathf.Max(1, GetMaxEnemyCount() / 2); i++)
+        {
+            GenerateStartingEnemy();
+        }
+        SpawnStartingEnemies();
         UpdateMoveCostManager();
     }
     protected void CreateRoomBiome(string dungeonType, List<int> roomTiles)
@@ -414,6 +486,7 @@ public class MysteryDungeonBattleMap : BattleMap
         // TODO Clear Buildings + Etc.
         if (string.IsNullOrEmpty(savedState))
             return;
+        combatLog.ForceStart();
         string[] sections = savedState.Split('|');
         foreach (string section in sections)
         {
@@ -472,12 +545,23 @@ public class MysteryDungeonBattleMap : BattleMap
                 case "ItemLocations":
                     itemLocations = string.IsNullOrEmpty(value) ? new List<int>() : value.Split(',').Select(int.Parse).ToList();
                     break;
+                case "PossibleEnemies":
+                    possibleEnemies = string.IsNullOrEmpty(value) ? new List<string>() : value.Split(',').ToList();
+                    break;
+                case "StartingEnemies":
+                    startingEnemies = string.IsNullOrEmpty(value) ? new List<string>() : value.Split(',').ToList();
+                    break;
+                case "EnemyLocations":
+                    startingEnemyLocations = string.IsNullOrEmpty(value) ? new List<int>() : value.Split(',').Select(int.Parse).ToList();
+                    break;
             }
         }
         ResetAll();
         UpdateVisibleTiles();
+        SpawnStartingEnemies();
         UpdateMoveCostManager();
     }
+    // This Is Basically Save()
     public string ReturnMapStateString()
     {
         string mapState = "";
@@ -496,6 +580,9 @@ public class MysteryDungeonBattleMap : BattleMap
         mapState += "TrapLocations=" + String.Join(",", trapLocations) + "|";
         mapState += "Items=" + String.Join(",", items) + "|";
         mapState += "ItemLocations=" + String.Join(",", itemLocations) + "|";
+        mapState += "PossibleEnemies=" + String.Join(",", possibleEnemies) + "|";
+        mapState += "StartingEnemies=" + String.Join(",", startingEnemies) + "|";
+        mapState += "EnemyLocations=" + String.Join(",", startingEnemyLocations) + "|";
         return mapState;
     }
     public MysteryDungeonMinimap miniMap;
@@ -546,6 +633,13 @@ public class MysteryDungeonBattleMap : BattleMap
         ApplyFogOfWar();
         // Update The Minimap Based On Explored/Visible Tiles.
         miniMap.CreateMinimap();
+    }
+    public override void MoveActorToTile(TacticActor actor, int tile, bool forced = false)
+    {
+        AIMoveActorToTile(actor, tile, forced);
+        ActorPickUpItem(actor);
+        // TODO If Trap
+        UpdateMap();
     }
     public void MoveEffect(TacticActor moved, string effect, string specifics, TacticActor mover = null)
     {

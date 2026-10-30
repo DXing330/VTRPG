@@ -58,7 +58,7 @@ public class MysteryDungeonMapUtility : ScriptableObject
         }
         else
         {
-            targetTiles = map.GetVisibleTiles();
+            targetTiles = map.GetActorVisibleTiles(actor.GetLocation());
         }
         List<TacticActor> enemies = map.ReturnEnemiesInTiles(actor, targetTiles);
         if (enemies.Count <= 0){return null;}

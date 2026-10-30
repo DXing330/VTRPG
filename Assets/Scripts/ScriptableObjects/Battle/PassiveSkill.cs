@@ -532,7 +532,7 @@ public class PassiveSkill : SkillEffect
             case "MoveType<>":
                 return conditionSpecifics != actor.GetMoveType();
             case "WaterImmune<>":
-                return (actor.PassThroughMoving() || actor.GetMoveType() == "Swimming");
+                return !(actor.PassThroughMoving() || actor.GetMoveType() == "Swimming");
             case "PassThroughMoving":
                 return actor.PassThroughMoving();
             case "PassThroughMoving<>":

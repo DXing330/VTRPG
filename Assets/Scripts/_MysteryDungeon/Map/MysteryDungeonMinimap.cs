@@ -18,7 +18,7 @@ public class MysteryDungeonMinimap : MaskableGraphic
         }
         int mapSize = Mathf.RoundToInt(Mathf.Sqrt(map.mapInfo.Count));
         // Maximum display size of the minimap.
-        int displaySize = 96;
+        int displaySize = 72;
         float panelWidth = rectTransform.rect.width;
         float panelHeight = rectTransform.rect.height;
         // Pointy-top hex dimensions.

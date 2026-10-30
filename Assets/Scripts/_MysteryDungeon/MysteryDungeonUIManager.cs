@@ -14,6 +14,13 @@ public enum ClickTileState
     Skill,
     Item
 }
+public enum MysteryDungeonUIState
+{
+    None,
+    Team,
+    Map,
+    Log
+}
 // Takes In Player Inputs And Calls Changes To Game State.
 // Also Updates UI.
 public class MysteryDungeonUIManager : ClickTileManager
@@ -31,19 +38,15 @@ public class MysteryDungeonUIManager : ClickTileManager
         CRITText.text = actor.GetCritChance() + "%";
         SPDText.text = (100 + actor.GetAttackSpeed()) + "%";
     }
-    public MysteryDungeonStatCardList statCards;
     void Start()
     {
         UpdateUI();
     }
-    protected void UpdateUI()
+    protected void UpdateActionUI()
     {
         utility.DisableGameObjects(actionStateObjects);
         int stateIndex = actionStateList.IndexOf(actionState);
         if (stateIndex >= 0){actionStateObjects[stateIndex].SetActive(true);}
-        UpdateFastMoveText();
-        statCards.UpdateTeamActors(battleManager.map.battlingActors, 0);
-        UpdateAttackStats(battleManager.GetTurnActor(0));
         switch (actionState)
         {
             // None/Skill/Item
@@ -63,6 +66,15 @@ public class MysteryDungeonUIManager : ClickTileManager
             useItemObject.SetActive(false);
             break;
         }
+    }
+    protected void UpdateUI()
+    {
+        int stateIndex = actionStateList.IndexOf(actionState);
+        if (stateIndex >= 0){actionStateObjects[stateIndex].SetActive(true);}
+        UpdateFastMoveText();
+        UpdateAttackStats(battleManager.GetTurnActor(0));
+        UpdateActionUI();
+        UpdateViewUI();
     }
     public GeneralUtility utility;
     public MysteryDungeonBattleManager battleManager;
@@ -192,6 +204,7 @@ public class MysteryDungeonUIManager : ClickTileManager
     // Removes The Item.
     public void DropItem()
     {
+        battleManager.ActorDropItem(selectItemList.GetSelectedString());
         partyData.dungeonBag.UseItem(selectItemList.GetSelectedString());
         ChangeState("Item");
     }
@@ -200,5 +213,49 @@ public class MysteryDungeonUIManager : ClickTileManager
     {
         battleManager.ActorThrowItem(selectItemList.GetSelectedString());
         ChangeState("Item");
+    }
+    public MysteryDungeonUIState UIState;
+    public List<MysteryDungeonUIState> UIStateList;
+    public List<TMP_Text> UIStateSelectTexts;
+    public List<GameObject> UIStateObjects;
+    public MysteryDungeonStatCardList statCards;
+    public MysteryDungeonCombatLog combatLog;
+    public void ChangeUIState(string newState)
+    {
+        try
+        {
+            UIState = Enum.Parse<MysteryDungeonUIState>(newState);
+        }
+        catch
+        {
+            UIState = MysteryDungeonUIState.None;
+        }
+        UpdateUI();
+    }
+    protected void UpdateViewUI()
+    {
+        utility.DisableGameObjects(UIStateObjects);
+        int stateIndex = UIStateList.IndexOf(UIState);
+        if (stateIndex >= 0)
+        {
+            UIStateObjects[stateIndex].SetActive(true);
+        }
+        for (int i = 0; i < UIStateSelectTexts.Count; i++)
+        {
+            UIStateSelectTexts[i].fontStyle = FontStyles.Normal;
+            if (i == stateIndex)
+            {
+                UIStateSelectTexts[i].fontStyle = FontStyles.Underline;
+            }
+        }
+        switch (UIState)
+        {
+            case MysteryDungeonUIState.Team:
+            statCards.UpdateTeamActors(battleManager.map.battlingActors, 0);
+            break;
+            case MysteryDungeonUIState.Log:
+            combatLog.UpdateCurrentPage();
+            break;
+        }
     }
 }

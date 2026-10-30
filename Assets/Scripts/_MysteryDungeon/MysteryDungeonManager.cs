@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Controls The Scene Flow.
+// Controls The Scene Flow + PartyData.
 public class MysteryDungeonManager : MonoBehaviour
 {
     void Start()
@@ -42,7 +42,7 @@ public class MysteryDungeonManager : MonoBehaviour
     protected void GenerateDungeon()
     {
         generator.GenerateDungeon(state.GetDungeonSize(), state.GetFloor());
-        map.InitializeMapFromGenerator(generator, state.GetDungeonType());
+        map.InitializeMapFromGenerator(generator, state.GetDungeonType(), state.GetDungeonEnemies());
         state.SaveFromMysteryDungeonMap(map);
         map.UpdateVisibleTiles();
     }
@@ -76,6 +76,7 @@ public class MysteryDungeonManager : MonoBehaviour
         partyData.Save();
         // Don't Need To Spawn The Party, Just Reset The Round So That The Player Can Act Again.
         battleManager.InitializePartyLocations(map.battlingActors, map.battlingActors.Count);
+        map.SpawnStartingEnemies();
         battleManager.NewRound();
         map.UpdateVisibleTiles();
         map.UpdateMap();

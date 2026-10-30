@@ -14,7 +14,7 @@ public class DungeonGenerator : ScriptableObject
     protected const int FLOOR_TILE = 0;
     protected const int WALL_TILE = 1;
     protected const int DEFAULT_BASE_SIZE = 32;
-    protected const int DEFAULT_MAX_SIZE = 96;
+    protected const int DEFAULT_MAX_SIZE = 72;
     protected const int DEFAULT_SIZE_VARIANCE = 6;
     protected const int DEFAULT_MIN_ROOM_SIZE = 6;
     protected const int DEFAULT_MAX_ROOMS = 6;
@@ -82,8 +82,9 @@ public class DungeonGenerator : ScriptableObject
     public void GenerateDungeon(int newSize = -1, int floor = 0)
     {
         // Size
-        size = Mathf.Min(Mathf.Max(newSize, baseSize), DEFAULT_MAX_SIZE);
-        size = size + Random.Range(-sizeVariance, sizeVariance + floor);
+        size = Mathf.Max(newSize, baseSize);
+        size = size + Random.Range(-sizeVariance, sizeVariance + floor / 2);
+        size = Mathf.Min(size, DEFAULT_MAX_SIZE);
         maxRooms = Mathf.Max(2, size / minRoomSize);
         Reset();
         // Generate base map

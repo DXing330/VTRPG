@@ -49,6 +49,15 @@ public class MysteryDungeonState : SavedData
         }
         return int.Parse(dungeonSpecifics[2]);
     }
+    public List<string> GetDungeonEnemies()
+    {
+        UpdateDungeonSpecifics();
+        if (dungeonSpecifics.Count < 4)
+        {
+            return new List<string>();
+        }
+        return dungeonSpecifics[3].Split(",").ToList();
+    }
     public int floor;
     public int GetFloor(){return floor;}
     public bool NewFloor()
@@ -76,6 +85,7 @@ public class MysteryDungeonState : SavedData
         Load();
         if (mapState.Length <= 0){return false;}
         map.LoadMapStateFromString(mapState);
+        // Spawn Starting Enemies.
         return true;
     }
     public override void NewGame()

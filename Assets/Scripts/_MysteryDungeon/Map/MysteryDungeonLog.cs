@@ -12,8 +12,15 @@ public class MysteryDungeonLog : CombatLog
         MDDetailKeys.Clear();
     }
     public List<string> MDLogs;
+    public List<string> GetMDLogs(){return new List<string>(MDLogs);}
     public List<string> MDDetails;
+    public List<string> GetMDDetails(){return new List<string>(MDDetails);}
     public List<int> MDDetailKeys;
+    public List<int> GetMDDetailKeys(){return new List<int>(MDDetailKeys);}
+    public string GetDetailedLogAtIndex(int index)
+    {
+        return ReturnDetailedLog(0, 0, index);
+    }
     public override string GetLatestLog()
     {
         if (MDLogs.Count <= 0){return "";}

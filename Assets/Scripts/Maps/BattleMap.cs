@@ -844,35 +844,38 @@ public class BattleMap : MapManager
         actor.IncrementDeployCount();
         ReviveActor(actor);
     }
+    public bool RemoveActorFromBattle(TacticActor actor)
+    {
+        if (actor.GetHealth() > 0){return false;}
+        if (actor.GetImmortal())
+        {
+            actor.SetCurrentHealth(1);
+            return false;
+        }
+        UpdateCombatLog(actor.GetPersonalName() + " is defeated.");
+        battlingActors.Remove(actor);
+        if (actor.WasSacrificed())
+        {
+            return false;
+        }
+        defeatedActors.Add(actor);
+        return true;
+    }
     public List<TacticActor> RemoveActorsFromBattle()
     {
         List<TacticActor> deadActors = new List<TacticActor>();
         for (int i = battlingActors.Count - 1; i >= 0; i--)
         {
-            if (ActorEscaped(battlingActors[i].GetSpriteName()))
+            TacticActor actor = battlingActors[i];
+            if (ActorEscaped(actor.GetSpriteName()))
             {
-                UpdateCombatLog(battlingActors[i].GetPersonalName() + " escaped from the battle.");
+                UpdateCombatLog(actor.GetPersonalName() + " escaped from the battle.");
                 battlingActors.RemoveAt(i);
                 continue;
             }
-            if (battlingActors[i].GetHealth() <= 0)
+            if (RemoveActorFromBattle(actor))
             {
-                if (battlingActors[i].GetImmortal())
-                {
-                    battlingActors[i].SetCurrentHealth(1);
-                    continue;
-                }
-                UpdateCombatLog(battlingActors[i].GetPersonalName() + " is defeated.");
-                // Don't activate death passives, don't allow revival.
-                if (battlingActors[i].WasSacrificed())
-                {
-                    battlingActors.RemoveAt(i);
-                    continue;
-                }
-                // Apply the death passives here.
-                deadActors.Add(battlingActors[i]);
-                defeatedActors.Add(battlingActors[i]);
-                battlingActors.RemoveAt(i);
+                deadActors.Add(actor);
             }
         }
         return deadActors;
@@ -1912,9 +1915,17 @@ public class BattleMap : MapManager
     public bool TileBlocksLineOfSight(int tile, int startElevation)
     {
         if (tile < 0 || tile >= mapInfo.Count){return false;}
+        if (GetTileInfo(tile).Contains("Wall")){return true;}
+        // Some teffects also block line of sight?
+        string tEffect = GetTerrainEffectOnTile(tile);
+        if (tEffect == "Fog" || tEffect == "Toxic Mist"){return true;}
         int tileLOSHeight = GetTileElevation(tile);
         // Some Tiles Count As Higher Elevations.
-        if (GetTileInfo(tile).Contains("Mountain") || GetTileInfo(tile).Contains("Forest"))
+        if (GetTileInfo(tile).Contains("Mountain") || GetTileInfo(tile).Contains("Wall"))
+        {
+            tileLOSHeight += 2;
+        }
+        if (GetTileInfo(tile).Contains("Forest"))
         {
             tileLOSHeight++;
         }
@@ -1924,9 +1935,6 @@ public class BattleMap : MapManager
             tileLOSHeight++;
         }
         if (tileLOSHeight > startElevation){return true;}
-        // Some teffects also block line of sight?
-        string tEffect = GetTerrainEffectOnTile(tile);
-        if (tEffect == "Fog" || tEffect == "Toxic Mist"){return true;}
         return false;
     }
     public void UpdateSelectedAttackTile(TacticActor actor, int selectedTile)
@@ -2405,8 +2413,9 @@ public class BattleMap : MapManager
         actor.SetLocation(tile);
         ApplyMovePassiveEffects(actor, tile);
     }
-    public void MoveActorToTile(TacticActor actor, int tile, bool forced = false)
+    public virtual void MoveActorToTile(TacticActor actor, int tile, bool forced = false)
     {
+        UpdateCombatLog(actor.GetPersonalName() + " moves to " + mapUtility.GetRowColumnCoordinateString(tile, mapSize));
         AIMoveActorToTile(actor, tile, forced);
         UpdateMap();
     }
@@ -2461,7 +2470,6 @@ public class BattleMap : MapManager
     // ALL Movement Should Go Through Here. Thus update the combat log here, the actor's direction should be updated before this is called, based on how the actor moved into the tile.
     public bool ApplyMovingTileEffect(TacticActor actor, int tileNumber)
     {
-        UpdateCombatLog(actor.GetPersonalName() + " moves to " + mapUtility.GetRowColumnCoordinateString(tileNumber, mapSize));
         actor.UpdateRoundMoveTracker();
         if (moveManager != null)
         {

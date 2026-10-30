@@ -123,9 +123,8 @@ public class MysteryDungeonBattleManager : ClickTileManager
     public void NewRound()
     {
         roundActors.Clear();
-        // TODO Remove The Dead.
         List<TacticActor> currentRoundActors = new List<TacticActor>(map.battlingActors);
-        // Make Sure The Leader Goes First, Then Sort By Initiative.
+        // Make Sure The Leader Goes First.
         for (int i = 0; i < currentRoundActors.Count; i++)
         {
             if (currentRoundActors[i].GetID() == partyData.dungeonState.GetLeaderID())
@@ -145,13 +144,11 @@ public class MysteryDungeonBattleManager : ClickTileManager
         }
         map.UpdateMap();
         // Wait For Player To Finish Before Doing Anything.
-        // TODO MentalState Turns For Player.
         if (actorAI.MentalStateTurn(roundActors[currentTurn], map))
         {
             EndActorTurn();
         }
     }
-    // TODO Add The Player Action Stuff.
     // Track If An Action Is Successful.
     protected List<int> GetTurnActorAttackableTiles()
     {
@@ -296,6 +293,15 @@ public class MysteryDungeonBattleManager : ClickTileManager
         }
         EndActorTurn();
     }
+    public void ActorDropItem(string itemName, TacticActor actor = null)
+    {
+        if (actor == null)
+        {
+            actor = roundActors[currentTurn];
+        }
+        map.AddItemToLocation(itemName, actor.GetLocation());
+        NextTurn();
+    }
     protected void EndActorTurn()
     {
         effectManager.EndTurn(roundActors[currentTurn], map);
@@ -322,7 +328,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         if (roundActors[currentTurn].GetHealth() <= 0 || roundActors[currentTurn].GetActions() <= 0)
         {
         }
-        // Next Priority Is Mental States
+        // Next Priority Is Mental States, Again Skipped Since Actor AI Will Handle It.
         else if (actorAI.MentalStateTurn(roundActors[currentTurn], map))
         {
         }
@@ -347,50 +353,15 @@ public class MysteryDungeonBattleManager : ClickTileManager
             NextTurn();
         }
     }
-    protected void FollowTheLeader()
-    {
-        int targetLocation = -1;
-        int targetDisance = 999;
-        int targetMoveCost = 999;
-        int currentLocation = roundActors[currentTurn].GetLocation();
-        int leaderLocation = map.GetPlayerLocation();
-        if (map.mapUtility.DistanceBetweenTiles(leaderLocation, currentLocation, map.mapSize) <= 1){return;}
-        // Path To The Closest Tile You Can Reach.
-        List<int> reachableTiles = GetTurnActorReachableTiles();
-        for (int i = 0; i < reachableTiles.Count; i++)
-        {
-            List<int> testPath = moveManager.GetPrecomputedPath(currentLocation, reachableTiles[i]);
-            int distance = map.mapUtility.DistanceBetweenTiles(leaderLocation, reachableTiles[i], map.mapSize);
-            int moveCost = moveManager.moveCost;
-            if (distance < targetDisance)
-            {
-                targetLocation = reachableTiles[i];
-                targetDisance = distance;
-                targetMoveCost = moveCost;
-            }
-            else if (distance == targetDisance && moveCost < targetMoveCost)
-            {
-                targetLocation = reachableTiles[i];
-                targetMoveCost = moveCost;
-            }
-        }
-        if (targetLocation < 0){return;}
-        List<int> path = moveManager.GetPrecomputedPath(currentLocation, targetLocation);
-        MoveAlongPath(roundActors[currentTurn], path);
-    }
     public void AllyTurn()
     {
         // DO ALLY TURNS BASED ON SET AI (Stick Together/Go After Foes/Go Other Way/Explore)
-        // For Now Simple, Follow The Leader.
-        FollowTheLeader();
+        actorAI.MysteryDungeonAllyTurn(roundActors[currentTurn], this, map);
     }
     // DO ENEMY TURNS.
     public void EnemyTurn()
     {
-        // Move Randomly In A Single Direction.
-        // If In Range Then Become Regular AI.
-        // Use Items If Applicable?
-        // Pick Up Items?
+        actorAI.MysteryDungeonEnemyTurn(roundActors[currentTurn], this, map);
     }
     protected void MoveAlongPath(TacticActor actor, List<int> path)
     {
@@ -411,6 +382,11 @@ public class MysteryDungeonBattleManager : ClickTileManager
         }
         map.MoveActorToTile(actor, tileNumber);
     }
+    public void ActorAttacksTarget(TacticActor actor)
+    {
+        if (!actor.TargetValid()){return;}
+        ActorAttacksActor(actor, actor.GetTarget());
+    }
     public void ActorBasicAttacksTile(TacticActor actor, int tileNumber)
     {
         TacticActor target = map.GetActorOnTile(tileNumber);
@@ -421,7 +397,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
     {
         if (!attacker.AttackActionsLeft()){return;}
         attacker.PayAttackCost();
-        //UpdateCombatLog(attacker.GetPersonalName() + " targets " + defender.GetPersonalName() + ".");
+        map.UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName() + ".");
         attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
         List<int> basicAttackTargetTiles = map.mapUtility.GetTilesByShapeSpan(defender.GetLocation(), attacker.GetBasicAttackShape(), attacker.GetBasicAttackSpan(), map.mapSize, attacker.GetLocation());
         List<TacticActor> targetActors = map.GetActorsOnTiles(basicAttackTargetTiles);
@@ -429,7 +405,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         {
             // Don't Hit Teammates Or The Target Twice.
             if (targetActors[i].GetTeam() == attacker.GetTeam() || targetActors[i] == defender){continue;}
-            //UpdateCombatLog(attacker.GetPersonalName() + " attacks " + targetActors[i].GetPersonalName() + ".");
+            map.UpdateCombatLog(attacker.GetPersonalName() + " hits " + targetActors[i].GetPersonalName() + ".");
             attackManager.ActorAttacksActorWithAttackSpeed(attacker, targetActors[i], map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
         }
         map.UpdateMap();
@@ -447,6 +423,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
             map.ResurrectActor(actor);
             return;
         }
+        if (!map.RemoveActorFromBattle(actor)){return;}
         List<string> deathActives = new List<string>(actor.GetDeathActives());
         for (int i = 0; i < deathActives.Count; i++)
         {
