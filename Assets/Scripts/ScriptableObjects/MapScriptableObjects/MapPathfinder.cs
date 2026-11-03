@@ -32,43 +32,72 @@ public class MapPathfinder : ScriptableObject
     }
     public int GetMapSize(){return mapSize;}
     public StatDatabase buildingMoveCosts;
+    private Dictionary<int, int> buildingMoveCostsByTile = new Dictionary<int, int>();
     public List<string> buildings;
     public List<int> buildingLocations;
     protected void ResetBuildings()
     {
         buildings.Clear();
         buildingLocations.Clear();
+        buildingMoveCostsByTile.Clear();
     }
     public void SetBuildings(List<string> newBuildings, List<int> newBuildingLocations)
     {
         buildings = new List<string>(newBuildings);
         buildingLocations = new List<int>(newBuildingLocations);
+        BuildBuildingMoveCostLookup();
+    }
+    protected void BuildBuildingMoveCostLookup()
+    {
+        buildingMoveCostsByTile.Clear();
+        int count = Mathf.Min(buildings.Count, buildingLocations.Count);
+        for (int i = 0; i < count; i++)
+        {
+            int tile = buildingLocations[i];
+            if (buildingMoveCostsByTile.ContainsKey(tile)){continue;}
+            buildingMoveCostsByTile.Add(tile, buildingMoveCosts.ReturnIntValue(buildings[i], 0));
+        }
     }
     public int GetBuildingMoveCost(int into)
     {
-        int indexOf = buildingLocations.IndexOf(into);
-        if (indexOf < 0){return 0;}
-        return int.Parse(buildingMoveCosts.ReturnValue(buildings[indexOf]));
+        if (buildingMoveCostsByTile.TryGetValue(into, out int cost)){return cost;}
+        return 0;
     }
-    public List<string> borders;
+    public List<int[]> borders;
     protected void ResetBorders()
     {
         borders.Clear();
     }
     public void SetBorders(List<string> newInfo)
     {
-        borders = new List<string>(newInfo);
+        borders = new List<int[]>(newInfo.Count);
+        for (int i = 0; i < newInfo.Count; i++)
+        {
+            int[] costs = new int[6];
+            string border = newInfo[i];
+            if (!string.IsNullOrEmpty(border) && border != "0|0|0|0|0|0")
+            {
+                string[] values = border.Split('|');
+                for (int j = 0; j < 6 && j < values.Length; j++)
+                {
+                    int.TryParse(values[j], out costs[j]);
+                }
+            }
+            borders.Add(costs);
+        }
     }
     public int GetBorderCost(int from, int into)
     {
-        if (into < 0 || from < 0 || into >= borders.Count || from >= borders.Count){return 0;}
-        // Determine the direction;
-        int direction = (mapUtility.DirectionBetweenLocations(into, from, mapSize));
-        // What delimiter to use?
-        string[] bordersCosts = borders[into].Split("|");
-        if (direction < 0 || direction >= bordersCosts.Length){return 0;}
-        //direction = (direction + 3) % 6;
-        return int.Parse(bordersCosts[direction]);
+        if (into < 0 || from < 0 || into >= borders.Count || from >= borders.Count)
+        {
+            return 0;
+        }
+        int direction = mapUtility.AdjacentDirectionBetweenLocations(into, from, mapSize);
+        if (direction < 0 || direction >= 6)
+        {
+            return 0;
+        }
+        return borders[into][direction];
     }
     // Keep track of the elevation of each tile for additional move cost calculations.
     public List<int> elevations;
@@ -94,7 +123,7 @@ public class MapPathfinder : ScriptableObject
     }
     protected int GetElevationDifference(int tile1, int tile2)
     {
-        return Mathf.Abs(GetElevation(tile1) - GetElevation(tile2));
+        return Mathf.Abs(elevations[tile1] - elevations[tile2]);
     }
     // Keep track of the movecost of each tile.
     public List<int> moveCosts;

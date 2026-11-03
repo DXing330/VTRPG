@@ -32,8 +32,10 @@ public class PartyDungeonState : SavedData
     public void SetLeaderID(int newID){leaderID = newID;}
     // TODO Save/Load To/From The Leader When NewFloor/Spawn
     public int maxFullness;
+    public int GetMaxFullness(){return maxFullness;}
     // Restores Starting Each Dungeon + Eating.
     public int currentFullness;
+    public int GetCurrentFullness(){return currentFullness;}
     // Changes Each Dungeon Based On Who You Pick To Enter + Health Updates Each Floor/Move.
     public Dictionary<int, string> currentPartyStats = new();
     public string GetCurrentStats(int ID)
@@ -73,6 +75,7 @@ public class PartyDungeonState : SavedData
             }
             if (actors[i].GetID() == leaderID)
             {
+                maxFullness = actors[i].GetMaxFullness();
                 currentFullness = actors[i].GetFullness();
             }
         }

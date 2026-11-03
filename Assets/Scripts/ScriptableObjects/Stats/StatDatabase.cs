@@ -37,6 +37,53 @@ public class StatDatabase : ScriptableObject
         }
         return "BS|||Self|" + effect + "|" + specifics;
     }
+    [System.NonSerialized]
+    private Dictionary<string, string> lookup;
+    [System.NonSerialized]
+    private Dictionary<string, int> intLookup;
+    [System.NonSerialized]
+    private Dictionary<string, List<int>> multiLookup;
+    [System.NonSerialized]
+    private bool lookupInitialized;
+    protected virtual void BuildLookup()
+    {
+        lookup = new Dictionary<string, string>();
+        intLookup = new Dictionary<string, int>();
+        multiLookup = new Dictionary<string, List<int>>();
+        int count = Mathf.Min(keys.Count, values.Count);
+        for (int i = 0; i < count; i++)
+        {
+            string key = keys[i];
+            if (multiLookup.TryGetValue(key, out List<int> indexes))
+            {
+                indexes.Add(i);
+            }
+            else
+            {
+                multiLookup.Add(key, new List<int> { i });
+            }
+            // First occurrence wins, matching IndexOf behavior.
+            if (!lookup.ContainsKey(key))
+            {
+                lookup.Add(key, values[i]);
+            }
+            if (int.TryParse(values[i], out int intValue))
+            {
+                if (!intLookup.ContainsKey(keys[i]))
+                {
+                    intLookup.Add(keys[i], intValue);
+                }
+            }
+        }
+        lookupInitialized = true;
+    }
+    protected void EnsureLookup()
+    {
+        if (!lookupInitialized)
+        {
+            BuildLookup();
+        }
+    }
     public List<string> keys;
     public List<string> values;
     public void DBSetDirty()
@@ -56,6 +103,10 @@ public class StatDatabase : ScriptableObject
         if (inputKeysAndValues)
         {
             string[] keysAndValues = allKeysAndValues.Split(keyValueDelimiter);
+            if (keysAndValues.Length < 2)
+            {
+                Debug.Log(this.name);
+            }
             SetAllKeys(keysAndValues[0]);
             SetValues(keysAndValues[1]);
         }
@@ -66,6 +117,7 @@ public class StatDatabase : ScriptableObject
             Debug.Log("Key-Value Count Not Equal");
             Debug.Log(this.name);
         }
+        BuildLookup();
     }
     public void SetAllKeys(string newKeys)
     {
@@ -272,7 +324,33 @@ public class StatDatabase : ScriptableObject
         // Distinct?
         return filtered;
     }
+    public int ReturnIntValue(string key, int defaultValue = 0)
+    {
+        EnsureLookup();
+        if (intLookup.TryGetValue(key, out int value))
+        {
+            return value;
+        }
+        return defaultValue;
+    }
     public virtual string ReturnValue(string key)
+    {
+        EnsureLookup();
+        if (lookup.TryGetValue(key, out string value))
+        {
+            return value;
+        }
+        if (defaultPassivesEnabled)
+        {
+            return ReturnDefaultPassive(key);
+        }
+        if (defaultsEnabled)
+        {
+            return defaultValue;
+        }
+        return "";
+    }
+    /*public virtual string ReturnValue(string key)
     {
         int index = keys.IndexOf(key);
         if (index >= 0 && index < values.Count)
@@ -285,7 +363,7 @@ public class StatDatabase : ScriptableObject
             if (defaultsEnabled){return defaultValue;}
             return "";
         }
-    }
+    }*/
     // No longer a dictionary if one key has multiple values.
     public List<string> ReturnAllValues(string key)
     {

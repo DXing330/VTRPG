@@ -84,6 +84,7 @@ public class MysteryDungeonManager : MonoBehaviour
     public void CompleteDungeon(bool win = true)
     {
         // TODO Move To Reward Scene If Win.
+        partyData.Save();
         sceneMover.ReturnToHub();
     }
 }

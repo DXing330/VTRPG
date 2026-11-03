@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class MysteryDungeonLog : CombatLog
 {
+    public MysteryDungeonCombatLog combatLogDisplay;
     // Simplified CombatLog.
     protected override void ResetLists()
     {
@@ -35,6 +36,10 @@ public class MysteryDungeonLog : CombatLog
     public override void UpdateNewestLog(string newLog)
     {
         MDLogs.Add(newLog);
+        if (combatLogDisplay != null)
+        {
+            combatLogDisplay.UpdateCurrentPage();
+        }
     }
     public override void AddDetailedLogs(string newDetail)
     {

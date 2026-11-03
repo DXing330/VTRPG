@@ -51,15 +51,7 @@ public class MysteryDungeonMapUtility : ScriptableObject
     public TacticActor GetClosestEnemy(TacticActor actor, MysteryDungeonBattleMap map)
     {
         List<int> targetTiles = new List<int>();
-        int currentRoom = map.GetRoomOfTile(actor.GetLocation());
-        if (currentRoom >= 0)
-        {
-            targetTiles = map.GetRoomTiles(currentRoom);
-        }
-        else
-        {
-            targetTiles = map.GetActorVisibleTiles(actor.GetLocation());
-        }
+        targetTiles = map.GetActorVisibleTiles(actor.GetLocation());
         List<TacticActor> enemies = map.ReturnEnemiesInTiles(actor, targetTiles);
         if (enemies.Count <= 0){return null;}
         int distance = int.MaxValue;

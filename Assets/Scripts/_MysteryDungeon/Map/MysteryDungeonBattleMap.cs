@@ -91,6 +91,28 @@ public class MysteryDungeonBattleMap : BattleMap
             SpawnAndAddActor(startingEnemyLocations[i], startingEnemies[i], 1);
         }
     }
+    private int turnSinceSpawn = 0;
+    [SerializeField] private int minSpawnInterval = 20;
+    [SerializeField] private int maxSpawnInterval = 50;
+    public void UpdateEnemySpawning()
+    {
+        turnSinceSpawn++;
+        int realUpperBound = Mathf.Max(minSpawnInterval, maxSpawnInterval - Mathf.RoundToInt(Mathf.Sqrt(floor)));
+        if (turnSinceSpawn >= UnityEngine.Random.Range(minSpawnInterval, realUpperBound))
+        {
+            turnSinceSpawn = 0;
+            SpawnRandomEnemy();
+        }
+    }
+    public void SpawnRandomEnemy()
+    {
+        string enemyName = GenerateRandomEnemy();
+        int enemyLocation = GenerateEnemyLocation();
+        if (GetActorOnTile(enemyLocation) == null)
+        {
+            SpawnAndAddActor(enemyLocation, enemyName, 1);
+        }
+    }
     public string GenerateRandomEnemy()
     {
         if (GetEnemyCount() >= GetMaxEnemyCount()){return "";}

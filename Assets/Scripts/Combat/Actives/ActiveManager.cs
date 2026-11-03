@@ -431,6 +431,21 @@ public class ActiveManager : MonoBehaviour
                     }
                 }
                 return;
+            case "RandomHitAttack":
+                if (targets.Count <= 0) { return; }
+                string[] randomHitRange = specifics.Split("Equals");
+                if (randomHitRange.Length < 2){return;}
+                int minHits = int.Parse(randomHitRange[0]);
+                int maxHits = int.Parse(randomHitRange[1]);
+                int randomHitAmount = UnityEngine.Random.Range(minHits, maxHits + 1);
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    for (int j = 0; j < randomHitAmount; j++)
+                    {
+                        attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map, power, skillUser.GetBasicAttackDamageType());
+                    }
+                }
+                return;
             case "AttackEnemies":
                 for (int i = 0; i < targets.Count; i++)
                 {
@@ -521,6 +536,21 @@ public class ActiveManager : MonoBehaviour
                     attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
                 }
                 map.MoveSkill(skillUser, targetTile, specifics, power);
+                return;
+            case "Attack+SwapBack":
+                if (targets.Count <= 0) {return;}
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    attackManager.ActorAttacksActorWithAttackSpeed(skillUser, targets[i], map);
+                }
+                int swapBackTile = map.mapUtility.PointInOppositeDirection(skillUser.GetLocation(), skillUser.GetDirection(), map.mapSize);
+                if (swapBackTile < 0 || swapBackTile == skillUser.GetLocation()){return;}
+                TacticActor swapBackActor = map.GetActorOnTile(swapBackTile);
+                if (swapBackActor != null && swapBackActor.GetTeam() == skillUser.GetTeam())
+                {
+                    map.MoveActorToTile(swapBackActor, skillUser.GetLocation());
+                    map.MoveActorToTile(skillUser, swapBackTile);
+                }
                 return;
             case "Move":
                 targetTile = targetedTiles[0];
@@ -864,6 +894,15 @@ public class ActiveManager : MonoBehaviour
                 {
                     attackManager.ActorAttacksActorWithAttackSpeed(skillUser, opForArmorTargetAdj[i], map);
                     active.AffectActor(opForArmorTargetAdj[i], "Status", "Stun", power);
+                }
+                return;
+            case "PMDRest":
+                // Full Heal + Cleanse + Sleep 3 Turns.
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    targets[i].HealToMaxHealth();
+                    targets[i].ClearStatuses();
+                    targets[i].Sleep(3);
                 }
                 return;
         }

@@ -1891,12 +1891,12 @@ public class BattleMap : MapManager
         List<int> LOSTiles = new List<int>();
         for (int i = tiles.Count - 1; i >= 0; i--)
         {
-            if (!LineOfSightBetweenTiles(startTile, tiles[i]))
+            if (LineOfSightBetweenTiles(startTile, tiles[i]))
             {
-                tiles.RemoveAt(i);
+                LOSTiles.Add(tiles[i]);
             }
         }
-        return tiles;
+        return LOSTiles;
     }
     public bool LineOfSightBetweenTiles(int start, int target)
     {
@@ -1928,6 +1928,10 @@ public class BattleMap : MapManager
         if (GetTileInfo(tile).Contains("Forest"))
         {
             tileLOSHeight++;
+        }
+        if (GetTileInfo(tile).Contains("Plains"))
+        {
+            tileLOSHeight--;
         }
         // Buildings Also Act As If Higher Elevations.
         if (GetBuildingOnTile(tile) != "")

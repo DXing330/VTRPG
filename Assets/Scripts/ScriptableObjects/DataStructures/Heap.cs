@@ -11,21 +11,17 @@ public class Heap : ScriptableObject
     public List<int> tiles;
     // Distances/Move Costs
     public List<int> weights;
-
-
     public void ResetHeap()
     {
         size = 0;
         tiles.Clear();
         weights.Clear();
     }
-
     protected void IncreaseSize()
     {
         tiles.Add(-1);
         weights.Add(bigInt);
     }
-
     public void InitializeHeap(int newSize)
     {
         tiles = new List<int>(new int[newSize]);
@@ -36,7 +32,6 @@ public class Heap : ScriptableObject
             weights[i] = bigInt;
         }
     }
-
     protected void EnsureCapacity()
     {
         if (weights.Count < size + 1)
@@ -47,32 +42,26 @@ public class Heap : ScriptableObject
             }
         }
     }
-
     protected int getLeftChildIndex(int parentIndex)
     {
         return ((parentIndex*2)+1);
     }
-
     protected int getRightChildIndex(int parentIndex)
     {
         return ((parentIndex*2)+2);
     }
-
     protected int getParentIndex(int childIndex)
     {
         return ((childIndex-1)/2);
     }
-
     protected bool hasLeftChild(int index)
     {
         return (getLeftChildIndex(index) < size);
     }
-
     protected bool hasRightChild(int index)
     {
         return (getRightChildIndex(index) < size);
     }
-
     protected bool hasParent(int index)
     {
         if (index <= 0)
@@ -82,22 +71,18 @@ public class Heap : ScriptableObject
         return true;
     }
     // Child/Parents are sorted by weight.
-
     protected int leftChild(int index)
     {
         return weights[getLeftChildIndex(index)];
     }
-
     protected int rightChild(int index)
     {
         return weights[getRightChildIndex(index)];
     }
-
     protected int parent(int index)
     {
         return weights[getParentIndex(index)];
     }
-
     // Need to swap on all lists.
     protected void Swap(int indexOne, int indexTwo)
     {
@@ -108,7 +93,6 @@ public class Heap : ScriptableObject
         tiles[indexOne] = tiles[indexTwo];
         tiles[indexTwo] = temp2;
     }
-
     // When looking/pulling you care about the actual tile not the move cost.
     public int Peek()
     {
@@ -118,7 +102,6 @@ public class Heap : ScriptableObject
         }
         return tiles[0];
     }
-
     public int PeekWeight()
     {
         if (size == 0)
@@ -127,7 +110,6 @@ public class Heap : ScriptableObject
         }
         return weights[0];
     }
-
     public int Pull()
     {
         if (size == 0)
@@ -141,7 +123,6 @@ public class Heap : ScriptableObject
         HeapifyDown();
         return tile;
     }
-
     public void AddNodeWeight(int newNode, int newWeight)
     {
         EnsureCapacity();
@@ -150,7 +131,6 @@ public class Heap : ScriptableObject
         size++;
         HeapifyUp();
     }
-
     protected void HeapifyUp()
     {
         int index = size - 1;
@@ -160,8 +140,7 @@ public class Heap : ScriptableObject
             index = getParentIndex(index);
         }
     }
-
-    protected void HeapifyDown()
+    /*protected void HeapifyDown()
     {
         int index = 0;
         while (hasLeftChild(index))
@@ -178,5 +157,31 @@ public class Heap : ScriptableObject
             Swap(index, smallerChildIndex);
             index = smallerChildIndex;
         }
+    }*/
+    protected void HeapifyDown()
+    {
+        int index = 0;
+        int currentWeight = weights[index];
+        int currentTile = tiles[index];
+        int leftChild = (index * 2) + 1;
+        while (leftChild < size)
+        {
+            int smallerChild = leftChild;
+            int rightChild = leftChild + 1;
+            if (rightChild < size && weights[rightChild] < weights[leftChild])
+            {
+                smallerChild = rightChild;
+            }
+            if (currentWeight <= weights[smallerChild])
+            {
+                break;
+            }
+            weights[index] = weights[smallerChild];
+            tiles[index] = tiles[smallerChild];
+            index = smallerChild;
+            leftChild = (index * 2) + 1;
+        }
+        weights[index] = currentWeight;
+        tiles[index] = currentTile;
     }
 }

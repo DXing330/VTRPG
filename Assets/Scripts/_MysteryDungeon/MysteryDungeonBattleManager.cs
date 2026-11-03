@@ -14,7 +14,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
     public PartyDataManager partyData;
     public CharacterList playerParty;
     public MysteryDungeonBattleMap map;
-    public ActorAI actorAI;
+    public MysteryDungeonActorAI actorAI;
     public AttackManager attackManager;
     public ActiveManager activeManager;
     public EffectManager effectManager;
@@ -58,6 +58,8 @@ public class MysteryDungeonBattleManager : ClickTileManager
         }
         actors[0].SetLocation(map.playerLocation);
         actors[0].LoadPersistentStats(partyData.dungeonState.GetCurrentStats(actors[0].GetID()));
+        actors[0].SetMaxFullness(partyData.dungeonState.GetMaxFullness());
+        actors[0].SetCurrentFullness(partyData.dungeonState.GetCurrentFullness());
         int count = 0;
         for (int i = 0; i < spawnCount; i++)
         {
@@ -84,6 +86,8 @@ public class MysteryDungeonBattleManager : ClickTileManager
         }
         InitializePartyLocations(actors, spawnCount);
     }
+    protected bool fastMove = false;
+    public void UpdateFastMove(bool newInfo){fastMove = newInfo;}
     protected bool dangerNear = false;
     public bool DangerNear(){return dangerNear;}
     public void UpdateDanger()
@@ -97,6 +101,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
             if (visibleActors[i].GetTeam() != 0)
             {
                 dangerNear = true;
+                fastMove = false;
                 return;
             }
         }
@@ -122,7 +127,12 @@ public class MysteryDungeonBattleManager : ClickTileManager
     }
     public void NewRound()
     {
+        map.UpdateEnemySpawning();
         roundActors.Clear();
+        for (int i = map.battlingActors.Count - 1; i >= 0; i--)
+        {
+            ActivateDeathPassive(map.battlingActors[i]);
+        }
         List<TacticActor> currentRoundActors = new List<TacticActor>(map.battlingActors);
         // Make Sure The Leader Goes First.
         for (int i = 0; i < currentRoundActors.Count; i++)
@@ -140,8 +150,12 @@ public class MysteryDungeonBattleManager : ClickTileManager
         if (roundActors[currentTurn].GetHealth() <= 0)
         {
             // Leader Dead, Owari Da, Check For Reviver Seeds?
-            // MDGeneralManager.OwariDa();
+            // Return In Defeat.
+            MDGeneralManager.CompleteDungeon(false);
+            return;
         }
+        if (!fastMove){map.updateMap = true;}
+        map.RefreshPlayerLocation();
         map.UpdateMap();
         // Wait For Player To Finish Before Doing Anything.
         if (actorAI.MentalStateTurn(roundActors[currentTurn], map))
@@ -191,7 +205,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
     protected List<int> GetTurnActorReachableTiles()
     {
         // This Already Updates Path Costs.
-        List<int> allReachable = moveManager.GetAllReachableTiles(roundActors[currentTurn], map.battlingActors, true);
+        List<int> allReachable = new List<int>(moveManager.GetAllReachableTiles(roundActors[currentTurn], map.battlingActors, true));
         if (currentTurn == 0)
         {
             allReachable = allReachable.Intersect(map.GetVisibleTiles()).ToList();
@@ -211,12 +225,13 @@ public class MysteryDungeonBattleManager : ClickTileManager
     {
         // Only On Player's Turn.
         if (currentTurn != 0){return false;}
+        TacticActor playerActor = roundActors[currentTurn];
         int currentLocation = map.GetPlayerLocation();
         int targetLocation = map.mapUtility.PointInDirection(currentLocation, direction, map.mapSize);
         if (map.mapUtility.DistanceBetweenTiles(currentLocation, targetLocation, map.mapSize) > 1){return false;}
-        // You Can Switch Places With Allies (You Will Die If In DeepWater/Pit And Not A Flier).
+        // You Can Switch Places With Allies If You Can Move Onto The Tile.
         TacticActor actorOnTile = map.GetActorOnTile(targetLocation);
-        if (actorOnTile != null && actorOnTile.GetTeam() == 0)
+        if (actorOnTile != null && actorOnTile.GetTeam() == 0 && moveManager.ReturnBaseMoveCostOfTile(playerActor, targetLocation) <= (playerActor.GetActions() * playerActor.GetSpeed()))
         {
             MoveActorToTile(targetLocation);
             MoveActorToTile(currentLocation, actorOnTile);
@@ -253,6 +268,21 @@ public class MysteryDungeonBattleManager : ClickTileManager
             return true;
         }
         return false;
+    }
+    protected void PlayerHunger()
+    {
+        if (currentTurn == 0)
+        {
+            int hungerDamage = roundActors[currentTurn].Hunger();
+            if (hungerDamage > 0)
+            {
+                map.UpdateCombatLog(roundActors[currentTurn].GetPersonalName() + " takes " + hungerDamage + " hunger damage.");
+            }
+            else if (roundActors[currentTurn].GetStomachPercentFull() < 10)
+            {
+                map.UpdateCombatLog("Feeling Hungry");
+            }
+        }
     }
     public MysteryDungeonItemEffect itemEffect;
     public void ActorUseItem(string itemName, TacticActor actor = null)
@@ -304,6 +334,8 @@ public class MysteryDungeonBattleManager : ClickTileManager
     }
     protected void EndActorTurn()
     {
+        // Track Hunger For The Leader At The End Of Turn.
+        PlayerHunger();
         effectManager.EndTurn(roundActors[currentTurn], map);
         roundActors[currentTurn].EndTurn();
         map.ApplyEndTerrainEffect(roundActors[currentTurn]);
@@ -316,6 +348,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
     }
     public void NextTurn()
     {
+        map.updateMap = false;
         currentTurn++;
         if (currentTurn >= roundActors.Count)
         {
@@ -337,7 +370,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         {
             AllyTurn();
         }
-        else
+        else if (roundActors[currentTurn].GetTeam() != 0)
         {
             EnemyTurn();
         }
@@ -410,13 +443,22 @@ public class MysteryDungeonBattleManager : ClickTileManager
         }
         map.UpdateMap();
     }
+    public void ActivateSkill(string skillName, TacticActor actor, int targetTile)
+    {
+        activeManager.SetSkillFromName(skillName, actor);
+        activeManager.GetTargetedTiles(targetTile);
+        map.UpdateCombatLog(actor.GetPersonalName() + " uses " + skillName + ".");
+        activeManager.ActivateSkill(this);
+    }
     public void ActivateSkill(string skillName, TacticActor actor = null)
     {
         if (actor == null){actor = roundActors[currentTurn];}
         activeManager.ActivateSkill(this);
     }
+    // Checks And Activates Death Effects.
     public void ActivateDeathPassive(TacticActor actor)
     {
+        if (actor.GetHealth() > 0){return;}
         if (actor.Resurrect())
         {
             actor.FullRestore();

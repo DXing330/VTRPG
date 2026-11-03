@@ -55,26 +55,22 @@ public class MapUtility : ScriptableObject
         }
         return (row * size) + col;
     }
-
     public int RandomTileInColumn(int col, int size)
     {
         int row = Random.Range(0, size);
         return ReturnTileNumberFromRowCol(row, col, size);
     }
-
     public int RandomTileInRow(int row, int size)
     {
         int col = Random.Range(0, size);
         return ReturnTileNumberFromRowCol(row, col, size);
     }
-
     public string GetRowColumnCoordinateString(int tile, int size)
     {
         int row = GetRow(tile, size);
         int col = GetColumn(tile, size);
         return "(" + (row + 1) + "," + (col + 1) + ")";
     }
-
     public int GetRow(int tile, int size)
     {
         int row = 0;
@@ -89,17 +85,40 @@ public class MapUtility : ScriptableObject
         }
         return row;
     }
-
     public int GetColumn(int tile, int size)
     {
         return tile % size;
     }
-
+    public int GetHexQ(int location, int size)
+    {
+        if (flatTop)
+        {
+            return GetColumn(location, size);
+        }
+        else
+        {
+            return GetColumn(location, size) - ((GetRow(location, size) - GetRow(location, size) % 2) / 2);
+        }
+    }
+    public int GetHexR(int location, int size)
+    {
+        if (flatTop)
+        {
+            return GetRow(location, size) - (GetColumn(location, size) - GetColumn(location, size) % 2) / 2;
+        }
+        else
+        {
+            return GetRow(location, size);
+        }
+    }
+    public int GetHexS(int location, int size)
+    {
+        return -GetHexQ(location, size) - GetHexR(location, size);
+    }
     public int ReturnTileNumberFromQRS(int Q, int R, int S, int size)
     {
         return ReturnTileNumberFromRowCol(GetRowFromQRS(Q, R, S, size), GetColFromQRS(Q, R, S, size), size);
     }
-
     public int GetColFromQRS(int Q, int R, int S, int size)
     {
         if (flatTop)
@@ -111,7 +130,6 @@ public class MapUtility : ScriptableObject
             return Q + (R - R % 2) / 2;
         }
     }
-
     public int GetRowFromQRS(int Q, int R, int S, int size)
     {
         if (flatTop)
@@ -222,36 +240,6 @@ public class MapUtility : ScriptableObject
         }
         return line;
     }
-
-    public int GetHexQ(int location, int size)
-    {
-        if (flatTop)
-        {
-            return GetColumn(location, size);
-        }
-        else
-        {
-            return GetColumn(location, size) - ((GetRow(location, size) - GetRow(location, size) % 2) / 2);
-        }
-    }
-
-    public int GetHexR(int location, int size)
-    {
-        if (flatTop)
-        {
-            return GetRow(location, size) - (GetColumn(location, size) - GetColumn(location, size) % 2) / 2;
-        }
-        else
-        {
-            return GetRow(location, size);
-        }
-    }
-
-    public int GetHexS(int location, int size)
-    {
-        return -GetHexQ(location, size) - GetHexR(location, size);
-    }
-
     public int PointInOppositeDirection(int location, int otherPoint, int size)
     {
         int direction = DirectionBetweenLocations(location, otherPoint, size);
@@ -313,7 +301,6 @@ public class MapUtility : ScriptableObject
         }
         return location;
     }
-
     public List<int> GetAllTilesInColumn(int column, int size)
     {
         List<int> tiles = new List<int>();
@@ -323,7 +310,6 @@ public class MapUtility : ScriptableObject
         }
         return tiles;
     }
-
     public List<int> GetAllTilesInRow(int row, int size)
     {
         List<int> tiles = new List<int>();
@@ -570,7 +556,6 @@ public class MapUtility : ScriptableObject
     {
         return (PointInDirection(location, direction, size) >= 0);
     }
-
     public int DirectionBetweenLocations(int start, int end, int size)
     {
         if (start < 0 || end < 0)
@@ -633,7 +618,52 @@ public class MapUtility : ScriptableObject
         }
         return -1;
     }
-
+    public int AdjacentDirectionBetweenLocations(int start, int end, int size)
+    {
+        if (start < 0 || end < 0 || start >= size * size || end >= size * size || start == end)
+        {
+            return -1;
+        }
+        int row1 = start / size;
+        int col1 = start % size;
+        int row2 = end / size;
+        int col2 = end % size;
+        int rowDiff = row2 - row1;
+        int colDiff = col2 - col1;
+        bool evenRow = row1 % 2 == 0;
+        if (rowDiff == 0)
+        {
+            if (colDiff == 1) { return 1; }
+            if (colDiff == -1) { return 4; }
+        }
+        else if (rowDiff == 1)
+        {
+            if (evenRow)
+            {
+                if (colDiff == 0) { return 2; }
+                if (colDiff == -1) { return 3; }
+            }
+            else
+            {
+                if (colDiff == 1) { return 2; }
+                if (colDiff == 0) { return 3; }
+            }
+        }
+        else if (rowDiff == -1)
+        {
+            if (evenRow)
+            {
+                if (colDiff == 0) { return 5; }
+                if (colDiff == -1) { return 0; }
+            }
+            else
+            {
+                if (colDiff == 1) { return 5; }
+                if (colDiff == 0) { return 0; }
+            }
+        }
+        return -1;
+    }
     public string IntDirectionToString(int direction)
     {
         if (flatTop)
@@ -674,8 +704,7 @@ public class MapUtility : ScriptableObject
         }
         return "";
     }
-
-    public List<int> AdjacentTiles(int location, int size)
+    /*public List<int> AdjacentTiles(int location, int size)
     {
         List<int> adjacent = new List<int>();
         if (location < 0){return adjacent;}
@@ -687,8 +716,80 @@ public class MapUtility : ScriptableObject
             adjacent.Add(adjacentTile);
         }
         return adjacent;
+    }*/
+    // Hardcoded Faster Version
+    public List<int> AdjacentTiles(int location, int size)
+    {
+        List<int> adjacent = new List<int>(6);
+        if (location < 0 || location >= size * size)
+        {
+            return adjacent;
+        }
+        int row = location / size;
+        int col = location % size;
+        bool oddRow = row % 2 != 0;
+        // UpRight (0)
+        if (row > 0)
+        {
+            if (oddRow)
+            {
+                if (col < size - 1)
+                    adjacent.Add(location - size + 1);
+            }
+            else
+            {
+                adjacent.Add(location - size);
+            }
+        }
+        // Right (1)
+        if (col < size - 1)
+        {
+            adjacent.Add(location + 1);
+        }
+        // DownRight (2)
+        if (row < size - 1)
+        {
+            if (oddRow)
+            {
+                if (col < size - 1)
+                    adjacent.Add(location + size + 1);
+            }
+            else
+            {
+                adjacent.Add(location + size);
+            }
+        }
+        // DownLeft (3)
+        if (row < size - 1)
+        {
+            if (oddRow)
+            {
+                adjacent.Add(location + size);
+            }
+            else if (col > 0)
+            {
+                adjacent.Add(location + size - 1);
+            }
+        }
+        // Left (4)
+        if (col > 0)
+        {
+            adjacent.Add(location - 1);
+        }
+        // UpLeft (5)
+        if (row > 0)
+        {
+            if (oddRow)
+            {
+                adjacent.Add(location - size);
+            }
+            else if (col > 0)
+            {
+                adjacent.Add(location - size - 1);
+            }
+        }
+        return adjacent;
     }
-
     public List<int> AdjacentBorders(List<int> locations, int mapSize)
     {
         List<int> adjacent = new List<int>();
@@ -700,7 +801,6 @@ public class MapUtility : ScriptableObject
         adjacent = adjacent.Except(locations).ToList();
         return adjacent;
     }
-
     public List<int> BorderTileSet(List<int> fullTileSet, int mapSize)
     {
         List<int> borders = new List<int>();
@@ -713,7 +813,6 @@ public class MapUtility : ScriptableObject
         }
         return borders;
     }
-
     public List<int> GetTilesInBorderShape(int span, int size)
     {
         List<int> borders = new List<int>();
@@ -727,12 +826,10 @@ public class MapUtility : ScriptableObject
         borders = borders.Distinct().ToList();
         return borders;
     }
-
     public bool TilesAdjacent(int location, int location2, int size)
     {
         return AdjacentTiles(location, size).Contains(location2);
     }
-
     public int RandomPointLeft(int location, int size)
     {
         int up = PointInDirection(location, 5, size);
@@ -745,7 +842,6 @@ public class MapUtility : ScriptableObject
         if (choice == 0) { return up; }
         return down;
     }
-
     public int RandomPointRight(int location, int size)
     {
         int up = PointInDirection(location, 1, size);
@@ -758,7 +854,6 @@ public class MapUtility : ScriptableObject
         if (choice == 0) { return up; }
         return down;
     }
-
     public int RandomPointDown(int location, int size)
     {
         int choice = Random.Range(2, 5);
@@ -766,7 +861,6 @@ public class MapUtility : ScriptableObject
         if (newPoint >= 0) { return newPoint; }
         return location;
     }
-
     public int RandomPointUp(int location, int size)
     {
         int choice = Random.Range(5, 8) % 6;
@@ -774,7 +868,6 @@ public class MapUtility : ScriptableObject
         if (newPoint >= 0) { return newPoint; }
         return location;
     }
-
     public int DetermineCenterTile(int size)
     {
         if (flatTop)
@@ -787,7 +880,6 @@ public class MapUtility : ScriptableObject
         }
         return ReturnTileNumberFromRowCol(size / 2, size / 2, size);
     }
-
     // TODO This is bugged for auras if the direction is required but the target is facing an edge of the map?
     public List<int> GetTilesByShapeSpan(int selected, string shape, int span, int size, int start = -1)
     {

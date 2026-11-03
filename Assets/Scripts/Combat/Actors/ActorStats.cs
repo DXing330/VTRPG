@@ -225,6 +225,11 @@ public class ActorStats : ActorInitialStats
         // Barricade means you don't lose temp health except by damage.
         if (barricade){return;}
         int decay = tempHealth * tempHealthDecayPercentage / 100;
+        if (tempHealth < minTempHealth)
+        {
+            tempHealth = Mathf.Max(0, tempHealth);
+            return;
+        }
         tempHealth = Mathf.Max(minTempHealth, tempHealth - decay);
     }
     // For Vambrace.
@@ -244,6 +249,10 @@ public class ActorStats : ActorInitialStats
     }
     public int GetTempHealth() { return tempHealth; }
     public int unhealable = 0;
+    public bool GetUnhealable()
+    {
+        return unhealable != 0;
+    }
     public void SetUnhealable(int newValue)
     {
         unhealable = newValue;
@@ -428,7 +437,7 @@ public class ActorStats : ActorInitialStats
     public virtual int TakeDamage(int damage, string type = "Physical")
     {
         // Intangible reduces damage to 1.
-        if (intangible)
+        if (GetIntangible())
         {
             damage = 1;
         }
@@ -571,7 +580,7 @@ public class ActorStats : ActorInitialStats
     {
         // Don't Reset Statuses Since Some Actors Will Load In With Them From Previous Battles
         //ClearStatuses();
-        ClearBuffs();
+        ResetBuffs();
         resistDmgTypes.Clear();
         baseDmgResists.Clear();
         currentDmgResists.Clear();
@@ -660,7 +669,6 @@ public class ActorStats : ActorInitialStats
         int tempIndex = UnityEngine.Random.Range(0, tempActives.Count);
         tempActives.RemoveAt(tempIndex);
     }
-
     public void AddActiveSkill(string skillName)
     {
         if (skillName.Length <= 1) { return; }
@@ -822,31 +830,22 @@ public class ActorStats : ActorInitialStats
             buffDurations[indexOf] = buffDurations[indexOf] + duration;
         }
     }
-    public void ClearBuffs(string specifics = "*")
+    protected void ResetBuffs()
     {
-        if (specifics == "*")
-        {
-            buffs.Clear();
-            buffDurations.Clear();
-            return;
-        }
-        RemoveBuff(specifics);
+        buffs.Clear();
+        buffDurations.Clear();
     }
-    public void RemoveBuff(string buffName)
+    public void RemoveBuff(int amount = -1)
     {
-        if (string.Equals(buffName, "All", StringComparison.OrdinalIgnoreCase))
+        if (amount < 0 || amount >= buffs.Count)
         {
-            buffs.Clear();
-            buffDurations.Clear();
+            ResetBuffs();
             return;
         }
-        for (int i = buffs.Count - 1; i >= 0; i--)
+        for (int i = 0; i < amount; i++)
         {
-            if (buffs[i] == buffName)
-            {
-                buffs.RemoveAt(i);
-                buffDurations.RemoveAt(i);
-            }
+            buffs.RemoveAt(0);
+            buffDurations.RemoveAt(0);
         }
     }
     public bool BuffExists(string buffName)

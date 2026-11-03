@@ -10,7 +10,7 @@ public class PartyDataManager : MonoBehaviour
 {
     void Start()
     {
-        SetFullParty();
+        Load();
     }
     // For out of combat party changes.
     public GeneralUtility utility;
@@ -531,6 +531,13 @@ public class PartyDataManager : MonoBehaviour
         names.AddRange(mainPartyData.GetNames());
         names.AddRange(tempPartyData.GetNames());
         return names;
+    }
+    [ContextMenu("DebugPartyCount")]
+    public void DebugPartyCount()
+    {
+        Debug.Log(permanentPartyData.GetNames().Count);
+        Debug.Log(permanentPartyData.GetSpriteNames().Count);
+        Debug.Log(permanentPartyData.GetStats().Count);
     }
     [ContextMenu("SetParty")]
     public void SetFullParty()

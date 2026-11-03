@@ -71,6 +71,9 @@ public class ActiveDetailViewerSwitch : ScriptableObject
                 return "The target(s) lose " + ASD(s) + "% of their current health.";
             case "Attack":
                 return "Attack the target(s) " + ASD(s) + " time(s) with " + APD(p) + "% damage.";
+            case "RandomHitAttack":
+                string[] randomHitRange = s.Split("Equals");
+                return "Attack the target(s) " + randomHitRange[0] + "-" + randomHitRange[1] + " time(s) with " + APD(p) + "% damage.";
             case "AttackAllEnemies":
                 return "Attack all enemies " + ASD(s) + " time(s) with " + APD(p) + "% damage.";
             case "AttackEnemies":
@@ -119,11 +122,11 @@ public class ActiveDetailViewerSwitch : ScriptableObject
                 if (buffDuration.Length < 2){return "???";}
                 return "Give the target(s) " + buffDuration[0] + " (" + passiveDetails.ReturnBuffStatusDetails(s) + ") for " + buffDuration[1] + " turn(s).";
             case "RemoveBuff":
-                if (s == "All")
+                if (s == "-1")
                 {
                 return "Remove all buff effect(s) from the target(s).";
                 }
-                return "Remove " + ASD(s) + " from the target(s).";
+                return "Remove " + ASD(s) + " buffs from the target(s).";
             case "RemoveStatus":
                 if (s == "All")
                 {
@@ -162,6 +165,8 @@ public class ActiveDetailViewerSwitch : ScriptableObject
                 return "Make target(s) more likely to attack.";
             case "Attack+Move":
                 return "Attack the target(s) and move " + ASD(s) + " " + APD(p) + " tile(s).";
+            case "Attack+SwapBack":
+                return "Attack the target(s) then swap places with the ally directly behind.";
             case "Move":
                 return "Move " + ASD(s) + " " + APD(p) + " tile(s).";
             case "Move+Attack":
@@ -271,6 +276,8 @@ public class ActiveDetailViewerSwitch : ScriptableObject
                 return "Gain " + APD(p) + " action(s) at the cost of " + ASD(s) + "% health.";
             case "AbsorbDeadEnemy":
                 return "Absorb " + ASD(s) + " from a dead enemy.";
+            case "PMDRest":
+                return "Heal to full health, remove all statuses and go to sleep for 3 turns.";
         }
         return passiveDetails.PassiveEffect(e, s, "Target");
     }

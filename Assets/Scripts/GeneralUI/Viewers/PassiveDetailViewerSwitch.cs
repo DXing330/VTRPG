@@ -221,6 +221,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
             case "SelfHeal":
             case "Health":
                 return " " + target + " regain up to " + specifics + " health";
+            case "Heal%":
+            case "SelfHeal%":
             case "Health%":
                 return " " + target + " regain up to " + specifics + "% health";
             case "MoveType":
@@ -584,6 +586,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " if more than " + specifics + " tile(s) away";
             case "Health":
                 return " if " + conTarget + " health is "+specifics;
+            case "TempHealth":
+                return " if " + conTarget + " has any shield";
             case "Energy":
                 return " if " + conTarget + " energy is "+specifics;
             case "Tile":

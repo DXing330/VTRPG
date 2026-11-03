@@ -509,6 +509,8 @@ public class PassiveSkill : SkillEffect
                 return true;
             case "Health":
                 return CheckHealthConditions(conditionSpecifics, actor);
+            case "TempHealth":
+                return actor.GetTempHealth() > 0;
             case "Energy":
                 return CheckEnergyConditions(conditionSpecifics, actor);
             case "Tile":

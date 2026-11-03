@@ -127,7 +127,7 @@ public class SkillEffect : ScriptableObject
                 AffectActor(target, "Buff", buffDuration[0], SafeParseInt(buffDuration[1]), combatLog);
                 break;
             case "RemoveBuff":
-                target.RemoveBuff(effectSpecifics);
+                target.RemoveBuff(int.Parse(effectSpecifics));
                 break;
             case "ExtendBuffs":
                 target.ExtendBuffs(int.Parse(effectSpecifics));
@@ -159,8 +159,14 @@ public class SkillEffect : ScriptableObject
             case "SelfHeal":
                 target.SelfHeal(int.Parse(effectSpecifics));
                 break;
+            case "SelfHeal%":
+                target.SelfHeal(int.Parse(effectSpecifics) * level * target.GetBaseHealth() / basicDenominator);
+                break;
             case "Heal":
                 target.Heal(int.Parse(effectSpecifics));
+                break;
+            case "Heal%":
+                target.Heal(int.Parse(effectSpecifics) * level * target.GetBaseHealth() / basicDenominator);
                 break;
             // Default is increasing health.
             case "Health":

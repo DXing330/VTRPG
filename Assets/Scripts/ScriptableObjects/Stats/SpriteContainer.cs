@@ -7,7 +7,6 @@ using UnityEngine.UI;
     using UnityEditor;
 #endif
 
-
 [CreateAssetMenu(fileName = "SpriteContainer", menuName = "ScriptableObjects/DataContainers/SpriteContainer", order = 1)]
 public class SpriteContainer : ScriptableObject
 {
@@ -74,9 +73,74 @@ public class SpriteContainer : ScriptableObject
             sizes = new List<string>(copiedSprites.sizes);
             sprites = copiedSprites.sprites;
         }
+        InvalidateLookups();
+        BuildLookups();
         #if UNITY_EDITOR
                 EditorUtility.SetDirty(this);
         #endif
+    }
+    [System.NonSerialized]
+    private Dictionary<string, Sprite> spriteLookup;
+    [System.NonSerialized]
+    private Dictionary<string, string> keyLookup;
+    [System.NonSerialized]
+    private Dictionary<string, string> colorLookup;
+    [System.NonSerialized]
+    private Dictionary<string, string> sizeLookup;
+    [System.NonSerialized]
+    private bool lookupInitialized;
+    protected virtual void BuildLookups()
+    {
+        spriteLookup = new Dictionary<string, Sprite>();
+        keyLookup = new Dictionary<string, string>();
+        colorLookup = new Dictionary<string, string>();
+        sizeLookup = new Dictionary<string, string>();
+        if (sprites != null)
+        {
+            for (int i = 0; i < sprites.Count; i++)
+            {
+                Sprite sprite = sprites[i];
+                if (sprite == null || string.IsNullOrEmpty(sprite.name))
+                    continue;
+                if (!spriteLookup.ContainsKey(sprite.name))
+                    spriteLookup.Add(sprite.name, sprite);
+            }
+        }
+        if (keys != null)
+        {
+            for (int i = 0; i < keys.Count; i++)
+            {
+                string key = keys[i];
+                if (string.IsNullOrEmpty(key))
+                    continue;
+                if (!keyLookup.ContainsKey(key) && values != null && i < values.Count)
+                    keyLookup.Add(key, values[i]);
+                if (!colorLookup.ContainsKey(key) && colorNames != null && i < colorNames.Count)
+                    colorLookup.Add(key, colorNames[i]);
+                if (!sizeLookup.ContainsKey(key) && sizes != null && i < sizes.Count)
+                    sizeLookup.Add(key, sizes[i]);
+            }
+        }
+        lookupInitialized = true;
+    }
+    protected void EnsureLookups()
+    {
+        if (!lookupInitialized)
+        {
+            BuildLookups();
+        }
+    }
+    protected virtual void OnValidate()
+    {
+        InvalidateLookups();
+    }
+    protected void InvalidateLookups()
+    {
+        lookupInitialized = false;
+        spriteLookup = null;
+        keyLookup = null;
+        colorLookup = null;
+        sizeLookup = null;
     }
     public List<string> keys;
     public List<string> colorNames;
@@ -97,6 +161,24 @@ public class SpriteContainer : ScriptableObject
     }
     protected Sprite SpriteByNameLocal(string spriteName)
     {
+        EnsureLookups();
+        if (string.IsNullOrEmpty(spriteName))
+            return null;
+        if (spriteLookup.TryGetValue(spriteName, out Sprite sprite))
+            return sprite;
+        return null;
+    }
+    protected string LocalSpriteName(string spriteName)
+    {
+        EnsureLookups();
+        if (string.IsNullOrEmpty(spriteName))
+            return spriteName;
+        if (keyLookup.TryGetValue(spriteName, out string value))
+            return value;
+        return spriteName;
+    }
+    /*protected Sprite SpriteByNameLocal(string spriteName)
+    {
         if (sprites == null){return null;}
         for (int i = 0; i < sprites.Count; i++)
         {
@@ -115,7 +197,7 @@ public class SpriteContainer : ScriptableObject
             }
         }
         return spriteName;
-    }
+    }*/
     protected Sprite SpriteDictionaryFromLinkedContainers(string spriteName)
     {
         if (!SearchLinkedContainers()){return null;}
@@ -152,7 +234,7 @@ public class SpriteContainer : ScriptableObject
         }
         return sprites[index];
     }
-    public Sprite SpriteByKey(string nKey)
+    /*public Sprite SpriteByKey(string nKey)
     {
         int indexOf = keys == null ? -1 : keys.IndexOf(nKey);
         if (values == null || indexOf < 0 || indexOf >= values.Count)
@@ -164,12 +246,35 @@ public class SpriteContainer : ScriptableObject
             return null;
         }
         return SpriteDictionary(values[indexOf]);
+    }*/
+    public Sprite SpriteByKey(string nKey)
+    {
+        EnsureLookups();
+        if (string.IsNullOrEmpty(nKey) || !keyLookup.TryGetValue(nKey, out string spriteName))
+        {
+            if (defaultsEnabled)
+                return SpriteDictionary(defaultKey);
+            return null;
+        }
+        return SpriteDictionary(spriteName);
     }
     public Sprite GetSprite(string spriteName)
     {
         return SpriteDictionary(spriteName);
     }
     string GetColorNameLocal(string nKey)
+    {
+        EnsureLookups();
+        if (string.IsNullOrEmpty(nKey))
+            return "None";
+        if (colorLookup.TryGetValue(nKey, out string colorName))
+        {
+            if (!string.IsNullOrEmpty(colorName))
+                return colorName;
+        }
+        return "None";
+    }
+    /*string GetColorNameLocal(string nKey)
     {
         int indexOf = keys == null ? -1 : keys.IndexOf(nKey);
         if (colorNames == null || indexOf < 0 || indexOf >= colorNames.Count)
@@ -181,7 +286,7 @@ public class SpriteContainer : ScriptableObject
             return "None";
         }
         return colorNames[indexOf];
-    }
+    }*/
     public string GetColorName(string nKey)
     {
         return GetColorNameLocal(nKey);
@@ -201,6 +306,18 @@ public class SpriteContainer : ScriptableObject
     }
     string GetSizeLocal(string nKey)
     {
+        EnsureLookups();
+        if (string.IsNullOrEmpty(nKey))
+            return "1";
+        if (sizeLookup.TryGetValue(nKey, out string size))
+        {
+            if (!string.IsNullOrEmpty(size))
+                return size;
+        }
+        return "1";
+    }
+    /*string GetSizeLocal(string nKey)
+    {
         int indexOf = keys == null ? -1 : keys.IndexOf(nKey);
         if (sizes == null || indexOf < 0 || indexOf >= sizes.Count)
         {
@@ -211,7 +328,7 @@ public class SpriteContainer : ScriptableObject
             return "1";
         }
         return sizes[indexOf];
-    }
+    }*/
     public string GetSize(string nKey)
     {
         return GetSizeLocal(nKey);

@@ -141,36 +141,28 @@ public class MoveCostManager : ScriptableObject
             }
         }
     }
+    public int ReturnBaseMoveCostOfTile(TacticActor actor, int tileNumber)
+    {
+        if (tileNumber < 0){return 999;}
+        string moveType = actor.GetMoveType();
+        string combined = mapInfo[tileNumber] + "-" + actor.GetMoveType();
+        string value = allMoveCosts.ReturnValue(combined);
+        if (value == ""){return 1;}
+        return int.Parse(value);
+    }
     public void UpdateCurrentMoveCosts(TacticActor actor, List<TacticActor> actors)
     {
         string moveType = actor.GetMoveType();
         currentMoveCosts.Clear();
         string combined = "";
-        string value = "";
         int cost = 1;
         for (int i = 0; i < mapInfo.Count; i++)
         {
             combined = mapInfo[i] + "-" + moveType;
-            value = allMoveCosts.ReturnValue(combined);
-            if (value == "")
-            {
-                cost = 1;
-            }
-            else
-            {
-                cost = int.Parse(value);
-            }
+            cost = allMoveCosts.ReturnIntValue(combined, 1);
             // TEffect move costs.
             combined = mapTerrainEffects[i] + "-" + moveType;
-            value = tEffectMoveCosts.ReturnValue(combined);
-            if (value == "")
-            {
-                cost += 0;
-            }
-            else
-            {
-                cost += int.Parse(value);
-            }
+            cost += tEffectMoveCosts.ReturnIntValue(combined, 0);
             currentMoveCosts.Add(cost);
         }
         List<string> movingPassives = actor.GetMovingPassives();

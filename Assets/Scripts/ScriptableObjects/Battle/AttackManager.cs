@@ -56,6 +56,7 @@ public class AttackManager : ScriptableObject
     {
         int hitRoll = Random.Range(0, 100);
         hitRoll += defender.GetLuck();
+        hitRoll -= attacker.GetLuck();
         if (hitRoll >= (hitChance - dodgeChance))
         {
             if (showLog)
@@ -98,7 +99,7 @@ public class AttackManager : ScriptableObject
         }
         return damage;
     }
-    // Purely For The Calculation, Doesn't Actually Change The Damage.
+    // Purely For Showing The Calculation, Doesn't Actually Change The Damage, Which Will Be Done When The Damage Is Actually Dealt.
     public void ElementalResistance(TacticActor defender, int damage, string type, bool showLog = true)
     {
         if (!showLog){return;}

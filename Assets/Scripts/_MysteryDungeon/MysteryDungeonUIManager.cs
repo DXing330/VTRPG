@@ -88,6 +88,13 @@ public class MysteryDungeonUIManager : ClickTileManager
     public void ToggleFastMove()
     {
         fastMove = !fastMove;
+        if (!fastMove)
+        {
+            battleManager.UpdateFastMove(fastMove);
+            map.updateMap = true;
+            map.RefreshPlayerLocation();
+            map.UpdateMap();
+        }
         UpdateUI();
     }
     public ClickTileState actionState;
@@ -142,42 +149,54 @@ public class MysteryDungeonUIManager : ClickTileManager
         }
         UpdateUI();
     }
+    protected bool isMoving = false;
+    protected float nextMoveInputTime = 0f;
+    protected float moveInputCooldown = 0.15f;
     public void MoveInDirection(int direction)
     {
+        // Prevent rapid external clicks.
+        if (!fastMove)
+        {
+            if (Time.unscaledTime < nextMoveInputTime){return;}
+            nextMoveInputTime = Time.unscaledTime + moveInputCooldown;
+        }
+        if (isMoving){return;}
+        isMoving = true;
         if (fastMove)
         {
             map.updateMap = false;
         }
-        if (fastMove && battleManager.PlayerMoveInDirection(direction))
+        bool moved = battleManager.PlayerMoveInDirection(direction);
+        if (fastMove && moved)
         {
-            // If In Danger Then ???
+            // If In Danger Then Stop Moving
             if (battleManager.DangerNear())
             {
-                fastMove = false;
+                ToggleFastMove();
                 ChangeState("None");
+                isMoving = false;
                 return;
             }
             else if (battleManager.RoomHallBorder(direction))
             {
-                fastMove = false;
-                UpdateFastMoveText();
-                map.updateMap = true;
-                map.UpdateMap();
+                ToggleFastMove();
+                battleManager.PlayerStartMoving();
             }
             else
             {
+                isMoving = false;
                 MoveInDirection(direction);
             }
         }
-        else if (fastMove && !battleManager.PlayerMoveInDirection(direction))
+        else if (fastMove && !moved)
         {
-            map.updateMap = true;
-            map.UpdateMap();
+            ToggleFastMove();
         }
-        else if (!fastMove && battleManager.PlayerMoveInDirection(direction))
+        else if (!fastMove && moved)
         {
             battleManager.PlayerStartMoving();
         }
+        isMoving = false;
     }
     public void ChangeDirection(int direction)
     {

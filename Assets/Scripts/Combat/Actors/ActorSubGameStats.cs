@@ -164,16 +164,18 @@ public class ActorSubGameStats : ActorStats
             currentFullness = maxFullness;
         }
     }
-    public void Hunger()
+    public int GetStomachPercentFull()
     {
-        if (currentFullness > 0)
+        return (currentFullness * 100) / maxFullness;
+    }
+    public int Hunger()
+    {
+        currentFullness--;
+        if (currentFullness < 0)
         {
-            currentFullness--;
+            return TakeEffectDamage(Mathf.RoundToInt(Mathf.Sqrt(Mathf.Abs(currentFullness))), "Hunger");
         }
-        else
-        {
-            currentHealth--;
-        }
+        return 0;
     }
     public int GetFullness(){return currentFullness;}
     // For Use By Enemies?
