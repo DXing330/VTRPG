@@ -150,7 +150,6 @@ public class MysteryDungeonBattleMap : BattleMap
             }
             allItemWeights.Insert(0, int.Parse(itemData[0]));
         }
-        // TODO Roll For An Item.
         string randomItem = utility.ReturnRandomValueBasedOnWeights(allItems, allItemWeights);
         return randomItem == "" ? "Apple" : randomItem;
     }
@@ -267,18 +266,19 @@ public class MysteryDungeonBattleMap : BattleMap
         }
         return null;
     }
-    public void RefreshPlayerLocation()
+    public bool RefreshPlayerLocation()
     {
-        UpdatePlayerLocation(GetPartyLeader().GetLocation());
+        return UpdatePlayerLocation(GetPartyLeader().GetLocation());
     }
-    public void UpdatePlayerLocation(int newLocation)
+    public bool UpdatePlayerLocation(int newLocation)
     {
         playerLocation = newLocation;
         if (playerLocation == stairsLocation)
         {
             MDGeneralManager.NewFloor();
-            return;
+            return true;
         }
+        return false;
     }
     public int GetPlayerLocation(){return playerLocation;}
     // Track Stairs.
@@ -295,6 +295,24 @@ public class MysteryDungeonBattleMap : BattleMap
     // Traps Are Normally Hidden Until Triggered.
     public List<bool> trapTriggered;
     public List<int> trapLocations;
+    public void ActorAttackTrap(int tileNumber)
+    {
+        int indexOf = trapLocations.IndexOf(tileNumber);
+        if (indexOf < 0){return;}
+        trapTriggered[indexOf] = true;
+    }
+    public void ActorStepOnTrap(TacticActor actor)
+    {
+        int location = actor.GetLocation();
+        int indexOf = trapLocations.IndexOf(location);
+        // No Trap On Tile.
+        if (indexOf < 0){return;}
+        // Enemies Won't Trigger Traps Unless Already Revealed.
+        if (!trapTriggered[indexOf] && actor.GetTeam() != 0){return;}
+        trapTriggered[indexOf] = true;
+        // TODO Apply The Trap To The Actor.
+        MDGeneralManager.TriggerTrap(actor, traps[indexOf]);
+    }
     public bool TrapTriggered(int tileNumber)
     {
         int indexOf = trapLocations.IndexOf(tileNumber);
@@ -308,6 +326,7 @@ public class MysteryDungeonBattleMap : BattleMap
     }
     public void AddTrap(int location)
     {
+        if (trapLocations.Contains(location)){return;}
         // Generate A Random Trap.
         traps.Add(GenerateTrap());
         trapLocations.Add(location);
@@ -609,6 +628,7 @@ public class MysteryDungeonBattleMap : BattleMap
     }
     public MysteryDungeonMinimap miniMap;
     // TODO Locked Rooms?
+    public void PublicUpdateCurrentTiles(){UpdateCurrentTiles();}
     protected override void UpdateCurrentTiles()
     {
         currentTiles = currentTileManager.GetCurrentTilesFromCenter(playerLocation, mapSize, gridSize);
@@ -626,6 +646,22 @@ public class MysteryDungeonBattleMap : BattleMap
             }
         }
         mapDisplayers[actorLayer].DisplayCurrentStyledTiles(mapTiles, actorTiles, currentTiles, true, actorDirections);
+    }
+    protected List<string> trapTiles;
+    protected void GetTrapTiles()
+    {
+        trapTiles = new List<string>(emptyList);
+        for (int i = 0; i < traps.Count; i++)
+        {
+            if (!trapTriggered[i]){continue;}
+            trapTiles[trapLocations[i]] = traps[i];
+        }
+    }
+    public void UpdateTraps()
+    {
+        GetTrapTiles();
+        if (!DisplayLayerExists(buildingLayer)){return;}
+        mapDisplayers[buildingLayer].DisplayCurrentTiles(mapTiles, trapTiles, currentTiles);
     }
     public void ApplyFogOfWar()
     {
@@ -645,13 +681,10 @@ public class MysteryDungeonBattleMap : BattleMap
         // Tile Layer.
         BaseUpdateMap();
         // TODO Trap Layer (Replaces Building Layer)
-        // TODO Item Layer On ActorLayer
+        UpdateTraps();
         UpdateActors();
-        // TODO Terrain Layer.
         UpdateTerrain();
-        // TODO Highlight Layer.
         // TODO Aura Layer.
-        // TODO Add Fog Of War For Hidden Tiles.
         ApplyFogOfWar();
         // Update The Minimap Based On Explored/Visible Tiles.
         miniMap.CreateMinimap();
@@ -660,7 +693,7 @@ public class MysteryDungeonBattleMap : BattleMap
     {
         AIMoveActorToTile(actor, tile, forced);
         ActorPickUpItem(actor);
-        // TODO If Trap
+        ActorStepOnTrap(actor);
         UpdateMap();
     }
     public void MoveEffect(TacticActor moved, string effect, string specifics, TacticActor mover = null)

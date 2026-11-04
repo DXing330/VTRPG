@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Applys Effects + Targeting For Items.
+// Probably Reuse This For Traps As Well.
 [CreateAssetMenu(fileName = "MysteryDungeonItemEffect", menuName = "ScriptableObjects/MysteryDungeon/MysteryDungeonItemEffect", order = 1)]
 public class MysteryDungeonItemEffect : PassiveSkill
 {
@@ -31,19 +32,8 @@ public class MysteryDungeonItemEffect : PassiveSkill
             map.AddItemToLocation(itemName, thrownTo.GetLocation());
         }
     }
-    public void UseItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, PartyDataManager partyData)
+    protected void ApplyTargetEffectSpecifics(TacticActor user, MysteryDungeonBattleMap map, PartyDataManager partyData, string target, string effect, string specifics)
     {
-        string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
-        if (itemData.Length < 5){return;}
-        string target = itemData[0];
-        string effect = itemData[1];
-        string specifics = itemData[2];
-        bool consumable = int.Parse(itemData[3]) == 1;
-        // If Edible Then Increase Fullness.
-        if (consumable && effect != "Stomach")
-        {
-            user.Eat(10);
-        }
         if (target.StartsWith("User"))
         {
             UserItems(user, map, target, effect, specifics, partyData);
@@ -68,6 +58,21 @@ public class MysteryDungeonItemEffect : PassiveSkill
             MapItems(user, map, target, effect, specifics, partyData);
             break;
         }
+    }
+    public void UseItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, PartyDataManager partyData)
+    {
+        string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
+        if (itemData.Length < 5){return;}
+        string target = itemData[0];
+        string effect = itemData[1];
+        string specifics = itemData[2];
+        bool consumable = int.Parse(itemData[3]) == 1;
+        // If Edible Then Increase Fullness.
+        if (consumable && effect != "Stomach")
+        {
+            user.Eat(10);
+        }
+        ApplyTargetEffectSpecifics(user, map, partyData, target, effect, specifics);
     }
     protected void UserItems(TacticActor user, MysteryDungeonBattleMap map, string target, string effect, string specifics, PartyDataManager partyData)
     {
@@ -167,5 +172,15 @@ public class MysteryDungeonItemEffect : PassiveSkill
     protected void MapItems(TacticActor user, MysteryDungeonBattleMap map, string target, string effect, string specifics, PartyDataManager partyData)
     {
         map.MDChangeMap(user, effect, specifics);
+    }
+    public StatDatabase MDTrapData;
+    public void TriggerTrap(TacticActor triggerer, MysteryDungeonBattleMap map, PartyDataManager partyData, string trapName)
+    {
+        string[] trapData = MDTrapData.ReturnValue(trapName).Split("|");
+        if (trapData.Length < 3){return;}
+        string target = trapData[0];
+        string effect = trapData[1];
+        string specifics = trapData[2];
+        ApplyTargetEffectSpecifics(triggerer, map, partyData, target, effect, specifics);
     }
 }

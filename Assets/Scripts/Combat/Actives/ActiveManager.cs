@@ -910,6 +910,7 @@ public class ActiveManager : MonoBehaviour
         active.AffectActors(targets, effect, specifics, power);
     }
     // All Skill Usage Should Go Through Here
+    // Only Called After Skill + Targetable/Targeted Tiles Are Calculated.
     public bool ActivateSkill(bool cost = true)
     {
         return ActivateSkillInternal(cost, cost);

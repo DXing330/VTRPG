@@ -23,7 +23,6 @@ public class MysteryDungeonBattleManager : ClickTileManager
     public void Initialize()
     {
         SpawnParty();
-        // TODO Randomly Spawn Some Enemies Based On Various Factors?
         NewRound();
     }
     public void InitializePartyLocations(List<TacticActor> actors, int spawnCount)
@@ -41,7 +40,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         if (emptyAdjacent.Count < spawnCount - 1)
         {
             Debug.Log($"Not enough valid spawn tiles. Required: {spawnCount - 1}, Available: {emptyAdjacent.Count}. ");
-            // TODO Move To Dungeon Defeat Scene.
+            MDGeneralManager.CompleteDungeon(false);
             return;
         }
         int leaderID = partyData.dungeonState.GetLeaderID();
@@ -53,7 +52,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         else if (leaderIndex < 0)
         {
             Debug.Log("No Leader, Exiting.");
-            // TODO Move To Dungeon Defeat Scene.
+            MDGeneralManager.CompleteDungeon(false);
             return;
         }
         actors[0].SetLocation(map.playerLocation);
@@ -127,6 +126,13 @@ public class MysteryDungeonBattleManager : ClickTileManager
     }
     public void NewRound()
     {
+        TacticActor partyLeader = map.GetPartyLeader();
+        if (partyLeader == null || partyLeader.GetHealth() <= 0)
+        {
+            // Leader Dead, Owari Da, Check For Reviver Seeds?
+            MDGeneralManager.CompleteDungeon(false);
+            return;
+        }
         map.UpdateEnemySpawning();
         roundActors.Clear();
         for (int i = map.battlingActors.Count - 1; i >= 0; i--)
@@ -147,21 +153,48 @@ public class MysteryDungeonBattleManager : ClickTileManager
         currentTurn = 0;
         roundActors[currentTurn].StartTurn();
         effectManager.StartTurn(roundActors[currentTurn], map);
-        if (roundActors[currentTurn].GetHealth() <= 0)
-        {
-            // Leader Dead, Owari Da, Check For Reviver Seeds?
-            // Return In Defeat.
-            MDGeneralManager.CompleteDungeon(false);
-            return;
-        }
         if (!fastMove){map.updateMap = true;}
-        map.RefreshPlayerLocation();
+        if (map.RefreshPlayerLocation()){return;}
         map.UpdateMap();
         // Wait For Player To Finish Before Doing Anything.
         if (actorAI.MentalStateTurn(roundActors[currentTurn], map))
         {
             EndActorTurn();
         }
+    }
+    public void PlayerSelectSkill(string skillName)
+    {
+        if (currentTurn != 0){return;}
+        // Load The Active.
+        activeManager.SetSkillFromName(skillName, roundActors[currentTurn]);
+        activeManager.ResetTargetedTiles();
+        // Show The Targetable Tiles.
+        map.UpdateHighlights(activeManager.GetTargetableTiles(roundActors[currentTurn].GetLocation()));
+    }
+    public void PlayerSelectSkillTarget(int tileNumber)
+    {
+        if (currentTurn != 0){return;}
+        // Need To Get The Real Location From Map Current Tiles.
+        map.PublicUpdateCurrentTiles();
+        int location = map.GetCurrentTileAtTileNumber(tileNumber);
+        if (!activeManager.ReturnTargetableTiles().Contains(location)){return;}
+        activeManager.GetTargetedTiles(location);
+        // Highlight
+        map.UpdateHighlights(activeManager.ReturnTargetableTiles());
+        map.UpdateHighlightsWithoutReseting(activeManager.targetedTiles, "Attack", 4);
+    }
+    public bool PlayerActivateSkill()
+    {
+        if (currentTurn != 0){return false;}
+        // If You Haven't Selected A Target Then Stop.
+        if (activeManager.ReturnTargetedTiles().Count <= 0){return false;}
+        map.UpdateCombatLog(roundActors[currentTurn].GetPersonalName() + " uses " + activeManager.active.GetSkillName() + ".");
+        bool used = activeManager.ActivateSkill(this);
+        if (used)
+        {
+            EndActorTurn();
+        }
+        return used;
     }
     // Track If An Action Is Successful.
     protected List<int> GetTurnActorAttackableTiles()
@@ -235,7 +268,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         {
             MoveActorToTile(targetLocation);
             MoveActorToTile(currentLocation, actorOnTile);
-            map.RefreshPlayerLocation();
+            if (map.RefreshPlayerLocation()){return true;}
             EndActorTurn();
             return true;
         }
@@ -243,7 +276,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         if (reachableTiles.Contains(targetLocation))
         {
             MoveActorToTile(targetLocation);
-            map.RefreshPlayerLocation();
+            if (map.RefreshPlayerLocation()){return true;}
             EndActorTurn();
             return true;
         }
@@ -263,7 +296,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
             // Find The Path To The Tile.
             List<int> path = moveManager.GetPrecomputedPath(currentLocation, clickedTileNumber);
             MoveAlongPath(roundActors[currentTurn], path);
-            map.RefreshPlayerLocation();
+            if (map.RefreshPlayerLocation()){return true;}
             EndActorTurn();
             return true;
         }
@@ -423,7 +456,12 @@ public class MysteryDungeonBattleManager : ClickTileManager
     public void ActorBasicAttacksTile(TacticActor actor, int tileNumber)
     {
         TacticActor target = map.GetActorOnTile(tileNumber);
-        if (target == null){return;}
+        if (target == null)
+        {
+            map.ActorAttackTrap(tileNumber);
+            actor.PayAttackCost();
+            return;
+        }
         ActorAttacksActor(actor, target);
     }
     protected void ActorAttacksActor(TacticActor attacker, TacticActor defender)

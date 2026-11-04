@@ -65,6 +65,10 @@ public class MysteryDungeonUIManager : ClickTileManager
             selectItemList.SetSelectables(partyData.dungeonBag.GetItems());
             useItemObject.SetActive(false);
             break;
+            case ClickTileState.Skill:
+            selectActiveList.SetSelectables(map.GetPartyLeader().GetActiveSkills());
+            useActiveObject.SetActive(false);
+            break;
         }
     }
     protected void UpdateUI()
@@ -111,6 +115,7 @@ public class MysteryDungeonUIManager : ClickTileManager
         {
             actionState = ClickTileState.None;
         }
+        map.ResetHighlights();
         UpdateUI();
     }
     // PLAYER CAN MOVE INTO ALLIES, SWAPPING LOCATIONS WITH THEM.
@@ -142,6 +147,18 @@ public class MysteryDungeonUIManager : ClickTileManager
             break;
             case ClickTileState.Attack:
             if (!battleManager.PlayerAttackTile(tileNumber))
+            {
+                ChangeState("None");
+            }
+            break;
+            case ClickTileState.Skill:
+            if (useActiveObject.activeSelf)
+            {
+                // TODO Call The BattleManager To Check That Kind Of Stuff.
+                battleManager.PlayerSelectSkillTarget(tileNumber);
+                return;
+            }
+            else
             {
                 ChangeState("None");
             }
@@ -232,6 +249,34 @@ public class MysteryDungeonUIManager : ClickTileManager
     {
         battleManager.ActorThrowItem(selectItemList.GetSelectedString());
         ChangeState("Item");
+    }
+    public SelectList selectActiveList;
+    public GameObject useActiveObject;
+    public TMP_Text useActiveDescription;
+    public ActiveDescriptionViewer activeDescriptions;
+    public void SelectSkill()
+    {
+        useActiveObject.SetActive(true);
+        string selectedActive = selectActiveList.GetSelectedString();
+        battleManager.PlayerSelectSkill(selectedActive);
+        useActiveDescription.text = activeDescriptions.ReturnActiveDescriptionFromName(selectedActive, map.GetPartyLeader());
+    }
+    public void DeselectSkill()
+    {
+        useActiveObject.SetActive(false);
+        selectActiveList.ResetSelected();
+        map.ResetHighlights();
+    }
+    public void ActivateSkill()
+    {
+        if (battleManager.PlayerActivateSkill())
+        {
+            ChangeState("Skill");
+        }
+        else
+        {
+            return;
+        }
     }
     public MysteryDungeonUIState UIState;
     public List<MysteryDungeonUIState> UIStateList;

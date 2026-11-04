@@ -52,6 +52,11 @@ public class MysteryDungeonManager : MonoBehaviour
         partyData.dungeonBag.GainItem(item);
         return true;
     }
+    public void TriggerTrap(TacticActor actor, string trapName)
+    {
+        battleManager.itemEffect.TriggerTrap(actor, map, partyData, trapName);
+        
+    }
     public void NewFloor()
     {
         // Generate New Map.

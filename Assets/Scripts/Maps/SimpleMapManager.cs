@@ -6,6 +6,12 @@ public class SimpleMapManager : ClickTileManager
 {
     public List<MapTile> mapTiles;
     public List<int> currentTiles;
+    public List<int> GetCurrentTiles(){return currentTiles;}
+    public int GetCurrentTileAtTileNumber(int tileNumber)
+    {
+        if (tileNumber < 0 || tileNumber >= currentTiles.Count){return -1;}
+        return currentTiles[tileNumber];
+    }
     public int mapSize;
     public void UpdateMapSize()
     {
