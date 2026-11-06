@@ -27,6 +27,8 @@ public class PartyDataManager : MonoBehaviour
     public PartyData mainPartyData;
     public void CombineIntoMainParty(PartyDataManager newPartyDataManager)
     {
+        permanentPartyData.ClearAllStats();
+        tempPartyData.ClearAllStats();
         mainPartyData.ClearAllStats();
         mainPartyData.AddPartyData(newPartyDataManager.permanentPartyData);
         mainPartyData.AddPartyData(newPartyDataManager.mainPartyData);

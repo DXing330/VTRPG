@@ -55,6 +55,20 @@ public class Equipment
     public string delimiter = "|";
     public string allStats;
     public string GetStats(){ return allStats; }
+    public void CopyFrom(Equipment source)
+    {
+        equipName = source.equipName;
+        slot = source.slot;
+        type = source.type;
+        passives = new List<string>(source.passives);
+        passiveLevels = new List<string>(source.passiveLevels);
+        maxUpgrades = source.maxUpgrades;
+        rarity = source.rarity;
+        runeSlots = source.runeSlots;
+        runes = new List<EquipmentRune>(source.runes);
+        equipSet = source.equipSet;
+        allStats = source.allStats;
+    }
     public void RefreshStats()
     {
         allStats = "";
@@ -154,12 +168,30 @@ public class Equipment
     public EquipSlots slot;
     public void SetSlot(string newInfo)
     {
-        if (newInfo == "-1" || newInfo.Length <= 0)
+        switch (newInfo)
         {
-            slot = EquipSlots.None;
-            return;
+            case "Weapon":
+                slot = EquipSlots.Weapon;
+                break;
+            case "Armor":
+                slot = EquipSlots.Armor;
+                break;
+            case "Charm":
+                slot = EquipSlots.Charm;
+                break;
+            case "Helmet":
+                slot = EquipSlots.Helmet;
+                break;
+            case "Boots":
+                slot = EquipSlots.Boots;
+                break;
+            case "Gloves":
+                slot = EquipSlots.Gloves;
+                break;
+            default:
+                slot = EquipSlots.None;
+                break;
         }
-        slot = Enum.Parse<EquipSlots>(newInfo);
     }
     public string GetSlot(){return slot.ToString();}
     public string type;

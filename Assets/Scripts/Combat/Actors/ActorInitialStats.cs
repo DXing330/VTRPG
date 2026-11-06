@@ -18,14 +18,7 @@ public class ActorInitialStats : ActorPassives
 {
     public int SafeParseInt(string intString, int defaultValue = 0)
     {
-        try
-        {
-            return int.Parse(intString);
-        }
-        catch
-        {
-            return defaultValue;
-        }
+        return int.TryParse(intString, out int result) ? result : defaultValue;
     }
     public List<string> RemoveEmptyListItems(List<string> stringList, int minLength = 0)
     {

@@ -5,7 +5,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "MysteryDungeonMapUtility", menuName = "ScriptableObjects/Utility/MysteryDungeonMapUtility", order = 1)]
 public class MysteryDungeonMapUtility : ScriptableObject
 {
-    public bool IsTilePassable(string terrain)
+    public bool TilePassable(string terrain)
     {
         switch (terrain)
         {
@@ -32,7 +32,7 @@ public class MysteryDungeonMapUtility : ScriptableObject
     {
         for (int i = tiles.Count - 1; i >= 0; i--)
         {
-            if (!IsTilePassable(map.mapInfo[tiles[i]]) || map.GetActorOnTile(tiles[i]) != null)
+            if (!TilePassable(map.mapInfo[tiles[i]]) || map.GetActorOnTile(tiles[i]) != null)
             {
                 tiles.RemoveAt(i);
             }
@@ -75,7 +75,7 @@ public class MysteryDungeonMapUtility : ScriptableObject
         for (int i = 0; i < maxRange; i++)
         {
             nextTile = map.mapUtility.PointInDirection(currentTile, direction, map.mapSize);
-            if (nextTile < 0 || nextTile == currentTile || !IsTilePassable(map.mapInfo[nextTile]) || map.GetActorOnTile(nextTile) != null){return passableTiles;}
+            if (nextTile < 0 || nextTile == currentTile || !TilePassable(map.mapInfo[nextTile]) || map.GetActorOnTile(nextTile) != null){return passableTiles;}
             passableTiles.Add(nextTile);
             currentTile = nextTile;
         }
@@ -92,7 +92,7 @@ public class MysteryDungeonMapUtility : ScriptableObject
         {
             nextTile = map.mapUtility.PointInDirection(currentTile, direction, map.mapSize);
             // Out Of Bounds Or Edge Of Map.
-            if (nextTile < 0 || nextTile == currentTile || !IsTilePassable(map.mapInfo[nextTile]))
+            if (nextTile < 0 || nextTile == currentTile || !TilePassable(map.mapInfo[nextTile]))
             {
                 return currentTile;
             }

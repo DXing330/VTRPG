@@ -157,7 +157,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         if (map.RefreshPlayerLocation()){return;}
         map.UpdateMap();
         // Wait For Player To Finish Before Doing Anything.
-        if (actorAI.MentalStateTurn(roundActors[currentTurn], map))
+        if (actorAI.MentalStateTurn(roundActors[currentTurn], map) || roundActors[currentTurn].GetActions() <= 0)
         {
             EndActorTurn();
         }
@@ -267,7 +267,17 @@ public class MysteryDungeonBattleManager : ClickTileManager
         if (actorOnTile != null && actorOnTile.GetTeam() == 0 && moveManager.ReturnBaseMoveCostOfTile(playerActor, targetLocation) <= (playerActor.GetActions() * playerActor.GetSpeed()))
         {
             MoveActorToTile(targetLocation);
-            MoveActorToTile(currentLocation, actorOnTile);
+            // If Open Space Behind Move Back.
+            int pushBackLocation = map.mapUtility.PointInDirection(targetLocation, direction, map.mapSize);
+            if (map.GetActorOnTile(pushBackLocation) == null && map.TilePassable(pushBackLocation))
+            {
+                MoveActorToTile(pushBackLocation, actorOnTile);
+            }
+            // Else Swap.
+            else
+            {
+                MoveActorToTile(currentLocation, actorOnTile);
+            }
             if (map.RefreshPlayerLocation()){return true;}
             EndActorTurn();
             return true;
@@ -372,7 +382,10 @@ public class MysteryDungeonBattleManager : ClickTileManager
         effectManager.EndTurn(roundActors[currentTurn], map);
         roundActors[currentTurn].EndTurn();
         map.ApplyEndTerrainEffect(roundActors[currentTurn]);
-        UpdateDanger();
+        if (currentTurn == 0)
+        {
+            UpdateDanger();
+        }
         NextTurn();
     }
     protected bool TurnActorAlive()

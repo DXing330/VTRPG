@@ -82,23 +82,28 @@ public class ActorAI : ScriptableObject
         {
             // Move Away From Closest Enemy.
             case "Terrified":
+                map.UpdateCombatLog(actor.GetPersonalName() + " is " + mentalState + ".");
                 TerrifiedTurn(actor, map);
                 return true;
             // Attack Closest Actor.
             case "Enraged":
+                map.UpdateCombatLog(actor.GetPersonalName() + " is " + mentalState + ".");
                 EnragedTurn(actor, map);
                 actor.ResetTarget();
                 return true;
             // Move Toward Closest Enemy.
             case "Charmed":
+                map.UpdateCombatLog(actor.GetPersonalName() + " is " + mentalState + ".");
                 CharmedTurn(actor, map);
                 return true;
             // Move Toward + Attack Closest Enemy.
             case "Taunted":
+                map.UpdateCombatLog(actor.GetPersonalName() + " is " + mentalState + ".");
                 TauntedTurn(actor, map);
                 return true;
             // Randomly Charmed/Enraged/Terrified.
             case "Confused":
+                map.UpdateCombatLog(actor.GetPersonalName() + " is " + mentalState + ".");
                 ConfusedTurn(actor, map);
                 return true;
         }

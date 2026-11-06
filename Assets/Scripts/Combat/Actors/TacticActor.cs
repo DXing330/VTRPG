@@ -102,10 +102,17 @@ public class TacticActor : ActorSubGameStats
     {
         for (int i = 0; i < baseEquipment.Length; i++)
         {
-            Equipment copy = new Equipment();
-            baseEquipment[i].RefreshStats();
-            copy.SetAllStats(baseEquipment[i].GetStats());
-            currentEquipment[i] = copy;
+            Equipment source = baseEquipment[i];
+            if (source == null)
+            {
+                currentEquipment[i] = null;
+                continue;
+            }
+            if (currentEquipment[i] == null)
+            {
+                currentEquipment[i] = new Equipment();
+            }
+            currentEquipment[i].CopyFrom(source);
         }
     }
     public void ResetWeapon()

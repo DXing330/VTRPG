@@ -40,4 +40,15 @@ public class MysteryDungeonItemTester : MonoBehaviour
         map.UpdateMap();
         UI.ChangeState("None");
     }
+    public string testTrapName;
+    [ContextMenu("Test MD Trap")]
+    public void TestMysteryDungeonTrap()
+    {
+        map.UpdateMap();
+        TacticActor leader = map.GetPartyLeader();
+        itemEffect.TriggerTrap(leader, map, partyData, testTrapName);
+        map.RefreshPlayerLocation();
+        map.UpdateMap();
+        UI.ChangeState("None");
+    }
 }
