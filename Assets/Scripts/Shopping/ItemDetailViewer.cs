@@ -17,9 +17,10 @@ public class ItemDetailViewer : MonoBehaviour
     public StatDatabase itemData;
     public ActiveSkill active;
     public ActiveDescriptionViewer itemDescriptions;
-    public StatDatabase dungeonItemDescriptions;
+    public MysteryDungeonItemDetailSwitch dungeonItemDescriptions;
     public SelectStatTextList passiveSelect;
     public PassiveDetailViewer passiveDetails;
+    public PassiveDetailViewerSwitch passiveDetailSwitch;
     public StatDatabase relicData;
     public StatDatabase skillBookData;
     public SkillDisplay skillBookDisplay;
@@ -57,7 +58,7 @@ public class ItemDetailViewer : MonoBehaviour
     }
     public void ShowDungeonItemInfo(string newItem)
     {
-        SetInfo(newItem, dungeonItemDescriptions.ReturnValue(newItem));
+        SetInfo(newItem, dungeonItemDescriptions.ReturnItemDescriptionFromName(newItem));
     }
     public void ShowInfo(string newItem)
     {
@@ -71,6 +72,8 @@ public class ItemDetailViewer : MonoBehaviour
             for (int i = 0; i < dummyEquip.passives.Count; i++)
             {
                 itemInfo.text += dummyEquip.passives[i];
+                // Show What The Passive Does.
+                itemInfo.text += $" ({passiveDetailSwitch.ReturnPassiveDetailsFromName(dummyEquip.passives[i])})";
                 if (i < dummyEquip.passives.Count - 1)
                 {
                     itemInfo.text += ", ";
@@ -95,7 +98,6 @@ public class ItemDetailViewer : MonoBehaviour
     }
     public void ShowRelicInfo(string relicName)
     {
-
     }
     public void ShowSkillBookInfo(string skillBookName)
     {

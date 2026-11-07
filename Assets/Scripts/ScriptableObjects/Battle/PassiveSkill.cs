@@ -295,6 +295,12 @@ public class PassiveSkill : SkillEffect
                 if (actor.GetGrappledByActor() == null){return;}
                 AffectActor(actor.GetGrappledByActor(), effect, specifics);
                 break;
+            case "Warp":
+            case "MDWarp":
+            case "WarpLeader":
+            case "WarpStairs":
+                map.WarpPassive(actor, effect, specifics);
+                break;
             // Move based on wording (effect) and distance (specifics).
             case "AKRaidMove":
             case "MoveSelf":
@@ -344,6 +350,9 @@ public class PassiveSkill : SkillEffect
                 break;
             case "Map":
                 AffectMap(actor, effect, specifics, map);
+                break;
+            case "MapReveal":
+                map.Reveal(specifics);
                 break;
             case "Aura":
                 map.AddAura(actor, actor.GetLocation(), effect, utility.SafeParseInt(specifics, 1));

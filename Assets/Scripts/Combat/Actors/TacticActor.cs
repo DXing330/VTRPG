@@ -429,6 +429,11 @@ public class TacticActor : ActorSubGameStats
     {
         direction = 5 - direction;
     }
+    public void Awaken(int amount)
+    {
+        WakeUp();
+        actions += amount;
+    }
     // Mental state.
     protected string immuneMentalState = "Calm";
     public string mentalState;

@@ -212,6 +212,7 @@ public class MysteryDungeonUIManager : ClickTileManager
         else if (!fastMove && moved)
         {
             battleManager.PlayerStartMoving();
+            UpdateUI();
         }
         isMoving = false;
     }

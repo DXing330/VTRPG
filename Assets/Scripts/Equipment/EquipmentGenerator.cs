@@ -2,7 +2,7 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+// TODO Refactor This, Select Some Passives, Then Generate Appropriate Levels For Them, Based On Rarity.
 public class EquipmentGenerator : MonoBehaviour
 {
     public Equipment dummyEquip = new Equipment();
@@ -14,7 +14,6 @@ public class EquipmentGenerator : MonoBehaviour
     public StatDatabase weaponBasePassives;
     public List<StatDatabase> equipmentPassiveMaxLevels;
     public List<StatDatabase> equipmentPassiveWeights;
-
     protected void GenerateRandomPassive(Equipment equip, int slot)
     {
         // Get a random passive.
@@ -32,7 +31,6 @@ public class EquipmentGenerator : MonoBehaviour
             GenerateRandomPassive(equip, slot);
         }
     }
-
     [ContextMenu("Test Generate")]
     public void TestGenerateNewEquipment()
     {
@@ -49,9 +47,7 @@ public class EquipmentGenerator : MonoBehaviour
             TestGenerateNewEquipment();
         }
     }
-
     protected int maxRuneSlots = 6;
-
     public string GenerateEquipmentOfRarity(string rarityString)
     {
         dummyEquip.ResetStats();

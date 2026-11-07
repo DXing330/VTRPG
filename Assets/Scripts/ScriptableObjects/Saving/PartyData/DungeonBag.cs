@@ -199,6 +199,11 @@ public class DungeonBag : SavedData
     {
         maxCapacity = 16;
         items.Clear();
+        string[] newGameItems = newGameData.Split("|");
+        for (int i = 0; i < newGameItems.Length; i++)
+        {
+            items.Add(newGameItems[i]);
+        }
         relics.Clear();
         relicCounters.Clear();
         Save();

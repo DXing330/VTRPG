@@ -55,23 +55,49 @@ public class Store : MonoBehaviour
             break;
         }
     }
+    // Constants For Each Store.
     public List<string> equipmentSold;
     public List<string> equipmentPrices;
     public List<string> itemsSolds;
     public List<string> itemsPrices;
     public List<string> dungeonItemsSolds;
     public List<string> dungeonItemsPrices;
+    // Based On Player Inventory.
+    public StatDatabase allItemPrices;
+    public List<string> currentItems;
+    public List<string> currentItemPrices;
+    public void RefreshCurrentItems()
+    {
+        currentItems = new List<string>(partyData.dungeonBag.GetItems());
+        currentItemPrices.Clear();
+        for (int i = 0; i < currentItems.Count; i++)
+        {
+            string[] itemData = allItemPrices.ReturnValue(currentItems[i]).Split("|");
+            if (itemData.Length < 7)
+            {
+                currentItemPrices.Add("1");
+            }
+            else
+            {
+                // Get The Sell Price.
+                currentItemPrices.Add(itemData[6]);
+            }
+        }
+    }
     public List<TMP_Text> itemsOwned;
     public List<TMP_Text> equipmentOwned;
     public SelectStatTextList equipmentDisplay;
     public SelectStatTextList itemsDisplay;
+    public SelectStatTextList currentItemDisplay;
     public bool dungeonItems = false;
     public SelectStatTextList dungeonItemDisplay;
     public bool buyingDungeonItems = false;
+    public GameObject sellButton;
     protected void ResetBuying(int type)
     {
         buyingEquipment = false;
         buyingItems = false;
+        sellingItems = false;
         if (type != 0)
         {
             equipmentDisplay.ResetSelected();
@@ -84,6 +110,11 @@ public class Store : MonoBehaviour
         {
             buyingDungeonItems = false;
             dungeonItemDisplay.ResetSelected();
+        }
+        if (type != 3)
+        {
+            currentItemDisplay.ResetSelected();
+            sellButton.SetActive(false);
         }
     }
     public void ClickOnDungeonItem()
@@ -110,6 +141,36 @@ public class Store : MonoBehaviour
         itemDetailViewer.ViewItem();
         itemDetailViewer.ShowInfo(itemsDisplay.GetSelectedStat());
     }
+    public bool sellingItems = false;
+    public void ClickOnItemToSell()
+    {
+        ResetBuying(3);
+        sellingItems = true;
+        sellButton.SetActive(true);
+        string item = currentItemDisplay.GetSelectedStat();
+        itemDetailViewer.ShowDungeonItemInfo(item);
+    }
+    public void TryToSellItem()
+    {
+        int index = currentItemDisplay.GetSelected();
+        if (index == -1 || index >= currentItems.Count){return;}
+        int price = int.Parse(currentItemPrices[index]);
+        partyData.inventory.GainGold(price);
+        partyData.dungeonBag.UseItem(currentItemDisplay.GetSelectedStat());
+        inventoryUI.UpdateKeyValues();
+        UpdateDisplay();
+    }
+    public void TryToSellItemAtIndex(int index)
+    {
+        index = currentItemDisplay.GetIndexOnPage(index);
+        if (index == -1 || index >= currentItems.Count){return;}
+        // Get The Sell Price Of The Item.
+        int price = int.Parse(currentItemPrices[index]);
+        partyData.inventory.GainGold(price);
+        partyData.dungeonBag.UseItem(dungeonItemDisplay.GetSelectedStat());
+        inventoryUI.UpdateKeyValues();
+        UpdateDisplay();
+    }
     protected void UpdateDisplay()
     {
         equipmentDisplay.SetStatsAndData(equipmentSold, equipmentPrices);
@@ -117,6 +178,8 @@ public class Store : MonoBehaviour
         if (dungeonItems)
         {
             dungeonItemDisplay.SetStatsAndData(dungeonItemsSolds, dungeonItemsPrices);
+            RefreshCurrentItems();
+            currentItemDisplay.SetStatsAndData(currentItems, currentItemPrices);
         }
         UpdateQuantityOwned();
     }

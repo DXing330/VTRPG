@@ -56,7 +56,6 @@ public class MysteryDungeonBattleManager : ClickTileManager
             return;
         }
         actors[0].SetLocation(map.playerLocation);
-        actors[0].LoadPersistentStats(partyData.dungeonState.GetCurrentStats(actors[0].GetID()));
         actors[0].SetMaxFullness(partyData.dungeonState.GetMaxFullness());
         actors[0].SetCurrentFullness(partyData.dungeonState.GetCurrentFullness());
         int count = 0;
@@ -65,8 +64,8 @@ public class MysteryDungeonBattleManager : ClickTileManager
             if (actors[i].GetID() == leaderID){continue;}
             actors[i].SetLocation(emptyAdjacent[count]);
             count++;
-            actors[i].LoadPersistentStats(partyData.dungeonState.GetCurrentStats(actors[i].GetID()));
         }
+        // TODO Apply Held Item Effects.
         map.UpdateMap();
     }
     protected void SpawnParty()
@@ -79,6 +78,8 @@ public class MysteryDungeonBattleManager : ClickTileManager
         for (int i = 0; i < spawnCount; i++)
         {
             // MD Mode Has Less Actions Per Turn, In General Either 1 Move/Attack/Skill.
+            actors[i].LoadPersistentStats(partyData.dungeonState.GetCurrentStats(actors[i].GetID()));
+            actors[i].SetDungeonHeldItem(partyData.dungeonState.GetCurrentHeldItem(actors[i].GetID()));
             actors[i].SetBaseActions(2);
             map.AddActorToBattle(actors[i]);
             effectManager.StartBattle(actors[i], map);

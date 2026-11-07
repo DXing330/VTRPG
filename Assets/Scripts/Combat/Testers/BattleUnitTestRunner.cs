@@ -1253,9 +1253,8 @@ public class BattleUnitTestRunner : MonoBehaviour
     private string BuildStats(TacticActor template, string sprite, int health, int attack, int range, int defense, int moveSpeed, string moveType, int hitChance, int dodge, int critChance, string actives)
     {
         List<string> values = new List<string>();
-        for (int i = 0; i < template.statNames.Count; i++)
+        for (int i = 0; i < template.GetStatNames().Count; i++)
             values.Add("");
-
         SetStat(values, template, "Sprite", sprite);
         SetStat(values, template, "Health", health.ToString());
         SetStat(values, template, "Attack", attack.ToString());
@@ -1284,7 +1283,7 @@ public class BattleUnitTestRunner : MonoBehaviour
 
     private void SetStat(List<string> values, TacticActor template, string name, string value)
     {
-        int index = template.statNames.IndexOf(name);
+        int index = template.GetStatNames().IndexOf(name);
         if (index >= 0)
             values[index] = value;
     }

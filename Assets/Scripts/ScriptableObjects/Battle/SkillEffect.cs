@@ -10,7 +10,6 @@ public class SkillEffect : ScriptableObject
     public StatDatabase buffsAndStatus;
     public StatDatabase standardSpells;
     public int basicDenominator = 100;
-    public int baseStatusDuration = 1;
     public virtual void AffectActor(TacticActor target, string effect, string effectSpecifics, int level = 1, CombatLog combatLog = null)
     {
         if (target == null){return;}
@@ -74,7 +73,6 @@ public class SkillEffect : ScriptableObject
                 break;
             case "Status":
                 int duration = level;
-                if (level <= baseStatusDuration && level >= 0) { duration = baseStatusDuration; }
                 // Some statuses don't naturally wear off and are permanent or immediately take effect.
                 switch (effectSpecifics)
                 {
@@ -100,7 +98,6 @@ public class SkillEffect : ScriptableObject
                 break;
             case "Statuses":
                 int durations = level;
-                if (level <= baseStatusDuration && level >= 0) { durations = baseStatusDuration; }
                 string[] statuses = effectSpecifics.Split(",");
                 for (int i = 0; i < statuses.Length; i++)
                 {
@@ -113,7 +110,6 @@ public class SkillEffect : ScriptableObject
             case "Buff":
                 // If it's a new buff, then immediately apply it's effects.
                 int bDuration = level;
-                if (level <= baseStatusDuration && level >= 0) { bDuration = baseStatusDuration; }
                 if (!target.BuffExists(effectSpecifics))
                 {
                     string[] buffEffects = buffsAndStatus.ReturnValue(effectSpecifics).Split("|");
@@ -534,6 +530,9 @@ public class SkillEffect : ScriptableObject
             case "Sleep":
                 target.Sleep(int.Parse(effectSpecifics));
                 break;
+            case "Awaken":
+                target.Awaken(int.Parse(effectSpecifics));
+                break;
             case "Invisible":
                 target.TurnInvisible(int.Parse(effectSpecifics));
                 break;
@@ -620,6 +619,31 @@ public class SkillEffect : ScriptableObject
             case "Stomach":
                 target.Eat(int.Parse(effectSpecifics));
                 break;
+            case "AvoidTraps":
+                target.SetAvoidTraps(true);
+                break;
+        }
+    }
+    public virtual void AntiAffectActor(TacticActor target, string effect, string effectSpecifics, int level = 1, CombatLog combatLog = null)
+    {
+        switch (effect)
+        {
+            default:
+            int parsedValue = SafeParseInt(effectSpecifics, -330);
+            string newSpecifics = parsedValue == -330 ? effectSpecifics : (-1 * parsedValue).ToString();
+            AffectActor(target, effect, newSpecifics, level ,combatLog);
+            break;
+            case "Passive":
+            // Remove one passive level.
+            target.AddPassiveSkill(effectSpecifics, "-1");
+            passiveOrganizer.OrganizeActorPassives(target);
+            break;
+            case "PassiveAtLevel":
+            // Remove the specified number of passive levels.
+            string[] passiveAtLevel = effectSpecifics.Split("Equals");
+            target.AddPassiveSkill(passiveAtLevel[0], "-" + passiveAtLevel[1]);
+            passiveOrganizer.OrganizeActorPassives(target);
+            break;
         }
     }
     public int ApplyElementalDamageToTarget(TacticActor target, string damageType, int damageAmount, BattleMap map = null)
@@ -761,12 +785,10 @@ public class SkillEffect : ScriptableObject
         }
         return 1;
     }
-
     protected int GetTargetPassiveLevel(TacticActor target, string passiveName)
     {
         return target.GetLevelFromPassive(passiveName);
     }
-
     protected int SafeParseInt(string intString, int defaultValue = 1)
     {
         try
@@ -778,7 +800,6 @@ public class SkillEffect : ScriptableObject
             return defaultValue;
         }
     }
-
     protected void AffectActorMovement(TacticActor target, string effectSpecifics, int power = 1)
     {
         int amount = SafeParseInt(effectSpecifics, -1);

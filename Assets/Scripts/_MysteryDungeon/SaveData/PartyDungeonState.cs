@@ -47,6 +47,16 @@ public class PartyDungeonState : SavedData
         // Default Is Full Health And No Mana.
         return "-1||0";
     }
+    public Dictionary<int, string> currentPartyHeldItems = new();
+    public string GetCurrentHeldItem(int ID)
+    {
+        if(currentPartyHeldItems.TryGetValue(ID, out string value))
+        {
+            return value;
+        }
+        // Default Is No Held Item.
+        return "";
+    }
     public void PartyEnterDungeon(PartyDataManager partyData)
     {
         SetLeaderID(partyData.GetLeaderID());
@@ -72,6 +82,7 @@ public class PartyDungeonState : SavedData
             if (actors[i].GetID() >= 0)
             {
                 currentPartyStats[actors[i].GetID()] = actors[i].ReturnPersistentStats();
+                currentPartyHeldItems[actors[i].GetID()] = actors[i].GetDungeonHeldItem();
             }
             if (actors[i].GetID() == leaderID)
             {
@@ -90,6 +101,7 @@ public class PartyDungeonState : SavedData
         allData += "MaxFullness=" + maxFullness + delimiter;
         allData += "CurrentFullness=" + currentFullness + delimiter;
         allData += "CurrentParty=" + utility.IntStringDictionaryToString(currentPartyStats) + delimiter;
+        allData += "CurrentHeldItems=" + utility.IntStringDictionaryToString(currentPartyHeldItems) + delimiter;
         File.WriteAllText(dataPath, allData);
     }
     public override void Load()
@@ -134,6 +146,9 @@ public class PartyDungeonState : SavedData
                 break;
             case "CurrentParty":
                 currentPartyStats = utility.StringToIntStringDictionary(value);
+                break;
+            case "CurrentHeldItems":
+                currentPartyHeldItems = utility.StringToIntStringDictionary(value);
                 break;
         }
     }

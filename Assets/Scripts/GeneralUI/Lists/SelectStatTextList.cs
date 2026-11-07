@@ -81,6 +81,10 @@ public class SelectStatTextList : StatTextList
         selectedIndex = index + (page*objects.Count);
         HighlightSelected();
     }
+    public int GetIndexOnPage(int index)
+    {
+        return index + (page*objects.Count);
+    }
     public int GetSelected(){return selectedIndex;}
     public string GetSelectedStat()
     {

@@ -41,16 +41,17 @@ public class ActorInitialStats : ActorPassives
         return count;
     }
     public string delimiter = "!";
-    public string allStatNames = "Sprite!Species!Elements!Attributes!Health!Attack!Range!Defense!MoveSpeed!MoveType!Weight!Initiative!Energy!Luck!CritChance!CritPower!HitChance!Dodge!AttackSpeed!Passives!PassiveLevels!CustomPassives!Actives!ActiveMods!DeathActives!MagicPower!MagicResist!ManaEfficiency!MaxMana!Spells!SpellMods!CustomSpells!ItemSlots!CurrentMana!CurrentHealth!Curses";
+    protected string allStatNames = "Sprite!Species!Elements!Attributes!Health!Attack!Range!Defense!MoveSpeed!MoveType!Weight!Initiative!Energy!Luck!CritChance!CritPower!HitChance!Dodge!AttackSpeed!Passives!PassiveLevels!CustomPassives!Actives!ActiveMods!DeathActives!MagicPower!MagicResist!ManaEfficiency!MaxMana!Spells!SpellMods!CustomSpells!ItemSlots!CurrentMana!CurrentHealth!Curses";
     protected void LoadStatNames()
     {
         statNames = allStatNames.Split(delimiter).ToList();
         publicStats = allPublicStats.Split(delimiter).ToList();
     }
-    public List<string> statNames = new();
-    public string allPublicStats = "0!0!0!0!0!0!0!0!0!0!0!0!0!0!1!1!1!1!1!0!0!0!0!0!0!1!1!1!1!0!0!0!0!1!0!0";
-    public List<string> publicStats = new();
-    public List<string> stats = new();
+    protected List<string> statNames = new();
+    public List<string> GetStatNames(){return statNames;}
+    protected string allPublicStats = "0!0!0!0!0!0!0!0!0!0!0!0!0!0!1!1!1!1!1!0!0!0!0!0!0!1!1!1!1!0!0!0!0!1!0!0";
+    protected List<string> publicStats = new();
+    protected List<string> stats = new();
     public List<string> GetPublicStatNames()
     {
         List<string> names = new List<string>();
@@ -370,7 +371,7 @@ public class ActorInitialStats : ActorPassives
         }
         return count;
     }
-    public int baseHealth;
+    protected int baseHealth;
     public void SetBaseHealth(int newHealth) { baseHealth = newHealth; }
     public int GetBaseHealth() { return baseHealth; }
     public void UpdateBaseHealth(int changeAmount, bool decrease = true)
@@ -386,7 +387,7 @@ public class ActorInitialStats : ActorPassives
         int healthDifference = GetBaseHealth() - GetHealth();
         return (healthDifference * 100) / GetBaseHealth();
     }
-    public int baseAttack;
+    protected int baseAttack;
     public void SetBaseAttack(int newAttack) { baseAttack = newAttack; }
     public int GetBaseAttack() { return baseAttack; }
     public void UpdateBaseAttack(int changeAmount)
@@ -394,7 +395,7 @@ public class ActorInitialStats : ActorPassives
         baseAttack += changeAmount;
         if (baseAttack < 0){baseAttack = 0;}
     }
-    public int attackRange;
+    protected int attackRange;
     public void SetAttackRange(int newRange) { attackRange = newRange; }
     public void SetAttackRangeMax(int newRange)
     {
@@ -402,7 +403,7 @@ public class ActorInitialStats : ActorPassives
     }
     public int GetAttackRange() { return attackRange + bonusAttackRange; }
     public void UpdateAttackRange(int changeAmount) { attackRange += changeAmount; }
-    public int bonusAttackRange;
+    protected int bonusAttackRange;
     public void ResetBonusAttackRange()
     {
         bonusAttackRange = 0;
@@ -411,11 +412,11 @@ public class ActorInitialStats : ActorPassives
     {
         bonusAttackRange += changeAmount;
     }
-    public int baseDefense;
+    protected int baseDefense;
     public void SetBaseDefense(int newDefense) { baseDefense = newDefense; }
     public int GetBaseDefense() { return baseDefense; }
     public void UpdateBaseDefense(int changeAmount) { baseDefense += changeAmount; }
-    public int moveSpeed;
+    protected int moveSpeed;
     public virtual void SetMoveSpeed(int newMoveSpeed)
     {
         moveSpeed = newMoveSpeed;
@@ -435,7 +436,7 @@ public class ActorInitialStats : ActorPassives
     {
         return moveType.ToString();
     }
-    public bool passThroughMoving = false;
+    protected bool passThroughMoving = false;
     public bool PassThroughMoving()
     {
         if (moveType == MoveType.Flying || moveType == MoveType.Ethereal){return true;}
@@ -449,33 +450,33 @@ public class ActorInitialStats : ActorPassives
     {
         passThroughMoving = false;
     }
-    public int weight;
+    protected int weight;
     public int GetBaseWeight() { return weight; }
     public void SetWeight(int newWeight) { weight = newWeight; }
-    public int initiative;
+    protected int initiative;
     public void SetInitiative(int newInitiative) { initiative = newInitiative; }
     public int GetInitiative() { return initiative; }
     // Luck stat for fun.
-    public int luck;
+    protected int luck;
     public void SetLuck(int newInfo){luck = newInfo;}
     public int GetLuck(){return luck;}
     public void ChangeLuck(int amount){luck += amount;}
-    public int baseCrit;
+    protected int baseCrit;
     public int GetBaseCritChance(){return baseCrit;}
     public void SetBaseCritChance(int newInfo){baseCrit = newInfo;}
-    public int baseCritPower;
+    protected int baseCritPower;
     public int GetBaseCritPower(){return baseCritPower;}
     public void SetBaseCritPower(int newInfo){baseCritPower = newInfo;}
-    public int baseHitChance;
+    protected int baseHitChance;
     public int GetBaseHitChance(){return baseHitChance;}
     public void SetBaseHitChance(int newInfo){baseHitChance = newInfo;}
-    public int baseDodge;
+    protected int baseDodge;
     public int GetBaseDodge(){return baseDodge;}
     public void SetBaseDodge(int newInfo){baseDodge = newInfo;}
-    public int baseAttackSpeed;
+    protected int baseAttackSpeed;
     public int GetBaseAttackSpeed(){return baseAttackSpeed;}
     public void SetBaseAttackSpeed(int newInfo){baseAttackSpeed = newInfo;}
-    public int baseEnergy;
+    protected int baseEnergy;
     public void UpdateBaseEnergy(int changeAmount)
     {
         baseEnergy += changeAmount;
@@ -587,7 +588,7 @@ public class ActorInitialStats : ActorPassives
             }
         }
     }
-    public int magicPower;
+    protected int magicPower;
     public void SetMagicPower(int newInfo)
     {
         magicPower = newInfo;
@@ -597,7 +598,7 @@ public class ActorInitialStats : ActorPassives
     {
         magicPower += amount;
     }
-    public int baseMagicResist;
+    protected int baseMagicResist;
     public void SetBaseMagicResist(int newInfo)
     {
         baseMagicResist = newInfo;
@@ -609,7 +610,7 @@ public class ActorInitialStats : ActorPassives
     }
     // How much bonus mana you get from consuming 1 mana.
     // Can be negative.
-    public int manaEfficiency;
+    protected int manaEfficiency;
     public void IncreaseManaEfficiency(int amount)
     {
         manaEfficiency += amount;
@@ -619,7 +620,7 @@ public class ActorInitialStats : ActorPassives
         manaEfficiency = newInfo;
     }
     public int GetManaEfficiency(){return manaEfficiency;}
-    public int maxMana;
+    protected int maxMana;
     public void SetMaxMana(int amount)
     {
         maxMana = amount;

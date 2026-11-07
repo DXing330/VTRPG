@@ -23,14 +23,14 @@ public class MysteryDungeonBattleMap : BattleMap
     public int floor = 0;
     public void SetFloor(int newFloor){floor = newFloor;}
     public void NewFloor(){floor++;}
-    protected string dungeonType = "Forest";
+    public string dungeonType = "Forest";
     public void SetDungeonType(string newType){dungeonType = newType;}
     public bool revealLayout = false;
     public bool revealTraps = false;
     public bool revealItems = false;
     public bool revealEnemies = false;
     public bool revealStairs = false;
-    public void Reveal(string specifics)
+    public override void Reveal(string specifics)
     {
         switch (specifics)
         {
@@ -40,6 +40,10 @@ public class MysteryDungeonBattleMap : BattleMap
             revealItems = true;
             revealEnemies = true;
             revealStairs = true;
+            break;
+            case "XRay":
+            revealItems = true;
+            revealEnemies = true;
             break;
             case "Layout":
             revealLayout = true;
@@ -70,10 +74,7 @@ public class MysteryDungeonBattleMap : BattleMap
     {
         monsterHouseRoom = -1;
         int monsterHouseChance = Mathf.Min(25, 5 * (floor / 5));
-        if (UnityEngine.Random.Range(0, 100) >= monsterHouseChance)
-        {
-            return;
-        }
+        if (UnityEngine.Random.Range(0, 100) >= monsterHouseChance){return;}
         // Pick a random room aside from the player spawning room.
         List<int> allRoomsNumbers = new List<int>(tileRooms).Distinct().ToList();
         allRoomsNumbers.Remove(-1);
@@ -255,51 +256,7 @@ public class MysteryDungeonBattleMap : BattleMap
     // For Use For Enemy Targeting.
     public List<int> GetActorVisibleTiles(int actorLocation)
     {
-        List<int> actorVisible = new List<int>();
-        int room = GetRoomOfTile(actorLocation);
-        int aRow = mapUtility.GetRow(actorLocation, mapSize);
-        int aCol = mapUtility.GetColumn(actorLocation, mapSize);
-        // Room, See Whole Room + Adjacent Tiles.
-        if (room >= 0)
-        {
-            actorVisible.AddRange(GetRoomTiles(actorLocation));
-            List<int> borders = mapUtility.AdjacentBorders(actorVisible, mapSize);
-            actorVisible.AddRange(borders);
-        }
-        // Hallway, See 9x9 + Hide Rooms
-        else
-        {
-            for (int row = aRow - 4; row <= aRow + 4; row++)
-            {
-                for (int col = aCol - 4; col <= aCol + 4; col++)
-                {
-                    if (row < 0 || row >= mapSize || col < 0 || col >= mapSize)
-                    {
-                        continue;
-                    }
-                    int tile = row * mapSize + col;
-                    actorVisible.Add(tile);
-                }
-            }
-            // Hide Rooms
-            for (int i = actorVisible.Count - 1; i >= 0; i--)
-            {
-                if (GetRoomOfTile(actorVisible[i]) >= 0)
-                {
-                    actorVisible.RemoveAt(i);
-                }
-            }
-            // Reveal Room Tiles Close To Center.
-            List<int> borders = mapUtility.AdjacentBorders(actorVisible, mapSize);
-            foreach (int tile in borders)
-            {
-                if (GetRoomOfTile(tile) >= 0)
-                {
-                    actorVisible.Add(tile);
-                }
-            }
-        }
-        return actorVisible;
+        return MDMapUtility.GetVisibleTiles(actorLocation, this);
     }
     public void UpdateVisibleTiles()
     {
@@ -378,6 +335,11 @@ public class MysteryDungeonBattleMap : BattleMap
         // Enemies Won't Trigger Traps Unless Already Revealed.
         if (!trapTriggered[indexOf] && actor.GetTeam() != 0){return;}
         trapTriggered[indexOf] = true;
+        if (actor.AvoidTraps())
+        {
+            UpdateCombatLog(actor.GetPersonalName() + " avoided a " + traps[indexOf]);
+            return;
+        }
         UpdateCombatLog(actor.GetPersonalName() + " triggered a " + traps[indexOf]);
         MDGeneralManager.TriggerTrap(actor, traps[indexOf]);
     }
@@ -391,6 +353,14 @@ public class MysteryDungeonBattleMap : BattleMap
         traps.Clear();
         trapTriggered.Clear();
         trapLocations.Clear();
+    }
+    public void RemoveTrapAtLocation(int location)
+    {
+        int indexOf = trapLocations.IndexOf(location);
+        if (indexOf < 0){return;}
+        traps.RemoveAt(indexOf);
+        trapLocations.RemoveAt(indexOf);
+        trapTriggered.RemoveAt(indexOf);
     }
     public void AddTrap(int location)
     {
@@ -431,10 +401,66 @@ public class MysteryDungeonBattleMap : BattleMap
     }
     public void AddItemToLocation(string itemName, int location)
     {
+        // TODO Check If Added To A Store.
         items.Add(itemName);
         itemLocations.Add(location);
         UpdateMap();
     }
+    // Track Stores.
+    public int storeRoom = -1;
+    public int storeOwnerTile = -1;
+    public List<int> storeTiles;
+    public void DetermineStoreRoom()
+    {
+        storeRoom = -1;
+        storeOwnerTile = -1;
+        storeTiles.Clear();
+        // Calculate Chance Of Store.
+        int chance = Mathf.Min(25, 5 * (floor / 3));
+        if (UnityEngine.Random.Range(0, 100) >= chance){return;}
+        // Pick A Random Room, Excluding Monster House Room + Player Room.
+        List<int> allRoomsNumbers = new List<int>(tileRooms).Distinct().ToList();
+        allRoomsNumbers.Remove(-1);
+        allRoomsNumbers.Remove(GetRoomOfTile(playerLocation));
+        allRoomsNumbers.Remove(monsterHouseRoom);
+        if (allRoomsNumbers.Count <= 0){return;}
+        storeRoom = allRoomsNumbers[UnityEngine.Random.Range(0, allRoomsNumbers.Count)];
+        List<int> roomTiles = GetTilesOfRoom(storeRoom);
+        utility.ShuffleIntList(roomTiles);
+        // Find Valid Tile
+        for (int i = 0; i < roomTiles.Count; i++)
+        {
+            List<int> adjacent = mapUtility.AdjacentTiles(roomTiles[i], mapSize);
+            // If Somehow On A Border/Edge Then Skip.
+            if (adjacent.Count < 6){continue;}
+            // If Adjacent To Stairs Then Skip.
+            if (adjacent.Contains(stairsLocation)){continue;}
+            // If Adjacent To Wall/Hall Then Skip.
+            if (!MDMapUtility.AllRoomTiles(adjacent, this)){continue;}
+            storeOwnerTile = roomTiles[i];
+            storeTiles = adjacent;
+            break;
+        }
+        if (storeOwnerTile < 0)
+        {
+            storeRoom = -1;
+            return;
+        }
+        // Remove Any Items/Traps On Tiles.
+        RemoveTrapAtLocation(storeOwnerTile);
+        RemoveItemAtLocation(storeOwnerTile);
+        for (int i = 0; i < storeTiles.Count; i++)
+        {
+            RemoveTrapAtLocation(storeTiles[i]);
+            RemoveItemAtLocation(storeTiles[i]);
+        }
+        // Generate The Store + Items.
+    }
+    public List<string> storeItems;
+    public List<int> storeItemLocations;
+    protected bool storeRobbed = false;
+    protected List<string> unpaidStoreItems;
+    protected List<string> soldToStoreItems;
     public List<string> possibleEnemies;
     public List<string> startingEnemies;
     public List<int> startingEnemyLocations;
@@ -514,7 +540,6 @@ public class MysteryDungeonBattleMap : BattleMap
         {
             CreateRoomBiome(dungeonType, room.Value);
         }
-        // Determine Starting Enemies.
         startingEnemies.Clear();
         startingEnemyLocations.Clear();
         for (int i = 0; i < Mathf.Max(1, GetMaxEnemyCount() / 2); i++)
@@ -523,6 +548,7 @@ public class MysteryDungeonBattleMap : BattleMap
         }
         SpawnStartingEnemies();
         DetermineMonsterHouseRoom();
+        DetermineStoreRoom();
         UpdateMoveCostManager();
     }
     protected void CreateRoomBiome(string dungeonType, List<int> roomTiles)
@@ -668,6 +694,18 @@ public class MysteryDungeonBattleMap : BattleMap
                 case "MonsterHouseRoom":
                     monsterHouseRoom = int.Parse(value);
                     break;
+                case "StoreRoom":
+                    storeRoom = int.Parse(value);
+                    break;
+                case "StoreTile":
+                    storeOwnerTile = int.Parse(value);
+                    break;
+                case "StoreItems":
+                    storeItems = string.IsNullOrEmpty(value) ? new List<string>() : value.Split(',').ToList();
+                    break;
+                case "StoreItemLocations":
+                    storeItemLocations = string.IsNullOrEmpty(value) ? new List<int>() : value.Split(',').Select(int.Parse).ToList();
+                    break;
             }
         }
         ResetAll();
@@ -678,26 +716,7 @@ public class MysteryDungeonBattleMap : BattleMap
     // This Is Basically Save()
     public string ReturnMapStateString()
     {
-        string mapState = "";
-        mapState += "Floor=" + floor + "|";
-        mapState += "Type=" + dungeonType + "|";
-        mapState += "Tiles=" + String.Join(",", mapInfo) + "|";
-        mapState += "MapSize=" + mapSize + "|";
-        mapState += "TileRooms=" + String.Join(",", tileRooms) + "|";
-        mapState += "TerrainEffects=" + String.Join(",", terrainEffectTiles) + "|";
-        mapState += "Weather=" + weather + "|";
-        mapState += "Time=" + time + "|";
-        mapState += "Player=" + playerLocation + "|";
-        mapState += "Stairs=" + stairsLocation + "|";
-        mapState += "Traps=" + String.Join(",", traps) + "|";
-        mapState += "TrapLocations=" + String.Join(",", trapLocations) + "|";
-        mapState += "Items=" + String.Join(",", items) + "|";
-        mapState += "ItemLocations=" + String.Join(",", itemLocations) + "|";
-        mapState += "PossibleEnemies=" + String.Join(",", possibleEnemies) + "|";
-        mapState += "StartingEnemies=" + String.Join(",", startingEnemies) + "|";
-        mapState += "EnemyLocations=" + String.Join(",", startingEnemyLocations) + "|";
-        mapState += "MonsterHouseRoom=" + monsterHouseRoom + "|";
-        return mapState;
+        return MDMapUtility.ReturnMapStateString(this);
     }
     public MysteryDungeonMinimap miniMap;
     // TODO Locked Rooms?
@@ -781,6 +800,10 @@ public class MysteryDungeonBattleMap : BattleMap
         ActorPickUpItem(actor);
         ActorStepOnTrap(actor);
         UpdateMap();
+    }
+    public override void WarpPassive(TacticActor actor, string effect, string specifics)
+    {
+        MoveEffect(actor, effect, specifics);
     }
     public void MoveEffect(TacticActor moved, string effect, string specifics, TacticActor mover = null)
     {

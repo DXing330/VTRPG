@@ -179,6 +179,8 @@ public class BattleMap : MapManager
             combatLog.UpdateNewestLog(newLog);
         }
     }
+    public virtual void WarpPassive(TacticActor actor, string effect, string specifics){}
+    public virtual void Reveal(string specifics){}
     public BattleStatsTracker damageTracker;
     public void InitializeDamageTracker()
     {
@@ -1597,7 +1599,6 @@ public class BattleMap : MapManager
         }
         battlingActors.Clear();
     }
-
     public override void UpdateMap()
     {
         base.UpdateMap();
@@ -1605,14 +1606,12 @@ public class BattleMap : MapManager
         UpdateActors();
         UpdateTerrain();
     }
-
     public virtual void UpdateActors()
     {
         GetActorTiles();
         if (!DisplayLayerExists(actorLayer)){return;}
         mapDisplayers[actorLayer].DisplayCurrentStyledTiles(mapTiles, actorTiles, currentTiles, true, actorDirections);
     }
-
     public List<string> buildingTiles;
     protected void GetBuildingTiles()
     {
@@ -2475,10 +2474,10 @@ public class BattleMap : MapManager
     public bool ApplyMovingTileEffect(TacticActor actor, int tileNumber)
     {
         actor.UpdateRoundMoveTracker();
-        if (moveManager != null)
+        /*if (moveManager != null)
         {
-            UpdateCombatLog("Move Cost: " + moveManager.MoveCostOfTile(tileNumber), true);
-        }
+            //UpdateCombatLog("Move Cost: " + moveManager.MoveCostOfTile(tileNumber), true);
+        }*/
         ApplyTileMovingEffect(actor, tileNumber);
         ApplyTerrainMovingEffect(actor, tileNumber);
         ApplyBorderMovingEffect(actor, tileNumber); // Direction Is Stored In The Actor?

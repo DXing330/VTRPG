@@ -144,6 +144,10 @@ public class PassiveDetailViewerSwitch : ScriptableObject
         {
             return " redeploy next to a random enemy";
         }
+        if (target.Contains("Warp"))
+        {
+            return " warp";
+        }
         if (effect.EndsWith("Damage"))
         {
             return " deal " + specifics + " " + effect + " to " + target;
@@ -295,6 +299,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " increase base " + sER[0] + " resistance by " + sER[3] + "% for each level of this passive";
             case "Sleep":
                 return "put " + target + " to sleep for " + specifics + " turns";
+            case "Awaken":
+                return "wake " + target + " up from sleep";
             case "Silence":
                 return " disable actives of " + target + " for " + specifics + " turns";
             case "Invisible":
@@ -335,6 +341,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " prevent healing from allies";
             case "Stomach":
                 return " increase fullness by " + specifics;
+            case "AvoidTraps":
+                return " prevent traps from triggering";
         }
         return " increase " + effect + " of " + target + " by " + specifics;
     }

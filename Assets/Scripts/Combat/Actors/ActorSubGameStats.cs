@@ -178,6 +178,9 @@ public class ActorSubGameStats : ActorStats
         return 0;
     }
     public int GetFullness(){return currentFullness;}
+    protected bool avoidTraps = false;
+    public bool AvoidTraps(){return avoidTraps;}
+    public void SetAvoidTraps(bool newInfo){avoidTraps = newInfo;}
     // For Use By Enemies?
     // Party Members Can Assign Held Items Through The Bag.
     protected string dungeonHeldItem = "";

@@ -27,6 +27,8 @@ public class MysteryDungeonItemDetailSwitch : ScriptableObject
             // User/UserTeam
             default:
             return passiveDetails.PassiveEffect(effect, specifics, target);
+            case "Held":
+            return passiveDetails.PassiveEffect(effect, specifics, "User") + " while held";
             case "UserParty":
             return passiveDetails.PassiveEffect(effect, specifics, "User") + " for the remainder of the dungeon";
             case "UserTeam":

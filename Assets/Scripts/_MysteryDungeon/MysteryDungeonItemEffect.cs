@@ -72,7 +72,36 @@ public class MysteryDungeonItemEffect : PassiveSkill
         {
             user.Eat(10);
         }
+        if (target == "Held")
+        {
+            EquipItem(user, map, itemName, effect, specifics, partyData);
+            return;
+        }
         ApplyTargetEffectSpecifics(user, map, partyData, target, effect, specifics);
+    }
+    protected void UnequipItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, PartyDataManager partyData)
+    {
+        if (string.IsNullOrEmpty(itemName)){return;}
+        // Put The Item Back In The Bag.
+        partyData.dungeonBag.GainItem(itemName);
+        string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
+        if (itemData.Length < 5){return;}
+        string target = itemData[0];
+        if (target != "Held"){return;}
+        string effect = itemData[1];
+        string specifics = itemData[2];
+        // Undo The Effect/Specifics Somehow.
+        AntiAffectActor(user, effect, specifics);
+    }
+    protected void EquipItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, string effect, string specifics, PartyDataManager partyData)
+    {
+        // Add The Current Held Item Back To Inventory + Lose Its Effects.
+        string currentHeld = user.GetDungeonHeldItem();
+        UnequipItem(user, map, currentHeld, partyData);
+        // Equip The New Held Item + Apply Effects.
+        user.SetDungeonHeldItem(itemName);
+        AffectActor(user, effect, specifics);
+        partyData.dungeonBag.UseItem(itemName);
     }
     protected void UserItems(TacticActor user, MysteryDungeonBattleMap map, string target, string effect, string specifics, PartyDataManager partyData)
     {
