@@ -11,6 +11,7 @@ public class DungeonBag : SavedData
 {
     public string delimiterTwo;
     public int maxCapacity = 16;
+    public int GetMaxBagSpace(){return maxCapacity;}
     public void AddCapacity(int amount = 1)
     {
         maxCapacity += amount;

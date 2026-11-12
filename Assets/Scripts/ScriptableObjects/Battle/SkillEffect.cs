@@ -392,6 +392,9 @@ public class SkillEffect : ScriptableObject
             case "BaseSpeed":
                 target.SetMoveSpeedMax(int.Parse(effectSpecifics));
                 break;
+            case "StopMovement":
+                target.StopMovement();
+                break;
             case "Movement":
                 AffectActorMovement(target, effectSpecifics, level);
                 break;

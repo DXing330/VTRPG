@@ -448,11 +448,19 @@ public class GeneralUtility : ScriptableObject
             return defaultValue;
         }
     }
+    public int SumStringList(List<string> stringList)
+    {
+        int sum = 0;
+        for (int i = 0; i < stringList.Count; i++)
+        {
+            sum += SafeParseInt(stringList[i]);
+        }
+        return sum;
+    }
     public int SumDescending(int lastValue)
     {
         return (lastValue) * (lastValue + 1) / 2;
     }
-
     public int Exponent(int eBase, int exponent = 2)
     {
         int value = 1;

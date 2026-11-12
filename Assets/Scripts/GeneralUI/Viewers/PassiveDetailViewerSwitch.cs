@@ -237,6 +237,8 @@ public class PassiveDetailViewerSwitch : ScriptableObject
                 return " increase Attack Range of " + target + " by up to " + specifics;
             case "TempRange":
                 return " increase Attack Range of " + target + " by " + specifics;
+            case "StopMovement":
+                return " prevent moving for the rest of the turn";
             case "SetSpeed":
                 return " set Base Speed of " + target + " to " + specifics;
             case "BaseSpeed":

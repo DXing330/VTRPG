@@ -31,7 +31,28 @@ public class StatTextList : GameObjectTextList
             statTexts[i].SetTextSize(textSize);
         }
     }
-
+    public void SetSellStatsAndData(List<string> newStats, List<string> rawData)
+    {
+        List<string> newData = new List<string>();
+        for (int i = 0; i < rawData.Count; i++)
+        {
+            string newText = "Sell" + "\n";
+            newText += $"({rawData[i]})";
+            newData.Add(newText);
+        }
+        SetStatsAndData(newStats, newData);
+    }
+    public void SetBuyStatsAndData(List<string> newStats, List<string> rawData)
+    {
+        List<string> newData = new List<string>();
+        for (int i = 0; i < rawData.Count; i++)
+        {
+            string newText = "Buy" + "\n";
+            newText += $"({rawData[i]})";
+            newData.Add(newText);
+        }
+        SetStatsAndData(newStats, newData);
+    }
     public void SetStatsAndData(List<string> newStats, List<string> newData = null)
     {
         DisableChangePage();
@@ -52,7 +73,6 @@ public class StatTextList : GameObjectTextList
         }
         UpdateCurrentPageStatTexts();
     }
-
     protected void UpdateCurrentPageStatTexts()
     {
         ResetPage();
@@ -64,7 +84,6 @@ public class StatTextList : GameObjectTextList
             statTexts[i].SetText(data[newPageIndices[i]]);
         }
     }
-
     protected override void UpdateCurrentPage()
     {
         ResetPage();
@@ -76,7 +95,6 @@ public class StatTextList : GameObjectTextList
             statTexts[i].SetText(data[newPageIndices[i]]);
         }
     }
-
     protected void UpdateStatPortion()
     {
         ResetPage();
@@ -87,7 +105,6 @@ public class StatTextList : GameObjectTextList
             statTexts[i].SetStatText(stats[newPageIndices[i]]);
         }
     }
-
     protected override void ResetPage()
     {
         for (int i = 0; i < objects.Count; i++)

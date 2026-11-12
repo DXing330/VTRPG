@@ -211,6 +211,10 @@ public class SpriteContainer : ScriptableObject
     }
     public Sprite SpriteDictionary(string spriteName)
     {
+        if (spriteName.StartsWith("TM"))
+        {
+            spriteName = "TM";
+        }
         spriteName = LocalSpriteName(spriteName);
         Sprite sprite = SpriteByNameLocal(spriteName);
         if (sprite != null){return sprite;}

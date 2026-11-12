@@ -266,8 +266,16 @@ public class TacticActor : ActorSubGameStats
         SpendAction(attackActionCost);
     }
     public bool ActionsLeft(){return actions > 0;}
-
     // Movement.
+    protected bool moveStopped = false;
+    public bool MovementStopped(){return moveStopped;}
+    // Stops Movement For A Turn.
+    public void StopMovement()
+    {
+        moveStopped = true;
+        movement = 0;
+        UpdateSpeed(-GetSpeed());
+    }
     public int movement;
     public int GetMovement(){return movement + tempMovement;}
     protected void MoveAction()
@@ -307,7 +315,6 @@ public class TacticActor : ActorSubGameStats
             }
         }
     }
-
     // Counterattacks.
     public int counterAttacks;
     public void GainCounterAttacks(int amount = 1)
@@ -339,6 +346,7 @@ public class TacticActor : ActorSubGameStats
     {
         base.StartTurnResetStats();
         movement = 0;
+        moveStopped = false;
     }
     // Start of Turn
     public void StartTurn()
@@ -417,7 +425,6 @@ public class TacticActor : ActorSubGameStats
         }
         return (movement + (GetMoveSpeed() * (baseActions - attackActionCost)));
     }
-
     // Map position and facing.
     public int location;
     public void SetLocation(int newLocation){location = newLocation;}
@@ -524,6 +531,10 @@ public class TacticActor : ActorSubGameStats
     {
         if (locationsEachRound.Count <= 1){return -1;}
         return locationsEachRound[locationsEachRound.Count - 2];
+    }
+    public bool CurrentAndPreviousLocationSame()
+    {
+        return GetLocation() == GetPreviousLocation();
     }
     public int GetInitialLocation()
     {

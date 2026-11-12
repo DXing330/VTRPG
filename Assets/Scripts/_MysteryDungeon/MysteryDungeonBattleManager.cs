@@ -80,6 +80,8 @@ public class MysteryDungeonBattleManager : ClickTileManager
             // MD Mode Has Less Actions Per Turn, In General Either 1 Move/Attack/Skill.
             actors[i].LoadPersistentStats(partyData.dungeonState.GetCurrentStats(actors[i].GetID()));
             actors[i].SetDungeonHeldItem(partyData.dungeonState.GetCurrentHeldItem(actors[i].GetID()));
+            // Apply The Held Item Effect.
+            itemEffect.ApplyHeldItemEffect(actors[i], map);
             actors[i].SetBaseActions(2);
             map.AddActorToBattle(actors[i]);
             effectManager.StartBattle(actors[i], map);
@@ -161,6 +163,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         if (actorAI.MentalStateTurn(roundActors[currentTurn], map) || roundActors[currentTurn].GetActions() <= 0)
         {
             EndActorTurn();
+            return;
         }
     }
     public void PlayerSelectSkill(string skillName)
@@ -219,7 +222,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         if (currentTurn != 0){return false;}
         int clickedTileNumber = map.currentTiles[tileNumber];
         if (clickedTileNumber < 0 || clickedTileNumber > map.mapInfo.Count){return false;}
-        // Check If The Tile Is In Move Range.
+        // Check If The Tile Is In Range.
         List<int> attackableTiles = GetTurnActorAttackableTiles();
         if (!attackableTiles.Contains(clickedTileNumber)){return false;}
         ActorBasicAttacksTile(roundActors[currentTurn], clickedTileNumber);
@@ -451,7 +454,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
             int prevLoc = actor.GetLocation();
             moveManager.MoveActorToTile(actor, path[i], map);
             actor.PayMoveCost(moveManager.MoveCostOfTile(path[i]));
-            if (actor.GetMovement() < 0){break;}
+            if (actor.GetMovement() < 0 || actor.MovementStopped()){break;}
         }
     }
     public void MoveActorToTile(int tileNumber, TacticActor actor = null)
@@ -470,8 +473,14 @@ public class MysteryDungeonBattleManager : ClickTileManager
     public void ActorBasicAttacksTile(TacticActor actor, int tileNumber)
     {
         TacticActor target = map.GetActorOnTile(tileNumber);
+        // Map Should Check All Possible Interactions In Priority?
         if (target == null)
         {
+            if (map.StoreOwner(tileNumber))
+            {
+                map.TalkToOwner();
+                return;
+            }
             map.ActorAttackTrap(tileNumber);
             actor.PayAttackCost();
             return;

@@ -220,7 +220,7 @@ public class ActorAI : ScriptableObject
             int prevLoc = actor.GetLocation();
             map.moveManager.MoveActorToTile(actor, path[i], map);
             actor.PayMoveCost(map.moveManager.MoveCostOfTile(path[i]));
-            if (actor.GetMovement() < 0){break;}
+            if (actor.GetMovement() < 0 || actor.MovementStopped()){break;}
         }
         map.UpdateActors();
     }

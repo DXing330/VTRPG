@@ -28,6 +28,11 @@ public class MysteryDungeonManager : MonoBehaviour
     public MysteryDungeonGenerator generator;
     public MysteryDungeonBattleMap map;
     public MysteryDungeonBattleManager battleManager;
+    public MysteryDungeonUIManager UIManager;
+    public void EnterStore()
+    {
+        UIManager.shopUI.ShowMDStoreUI();
+    }
     public PartyDataManager partyData;
     public int testGenerateSize;
     public MysteryDungeonMinimap miniMap;
@@ -46,8 +51,14 @@ public class MysteryDungeonManager : MonoBehaviour
         state.SaveFromMysteryDungeonMap(map);
         map.UpdateVisibleTiles();
     }
-    public bool PickUpItem(string item)
+    public bool PickUpItem(string item, int floor = 0)
     {
+        if (item == "Gold")
+        {
+            int goldAmount = Random.Range(0, 6) + Mathf.RoundToInt(Mathf.Sqrt(floor) * Random.Range(5, 20));
+            partyData.inventory.GainGold(goldAmount);
+            return true;
+        }
         if (partyData.dungeonBag.BagFull()){return false;}
         partyData.dungeonBag.GainItem(item);
         return true;
@@ -88,8 +99,10 @@ public class MysteryDungeonManager : MonoBehaviour
     }
     public void CompleteDungeon(bool win = true)
     {
-        // TODO Move To Reward Scene If Win.
+        // Update The Held Items As Well.
+        partyData.dungeonState.NewFloor(map.battlingActors);
         partyData.Save();
+        // TODO Move To Reward Scene If Win.
         sceneMover.ReturnToHub();
     }
 }

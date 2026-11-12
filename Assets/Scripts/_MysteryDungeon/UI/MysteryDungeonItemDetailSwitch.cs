@@ -9,6 +9,12 @@ public class MysteryDungeonItemDetailSwitch : ScriptableObject
     public StatDatabase itemData;
     public string ReturnItemDescriptionFromName(string itemName)
     {
+        if (itemName.StartsWith("TM"))
+        {
+            string[] TMName = itemName.Split("-");
+            if (TMName.Length < 2){return "";}
+            return "Learn " + TMName[1];
+        }
         string[] itemStats = itemData.ReturnValue(itemName).Split("|");
         if (itemStats.Length < 3){return "";}
         string target = itemStats[0];
@@ -73,9 +79,9 @@ public class MysteryDungeonItemDetailSwitch : ScriptableObject
             case "WarpStairs":
                 return "Warp " + targetDescription + " to the stairs.";
             case "Push":
-                return "Push " + targetDescription + "up to " + specifics + " tiles away ";
+                return "Push " + targetDescription + " up to " + specifics + " tiles away ";
             case "Forward":
-                return "Move " + targetDescription + "up to " + specifics + " tiles forward ";
+                return "Move " + targetDescription + " up to " + specifics + " tiles forward ";
             case "WarpLeader":
                 return "Warp " + targetDescription + " to the leader.";
             case "Hurl":

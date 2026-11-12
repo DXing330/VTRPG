@@ -51,11 +51,13 @@ public class SelectStatTextList : StatTextList
             }
         }
     }
+    public Color defaultColor;
+    public Color highlightColor;
     public void ResetHighlights()
     {
         for (int i = 0; i < statTexts.Count; i++)
         {
-            statTexts[i].SetColor(colors.GetColor("Default"));
+            statTexts[i].SetColor(defaultColor);
         }
     }
     public void HighlightIndex(int index, string color = "Highlight")
@@ -67,7 +69,7 @@ public class SelectStatTextList : StatTextList
         ResetHighlights();
         if (!highlights){ return; }
         if (GetSelected() < 0) { return; }
-        statTexts[GetSelected()%statTexts.Count].SetColor(colors.GetColor(color));
+        statTexts[GetSelected()%statTexts.Count].SetColor(highlightColor);
     }
     public int selectedIndex = -1;
     public void SetSelected(int index){ selectedIndex = index; }

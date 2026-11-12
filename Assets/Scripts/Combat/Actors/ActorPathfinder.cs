@@ -65,14 +65,15 @@ public class ActorPathfinder : MapPathfinder
             moveCost = moveCosts[closestTile];
             if (extraCosts)
             {
+                int elevationDifference = GetElevationDifference(adjacentTiles[i], closestTile);
                 // Fliers half elevation differences, because they aren't op enough already.
                 if (currentActor != null && currentActor.PassThroughMoving())
                 {
-                    moveCost += GetElevationDifference(adjacentTiles[i], closestTile) / 2;
+                    moveCost += elevationDifference;
                 }
                 else
                 {
-                    moveCost += GetElevationDifference(adjacentTiles[i], closestTile);
+                    moveCost += elevationDifference * elevationDifference;
                 }
                 int borderCost = GetBorderCost(adjacentTiles[i], closestTile);
                 moveCost += borderCost;
@@ -107,7 +108,7 @@ public class ActorPathfinder : MapPathfinder
                 int elevationDifference = GetElevationDifference(closestTile, adjacentTiles[i]);
                 if (currentActor != null && currentActor.PassThroughMoving())
                 {
-                    moveCost += elevationDifference / 2;
+                    moveCost += elevationDifference;
                 }
                 else
                 {

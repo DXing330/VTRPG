@@ -61,6 +61,11 @@ public class MysteryDungeonItemEffect : PassiveSkill
     }
     public void UseItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, PartyDataManager partyData)
     {
+        if (itemName.StartsWith("TM"))
+        {
+            UseTM(user, map, itemName, partyData);
+            return;
+        }
         string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
         if (itemData.Length < 5){return;}
         string target = itemData[0];
@@ -93,6 +98,14 @@ public class MysteryDungeonItemEffect : PassiveSkill
         // Undo The Effect/Specifics Somehow.
         AntiAffectActor(user, effect, specifics);
     }
+    public void ApplyHeldItemEffect(TacticActor user, MysteryDungeonBattleMap map)
+    {
+        string currentHeld = user.GetDungeonHeldItem();
+        if (string.IsNullOrEmpty(currentHeld)){return;}
+        string[] itemData = MDItemData.ReturnValue(currentHeld).Split("|");
+        if (itemData.Length < 5){return;}
+        AffectActor(user, itemData[1], itemData[2]);
+    }
     protected void EquipItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, string effect, string specifics, PartyDataManager partyData)
     {
         // Add The Current Held Item Back To Inventory + Lose Its Effects.
@@ -102,6 +115,12 @@ public class MysteryDungeonItemEffect : PassiveSkill
         user.SetDungeonHeldItem(itemName);
         AffectActor(user, effect, specifics);
         partyData.dungeonBag.UseItem(itemName);
+    }
+    protected void UseTM(TacticActor user, MysteryDungeonBattleMap map, string TMName, PartyDataManager partyData)
+    {
+        string[] TMData = TMName.Split("-");
+        if (TMData.Length < 2){return;}
+        UserItems(user, map, "UserParty", "Skill", TMData[1], partyData);
     }
     protected void UserItems(TacticActor user, MysteryDungeonBattleMap map, string target, string effect, string specifics, PartyDataManager partyData)
     {

@@ -26,7 +26,16 @@ public class Store : MonoBehaviour
         if (dungeonItems)
         {
             dungeonItemsSolds = storeStuff[4].Split(",").ToList();
-            dungeonItemsPrices = storeStuff[5].Split(",").ToList();
+            dungeonItemsPrices.Clear();
+            for (int i = 0; i < dungeonItemsSolds.Count; i++)
+            {
+                string[] itemData = allItemPrices.ReturnValue(dungeonItemsSolds[i]).Split("|");
+                if (itemData.Length < 7)
+                {
+                    dungeonItemsPrices.Add("10");
+                }
+                else{dungeonItemsPrices.Add(itemData[5]);}
+            }
         }
         TrimStock();
         UpdateDisplay();

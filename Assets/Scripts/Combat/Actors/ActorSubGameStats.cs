@@ -183,7 +183,7 @@ public class ActorSubGameStats : ActorStats
     public void SetAvoidTraps(bool newInfo){avoidTraps = newInfo;}
     // For Use By Enemies?
     // Party Members Can Assign Held Items Through The Bag.
-    protected string dungeonHeldItem = "";
+    public string dungeonHeldItem = "";
     public string GetDungeonHeldItem(){return dungeonHeldItem;}
     public void SetDungeonHeldItem(string newItem){dungeonHeldItem = newItem;}
 }

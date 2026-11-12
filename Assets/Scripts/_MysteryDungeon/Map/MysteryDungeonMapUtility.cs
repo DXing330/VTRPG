@@ -30,10 +30,79 @@ public class MysteryDungeonMapUtility : ScriptableObject
         mapState += "EnemyLocations=" + String.Join(",", map.startingEnemyLocations) + "|";
         mapState += "MonsterHouseRoom=" + map.monsterHouseRoom + "|";
         mapState += "StoreRoom=" + map.storeRoom + "|";
-        mapState += "StoreTile=" + map.storeOwnerTile + "|";
-        mapState += "StoreItems=" + String.Join(",", map.storeItems) + "|";
-        mapState += "StoreItemLocations=" + String.Join(",", map.storeItemLocations) + "|";
+        mapState += "StoreTile=" + map.GetStoreOwnerTile() + "|";
+        mapState += "StoreItems=" + String.Join(",", map.GetStoreItems()) + "|";
         return mapState;
+    }
+    public void CreateRoomBiome(string dungeonType, List<int> roomTiles, MysteryDungeonBattleMap map)
+    {
+        string[] dungeonTypeBiomes = map.dungeonTypeSubTerrains.ReturnValue(dungeonType).Split("|");
+        string mainBiome = dungeonTypeBiomes[UnityEngine.Random.Range(0, dungeonTypeBiomes.Length)];
+        string subBiome = dungeonTypeBiomes[UnityEngine.Random.Range(0, dungeonTypeBiomes.Length)];
+        // TODO Make The Biome Clusters.
+        HashSet<int> roomSet = new HashSet<int>(roomTiles);
+        HashSet<int> changedTiles = new HashSet<int>();
+        int patchCount = Mathf.Max(1, roomTiles.Count / 12);
+        for (int patch = 0; patch < patchCount; patch++)
+        {
+            // Choose a seed that has not already been changed.
+            List<int> availableSeeds = roomTiles.Where(tile => !changedTiles.Contains(tile)).ToList();
+            if (availableSeeds.Count == 0)
+                break;
+            int seed = availableSeeds[UnityEngine.Random.Range(0, availableSeeds.Count)];
+            // Keep patches irregular by varying their size.
+            int targetSize = UnityEngine.Random.Range(4, 9);
+            GrowTerrainPatch(seed, mainBiome, subBiome, targetSize, roomSet, changedTiles, map);
+        }
+    }
+    protected void GrowTerrainPatch(int seed, string terrain, string subTerrain, int targetSize, HashSet<int> roomTiles, HashSet<int> changedTiles, MysteryDungeonBattleMap map)
+    {
+        if (!roomTiles.Contains(seed) || changedTiles.Contains(seed)){return;}
+        int mapSize = map.mapSize;
+        List<int> mainTerrainTiles = new List<int>{seed};
+        List<int> borders = map.mapUtility.AdjacentBorders(mainTerrainTiles, mapSize);
+        // Only Get Tiles Inside The Room.
+        borders = borders.Intersect(roomTiles).ToList();
+        if (borders.Count <= 0){return;}
+        // Randomly Add A Tile And Keep Spreading.
+        for (int i = 0; i < targetSize; i++)
+        {
+            mainTerrainTiles.Add(borders[UnityEngine.Random.Range(0, borders.Count)]);
+            borders = map.mapUtility.AdjacentBorders(mainTerrainTiles, mapSize);
+            borders = borders.Intersect(roomTiles).ToList();
+            if (borders.Count <= 0){return;}
+        }
+        for (int i = 0; i < mainTerrainTiles.Count; i++)
+        {
+            map.mapInfo[mainTerrainTiles[i]] = terrain;
+            changedTiles.Add(mainTerrainTiles[i]);
+        }
+        // Surround the main terrain with subterrain.
+        borders = map.mapUtility.AdjacentBorders(mainTerrainTiles, mapSize);
+        borders = borders.Intersect(roomTiles).ToList();
+        for (int i = 0; i < borders.Count; i++)
+        {
+            map.mapInfo[borders[i]] = subTerrain;
+        }
+    }
+    public string GetWallTerrain(string dungeonType)
+    {
+        switch (dungeonType)
+        {
+            case "Forest":
+                return "Wall";
+            case "Mountain":
+                return "Pit";
+            case "Water":
+                return "DeepWater";
+            case "Underground":
+                return "Pit";
+            case "Snow":
+                return "Wall";
+            case "Desert":
+                return "Wall";
+        }
+        return "Wall";
     }
     public bool TilePassable(string terrain)
     {

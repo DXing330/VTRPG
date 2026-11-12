@@ -86,6 +86,7 @@ public class AuraManager : MonoBehaviour
     protected void TriggerAuraEffect(AuraEffect aura, TacticActor actor, string triggerType)
     {
         if (!aura.TriggerAura(triggerType)){return;}
+        // This Also Checks Team
         if (passive.CheckAuraCondition(aura, actor, map))
         {
             map.UpdateCombatLog(actor.GetPersonalName() + " is affected by " + aura.GetAuraName() + ".");

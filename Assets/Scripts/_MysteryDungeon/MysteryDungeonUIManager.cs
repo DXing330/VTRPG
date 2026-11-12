@@ -26,6 +26,11 @@ public enum MysteryDungeonUIState
 public class MysteryDungeonUIManager : ClickTileManager
 {
     // UI Objects.
+    public TMP_Text bagSpaceText;
+    protected void UpdateBagSpaceText()
+    {
+        bagSpaceText.text = partyData.dungeonBag.ReturnBagLimitString();
+    }
     public TMP_Text fastMoveText;
     public TMP_Text ATKText;
     public TMP_Text HITText;
@@ -76,6 +81,7 @@ public class MysteryDungeonUIManager : ClickTileManager
         int stateIndex = actionStateList.IndexOf(actionState);
         if (stateIndex >= 0){actionStateObjects[stateIndex].SetActive(true);}
         UpdateFastMoveText();
+        UpdateBagSpaceText();
         UpdateAttackStats(battleManager.GetTurnActor(0));
         UpdateActionUI();
         UpdateViewUI();
@@ -83,6 +89,7 @@ public class MysteryDungeonUIManager : ClickTileManager
     public GeneralUtility utility;
     public MysteryDungeonBattleManager battleManager;
     public MysteryDungeonBattleMap map;
+    public MysteryDungeonStoreUI shopUI;
     public PartyDataManager partyData;
     public bool fastMove = false;
     protected void UpdateFastMoveText()

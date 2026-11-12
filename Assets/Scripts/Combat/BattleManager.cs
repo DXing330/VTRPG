@@ -1147,9 +1147,9 @@ public class BattleManager : ClickTileManager
             {
                 DragGrappledActor(actor.GetGrappledActor(), prevLoc);
             }
-            if (actor.GetMovement() < 0)
+            if (actor.GetMovement() < 0 || actor.MovementStopped())
             {
-                // Stop if you run out of movement.
+                // Stop if you run out of movement or something stops the movement.
                 break;
             }
         }

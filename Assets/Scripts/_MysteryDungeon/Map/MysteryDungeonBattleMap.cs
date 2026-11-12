@@ -189,24 +189,6 @@ public class MysteryDungeonBattleMap : BattleMap
     public StatDatabase dungeonTypeWeathers;
     // Takes In The Floor + Type And Returns A Pool Of Items.
     public StatDatabase dungeonTypeItemPool;
-    public string GenerateItemFromPool()
-    {
-        List<string> allItems = dungeonTypeItemPool.GetAllKeys();
-        List<int> allItemWeights = new List<int>();
-        for (int i = allItems.Count - 1; i >= 0; i--)
-        {
-            string[] itemData = dungeonTypeItemPool.ReturnValue(allItems[i]).Split("|");
-            // Min Floor > Current Floor OR Excluded Type
-            if (int.Parse(itemData[1]) > floor || itemData[2].Contains(dungeonType))
-            {
-                allItems.RemoveAt(i);
-                continue;
-            }
-            allItemWeights.Insert(0, int.Parse(itemData[0]));
-        }
-        string randomItem = utility.ReturnRandomValueBasedOnWeights(allItems, allItemWeights);
-        return randomItem == "" ? "Apple" : randomItem;
-    }
     public StatDatabase dungeonItems;
     // Each Tile Is Either A Room (Room #) Or Not (-1).
     [System.NonSerialized]
@@ -371,6 +353,7 @@ public class MysteryDungeonBattleMap : BattleMap
         trapTriggered.Add(false);
     }
     // Track Treasures.
+    public StatDatabase itemData;
     public List<string> items;
     public List<int> itemLocations;
     public void ActorPickUpItem(TacticActor actor)
@@ -384,7 +367,7 @@ public class MysteryDungeonBattleMap : BattleMap
             actor.SetDungeonHeldItem(items[indexOf]);
             RemoveItemAtLocation(actor.GetLocation());
         }
-        else if (actor.GetTeam() == 0 && MDGeneralManager.PickUpItem(items[indexOf]))
+        else if (actor.GetTeam() == 0 && MDGeneralManager.PickUpItem(items[indexOf], floor))
         {
             UpdateCombatLog(actor.GetPersonalName() + " picked up " + items[indexOf]);
             RemoveItemAtLocation(actor.GetLocation());
@@ -401,24 +384,61 @@ public class MysteryDungeonBattleMap : BattleMap
     }
     public void AddItemToLocation(string itemName, int location)
     {
-        // TODO Check If Added To A Store.
         items.Add(itemName);
         itemLocations.Add(location);
         UpdateMap();
     }
-    // Track Stores.
-    public int storeRoom = -1;
-    public int storeOwnerTile = -1;
-    public List<int> storeTiles;
-    public void DetermineStoreRoom()
+    // 15% of all items are just gold.
+    protected int goldChance = 15;
+    public StatDatabase TMListing;
+    public string GenerateItemFromPool()
     {
-        storeRoom = -1;
-        storeOwnerTile = -1;
-        storeTiles.Clear();
-        // Calculate Chance Of Store.
-        int chance = Mathf.Min(25, 5 * (floor / 3));
-        if (UnityEngine.Random.Range(0, 100) >= chance){return;}
-        // Pick A Random Room, Excluding Monster House Room + Player Room.
+        if (UnityEngine.Random.Range(0, 100) < goldChance)
+        {
+            return "Gold";
+        }
+        List<string> allItems = dungeonTypeItemPool.GetAllKeys();
+        List<int> allItemWeights = new List<int>();
+        for (int i = allItems.Count - 1; i >= 0; i--)
+        {
+            string[] itemInfo = dungeonTypeItemPool.ReturnValue(allItems[i]).Split("|");
+            // Min Floor > Current Floor OR Excluded Type
+            if (int.Parse(itemInfo[1]) > floor || itemInfo[2].Contains(dungeonType))
+            {
+                allItems.RemoveAt(i);
+                continue;
+            }
+            allItemWeights.Insert(0, int.Parse(itemInfo[0]));
+        }
+        string randomItem = utility.ReturnRandomValueBasedOnWeights(allItems, allItemWeights);
+        if (randomItem == "TM")
+        {
+            List<string> allTMs = TMListing.GetAllKeys();
+            return allTMs[UnityEngine.Random.Range(0, allTMs.Count)];
+        }
+        return randomItem == "" ? "Apple" : randomItem;
+    }
+    // Track Stores.
+    public StatDatabase storePool;
+    public string GenerateStoreItem()
+    {
+        List<string> allStoreItems = storePool.GetAllKeys();
+        List<int> allWeights = new List<int>();
+        for (int i = 0; i < allStoreItems.Count; i++)
+        {
+            allWeights.Add(int.Parse(storePool.ReturnValue(allStoreItems[i])));
+        }
+        string randomItem = utility.ReturnRandomValueBasedOnWeights(allStoreItems, allWeights);
+        if (randomItem == "TM")
+        {
+            List<string> allTMs = TMListing.GetAllKeys();
+            return allTMs[UnityEngine.Random.Range(0, allTMs.Count)];
+        }
+        return randomItem == "" ? "Apple" : randomItem;
+    }
+    [ContextMenu("Generate Store")]
+    public void GenerateStore()
+    {
         List<int> allRoomsNumbers = new List<int>(tileRooms).Distinct().ToList();
         allRoomsNumbers.Remove(-1);
         allRoomsNumbers.Remove(GetRoomOfTile(playerLocation));
@@ -437,8 +457,7 @@ public class MysteryDungeonBattleMap : BattleMap
             if (adjacent.Contains(stairsLocation)){continue;}
             // If Adjacent To Wall/Hall Then Skip.
             if (!MDMapUtility.AllRoomTiles(adjacent, this)){continue;}
-            storeOwnerTile = roomTiles[i];
-            storeTiles = adjacent;
+            SetStoreOwnerTile(roomTiles[i]);
             break;
         }
         if (storeOwnerTile < 0)
@@ -449,18 +468,93 @@ public class MysteryDungeonBattleMap : BattleMap
         // Remove Any Items/Traps On Tiles.
         RemoveTrapAtLocation(storeOwnerTile);
         RemoveItemAtLocation(storeOwnerTile);
+        mapInfo[storeOwnerTile] = "Wall";
         for (int i = 0; i < storeTiles.Count; i++)
         {
+            mapInfo[storeTiles[i]] = "StoreTile";
             RemoveTrapAtLocation(storeTiles[i]);
             RemoveItemAtLocation(storeTiles[i]);
         }
         // Generate The Store + Items.
+        int storeItemCount = UnityEngine.Random.Range(2, storeTiles.Count);
+        for (int i = 0; i < storeItemCount; i++)
+        {
+            storeItems.Add(GenerateStoreItem());
+        }
     }
-    public List<string> storeItems;
-    public List<int> storeItemLocations;
+    public int storeRoom = -1;
+    protected int storeOwnerTile = -1;
+    public int GetStoreOwnerTile(){return storeOwnerTile;}
+    public void SetStoreOwnerTile(int newInfo = -1)
+    {
+        storeOwnerTile = newInfo;
+        storeTiles.Clear();
+        if (storeOwnerTile < 0){return;}
+        storeTiles = mapUtility.AdjacentTiles(storeOwnerTile, mapSize);
+    }
+    public bool StoreOwner(int tileNumber)
+    {
+        if (storeRobbed){return false;}
+        return GetStoreOwnerTile() == tileNumber;
+    }
+    public void TalkToOwner()
+    {
+        if (storeRobbed){return;}
+        MDGeneralManager.EnterStore();
+    }
+    protected List<int> storeTiles = new();
+    public void DetermineStoreRoom()
+    {
+        storeRoom = -1;
+        // Resets to -1.
+        SetStoreOwnerTile();
+        // Calculate Chance Of Store.
+        int chance = Mathf.Min(25, 5 * (floor / 3));
+        if (UnityEngine.Random.Range(0, 100) >= chance){return;}
+        GenerateStore();
+    }
+    protected List<string> storeItems = new();
+    public List<string> GetStoreItems(){return new List<string>(storeItems);}
     protected bool storeRobbed = false;
-    protected List<string> unpaidStoreItems;
-    protected List<string> soldToStoreItems;
+    public void RobStore()
+    {
+        storeRobbed = true;
+        UpdateCombatLog("Help! I've Been Robbed!");
+        SpawnAndAddActor(storeOwnerTile, "Chameleon", 1);
+        for (int i = 0; i < storeTiles.Count; i++)
+        {
+            if (GetActorOnTile(storeTiles[i]) == null)
+            {
+                SpawnAndAddActor(storeTiles[i], "Chameleon", 1);
+            }
+        }
+        storeTiles.Clear();
+        storeOwnerTile = -1;
+    }
+    protected List<string> unpaidStoreItems = new();
+    public List<string> GetUnpaidItems(){return new List<string>(unpaidStoreItems);}
+    public void AddToCart(string itemName)
+    {
+        unpaidStoreItems.Add(itemName);
+        storeItems.Remove(itemName);
+    }
+    public void ClearCart()
+    {
+        for (int i = 0; i < unpaidStoreItems.Count; i++)
+        {
+            storeItems.Add(unpaidStoreItems[i]);
+        }
+        unpaidStoreItems.Clear();
+    }
+    public void ClearUnpaidItems()
+    {
+        unpaidStoreItems.Clear();
+    }
+    protected List<string> soldToStoreItems = new();
+    public List<string> GetSoldItems(){return new List<string>(soldToStoreItems);}
+    public void ClearSoldItems(){soldToStoreItems.Clear();}
+    public void SellItem(string itemName){soldToStoreItems.Add(itemName);}
+    public void BuyBackItem(string itemName){soldToStoreItems.Remove(itemName);}
     public List<string> possibleEnemies;
     public List<string> startingEnemies;
     public List<int> startingEnemyLocations;
@@ -479,7 +573,7 @@ public class MysteryDungeonBattleMap : BattleMap
         {
             if (generator.allTiles[i] == 1)
             {
-                mapInfo.Add(GetWallTerrain(dungeonType));
+                mapInfo.Add(MDMapUtility.GetWallTerrain(dungeonType));
             }
             else
             {
@@ -538,7 +632,7 @@ public class MysteryDungeonBattleMap : BattleMap
         // Second pass: give each room its own biome and generate clustered terrain inside that room.
         foreach (var room in roomFloorTiles)
         {
-            CreateRoomBiome(dungeonType, room.Value);
+            MDMapUtility.CreateRoomBiome(dungeonType, room.Value, this);
         }
         startingEnemies.Clear();
         startingEnemyLocations.Clear();
@@ -551,76 +645,7 @@ public class MysteryDungeonBattleMap : BattleMap
         DetermineStoreRoom();
         UpdateMoveCostManager();
     }
-    protected void CreateRoomBiome(string dungeonType, List<int> roomTiles)
-    {
-        string[] dungeonTypeBiomes = dungeonTypeSubTerrains.ReturnValue(dungeonType).Split("|");
-        string mainBiome = dungeonTypeBiomes[UnityEngine.Random.Range(0, dungeonTypeBiomes.Length)];
-        string subBiome = dungeonTypeBiomes[UnityEngine.Random.Range(0, dungeonTypeBiomes.Length)];
-        // TODO Make The Biome Clusters.
-        HashSet<int> roomSet = new HashSet<int>(roomTiles);
-        HashSet<int> changedTiles = new HashSet<int>();
-        int patchCount = Mathf.Max(1, roomTiles.Count / 12);
-        for (int patch = 0; patch < patchCount; patch++)
-        {
-            // Choose a seed that has not already been changed.
-            List<int> availableSeeds = roomTiles.Where(tile => !changedTiles.Contains(tile)).ToList();
-            if (availableSeeds.Count == 0)
-                break;
-            int seed = availableSeeds[UnityEngine.Random.Range(0, availableSeeds.Count)];
-            // Keep patches irregular by varying their size.
-            int targetSize = UnityEngine.Random.Range(4, 9);
-            GrowTerrainPatch(seed, mainBiome, subBiome, targetSize, roomSet, changedTiles);
-        }
-    }
-    protected void GrowTerrainPatch(int seed, string terrain, string subTerrain, int targetSize, HashSet<int> roomTiles, HashSet<int> changedTiles)
-    {
-        if (!roomTiles.Contains(seed) || changedTiles.Contains(seed)){return;}
-        List<int> mainTerrainTiles = new List<int>{seed};
-        List<int> borders = mapUtility.AdjacentBorders(mainTerrainTiles, mapSize);
-        // Only Get Tiles Inside The Room.
-        borders = borders.Intersect(roomTiles).ToList();
-        if (borders.Count <= 0){return;}
-        // Randomly Add A Tile And Keep Spreading.
-        for (int i = 0; i < targetSize; i++)
-        {
-            mainTerrainTiles.Add(borders[UnityEngine.Random.Range(0, borders.Count)]);
-            borders = mapUtility.AdjacentBorders(mainTerrainTiles, mapSize);
-            borders = borders.Intersect(roomTiles).ToList();
-            if (borders.Count <= 0){return;}
-        }
-        for (int i = 0; i < mainTerrainTiles.Count; i++)
-        {
-            mapInfo[mainTerrainTiles[i]] = terrain;
-            changedTiles.Add(mainTerrainTiles[i]);
-        }
-        // Surround the main terrain with subterrain.
-        borders = mapUtility.AdjacentBorders(mainTerrainTiles, mapSize);
-        borders = borders.Intersect(roomTiles).ToList();
-        for (int i = 0; i < borders.Count; i++)
-        {
-            mapInfo[borders[i]] = subTerrain;
-        }
-    }
-    protected string GetWallTerrain(string dungeonType)
-    {
-        switch (dungeonType)
-        {
-            case "Forest":
-                return "Wall";
-            case "Mountain":
-                return "Pit";
-            case "Water":
-                return "DeepWater";
-            case "Underground":
-                return "Pit";
-            case "Snow":
-                return "Wall";
-            case "Desert":
-                return "Wall";
-        }
-        return "Wall";
-    }
-    // This Is Basically Start()
+    // This Is Basically Start()/Load()
     public void LoadMapStateFromString(string savedState)
     {
         // TODO Clear Buildings + Etc.
@@ -658,10 +683,10 @@ public class MysteryDungeonBattleMap : BattleMap
                     terrainEffectTiles = value.Split(",").ToList();
                     break;
                 case "Weather":
-                    weather = value;
+                    SetWeather(value);
                     break;
                 case "Time":
-                    time = value;
+                    SetTime(value);
                     break;
                 case "Player":
                     playerLocation = int.Parse(value);
@@ -698,13 +723,10 @@ public class MysteryDungeonBattleMap : BattleMap
                     storeRoom = int.Parse(value);
                     break;
                 case "StoreTile":
-                    storeOwnerTile = int.Parse(value);
+                    SetStoreOwnerTile(int.Parse(value));
                     break;
                 case "StoreItems":
                     storeItems = string.IsNullOrEmpty(value) ? new List<string>() : value.Split(',').ToList();
-                    break;
-                case "StoreItemLocations":
-                    storeItemLocations = string.IsNullOrEmpty(value) ? new List<int>() : value.Split(',').Select(int.Parse).ToList();
                     break;
             }
         }
@@ -736,6 +758,18 @@ public class MysteryDungeonBattleMap : BattleMap
             {
                 actorTiles[itemLocations[i]] = items[i];
             }
+        }
+        // Draw Store Items In Order For Visual Reference.
+        for (int i = 0; i < storeItems.Count; i++)
+        {
+            if (actorTiles[storeTiles[i]] == "")
+            {
+                actorTiles[storeTiles[i]] = storeItems[i];
+            }
+        }
+        if (storeOwnerTile >= 0)
+        {
+            actorTiles[storeOwnerTile] = "Chameleon";
         }
         mapDisplayers[actorLayer].DisplayCurrentStyledTiles(mapTiles, actorTiles, currentTiles, true, actorDirections);
         for (int i = 0; i < mapTiles.Count; i++)
@@ -926,7 +960,6 @@ public class MysteryDungeonBattleMap : BattleMap
             for (int i = 0; i < mapInfo.Count; i++)
             {
                 tileRooms[i] = 0;
-                mapInfo[i] = "Plains";
             }
             break;
             case "RemoveTraps":
