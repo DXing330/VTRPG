@@ -438,7 +438,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
     }
     public void AllyTurn()
     {
-        // DO ALLY TURNS BASED ON SET AI (Stick Together/Go After Foes/Go Other Way/Explore)
+        // DO ALLY TURNS BASED ON SET AI (Stick Together[Default]/Go After Foes/Go Other Way/Explore)
         actorAI.MysteryDungeonAllyTurn(roundActors[currentTurn], this, map);
     }
     // DO ENEMY TURNS.
@@ -476,12 +476,10 @@ public class MysteryDungeonBattleManager : ClickTileManager
         // Map Should Check All Possible Interactions In Priority?
         if (target == null)
         {
-            if (map.StoreOwner(tileNumber))
+            if (!map.AttackTile(tileNumber))
             {
-                map.TalkToOwner();
                 return;
             }
-            map.ActorAttackTrap(tileNumber);
             actor.PayAttackCost();
             return;
         }

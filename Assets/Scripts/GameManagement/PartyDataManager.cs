@@ -109,18 +109,6 @@ public class PartyDataManager : MonoBehaviour
     {
         for (int i = 0; i < otherPartyData.Count; i++) { otherPartyData[i].NewDay(dayCount); }
         // Pay the failure penalty for any failed quests.
-        int penalty = guildCard.GetFailPenalty();
-        if (penalty > 0)
-        {
-            if (inventory.EnoughGold(penalty))
-            {
-                inventory.SpendGold(penalty);
-            }
-            else
-            {
-                inventory.LoseGold();
-            }
-        }
         // Add exhaustion to all party members.
         for (int i = 0; i < allParties.Count; i++)
         {
@@ -170,7 +158,6 @@ public class PartyDataManager : MonoBehaviour
                 if (permStarved){return true;}
             }
         }
-        // Remove dead party members.
         SetFullParty();
         return false;
     }
@@ -187,7 +174,6 @@ public class PartyDataManager : MonoBehaviour
                 return true;
             }
         }
-        // Remove dead party members.
         SetFullParty();
         return false;
     }
@@ -416,6 +402,10 @@ public class PartyDataManager : MonoBehaviour
         if (section == null){return;}
         section.SetMemberStats(newActorStats, localIndex);
         SetFullParty();
+    }
+    public void RemovePartyMemberByID(int ID)
+    {
+        RemovePartyMember(ReturnIndexAtID(ID));
     }
     public void RemovePartyMember(int index)
     {

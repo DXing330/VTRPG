@@ -54,7 +54,15 @@ public class MultiKeyStatDatabase : StatDatabase
             // the first matching entry wins.
             if (!multiKeyLookup.ContainsKey(key))
             {
-                multiKeyLookup.Add(key, values[i]);
+                try
+                {
+                    multiKeyLookup.Add(key, values[i]);
+                }
+                catch
+                {
+                    Debug.Log(keys.Count);
+                    Debug.Log(values.Count);
+                }
             }
         }
     }

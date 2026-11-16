@@ -12,6 +12,7 @@ public class MysteryDungeonBattleMap : BattleMap
     protected override void ResetAll()
     {
         base.ResetAll();
+        ResetNPCs();
         revealLayout = false;
         revealTraps = false;
         revealItems = false;
@@ -22,7 +23,6 @@ public class MysteryDungeonBattleMap : BattleMap
     public bool updateMap = true;
     public int floor = 0;
     public void SetFloor(int newFloor){floor = newFloor;}
-    public void NewFloor(){floor++;}
     public string dungeonType = "Forest";
     public void SetDungeonType(string newType){dungeonType = newType;}
     public bool revealLayout = false;
@@ -132,6 +132,11 @@ public class MysteryDungeonBattleMap : BattleMap
         if (enemy == ""){return;}
         int location = GenerateEnemyLocation();
         if (startingEnemyLocations.Contains(location)){return;}
+        AddStartingEnemy(enemy, location);
+    }
+    // Quests Add To Starting Enemies So They Spawn On Reload.
+    public void AddStartingEnemy(string enemy, int location)
+    {
         startingEnemies.Add(enemy);
         startingEnemyLocations.Add(location);
     }
@@ -159,6 +164,7 @@ public class MysteryDungeonBattleMap : BattleMap
     {
         string enemyName = GenerateRandomEnemy();
         int enemyLocation = GenerateEnemyLocation();
+        if (enemyLocation < 0){return;}
         if (GetActorOnTile(enemyLocation) == null)
         {
             SpawnAndAddActor(enemyLocation, enemyName, 1);
@@ -173,15 +179,24 @@ public class MysteryDungeonBattleMap : BattleMap
         if (GetEnemyCount() >= GetMaxEnemyCount()){return "";}
         return RandomEnemy();
     }
-    public int GenerateEnemyLocation()
+    public int GenerateEmptyLocation()
     {
-        // Pick A Random Tile In A Room That Is Not Visible.
         UpdateVisibleTiles();
+        // Pick A Random Tile In A Room That Is Not Visible.
         List<int> allRoomTiles = GetAllRoomTiles();
         List<int> allVisible = GetVisibleTiles();
         List<int> availableTiles = allRoomTiles.Except(allVisible).ToList();
+        availableTiles.Remove(storeOwnerTile);
+        for (int i = 0; i < battlingActors.Count; i++)
+        {
+            availableTiles.Remove(battlingActors[i].GetLocation());
+        }
         if (availableTiles.Count == 0){return -1;}
         return availableTiles[UnityEngine.Random.Range(0, availableTiles.Count)];
+    }
+    public int GenerateEnemyLocation()
+    {
+        return GenerateEmptyLocation();
     }
     public PartyDungeonState partyDungeonState;
     public MysteryDungeonMapUtility MDMapUtility;
@@ -513,6 +528,11 @@ public class MysteryDungeonBattleMap : BattleMap
         if (UnityEngine.Random.Range(0, 100) >= chance){return;}
         GenerateStore();
     }
+    public bool StoreItemShowcase(int tileNumber)
+    {
+        int indexOf = storeTiles.IndexOf(tileNumber);
+        return (indexOf >= 0 && indexOf < storeItems.Count);
+    }
     protected List<string> storeItems = new();
     public List<string> GetStoreItems(){return new List<string>(storeItems);}
     protected bool storeRobbed = false;
@@ -555,6 +575,58 @@ public class MysteryDungeonBattleMap : BattleMap
     public void ClearSoldItems(){soldToStoreItems.Clear();}
     public void SellItem(string itemName){soldToStoreItems.Add(itemName);}
     public void BuyBackItem(string itemName){soldToStoreItems.Remove(itemName);}
+    public List<string> NPCs = new();
+    public void SetNPCs(List<string> newInfo){NPCs = newInfo;}
+    public List<string> GetNPCs(){return NPCs;}
+    public List<int> NPCLocations = new();
+    public void SetNPCLocations(List<int> newInfo){NPCLocations = newInfo;}
+    public List<int> GetNPCLocations(){return NPCLocations;}
+    public void ResetNPCs()
+    {
+        NPCs = new();
+        NPCLocations = new();
+    }
+    public void AddNPC(int location, string specifics)
+    {
+        NPCLocations.Add(location);
+        NPCs.Add(specifics);
+    }
+    public void RemoveNPCAtIndex(int index)
+    {
+        NPCs.RemoveAt(index);
+        NPCLocations.RemoveAt(index);
+    }
+    public void InteractWithNPC(int index)
+    {
+        if (index < 0 || index >= NPCs.Count){return;}
+        switch (NPCs[index])
+        {
+            // Let Them Escape.
+            default:
+            SpawnAndAddActor(NPCLocations[index], NPCs[index], 0);
+            //MDGeneralManager.AddNPCToParty(NPCs[index]);
+            RemoveNPCAtIndex(index);
+            ActorEscapesBattle(battlingActors[battlingActors.Count - 1]);
+            break;
+        }
+    }
+    // Bool For Consume Actions Or Not.
+    public bool AttackTile(int tileNumber)
+    {
+        if (StoreOwner(tileNumber))
+        {
+            TalkToOwner();
+            return false;
+        }
+        int indexOf = NPCLocations.IndexOf(tileNumber);
+        if (indexOf >= 0)
+        {
+            InteractWithNPC(indexOf);
+            return false;
+        }
+        ActorAttackTrap(tileNumber);
+        return true;
+    }
     public List<string> possibleEnemies;
     public List<string> startingEnemies;
     public List<int> startingEnemyLocations;
@@ -582,7 +654,7 @@ public class MysteryDungeonBattleMap : BattleMap
             }
         }
         UpdateMapSize();
-        // Resets Terrain/Elevations/Borders/Buildings
+        // Resets Terrain/Elevations/Borders/Buildings/NPCs
         ResetAll();
         UpdatePlayerLocation(generator.startLocation);
         stairsLocation = generator.stairsLocation;
@@ -648,7 +720,7 @@ public class MysteryDungeonBattleMap : BattleMap
     // This Is Basically Start()/Load()
     public void LoadMapStateFromString(string savedState)
     {
-        // TODO Clear Buildings + Etc.
+        ResetAll();
         if (string.IsNullOrEmpty(savedState))
             return;
         combatLog.ForceStart();
@@ -728,9 +800,14 @@ public class MysteryDungeonBattleMap : BattleMap
                 case "StoreItems":
                     storeItems = string.IsNullOrEmpty(value) ? new List<string>() : value.Split(',').ToList();
                     break;
+                case "NPCs":
+                    NPCs = string.IsNullOrEmpty(value) ? new List<string>() : value.Split(',').ToList();
+                    break;
+                case "NPCLocations":
+                    NPCLocations = string.IsNullOrEmpty(value) ? new List<int>() : value.Split(',').Select(int.Parse).ToList();
+                    break;
             }
         }
-        ResetAll();
         UpdateVisibleTiles();
         SpawnStartingEnemies();
         UpdateMoveCostManager();
@@ -752,6 +829,14 @@ public class MysteryDungeonBattleMap : BattleMap
         GetActorTiles();
         if (!DisplayLayerExists(actorLayer)){return;}
         actorTiles[stairsLocation] = "Stairs";
+        // Draw NPCs
+        for (int i = 0; i < NPCLocations.Count; i++)
+        {
+            if (actorTiles[NPCLocations[i]] == "")
+            {
+                actorTiles[NPCLocations[i]] = NPCs[i];
+            }
+        }
         for (int i = 0; i < itemLocations.Count; i++)
         {
             if (actorTiles[itemLocations[i]] == "")

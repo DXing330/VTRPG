@@ -85,6 +85,7 @@ public class MysteryDungeonState : SavedData
         Load();
         if (mapState.Length <= 0){return false;}
         map.LoadMapStateFromString(mapState);
+        map.SetFloor(floor);
         // Spawn Starting Enemies.
         return true;
     }

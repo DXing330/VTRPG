@@ -48,8 +48,13 @@ public class MysteryDungeonManager : MonoBehaviour
     {
         generator.GenerateDungeon(state.GetDungeonSize(), state.GetFloor());
         map.InitializeMapFromGenerator(generator, state.GetDungeonType(), state.GetDungeonEnemies());
+        partyData.guildCard.QuestStartFloor(state.GetFloor(), map);
         state.SaveFromMysteryDungeonMap(map);
         map.UpdateVisibleTiles();
+    }
+    public void AddNPCToParty(string NPC)
+    {
+        partyData.AddTempPartyMember(NPC);
     }
     public bool PickUpItem(string item, int floor = 0)
     {
@@ -70,6 +75,13 @@ public class MysteryDungeonManager : MonoBehaviour
     }
     public void NewFloor()
     {
+        // Remove Defeat Members From The Party.
+        for (int i = 0; i < map.defeatedActors.Count; i++)
+        {
+            partyData.RemovePartyMemberByID(map.defeatedActors[i].GetID());
+        }
+        // Check Quests At Current Map State.
+        partyData.guildCard.CheckQuestCompletion(state.GetFloor(), map);
         // Generate New Map.
         if (!state.NewFloor())
         {
@@ -78,7 +90,6 @@ public class MysteryDungeonManager : MonoBehaviour
         }
         loadingScreen.EnableLoading();
         loadingScreen.FinishLoadingScreen();
-        map.NewFloor();
         GenerateDungeon();
         // Remove All Enemies Since They Are On A Different Floor Now.
         map.RemoveNonTeamMembers();
@@ -101,6 +112,10 @@ public class MysteryDungeonManager : MonoBehaviour
     {
         // Update The Held Items As Well.
         partyData.dungeonState.NewFloor(map.battlingActors);
+        if (win)
+        {
+            partyData.guildCard.CheckQuestCompletion(partyData);
+        }
         partyData.Save();
         // TODO Move To Reward Scene If Win.
         sceneMover.ReturnToHub();

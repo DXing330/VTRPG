@@ -101,7 +101,8 @@ public class MysteryDungeonMinimap : MaskableGraphic
         bool visible = map.visibleTiles.Contains(tile);
         bool stairs = map.stairsLocation == tile;
         bool enemy = map.EnemyOnTile(tile);
-        bool item = map.itemLocations.Contains(tile);
+        bool NPC = map.GetNPCLocations().Contains(tile);
+        bool item = map.itemLocations.Contains(tile) || map.StoreItemShowcase(tile);
         bool trap = map.trapLocations.Contains(tile);
         if (enemy && (visible || map.revealEnemies))
         {
@@ -110,6 +111,10 @@ public class MysteryDungeonMinimap : MaskableGraphic
         if (stairs && (visible || map.revealStairs))
         {
             return Color.black;
+        }
+        if (NPC && visible)
+        {
+            return new Color(0.56f, 0.93f, 0.56f, 1f);
         }
         if (item && (visible || map.revealItems))
             return Color.blue;
@@ -138,6 +143,7 @@ public class MysteryDungeonMinimap : MaskableGraphic
             case "SnowForest":
             case "SnowMountain":
             case "Oasis":
+            case "StoreTile":
                 return true;
             case "Pit":
             case "Wall":

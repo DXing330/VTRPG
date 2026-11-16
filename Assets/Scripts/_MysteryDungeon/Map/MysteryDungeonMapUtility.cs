@@ -32,6 +32,8 @@ public class MysteryDungeonMapUtility : ScriptableObject
         mapState += "StoreRoom=" + map.storeRoom + "|";
         mapState += "StoreTile=" + map.GetStoreOwnerTile() + "|";
         mapState += "StoreItems=" + String.Join(",", map.GetStoreItems()) + "|";
+        mapState += "NPCs=" + String.Join(",", map.GetNPCs()) + "|";
+        mapState += "NPCLocations=" + String.Join(",", map.GetNPCLocations()) + "|";
         return mapState;
     }
     public void CreateRoomBiome(string dungeonType, List<int> roomTiles, MysteryDungeonBattleMap map)

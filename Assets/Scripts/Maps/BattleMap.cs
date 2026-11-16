@@ -496,6 +496,14 @@ public class BattleMap : MapManager
     {
         return defeatedActors;
     }
+    public bool DefeatedActorExists(string newName)
+    {
+        for (int i = 0; i < defeatedActors.Count; i++)
+        {
+            if (defeatedActors[i].GetPersonalName() == newName || defeatedActors[i].GetSpriteName() == newName){return true;}
+        }
+        return false;
+    }
     public bool RemoveDefeatedActor(TacticActor actor)
     {
         if (!defeatedActors.Contains(actor)){return false;}
@@ -607,6 +615,14 @@ public class BattleMap : MapManager
         return false;
     }
     public List<TacticActor> escapedActors;
+    public bool EscapedActorExists(string newInfo)
+    {
+        for (int i = 0; i < escapedActors.Count; i++)
+        {
+            if (escapedActors[i].GetPersonalName() == newInfo || escapedActors[i].GetSpriteName() == newInfo){return true;}
+        }
+        return false;
+    }
     public bool ActorCanEscape(TacticActor actor)
     {
         if (!mapUtility.BorderTile(actor.GetLocation(), mapSize)){return false;}
@@ -621,6 +637,7 @@ public class BattleMap : MapManager
             // Deal with escaped actors differently at the end of battle.
             escapedActors.Add(actor);
             // Just play dead and leave the battle?
+            battlingActors.Remove(actor);
         }
     }
     public bool ActorEscaped(string spriteName, string actorName = "")
@@ -1584,12 +1601,12 @@ public class BattleMap : MapManager
         {
             // Just for fun make the actor not appear on the map.
             // They can still use movement to determine the actors location so it doesn't really do anything if you're paying the slightest amount of attention.
-            if (battlingActors[i].invisible || battlingActors[i].GetLocation() < 0){continue;}
+            int location = battlingActors[i].GetLocation();
+            if (battlingActors[i].invisible || location < 0 || location >= actorTiles.Count){continue;}
             actorTiles[battlingActors[i].GetLocation()] = battlingActors[i].GetSpriteName();
             actorDirections[battlingActors[i].location] = battlingActors[i].GetDirection().ToString();
         }
     }
-
     [ContextMenu("Clear Actors")]
     public void ClearActors()
     {

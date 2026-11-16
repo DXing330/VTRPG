@@ -62,4 +62,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MysteryDungeon/Test/TestMysteryDungeonGenerator.unity
     guid: def64a761b543bf4dad61d88b49c968f
+  - enabled: 1
+    path: Assets/Scenes/MainScenes/RequestBoard.unity
+    guid: ce37ef600ed6dee4fbb2d159a79cf1b3
   m_configObjects: {}
