@@ -8,17 +8,11 @@ using UnityEngine;
 // You Control The Party Leader.
 // Other Party Members Are Adjustable AI (Select AI + Usable Skills/Spells).
 // Enemy Are Nonadjustable AI.
-public class MysteryDungeonBattleManager : ClickTileManager
+public class MysteryDungeonBattleManager : BasicBattleManager<MysteryDungeonBattleMap, MysteryDungeonActorAI>
 {
     public MysteryDungeonManager MDGeneralManager;
     public PartyDataManager partyData;
     public CharacterList playerParty;
-    public MysteryDungeonBattleMap map;
-    public MysteryDungeonActorAI actorAI;
-    public AttackManager attackManager;
-    public ActiveManager activeManager;
-    public EffectManager effectManager;
-    public MoveCostManager moveManager;
     // Add The Party To The Map Battling Actors.
     public void Initialize()
     {
@@ -65,7 +59,6 @@ public class MysteryDungeonBattleManager : ClickTileManager
             actors[i].SetLocation(emptyAdjacent[count]);
             count++;
         }
-        // TODO Apply Held Item Effects.
         map.UpdateMap();
     }
     protected void SpawnParty()
@@ -79,7 +72,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         {
             // MD Mode Has Less Actions Per Turn, In General Either 1 Move/Attack/Skill.
             actors[i].LoadPersistentStats(partyData.dungeonState.GetCurrentStats(actors[i].GetID()));
-            actors[i].SetDungeonHeldItem(partyData.dungeonState.GetCurrentHeldItem(actors[i].GetID()));
+            actors[i].SetDungeonHeldItem(partyData.dungeonBag.GetHeldItemOfID(actors[i].GetID()));
             // Apply The Held Item Effect.
             itemEffect.ApplyHeldItemEffect(actors[i], map);
             actors[i].SetBaseActions(2);
@@ -120,14 +113,12 @@ public class MysteryDungeonBattleManager : ClickTileManager
         if (currentRoom >= 0 && nextRoom < 0){return true;}
         return false;
     }
-    public List<TacticActor> roundActors;
-    public int currentTurn = 0;
     public TacticActor GetTurnActor(int turn = -1)
     {
         if (turn < 0){turn = currentTurn;}
         return roundActors[turn];
     }
-    public void NewRound()
+    public override void NewRound()
     {
         TacticActor partyLeader = map.GetPartyLeader();
         if (partyLeader == null || partyLeader.GetHealth() <= 0)
@@ -332,21 +323,16 @@ public class MysteryDungeonBattleManager : ClickTileManager
         }
     }
     public MysteryDungeonItemEffect itemEffect;
-    public void ActorUseItem(string itemName, TacticActor actor = null)
+    public void ActorUseItem(string itemName, int itemIndex = -1, TacticActor actor = null)
     {
         if (actor == null)
         {
             actor = roundActors[currentTurn];
         }
-        itemEffect.UseItem(actor, map, itemName, partyData);
-        if (actor.GetTeam() == 0)
-        {
-            // Remove The Item.
-            partyData.dungeonBag.UseItem(itemName);
-        }
+        itemEffect.UseItem(actor, map, itemName, itemIndex, partyData);
         EndActorTurn();
     }
-    public void ActorThrowItem(string itemName, TacticActor actor = null)
+    public void ActorThrowItem(string itemName, int itemIndex = -1, TacticActor actor = null)
     {
         if (actor == null)
         {
@@ -358,19 +344,15 @@ public class MysteryDungeonBattleManager : ClickTileManager
         {
             // TESTED 10/26/26
             map.AddItemToLocation(itemName, thrownToTile);
+            partyData.dungeonBag.RemoveItemAt(itemIndex);
         }
         else
         {
-            itemEffect.ThrowItem(map.GetActorOnTile(thrownToTile), map, itemName, partyData);
-        }
-        if (actor.GetTeam() == 0)
-        {
-            // Remove The Item.
-            partyData.dungeonBag.UseItem(itemName);
+            itemEffect.ThrowItem(map.GetActorOnTile(thrownToTile), map, itemName, itemIndex, partyData);
         }
         EndActorTurn();
     }
-    public void ActorDropItem(string itemName, TacticActor actor = null)
+    public void ActorDropItem(string itemName, int itemIndex = -1, TacticActor actor = null)
     {
         if (actor == null)
         {
@@ -379,7 +361,7 @@ public class MysteryDungeonBattleManager : ClickTileManager
         map.AddItemToLocation(itemName, actor.GetLocation());
         NextTurn();
     }
-    protected void EndActorTurn()
+    protected override void EndActorTurn()
     {
         // Track Hunger For The Leader At The End Of Turn.
         PlayerHunger();
@@ -396,66 +378,14 @@ public class MysteryDungeonBattleManager : ClickTileManager
     {
         return roundActors[currentTurn].GetHealth() > 0;
     }
-    public void NextTurn()
-    {
-        map.updateMap = false;
-        currentTurn++;
-        if (currentTurn >= roundActors.Count)
-        {
-            NewRound();
-            return;
-        }
-        roundActors[currentTurn].StartTurn();
-        effectManager.StartTurn(roundActors[currentTurn], map);
-        // Skip Dead/Stunned/Etc Do Nothing.
-        if (roundActors[currentTurn].GetHealth() <= 0 || roundActors[currentTurn].GetActions() <= 0)
-        {
-        }
-        // Next Priority Is Mental States, Again Skipped Since Actor AI Will Handle It.
-        else if (actorAI.MentalStateTurn(roundActors[currentTurn], map))
-        {
-        }
-        // Then Team Checks.
-        else if (roundActors[currentTurn].GetTeam() == 0)
-        {
-            AllyTurn();
-        }
-        else if (roundActors[currentTurn].GetTeam() != 0)
-        {
-            EnemyTurn();
-        }
-        // Always Reach Here.
-        if (TurnActorAlive())
-        {
-            // This Calls NextTurn();
-            EndActorTurn();
-        }
-        else
-        {
-            ActivateDeathPassive(roundActors[currentTurn]);
-            NextTurn();
-        }
-    }
-    public void AllyTurn()
+    public override void AllyTurn()
     {
         // DO ALLY TURNS BASED ON SET AI (Stick Together[Default]/Go After Foes/Go Other Way/Explore)
         actorAI.MysteryDungeonAllyTurn(roundActors[currentTurn], this, map);
     }
-    // DO ENEMY TURNS.
-    public void EnemyTurn()
+    public override void EnemyTurn()
     {
         actorAI.MysteryDungeonEnemyTurn(roundActors[currentTurn], this, map);
-    }
-    protected void MoveAlongPath(TacticActor actor, List<int> path)
-    {
-        if (path.Count <= 0){return;}
-        for (int i = path.Count - 1; i >= 0; i--)
-        {
-            int prevLoc = actor.GetLocation();
-            moveManager.MoveActorToTile(actor, path[i], map);
-            actor.PayMoveCost(moveManager.MoveCostOfTile(path[i]));
-            if (actor.GetMovement() < 0 || actor.MovementStopped()){break;}
-        }
     }
     public void MoveActorToTile(int tileNumber, TacticActor actor = null)
     {
@@ -464,11 +394,6 @@ public class MysteryDungeonBattleManager : ClickTileManager
             actor = roundActors[currentTurn];
         }
         map.MoveActorToTile(actor, tileNumber);
-    }
-    public void ActorAttacksTarget(TacticActor actor)
-    {
-        if (!actor.TargetValid()){return;}
-        ActorAttacksActor(actor, actor.GetTarget());
     }
     public void ActorBasicAttacksTile(TacticActor actor, int tileNumber)
     {
@@ -484,54 +409,5 @@ public class MysteryDungeonBattleManager : ClickTileManager
             return;
         }
         ActorAttacksActor(actor, target);
-    }
-    protected void ActorAttacksActor(TacticActor attacker, TacticActor defender)
-    {
-        if (!attacker.AttackActionsLeft()){return;}
-        attacker.PayAttackCost();
-        map.UpdateCombatLog(attacker.GetPersonalName() + " attacks " + defender.GetPersonalName() + ".");
-        attackManager.ActorAttacksActorWithAttackSpeed(attacker, defender, map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
-        List<int> basicAttackTargetTiles = map.mapUtility.GetTilesByShapeSpan(defender.GetLocation(), attacker.GetBasicAttackShape(), attacker.GetBasicAttackSpan(), map.mapSize, attacker.GetLocation());
-        List<TacticActor> targetActors = map.GetActorsOnTiles(basicAttackTargetTiles);
-        for (int i = 0; i < targetActors.Count; i++)
-        {
-            // Don't Hit Teammates Or The Target Twice.
-            if (targetActors[i].GetTeam() == attacker.GetTeam() || targetActors[i] == defender){continue;}
-            map.UpdateCombatLog(attacker.GetPersonalName() + " hits " + targetActors[i].GetPersonalName() + ".");
-            attackManager.ActorAttacksActorWithAttackSpeed(attacker, targetActors[i], map, attacker.GetBasicAttackMultiplier(), attacker.GetBasicAttackDamageType());
-        }
-        map.UpdateMap();
-    }
-    public void ActivateSkill(string skillName, TacticActor actor, int targetTile)
-    {
-        activeManager.SetSkillFromName(skillName, actor);
-        activeManager.GetTargetedTiles(targetTile);
-        map.UpdateCombatLog(actor.GetPersonalName() + " uses " + skillName + ".");
-        activeManager.ActivateSkill(this);
-    }
-    public void ActivateSkill(string skillName, TacticActor actor = null)
-    {
-        if (actor == null){actor = roundActors[currentTurn];}
-        activeManager.ActivateSkill(this);
-    }
-    // Checks And Activates Death Effects.
-    public void ActivateDeathPassive(TacticActor actor)
-    {
-        if (actor.GetHealth() > 0){return;}
-        if (actor.Resurrect())
-        {
-            actor.FullRestore();
-            map.ResurrectActor(actor);
-            return;
-        }
-        if (!map.RemoveActorFromBattle(actor)){return;}
-        List<string> deathActives = new List<string>(actor.GetDeathActives());
-        for (int i = 0; i < deathActives.Count; i++)
-        {
-            if (deathActives[i].Length <= 0) { continue; }
-            activeManager.SetSkillFromName(deathActives[i], actor);
-            activeManager.GetTargetedTiles(actor.GetLocation());
-            ActivateSkill(deathActives[i], actor);
-        }
     }
 }

@@ -138,7 +138,7 @@ public class ActorSubGameStats : ActorStats
     }
     public void PrepareToRespawn(){currentRespawnTimer++;}
     public List<AutoChessTrait> autoChessTemporaryTraits = new();
-    // MYSTERY DUNGEON
+    [Header("MD STATS")]
     protected int maxFullness;
     public void SetMaxFullness(int newInfo){maxFullness = newInfo;}
     public int GetMaxFullness(){return maxFullness;}
@@ -184,6 +184,25 @@ public class ActorSubGameStats : ActorStats
     // For Use By Enemies?
     // Party Members Can Assign Held Items Through The Bag.
     public string dungeonHeldItem = "";
+    public void ResetDungeonHeldItem(){dungeonHeldItem = "";}
     public string GetDungeonHeldItem(){return dungeonHeldItem;}
     public void SetDungeonHeldItem(string newItem){dungeonHeldItem = newItem;}
+    [Header("GH STATS")]
+    public string possibleActions;
+    public void SetPossibleActions(string newInfo){possibleActions = newInfo;}
+    public string nextTurnAction;
+    public void SetNewTurnAction(string newInfo){nextTurnAction = newInfo;}
+    public string GetNextTurnAction(){return nextTurnAction;}
+    public int multiHitCount = 1;
+    public void SetMultiHitCount(int newInfo){multiHitCount = newInfo;}
+    public int GetMultiHitCount(){return multiHitCount;}
+    public string buffAction;
+    public void SetBuffAction(string newInfo){buffAction = newInfo;}
+    public string GetBuffAction(){return buffAction;}
+    public string statusAction;
+    public void SetStatusAction(string newInfo){statusAction = newInfo;}
+    public string GetStatusAction(){return statusAction;}
+    public string specialAction;
+    public void SetSpecialAction(string newInfo){specialAction = newInfo;}
+    public string GetSpecialAction(){return specialAction;}
 }

@@ -37,6 +37,7 @@ public class PartyData : SavedData
     public TacticActor ReturnActorAtIndex(int index)
     {
         dummyActor.SetInitialStatsFromString(partyStats[index]);
+        dummyActor.SetID(int.Parse(partyIDs[index]));
         dummyActor.SetPersonalName(partyNames[index]);
         return dummyActor;
     }

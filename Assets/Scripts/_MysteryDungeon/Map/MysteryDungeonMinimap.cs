@@ -88,7 +88,6 @@ public class MysteryDungeonMinimap : MaskableGraphic
             vh.AddTriangle(startIndex, startIndex + i + 1, startIndex + next + 1);
         }
     }
-    // TODO Add Enemies/Items Traps
     private Color GetTileColor(int tile)
     {
         // Player always visible.

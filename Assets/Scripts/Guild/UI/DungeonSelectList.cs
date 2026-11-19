@@ -26,7 +26,6 @@ public class DungeonSelectList : MonoBehaviour
     public void SelectDungeon()
     {
         dungeonState.InitializeDungeonByName(currentDungeons[selected]);
-        // TODO Copy The Current Party Into The Mystery Dungeon Party.
         partyData.Load();
         mysteryDungeonParty.CombineIntoMainParty(partyData);
         mysteryDungeonParty.guildCard.QuestStartDungeon(mysteryDungeonParty, currentDungeons[selected]);

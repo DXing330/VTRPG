@@ -4,6 +4,9 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+    using UnityEditor;
+#endif
 
 public class ActorMaker : MonoBehaviour
 {
@@ -16,11 +19,31 @@ public class ActorMaker : MonoBehaviour
     public StatDatabase attributeResists;
     public StatDatabase attributeWeaknesses;
     public PassiveOrganizer passiveOrganizer;
+    public MapPatternLocations mapPatterns;
+    public ActorMaker copiedActorMaker;
+    [ContextMenu("Copy Public Fields")]
+    public void CopyPublicFields()
+    {
+        if (copiedActorMaker == null){return;}
+        utility = copiedActorMaker.utility;
+        battleModifier = copiedActorMaker.battleModifier;
+        actorStats = copiedActorMaker.actorStats;
+        elementPassives = copiedActorMaker.elementPassives;
+        speciesPassives = copiedActorMaker.speciesPassives;
+        attributeResists = copiedActorMaker.attributeResists;
+        attributeWeaknesses = copiedActorMaker.attributeWeaknesses;
+        passiveOrganizer = copiedActorMaker.passiveOrganizer;
+        mapPatterns = copiedActorMaker.mapPatterns;
+        weaponReach = copiedActorMaker.weaponReach;
+        runeGridManager = copiedActorMaker.runeGridManager;
+        #if UNITY_EDITOR
+            EditorUtility.SetDirty(this);
+        #endif
+    }
     public void ReorganizeActorPassives(TacticActor actor)
     {
         passiveOrganizer.OrganizeActorPassives(actor);
     }
-    public MapPatternLocations mapPatterns;
     public int mapSize;
     public void SetMapSize(int newSize) { mapSize = newSize; }
     [ContextMenu("New Actor")]

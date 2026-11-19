@@ -324,6 +324,13 @@ public class MoveCostManager : ScriptableObject
         }
         return tiles;
     }
+    public List<int> GetAllReachableTilesWithFixedMovement(TacticActor actor, List<TacticActor> actors, int fixedAmount)
+    {
+        GetAllMoveCosts(actor, actors);
+        reachableTiles = actorPathfinder.FindTilesInMoveRange(actor.GetLocation(), fixedAmount, currentMoveCosts);
+        reachableTiles = RemoveReachableTilesWithActors(reachableTiles, actors);
+        return reachableTiles;
+    }
     public List<int> GetAllReachableTiles(TacticActor actor, List<TacticActor> actors, bool current = true)
     {
         GetAllMoveCosts(actor, actors);

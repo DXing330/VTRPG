@@ -661,7 +661,6 @@ public class MysteryDungeonBattleMap : BattleMap
         itemLocations = new List<int>(generator.itemLocations);
         trapLocations = new List<int>(generator.trapLocations);
         trapTriggered = Enumerable.Repeat(false, trapLocations.Count).ToList();
-        // TODO Decide What Items/Traps Exist.
         items = new List<string>();
         for (int i = 0; i < itemLocations.Count; i++)
         {
@@ -906,7 +905,6 @@ public class MysteryDungeonBattleMap : BattleMap
         BaseUpdateMap();
         UpdateTraps();
         UpdateActors();
-        // TODO HP Bars.
         UpdateTerrain();
         // TODO Aura Layer.
         ApplyFogOfWar();

@@ -41,7 +41,6 @@ public class MysteryDungeonMapUtility : ScriptableObject
         string[] dungeonTypeBiomes = map.dungeonTypeSubTerrains.ReturnValue(dungeonType).Split("|");
         string mainBiome = dungeonTypeBiomes[UnityEngine.Random.Range(0, dungeonTypeBiomes.Length)];
         string subBiome = dungeonTypeBiomes[UnityEngine.Random.Range(0, dungeonTypeBiomes.Length)];
-        // TODO Make The Biome Clusters.
         HashSet<int> roomSet = new HashSet<int>(roomTiles);
         HashSet<int> changedTiles = new HashSet<int>();
         int patchCount = Mathf.Max(1, roomTiles.Count / 12);

@@ -117,7 +117,6 @@ public class MysteryDungeonManager : MonoBehaviour
             partyData.guildCard.CheckQuestCompletion(partyData);
         }
         partyData.Save();
-        // TODO Move To Reward Scene If Win.
         sceneMover.ReturnToHub();
     }
 }

@@ -256,4 +256,25 @@ public class MapTile : MonoBehaviour
         if (index >= autoChessEquipmentImages.Count){return null;}
         return autoChessEquipmentImages[index];
     }
+    // STS Specific Items
+    public List<string> intentNames;
+    public List<GameObject> intentDisplayObjects;
+    public void ResetIntent()
+    {
+        for (int i = 0; i < intentDisplayObjects.Count; i++)
+        {
+            intentDisplayObjects[i].SetActive(false);
+        }
+    }
+    public void ShowIntent(string allIntentions)
+    {
+        ResetIntent();
+        string[] allIntent = allIntentions.Split("+");
+        for (int i = 0; i < allIntent.Length; i++)
+        {
+            int indexOf = intentNames.IndexOf(allIntent[i]);
+            if (indexOf < 0){continue;}
+            intentDisplayObjects[indexOf].SetActive(true);
+        }
+    }
 }

@@ -163,7 +163,6 @@ public class MysteryDungeonQuestBoard : MonoBehaviour
     {
         if (selectedAcceptedQuestIndex < 0 || selectedAcceptedQuestIndex >= acceptedQuests.Count){return;}
         if (acceptedQuests[selectedAcceptedQuestIndex].completed == 0){return;}
-        // TODO Gain The Reward.
         // For Now Assume That The Report Is Gold.
         partyData.inventory.GainGold(acceptedQuests[selectedAcceptedQuestIndex].rewardQuantity);
         partyData.guildCard.RemoveQuestAtIndex(selectedAcceptedQuestIndex);

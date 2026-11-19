@@ -1,6 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+    using UnityEditor;
+#endif
 
 [CreateAssetMenu(fileName = "ActorAI", menuName = "ScriptableObjects/BattleLogic/ActorAI", order = 1)]
 public class ActorAI : ScriptableObject
@@ -22,6 +25,22 @@ public class ActorAI : ScriptableObject
     public string AIType;
     public string activeSkillName;
     public string ReturnAIActiveSkill() { return activeSkillName; }
+    public ActorAI copiedAI;
+    [ContextMenu("Copy Public Fields")]
+    protected void CopyPublicFieldsFromActorAI()
+    {
+        if (copiedAI == null){return;}
+        active = copiedAI.active;
+        activeData = copiedAI.activeData;
+        attackManager = copiedAI.attackManager;
+        actorAttackSkills = copiedAI.actorAttackSkills;
+        actorSkillRotation = copiedAI.actorSkillRotation;
+        spriteToBossRotation = copiedAI.spriteToBossRotation;
+        bossSkillRotation = copiedAI.bossSkillRotation;
+        #if UNITY_EDITOR
+            EditorUtility.SetDirty(this);
+        #endif
+    }
     public ActiveSkill active;
     public StatDatabase activeData;
     public AttackManager attackManager;

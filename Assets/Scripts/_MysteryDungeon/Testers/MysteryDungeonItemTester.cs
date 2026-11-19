@@ -35,7 +35,7 @@ public class MysteryDungeonItemTester : MonoBehaviour
     {
         map.UpdateMap();
         TacticActor leader = map.GetPartyLeader();
-        itemEffect.UseItem(leader, map, testItemName, partyData);
+        itemEffect.UseItem(leader, map, testItemName, -1, partyData);
         map.RefreshPlayerLocation();
         map.UpdateMap();
         UI.ChangeState("None");

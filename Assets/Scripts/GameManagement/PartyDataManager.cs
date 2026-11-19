@@ -524,6 +524,19 @@ public class PartyDataManager : MonoBehaviour
         names.AddRange(tempPartyData.GetNames());
         return names;
     }
+    public List<int> GetAllPartyIDs()
+    {
+        List<string> IDs = new List<string>();
+        IDs.AddRange(permanentPartyData.GetPartyIDs());
+        IDs.AddRange(mainPartyData.GetPartyIDs());
+        IDs.AddRange(tempPartyData.GetPartyIDs());
+        List<int> intIDs = new List<int>();
+        for (int i = 0; i < IDs.Count; i++)
+        {
+            intIDs.Add(utility.SafeParseInt(IDs[i], -1));
+        }
+        return intIDs;
+    }
     [ContextMenu("DebugPartyCount")]
     public void DebugPartyCount()
     {

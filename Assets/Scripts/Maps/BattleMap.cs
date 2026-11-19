@@ -1728,6 +1728,14 @@ public class BattleMap : MapManager
         if (index < 0 || index >= battlingActors.Count) { return null; }
         return battlingActors[index];
     }
+    public TacticActor GetActorByID(int ID)
+    {
+        for (int i = 0; i < battlingActors.Count; i++)
+        {
+            if (battlingActors[i].GetID() == ID){return battlingActors[i];}
+        }
+        return null;
+    }
     public string GetTileInfo(int tileNumber)
     {
         return mapInfo[tileNumber];

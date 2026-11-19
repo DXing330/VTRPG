@@ -8,28 +8,43 @@ using UnityEngine;
 public class MysteryDungeonItemEffect : PassiveSkill
 {
     public StatDatabase MDItemData;
-    public void ThrowItem(TacticActor thrownTo, MysteryDungeonBattleMap map, string itemName, PartyDataManager partyData)
+    public void ThrowItem(TacticActor thrownTo, MysteryDungeonBattleMap map, string itemName, int itemIndex, PartyDataManager partyData)
     {
         // Check If The Item Is Throwable (Usable When Thrown).
         string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
         if (itemData.Length < 5){return;}
         bool throwable = int.Parse(itemData[4]) == 1;
+        // Remove The Item From Begin Equipped If Applicable.
+        int oldHolderID = partyData.dungeonBag.UnequipItemAtIndex(itemIndex);
+        if (oldHolderID >= 0)
+        {
+            UnequipItem(map.GetActorByID(oldHolderID), map, itemName, partyData);
+        }
         // If Throwable, The Actor Thrown To AutoUses.
         if (throwable)
         {
             // TESTED 10/26/26
-            UseItem(thrownTo, map, itemName, partyData);
+            UseItem(thrownTo, map, itemName, itemIndex, partyData);
         }
         // Else If Possible The Actor Picks It Up.
         else if (thrownTo.GetDungeonHeldItem() == "")
         {
             // TESTED 10/26/26
             thrownTo.SetDungeonHeldItem(itemName);
+            if (thrownTo.GetTeam() == 0)
+            {
+                partyData.dungeonBag.EquipItemAtIndex(itemIndex, thrownTo);
+            }
+            else
+            {
+                partyData.dungeonBag.RemoveItemAt(itemIndex);
+            }
         }
         // Else It Drops To The Tile
         else
         {
             map.AddItemToLocation(itemName, thrownTo.GetLocation());
+            partyData.dungeonBag.RemoveItemAt(itemIndex);
         }
     }
     protected void ApplyTargetEffectSpecifics(TacticActor user, MysteryDungeonBattleMap map, PartyDataManager partyData, string target, string effect, string specifics)
@@ -59,11 +74,17 @@ public class MysteryDungeonItemEffect : PassiveSkill
             break;
         }
     }
-    public void UseItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, PartyDataManager partyData)
+    public void UseItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, int itemIndex, PartyDataManager partyData)
     {
+        int oldHolderID = partyData.dungeonBag.UnequipItemAtIndex(itemIndex);
+        if (oldHolderID >= 0)
+        {
+            UnequipItem(map.GetActorByID(oldHolderID), map, itemName, partyData);
+        }
         if (itemName.StartsWith("TM"))
         {
             UseTM(user, map, itemName, partyData);
+            partyData.dungeonBag.RemoveItemAt(itemIndex);
             return;
         }
         string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
@@ -79,16 +100,19 @@ public class MysteryDungeonItemEffect : PassiveSkill
         }
         if (target == "Held")
         {
-            EquipItem(user, map, itemName, effect, specifics, partyData);
+            // Equipped Items Are Not Removed From Inventory.
+            EquipItem(user, map, itemName, itemIndex, effect, specifics, partyData, true);
             return;
         }
         ApplyTargetEffectSpecifics(user, map, partyData, target, effect, specifics);
+        partyData.dungeonBag.RemoveItemAt(itemIndex);
     }
     protected void UnequipItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, PartyDataManager partyData)
     {
-        if (string.IsNullOrEmpty(itemName)){return;}
+        if (string.IsNullOrEmpty(itemName) || user == null){return;}
         // Put The Item Back In The Bag.
-        partyData.dungeonBag.GainItem(itemName);
+        partyData.dungeonBag.UnequipItem(itemName, user);
+        user.ResetDungeonHeldItem();
         string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
         if (itemData.Length < 5){return;}
         string target = itemData[0];
@@ -106,15 +130,33 @@ public class MysteryDungeonItemEffect : PassiveSkill
         if (itemData.Length < 5){return;}
         AffectActor(user, itemData[1], itemData[2]);
     }
-    protected void EquipItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, string effect, string specifics, PartyDataManager partyData)
+    // Previously Bug Out With Multiple Items Of Same Name Equipped To Multiple Users, TOTEST.
+    public void EquipItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, int itemIndex, PartyDataManager partyData)
+    {
+        string[] itemData = MDItemData.ReturnValue(itemName).Split("|");
+        if (itemData.Length < 5){return;}
+        string target = itemData[0];
+        string effect = itemData[1];
+        string specifics = itemData[2];
+        bool held = false;
+        if (target == "Held"){held = true;}
+        EquipItem(user, map, itemName, itemIndex, effect, specifics, partyData, held);
+    }
+    protected void EquipItem(TacticActor user, MysteryDungeonBattleMap map, string itemName, int itemIndex, string effect, string specifics, PartyDataManager partyData, bool held = true)
     {
         // Add The Current Held Item Back To Inventory + Lose Its Effects.
         string currentHeld = user.GetDungeonHeldItem();
         UnequipItem(user, map, currentHeld, partyData);
         // Equip The New Held Item + Apply Effects.
         user.SetDungeonHeldItem(itemName);
-        AffectActor(user, effect, specifics);
-        partyData.dungeonBag.UseItem(itemName);
+        if (held)
+        {
+            AffectActor(user, effect, specifics);
+        }
+        int oldHolderID = partyData.dungeonBag.EquipItemAtIndex(itemIndex, user);
+        if (oldHolderID < 0 || oldHolderID == user.GetID()){return;}
+        // Unequip The Item From The Old Holder.
+        UnequipItem(map.GetActorByID(oldHolderID), map, itemName, partyData);
     }
     protected void UseTM(TacticActor user, MysteryDungeonBattleMap map, string TMName, PartyDataManager partyData)
     {

@@ -161,7 +161,6 @@ public class MysteryDungeonUIManager : ClickTileManager
             case ClickTileState.Skill:
             if (useActiveObject.activeSelf)
             {
-                // TODO Call The BattleManager To Check That Kind Of Stuff.
                 battleManager.PlayerSelectSkillTarget(tileNumber);
                 return;
             }
@@ -230,33 +229,56 @@ public class MysteryDungeonUIManager : ClickTileManager
     public SelectList selectItemList;
     public GameObject useItemObject;
     public TMP_Text useItemDescription;
+    public MysteryDungeonItemEffect itemEffect;
     public MysteryDungeonItemDetailSwitch itemDescriptions;
     public void SelectItem()
     {
         useItemObject.SetActive(true);
-        UpdateItemDescription(selectItemList.GetSelectedString());
+        UpdateItemDescription(selectItemList.GetSelectedString(), selectItemList.GetSelected());
     }
-    public void UpdateItemDescription(string itemName)
+    public void UpdateItemDescription(string itemName, int selected)
     {
         useItemDescription.text = itemDescriptions.ReturnItemDescriptionFromName(itemName);
+        // Add The Holder If It Is Held.
+        int heldByID = partyData.dungeonBag.GetHeldByIDFromIndex(selected);
+        if (heldByID < 0){return;}
+        TacticActor heldByActor = map.GetActorByID(heldByID);
+        if (heldByActor == null){return;}
+        useItemDescription.text += "\n" + $"(Equipped To {heldByActor.GetPersonalName()})";
     }
     public void UseItem()
     {
-        battleManager.ActorUseItem(selectItemList.GetSelectedString());
+        battleManager.ActorUseItem(selectItemList.GetSelectedString(), selectItemList.GetSelected());
         ChangeState("Item");
     }
     // Removes The Item.
     public void DropItem()
     {
-        battleManager.ActorDropItem(selectItemList.GetSelectedString());
+        battleManager.ActorDropItem(selectItemList.GetSelectedString(), selectItemList.GetSelected());
         partyData.dungeonBag.UseItem(selectItemList.GetSelectedString());
         ChangeState("Item");
     }
     // If Throwable?
     public void ThrowItem()
     {
-        battleManager.ActorThrowItem(selectItemList.GetSelectedString());
+        battleManager.ActorThrowItem(selectItemList.GetSelectedString(), selectItemList.GetSelected());
         ChangeState("Item");
+    }
+    // Need An Actor Select Type Of List.
+    public GameObject actorHeldItemObject;
+    public SelectStatTextList actorHeldItemList;
+    public void ClickEquipItem()
+    {
+        // Show A Popup That Shows All Current Actors And Their Equipment And If The Item Is Currently Equipped.
+        actorHeldItemObject.SetActive(true);
+        actorHeldItemList.SetStatsAndData(partyData.GetAllPartyNames(), partyData.dungeonBag.GetHeldItemsOfIDs(partyData.GetAllPartyIDs()));
+    }
+    // Need To Convert The Index To An Actor.
+    public void EquipItem()
+    {
+        int selectedIndex = actorHeldItemList.GetSelected();
+        int selectedID = partyData.ReturnActorAtIndex(selectedIndex).GetID();
+        itemEffect.EquipItem(map.GetActorByID(selectedID), map, selectItemList.GetSelectedString(), selectItemList.GetSelected(), partyData);
     }
     public SelectList selectActiveList;
     public GameObject useActiveObject;

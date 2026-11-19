@@ -226,7 +226,6 @@ public class SelectStatTextList : StatTextList
             }
         }
     }
-
     // raw data is full equip stats, just extract the names.
     public void UpdateEquipNames()
     {

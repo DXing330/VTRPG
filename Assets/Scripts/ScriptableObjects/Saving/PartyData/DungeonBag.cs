@@ -25,12 +25,67 @@ public class DungeonBag : SavedData
         if (items.Count > maxCapacity)
         {
             List<string> trimmedItems = new List<string>();
+            List<int> trimmedHolders = new List<int>();
             for (int i = 0; i < maxCapacity; i++)
             {
                 trimmedItems.Add(items[i]);
+                trimmedHolders.Add(itemHeldByID[i]);
             }
             SetItems(trimmedItems);
+            SetHolders(trimmedHolders);
         }
+    }
+    public List<int> itemHeldByID;
+    public int GetHeldByIDFromIndex(int index)
+    {
+        return itemHeldByID[index];
+    }
+    public List<string> GetHeldItemsOfIDs(List<int> actorIDs)
+    {
+        List<string> heldItems = new List<string>();
+        for (int i = 0; i < actorIDs.Count; i++)
+        {
+            heldItems.Add(GetHeldItemOfID(actorIDs[i]));
+        }
+        return heldItems;
+    }
+    public string GetHeldItemOfID(int ID)
+    {
+        if (ID < 0){return "";}
+        for (int i = 0; i < itemHeldByID.Count; i++)
+        {
+            if (itemHeldByID[i] == ID){return items[i];}
+        }
+        return "";
+    }
+    public void SetHolders(List<int> newInfo)
+    {
+        itemHeldByID = newInfo;
+    }
+    public void UnequipItem(string itemName, TacticActor actor)
+    {
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] == itemName && itemHeldByID[i] == actor.GetID())
+            {
+                itemHeldByID[i] = -1;
+                return;
+            }
+        }
+    }
+    public int UnequipItemAtIndex(int itemIndex)
+    {
+        if (itemIndex < 0 || itemIndex >= items.Count){return -1;}
+        int oldHolder = itemHeldByID[itemIndex];
+        itemHeldByID[itemIndex] = -1;
+        return oldHolder;
+    }
+    public int EquipItemAtIndex(int itemIndex, TacticActor actor)
+    {
+        if (itemIndex < 0 || itemIndex >= items.Count){return -1;}
+        int oldHolder = itemHeldByID[itemIndex];
+        itemHeldByID[itemIndex] = actor.GetID();
+        return oldHolder;
     }
     public List<string> items;
     public List<string> GetItems()
@@ -38,7 +93,11 @@ public class DungeonBag : SavedData
         return new List<string>(items);
     }
     public int GetItemCount(){return items.Count;}
-    public void DropItems(){items.Clear();}
+    public void DropItems()
+    {
+        items.Clear();
+        itemHeldByID.Clear();
+    }
     public void SetItems(List<string> newInfo)
     {
         utility.RemoveEmptyListItems(newInfo);
@@ -52,6 +111,14 @@ public class DungeonBag : SavedData
     {
         if (newItem == ""){return;}
         items.Add(newItem);
+        itemHeldByID.Add(-1);
+    }
+    public void RemoveItemAt(int index)
+    {
+        if (index < 0 || index >= items.Count){return;}
+        if (index >= itemHeldByID.Count){return;}
+        items.RemoveAt(index);
+        itemHeldByID.RemoveAt(index);
     }
     public void GainItems(List<string> newItems)
     {
@@ -66,7 +133,7 @@ public class DungeonBag : SavedData
         int indexOf = items.IndexOf(usedItem);
         if (indexOf >= 0)
         {
-            items.RemoveAt(indexOf);
+            RemoveItemAt(indexOf);
         }
     }
     public bool ItemExists(string itemName)
@@ -82,7 +149,7 @@ public class DungeonBag : SavedData
             if (items[i].Contains("Chest"))
             {
                 chests.Add(items[i]);
-                items.RemoveAt(i);
+                RemoveItemAt(i);
             }
         }
         return chests;
@@ -124,16 +191,19 @@ public class DungeonBag : SavedData
         {
             if (items[i].Contains(type))
             {
-                items.RemoveAt(i);
+                RemoveItemAt(i);
                 return;
             }
         }
     }
     public void RemoveAllItemsOfType(string type)
     {
-        for (int i = 0; i < items.Count; i++)
+        for (int i = items.Count - 1; i >= 0; i--)
         {
-            RemoveItemOfType(type);
+            if (items[i].Contains(type))
+            {
+                RemoveItemAt(i);
+            }
         }
     }
     public void OpenChest(string chest)
@@ -142,7 +212,7 @@ public class DungeonBag : SavedData
         {
             if (items[i] == chest)
             {
-                items.RemoveAt(i);
+                RemoveItemAt(i);
                 return;
             }
         }
@@ -152,7 +222,7 @@ public class DungeonBag : SavedData
         int indexOf = items.IndexOf(item);
         if (indexOf >= 0)
         {
-            items.RemoveAt(indexOf);
+            RemoveItemAt(indexOf);
         }
     }
     // RELICS
@@ -200,10 +270,11 @@ public class DungeonBag : SavedData
     {
         maxCapacity = 16;
         items.Clear();
+        itemHeldByID.Clear();
         string[] newGameItems = newGameData.Split("|");
         for (int i = 0; i < newGameItems.Length; i++)
         {
-            items.Add(newGameItems[i]);
+            GainItem(newGameItems[i]);
         }
         relics.Clear();
         relicCounters.Clear();
@@ -216,6 +287,7 @@ public class DungeonBag : SavedData
         allData = "";
         allData += "Max=" + maxCapacity + delimiter;
         allData += "Items=" + String.Join(delimiterTwo, items) + delimiter;
+        allData += "Holders=" + String.Join(delimiterTwo, itemHeldByID) + delimiter;
         allData += "Relics=" + String.Join(delimiterTwo, relics) + delimiter;
         allData += "RelicCounters=" + String.Join(delimiterTwo, relicCounters) + delimiter;
         File.WriteAllText(dataPath, allData);
@@ -244,6 +316,9 @@ public class DungeonBag : SavedData
             break;
             case "Items":
             SetItems(value.Split(delimiterTwo).ToList());
+            break;
+            case "Holders":
+            SetHolders(value.Split(delimiterTwo).Select(x => utility.SafeParseInt(x, -1)).ToList());
             break;
             case "Relics":
             SetRelics(value.Split(delimiterTwo).ToList());
